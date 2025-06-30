@@ -3,111 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carga de Materias Primas - Cotizador de Tortas</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2em; background-color: #f4f4f9; }
-        .container { max-width: 800px; margin: auto; }
-        h1, h2 { color: #333; }
-        form { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        input, select, button { display: block; width: 100%; padding: 0.8em; margin-bottom: 1em; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-        button { background-color: #007bff; color: white; font-weight: bold; cursor: pointer; border: none; }
-        button:hover { background-color: #0056b3; }
-        table { margin-top: 2em; border-collapse: collapse; width: 100%; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #ddd; padding: 0.8em; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .nav-link { display: inline-block; margin-top: 1.5em; padding: 10px 15px; background-color: #28a745; color: white; text-decoration: none; font-weight: bold; border-radius: 5px; }
-        .nav-link:hover { background-color: #218838; }
-    </style>
+    <title>Gestión de Materias Primas</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
     <div class="container">
-        <h1>Carga de Materias Primas</h1>
+        <h1>Gestión de Materias Primas</h1>
+        
         <form id="form-materia-prima">
-            <label for="nombre">Nombre:</label>
-            <input type="text" id="nombre" required>
+            <input type="hidden" id="edit-id">
 
-            <label for="precio">Precio:</label>
-            <input type="number" id="precio" step="0.01" required>
+            <div class="form-group">
+                <label for="nombre">Materia Prima:</label>
+                <input type="text" id="nombre" placeholder="Ej: Harina 0000" required>
+            </div>
 
-            <label for="unidad">Unidad de Medida:</label>
-            <select id="unidad" required>
-                <option value="gr">Gramos (gr)</option>
-                <option value="kg">Kilogramos (kg)</option>
-                <option value="ml">Mililitros (ml)</option>
-                <option value="l">Litros (l)</option>
-                <option value="unidad">Unidad</option>
-            </select>
+            <div class="form-group">
+                <label for="precio">Precio de Compra:</label>
+                <input type="number" id="precio" placeholder="Ej: 5000" step="0.01" required>
+            </div>
 
-            <button type="submit">Agregar Materia Prima</button>
+            <div class="form-group">
+                <label for="cantidad">Cantidad Comprada:</label>
+                <input type="number" id="cantidad" placeholder="Ej: 1000" step="any" required>
+            </div>
+
+            <div class="form-group">
+                <label for="unidad">Unidad de Medida:</label>
+                <select id="unidad" required>
+                    <option value="gr">Gramos (gr)</option>
+                    <option value="kg">Kilogramos (kg)</option>
+                    <option value="ml">Mililitros (ml)</option>
+                    <option value="l">Litros (l)</option>
+                    <option value="unidad">Unidad</option>
+                </select>
+            </div>
+            
+            <div class="form-group full-width">
+                <button type="submit" id="btn-guardar">Guardar Materia Prima</button>
+            </div>
         </form>
 
-        <h2>Listado de Materias Primas</h2>
+        <h2>Listado Actual</h2>
         <table id="tabla-materias-primas">
             <thead>
                 <tr>
                     <th>Nombre</th>
-                    <th>Precio</th>
-                    <th>Unidad de Medida</th>
+                    <th>Precio Base</th>
+                    <th>Costo Unitario</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 </tbody>
         </table>
-        <br>
-        <a href="./presupuesto.html" class="nav-link">Ir a Presupuestar Torta &rarr;</a>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 
-    <script>
-        // --- COPIA AQUÍ TU OBJETO firebaseConfig ---
-        const firebaseConfig = {
-            apiKey: "AIzaSy...xxxxxxxxxxxx", // ¡TU PROPIA CLAVE!
-            authDomain: "tu-proyecto.firebaseapp.com",
-            projectId: "tu-proyecto",
-            storageBucket: "tu-proyecto.appspot.com",
-            messagingSenderId: "1234567890",
-            appId: "1:1234567890:web:xxxxxxxxxxxx"
-        };
-        
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const materiasPrimasCollection = db.collection('materiasPrimas');
+    <script src="js/firebase-config.js"></script>
+    <script src="js/app.js"></script>
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('form-materia-prima');
-            const tabla = document.getElementById('tabla-materias-primas').getElementsByTagName('tbody')[0];
-
-            materiasPrimasCollection.orderBy('nombre').onSnapshot(snapshot => {
-                tabla.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const item = doc.data();
-                    let fila = tabla.insertRow();
-                    fila.insertCell(0).innerText = item.nombre;
-                    fila.insertCell(1).innerText = `$${Number(item.precio).toFixed(2)}`;
-                    fila.insertCell(2).innerText = item.unidad;
-                });
-            }, error => {
-                console.error("Error al obtener datos de Firestore: ", error);
-            });
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const nuevaMateria = {
-                    nombre: document.getElementById('nombre').value,
-                    precio: parseFloat(document.getElementById('precio').value),
-                    unidad: document.getElementById('unidad').value
-                };
-                
-                try {
-                    await materiasPrimasCollection.add(nuevaMateria);
-                    form.reset();
-                } catch (error) {
-                    console.error("Error al agregar documento: ", error);
-                }
-            });
-        });
-    </script>
 </body>
 </html>
