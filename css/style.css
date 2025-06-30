@@ -1,8 +1,9 @@
-/* css/style.css (Versión Completa y Unificada) */
+/* css/style.css (Versión Completa y Final - 30/06/2025) */
 
 /* 1. Variables Globales y Reseteo Básico */
 :root {
     --primary-color: #4A90E2; /* Un azul moderno */
+    --success-color: #28a745;
     --background-color: #f7f8fa;
     --card-background: #ffffff;
     --text-color: #333333;
@@ -140,6 +141,12 @@ body {
     background-color: #3a7ac8;
 }
 
+.btn-primary:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+}
+
+
 /* 7. Tabla Limpia */
 .table-clean {
     width: 100%;
@@ -167,7 +174,7 @@ body {
     padding: 0.2rem 0.5rem;
 }
 
-/* 8. Layout de la página de Presupuesto (NUEVO) */
+/* 8. Layout de la página de Presupuesto */
 .presupuesto-layout {
     display: grid;
     grid-template-columns: 1fr; /* Una columna por defecto */
@@ -181,7 +188,7 @@ body {
     }
 }
 
-/* 9. Lista Interactiva de Ingredientes (NUEVO) */
+/* 9. Lista Interactiva de Ingredientes */
 .ingredientes-container {
     max-height: 400px; /* Altura máxima para que no sea muy largo */
     overflow-y: auto; /* Scroll si hay muchos ingredientes */
@@ -236,4 +243,29 @@ body {
     font-size: 1.8rem;
     font-weight: 600;
     color: var(--primary-color);
+}
+
+/* 11. Estilos para la sección de resultado final */
+#mensaje-final {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 1rem;
+    line-height: 1.6;
+    background-color: #fdfdfd;
+    resize: vertical;
+}
+
+#btn-finalizar {
+    margin-top: 1rem; /* Espacio sobre el botón finalizar */
+}
+
+#copiado-feedback {
+    display: inline-block;
+    margin-left: 1rem;
+    color: var(--success-color);
+    font-weight: 500;
+    transition: opacity 0.3s;
 }
