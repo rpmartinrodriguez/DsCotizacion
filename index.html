@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Materias Primas</title>
+    <title>Registro de Compras</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,31 +14,32 @@
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
         <nav class="tabs">
-            <a href="index.html" class="tabs__link active">Materias Primas</a>
+            <a href="index.html" class="tabs__link active">Registrar Compra</a>
             <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
-            <a href="stock.html" class="tabs__link">Stock</a> <a href="historial.html" class="tabs__link">Historial</a>
+            <a href="stock.html" class="tabs__link">Stock</a>
+            <a href="historial.html" class="tabs__link">Historial</a>
         </nav>
         <main>
             <section class="card">
-                <h2 class="card__title">Agregar Materia Prima</h2>
-                <input type="hidden" id="edit-id">
-                <form id="form-materia-prima">
+                <h2 class="card__title">Registrar Nueva Compra de Materia Prima</h2>
+                <form id="form-nueva-compra">
                     <div class="form-modern">
                         <div class="form-group">
-                            <label for="nombre">Nombre del Producto</label>
-                            <input type="text" id="nombre" required>
+                            <label for="nombre-producto">Nombre del Producto</label>
+                            <input type="text" id="nombre-producto" required list="lista-productos-existentes" placeholder="Escribe o selecciona un producto">
+                            <datalist id="lista-productos-existentes"></datalist>
                         </div>
                         <div class="form-group">
-                            <label for="precio">Precio de Compra ($)</label>
-                            <input type="number" id="precio" step="0.01" required>
+                            <label for="precio-compra">Precio de Compra ($)</label>
+                            <input type="number" id="precio-compra" step="0.01" required>
                         </div>
                         <div class="form-group">
-                            <label for="cantidad">Cantidad de Compra</label>
-                            <input type="number" id="cantidad" step="any" required>
+                            <label for="cantidad-compra">Cantidad Comprada</label>
+                            <input type="number" id="cantidad-compra" step="any" required>
                         </div>
                         <div class="form-group">
-                            <label for="unidad">Unidad de Medida</label>
-                            <select id="unidad" required>
+                            <label for="unidad-medida">Unidad de Medida</label>
+                            <select id="unidad-medida" required>
                                 <option value="gr">Gramo (gr)</option>
                                 <option value="kg">Kilogramo (kg)</option>
                                 <option value="l">Litro (l)</option>
@@ -46,41 +47,19 @@
                                 <option value="unidad">Unidad</option>
                             </select>
                         </div>
-                        <div class="form-group" id="stock-inicial-group">
-                            <label for="stock">Stock Inicial</label>
-                            <input type="number" id="stock" step="any" required>
-                        </div>
                     </div>
-                    <button type="submit" id="btn-guardar" class="btn-primary">Guardar Producto</button>
+                    <button type="submit" id="btn-guardar-compra" class="btn-primary">Guardar Compra</button>
                 </form>
-            </section>
-            <section class="card">
-                <h2 class="card__title">Listado de Materias Primas</h2>
-                <table class="table-clean" id="tabla-materias-primas">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Precio Base</th>
-                            <th>Costo Unitario</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="4" style="text-align: center;">Cargando...</td>
-                        </tr>
-                    </tbody>
-                </table>
             </section>
         </main>
     </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupMateriasPrimas } from './js/app.js';
+        import { setupCompras } from './js/compras.js'; // Usaremos un nuevo archivo JS
         try {
             const app = initializeApp(firebaseConfig);
-            setupMateriasPrimas(app);
+            setupCompras(app);
         } catch (error) { console.error(error); }
     </script>
 </body>
