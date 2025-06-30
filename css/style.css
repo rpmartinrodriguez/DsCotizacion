@@ -1,6 +1,9 @@
-/* Estilos Generales */
+/* css/style.css */
+
+/* Estilos Generales y Variables */
 :root {
     --primary-color: #4a69bd;
+    --success-color: #28a745;
     --danger-color: #e55039;
     --warning-color: #f6b93b;
     --light-grey: #f4f4f9;
@@ -25,14 +28,19 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
+h1, h2 {
+    color: var(--dark-grey);
+    border-bottom: 2px solid var(--light-grey);
+    padding-bottom: 0.5em;
+    margin-bottom: 1em;
+}
+
 /* Formularios */
 form {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1em 1.5em;
     margin-bottom: 2em;
-    border-bottom: 2px solid var(--light-grey);
-    padding-bottom: 2em;
 }
 
 .form-group {
@@ -55,6 +63,7 @@ input, select, button {
     border: 1px solid #ccc;
     width: 100%;
     box-sizing: border-box;
+    font-size: 1rem; /* Consistencia en el tamaño de fuente */
 }
 
 button {
@@ -68,15 +77,22 @@ button {
 #btn-guardar {
     background-color: var(--primary-color);
 }
-
 #btn-guardar:hover {
     background-color: #3b5998;
 }
 
-/* Tabla */
+#btn-agregar {
+    background-color: var(--success-color);
+}
+#btn-agregar:hover {
+    background-color: #218838;
+}
+
+/* Tabla de Datos */
 table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 1em;
 }
 
 th, td {
@@ -87,9 +103,10 @@ th, td {
 
 th {
     background-color: #f2f2f2;
+    font-weight: bold;
 }
 
-/* Botones de Acción en la Tabla */
+/* Botones de Acción (Editar/Borrar) */
 .action-buttons button {
     margin-right: 0.5em;
     padding: 0.5em 0.8em;
@@ -102,6 +119,7 @@ th {
 .btn-edit:hover {
     background-color: #e0a800;
 }
+
 .btn-delete {
     background-color: var(--danger-color);
 }
@@ -109,7 +127,20 @@ th {
     background-color: #c82333;
 }
 
-/* Agrega esto al final de tu archivo css/style.css */
+/* Enlaces de Navegación */
+.link-navegacion {
+    display: inline-block;
+    margin-bottom: 2em;
+    padding: 10px 15px;
+    background-color: var(--success-color);
+    color: var(--white);
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 5px;
+}
+.link-navegacion:hover {
+    background-color: #218838;
+}
 
 .link-volver {
     display: inline-block;
@@ -118,14 +149,15 @@ th {
     text-decoration: none;
     font-weight: bold;
 }
-
 .link-volver:hover {
     text-decoration: underline;
 }
 
+/* Estilos Específicos de Presupuesto */
 .total-cost {
     text-align: right;
     margin-top: 1.5em;
     font-size: 1.8em;
-    color: #28a745; /* Un verde para el total */
+    color: var(--success-color);
+    border-bottom: none; /* Quitar el borde inferior para el H2 del total */
 }
