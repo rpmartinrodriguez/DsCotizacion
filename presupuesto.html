@@ -62,7 +62,6 @@
                 <span id="copiado-feedback"></span>
             </section>
         </main>
-
     </div>
 
     <script type="module">
@@ -78,5 +77,21 @@
             console.error("Error al inicializar:", error);
         }
     </script>
+
+    <div id="custom-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">Finalizar Presupuesto</h2>
+            <p>Dale un nombre a tu creación para generar el mensaje final.</p>
+            <div class="form-group">
+                <label for="torta-titulo-input">Nombre de la Torta</label>
+                <input type="text" id="torta-titulo-input" placeholder="Ej: Torta Chocotorta Premium">
+            </div>
+            <div class="modal-actions">
+                <button id="modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="modal-btn-confirmar" class="btn-primary">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
