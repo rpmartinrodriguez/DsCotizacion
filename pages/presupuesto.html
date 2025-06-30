@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presupuesto de Torta - Cotizador</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2em; background-color: #f4f4f9; }
+        h1, h2 { color: #333; }
+        form { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        select, input, button { display: block; width: 100%; padding: 0.8em; margin-bottom: 1em; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #28a745; color: white; font-weight: bold; cursor: pointer; border: none; }
+        button:hover { background-color: #218838; }
+        table { margin-top: 2em; border-collapse: collapse; width: 100%; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #ddd; padding: 0.8em; text-align: left; }
+        th { background-color: #f2f2f2; }
+        h2 span { color: #28a745; font-weight: bold; }
+        a { display: inline-block; margin-top: 1em; color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <h1>Presupuesto de Torta</h1>
+    <form id="form-presupuesto">
+        <label for="selector-materia-prima">Seleccionar Materia Prima:</label>
+        <select id="selector-materia-prima" required>
+            <option value="" disabled selected>Cargando ingredientes...</option>
+        </select>
+
+        <label for="cantidad">Cantidad (en la unidad del ingrediente):</label>
+        <input type="number" id="cantidad" step="any" required>
+
+        <button type="submit">Agregar al Presupuesto</button>
+    </form>
+
+    <h2>Detalle del Presupuesto</h2>
+    <table id="tabla-presupuesto">
+        <thead>
+            <tr>
+                <th>Ingrediente</th>
+                <th>Cantidad</th>
+                <th>Costo</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Costo Total: <span id="costo-total">$0.00</span></h2>
+    <br>
+    <a href="index.html">&larr; Volver a Carga de Materias Primas</a>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+
+    <script>
+        // --- COPIA AQUÍ EL MISMO OBJETO firebaseConfig QUE USASTE EN INDEX.HTML ---
+        const firebaseConfig = {
+            apiKey: "AIzaSy...xxxxxxxxxxxx", // ¡TU PROPIA CLAVE!
+            authDomain: "tu-proyecto.firebaseapp.com",
+            projectId: "tu-proyecto",
+            storageBucket: "tu-proyecto.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:xxxxxxxxxxxx"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const materiasPrimasCollection = db.collection('materiasPrimas');
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const selector = document.getElementById('selector-materia-prima');
+            const form = document.getElementById('form-presupuesto');
+            const tablaPresupuesto = document.getElementById('tabla-presupuesto').getElementsByTagName('tbody')[0];
+            const costoTotalSpan = document.getElementById('costo-total');
+            
+            let materiasPrimas = []; // Array local para almacenar los datos leídos
+            let presupuestoActual = [];
+
+            // Cargar las materias primas desde Firestore
+            materiasPrimasCollection.orderBy('nombre').get().then(snapshot => {
+                selector.innerHTML = '<option value="" disabled selected>-- Elige un ingrediente --</option>';
+                snapshot.forEach(doc => {
+                    const item = { id: doc.id, ...doc.data() };
+                    materiasPrimas.push(item);
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.nombre} ($${Number(item.precio).toFixed(2)} por ${item.unidad})`;
+                    selector.appendChild(option);
+                });
+            }).catch(error => {
+                console.error("Error al cargar materias primas: ", error);
+                selector.innerHTML = '<option disabled>Error al cargar datos</option>';
+            });
+
+            const calcularYRenderizarPresupuesto = () => {
+                tablaPresupuesto.innerHTML = '';
+                let total = 0;
+                presupuestoActual.forEach(item => {
+                    let fila = tablaPresupuesto.insertRow();
+                    fila.insertCell(0).innerText = item.nombre;
+                    fila.insertCell(1).innerText = `${item.cantidad} ${item.unidad}`;
+                    fila.insertCell(2).innerText = `$${item.costo.toFixed(2)}`;
+                    total += item.costo;
+                });
+                costoTotalSpan.innerText = `$${total.toFixed(2)}`;
+            };
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const materiaPrimaId = selector.value;
+                if (!materiaPrimaId) return;
+
+                const materiaPrimaSeleccionada = materiasPrimas.find(item => item.id === materiaPrimaId);
+                const cantidad = parseFloat(document.getElementById('cantidad').value);
+                
+                if (isNaN(cantidad) || cantidad <= 0) {
+                    alert('Por favor, ingresa una cantidad válida.');
+                    return;
+                }
+
+                const costoIngrediente = materiaPrimaSeleccionada.precio * cantidad;
+                
+                presupuestoActual.push({
+                    nombre: materiaPrimaSeleccionada.nombre,
+                    cantidad: cantidad,
+                    unidad: materiaPrimaSeleccionada.unidad,
+                    costo: costoIngrediente
+                });
+
+                calcularYRenderizarPresupuesto();
+                form.reset();
+                selector.value = "";
+            });
+        });
+    </script>
+</body>
+</html>
