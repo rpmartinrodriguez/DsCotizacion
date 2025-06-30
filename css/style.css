@@ -108,3 +108,24 @@ th {
 .btn-delete:hover {
     background-color: #c82333;
 }
+
+/* Agrega esto al final de tu archivo css/style.css */
+
+.link-volver {
+    display: inline-block;
+    margin-bottom: 2em;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.link-volver:hover {
+    text-decoration: underline;
+}
+
+.total-cost {
+    text-align: right;
+    margin-top: 1.5em;
+    font-size: 1.8em;
+    color: #28a745; /* Un verde para el total */
+}
