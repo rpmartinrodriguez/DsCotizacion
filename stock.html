@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Stock</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <div class="header__logo">🎂</div>
+            <h1 class="header__title">Cotizador de Tortas</h1>
+            <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
+        </header>
+
+        <nav class="tabs">
+            <a href="index.html" class="tabs__link">Materias Primas</a>
+            <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="stock.html" class="tabs__link active">Stock</a>
+            <a href="historial.html" class="tabs__link">Historial</a>
+        </nav>
+
+        <main>
+            <section class="card">
+                <h2 class="card__title">Inventario de Materias Primas</h2>
+                <table class="table-clean" id="tabla-stock">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Stock Actual</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="3" style="text-align: center;">Cargando stock...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupStock } from './js/stock.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupStock(app);
+        } catch (error) { console.error(error); }
+    </script>
+</body>
+</html>
