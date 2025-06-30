@@ -1,8 +1,8 @@
-/* css/style.css (Versión Completa y Final - 30/06/2025) */
+/* css/style.css (Versión con tema Rosa Viejo) */
 
 /* 1. Variables Globales y Reseteo Básico */
 :root {
-    --primary-color: #4A90E2; /* Un azul moderno */
+    --primary-color: #C08081; /* Tono Rosa Viejo */
     --success-color: #28a745;
     --danger-color: #e55039;
     --background-color: #f7f8fa;
@@ -122,7 +122,7 @@ body {
 .form-group input:focus, .form-group select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    box-shadow: 0 0 0 3px rgba(192, 128, 129, 0.2); /* Sombra ajustada al nuevo color */
 }
 
 .btn-primary {
@@ -139,7 +139,7 @@ body {
 }
 
 .btn-primary:hover {
-    background-color: #3a7ac8;
+    background-color: #a96869; /* Un tono Rosa Viejo más oscuro */
 }
 
 .btn-primary:disabled {
