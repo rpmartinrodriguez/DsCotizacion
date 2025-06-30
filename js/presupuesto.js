@@ -1,4 +1,4 @@
-// js/presupuesto.js
+// js/presupuesto.js (Versión final con modal personalizado)
 
 import { 
     getFirestore, collection, getDocs, query, orderBy 
@@ -8,7 +8,7 @@ export function setupPresupuesto(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
 
-    // --- REFERENCIAS A ELEMENTOS DEL DOM (Nuevos elementos agregados) ---
+    // --- REFERENCIAS A ELEMENTOS DEL DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
     const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
     const costoTotalSpan = document.getElementById('costo-total');
@@ -17,17 +17,18 @@ export function setupPresupuesto(app) {
     const mensajeFinalTextarea = document.getElementById('mensaje-final');
     const btnCopiar = document.getElementById('btn-copiar');
     const copiadoFeedback = document.getElementById('copiado-feedback');
-    
-    // --- LÓGICA PRINCIPAL ---
+    const modalOverlay = document.getElementById('custom-modal-overlay');
+    const tortaTituloInput = document.getElementById('torta-titulo-input');
+    const modalBtnConfirmar = document.getElementById('modal-btn-confirmar');
+    const modalBtnCancelar = document.getElementById('modal-btn-cancelar');
+
     const actualizarPresupuesto = () => {
         let presupuestoActual = [];
         let costoTotal = 0;
         const todosLosInputs = ingredientesContainer.querySelectorAll('.ingrediente-item');
-
         todosLosInputs.forEach(itemDiv => {
             const checkbox = itemDiv.querySelector('input[type="checkbox"]');
             const cantidadInput = itemDiv.querySelector('input[type="number"]');
-
             if (checkbox.checked) {
                 cantidadInput.disabled = false;
                 const cantidad = parseFloat(cantidadInput.value) || 0;
@@ -49,7 +50,7 @@ export function setupPresupuesto(app) {
         });
         renderizarResumen(presupuestoActual, costoTotal);
     };
-    
+
     const renderizarResumen = (presupuesto, total) => {
         tablaPresupuestoBody.innerHTML = '';
         if (presupuesto.length === 0) {
@@ -66,12 +67,10 @@ export function setupPresupuesto(app) {
             });
         }
         costoTotalSpan.textContent = `$${total.toFixed(2)}`;
-        // Habilitar o deshabilitar el botón "Finalizar"
         btnFinalizar.disabled = total <= 0;
     };
 
     const cargarMateriasPrimas = async () => {
-        // ... (esta función se mantiene igual que antes)
         const q = query(materiasPrimasCollection, orderBy('nombre'));
         const snapshot = await getDocs(q);
         ingredientesContainer.innerHTML = '';
@@ -95,13 +94,53 @@ export function setupPresupuesto(app) {
         ingredientesContainer.addEventListener('input', actualizarPresupuesto);
     };
 
-    // --- NUEVOS EVENT LISTENERS ---
+    const showTitlePrompt = () => {
+        return new Promise((resolve, reject) => {
+            modalOverlay.classList.add('visible');
+            tortaTituloInput.focus();
+            tortaTituloInput.value = '';
 
-    // 1. Al hacer clic en "Finalizar Presupuesto"
-    btnFinalizar.addEventListener('click', () => {
-        const tituloTorta = prompt("Por favor, ingresa un nombre o título para esta torta:", "Torta Personalizada");
+            const closeModal = () => {
+                modalOverlay.classList.remove('visible');
+                modalBtnConfirmar.onclick = null;
+                modalBtnCancelar.onclick = null;
+                modalOverlay.onclick = null;
+                document.onkeydown = null;
+            };
 
-        if (tituloTorta) { // Si el usuario no cancela el prompt
+            modalBtnConfirmar.onclick = () => {
+                if (tortaTituloInput.value.trim() === '') {
+                    alert('Por favor, ingresa un nombre para la torta.');
+                    return;
+                }
+                resolve(tortaTituloInput.value.trim());
+                closeModal();
+            };
+
+            modalBtnCancelar.onclick = () => {
+                reject();
+                closeModal();
+            };
+            
+            modalOverlay.onclick = (e) => {
+                if (e.target === modalOverlay) {
+                    reject();
+                    closeModal();
+                }
+            };
+
+            document.onkeydown = (e) => {
+                if (e.key === 'Escape') {
+                    reject();
+                    closeModal();
+                }
+            };
+        });
+    };
+
+    btnFinalizar.addEventListener('click', async () => {
+        try {
+            const tituloTorta = await showTitlePrompt();
             const precioFinal = costoTotalSpan.textContent;
             const detalle = `${tituloTorta}`;
 
@@ -117,16 +156,18 @@ Dulce Sal — Horneando tus mejores momentos 🍰`;
             mensajeFinalTextarea.value = mensajeGenerado;
             resultadoFinalContainer.style.display = 'block';
             resultadoFinalContainer.scrollIntoView({ behavior: 'smooth' });
+
+        } catch (error) {
+            console.log("El usuario canceló la acción.");
         }
     });
 
-    // 2. Al hacer clic en "Copiar Mensaje"
     btnCopiar.addEventListener('click', () => {
         navigator.clipboard.writeText(mensajeFinalTextarea.value).then(() => {
             copiadoFeedback.textContent = '¡Copiado al portapapeles!';
             setTimeout(() => {
                 copiadoFeedback.textContent = '';
-            }, 2000); // El mensaje desaparece después de 2 segundos
+            }, 2000);
         }).catch(err => {
             console.error('Error al copiar el texto: ', err);
             alert("No se pudo copiar el texto.");
