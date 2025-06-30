@@ -7,21 +7,17 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
     <div class="main-container">
-
         <header class="header">
             <div class="header__logo">🎂</div>
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
-
         <nav class="tabs">
             <a href="index.html" class="tabs__link active">Materias Primas</a>
-            <a href="presupuesto.html" class="tabs__link">Presupuesto de Tortas</a>
-            <a href="historial.html" class="tabs__link">Historial</a>
+            <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="stock.html" class="tabs__link">Stock</a> <a href="historial.html" class="tabs__link">Historial</a>
         </nav>
-
         <main>
             <section class="card">
                 <h2 class="card__title">Agregar Materia Prima</h2>
@@ -36,12 +32,10 @@
                             <label for="precio">Precio de Compra ($)</label>
                             <input type="number" id="precio" step="0.01" required>
                         </div>
-                        
                         <div class="form-group">
                             <label for="cantidad">Cantidad de Compra</label>
                             <input type="number" id="cantidad" step="any" required>
                         </div>
-
                         <div class="form-group">
                             <label for="unidad">Unidad de Medida</label>
                             <select id="unidad" required>
@@ -52,11 +46,14 @@
                                 <option value="unidad">Unidad</option>
                             </select>
                         </div>
+                        <div class="form-group" id="stock-inicial-group">
+                            <label for="stock">Stock Inicial</label>
+                            <input type="number" id="stock" step="any" required>
+                        </div>
                     </div>
                     <button type="submit" id="btn-guardar" class="btn-primary">Guardar Producto</button>
                 </form>
             </section>
-
             <section class="card">
                 <h2 class="card__title">Listado de Materias Primas</h2>
                 <table class="table-clean" id="tabla-materias-primas">
@@ -70,27 +67,21 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="4" style="text-align: center;">Cargando materias primas...</td>
+                            <td colspan="4" style="text-align: center;">Cargando...</td>
                         </tr>
                     </tbody>
                 </table>
             </section>
         </main>
-
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupMateriasPrimas } from './js/app.js';
-
         try {
             const app = initializeApp(firebaseConfig);
             setupMateriasPrimas(app);
-            console.log("Firebase y App de Materias Primas inicializadas.");
-        } catch (error) {
-            console.error("Error al inicializar:", error);
-        }
+        } catch (error) { console.error(error); }
     </script>
 </body>
 </html>
