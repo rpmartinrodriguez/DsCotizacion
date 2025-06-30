@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Presupuestos</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <div class="header__logo">🎂</div>
+            <h1 class="header__title">Cotizador de Tortas</h1>
+            <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
+        </header>
+
+        <nav class="tabs">
+            <a href="index.html" class="tabs__link">Materias Primas</a>
+            <a href="presupuesto.html" class="tabs__link">Presupuesto de Tortas</a>
+            <a href="historial.html" class="tabs__link active">Historial</a>
+        </nav>
+
+        <main>
+            <section class="card">
+                <h2 class="card__title">Presupuestos Guardados</h2>
+                <div id="historial-container">
+                    <p>Cargando historial...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupHistorial } from './js/historial.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupHistorial(app);
+        } catch (error) {
+            console.error("Error al inicializar:", error);
+        }
+    </script>
+</body>
+</html>
