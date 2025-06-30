@@ -4,6 +4,7 @@
 :root {
     --primary-color: #4A90E2; /* Un azul moderno */
     --success-color: #28a745;
+    --danger-color: #e55039;
     --background-color: #f7f8fa;
     --card-background: #ffffff;
     --text-color: #333333;
@@ -381,8 +382,14 @@ body {
     list-style: disc;
 }
 
-.btn-ver-detalle {
+/* 14. Estilos para Acciones del Historial */
+.historial-card__actions {
     margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-ver-detalle {
     background: none;
     border: 1px solid var(--border-color);
     color: var(--primary-color);
@@ -390,4 +397,20 @@ body {
     border-radius: 5px;
     cursor: pointer;
     font-weight: 500;
+}
+
+.btn-borrar-presupuesto {
+    background: none;
+    border: 1px solid var(--danger-color);
+    color: var(--danger-color);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-borrar-presupuesto:hover {
+    background-color: var(--danger-color);
+    color: white;
 }
