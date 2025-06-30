@@ -1,103 +1,111 @@
 // js/presupuesto.js
 
-// 1. Importar funciones de Firebase y la configuración local
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js";
 import { 
     getFirestore, collection, getDocs, query, orderBy 
-} from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
-import { firebaseConfig } from './firebase-config.js';
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// 2. Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const materiasPrimasCollection = collection(db, 'materiasPrimas');
+export function setupPresupuesto(app) {
+    const db = getFirestore(app);
+    const materiasPrimasCollection = collection(db, 'materiasPrimas');
 
-// --- REFERENCIAS A ELEMENTOS DEL DOM ---
-const form = document.getElementById('form-presupuesto');
-const selector = document.getElementById('selector-materia-prima');
-const cantidadInput = document.getElementById('cantidad-necesaria');
-const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
-const costoTotalSpan = document.getElementById('costo-total');
-const agregarBtn = document.getElementById('btn-agregar');
+    // --- REFERENCIAS A ELEMENTOS DEL DOM ---
+    const ingredientesContainer = document.getElementById('lista-ingredientes');
+    const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
+    const costoTotalSpan = document.getElementById('costo-total');
+    
+    let materiasPrimasDisponibles = [];
 
-let materiasPrimasDisponibles = [];
-let presupuestoActual = [];
+    // --- FUNCIÓN PRINCIPAL DE CÁLCULO ---
+    const actualizarPresupuesto = () => {
+        let presupuestoActual = [];
+        let costoTotal = 0;
 
-// --- LÓGICA PRINCIPAL ---
+        // Recorremos todos los inputs de la lista de ingredientes
+        const todosLosInputs = ingredientesContainer.querySelectorAll('.ingrediente-item');
 
-document.addEventListener('DOMContentLoaded', async () => {
-    agregarBtn.textContent = 'Cargando...';
-    agregarBtn.disabled = true;
+        todosLosInputs.forEach(itemDiv => {
+            const checkbox = itemDiv.querySelector('input[type="checkbox"]');
+            const cantidadInput = itemDiv.querySelector('input[type="number"]');
 
-    try {
+            if (checkbox.checked) {
+                cantidadInput.disabled = false; // Habilitar input de cantidad
+
+                const cantidad = parseFloat(cantidadInput.value) || 0;
+                const precioUnitario = parseFloat(checkbox.dataset.precioUnitario);
+                const costo = cantidad * precioUnitario;
+
+                if (cantidad > 0) {
+                    presupuestoActual.push({
+                        nombre: checkbox.dataset.nombre,
+                        cantidad: cantidad,
+                        unidad: checkbox.dataset.unidad,
+                        costo: costo,
+                    });
+                    costoTotal += costo;
+                }
+            } else {
+                cantidadInput.disabled = true; // Deshabilitar si no está chequeado
+                cantidadInput.value = '';
+            }
+        });
+
+        renderizarResumen(presupuestoActual, costoTotal);
+    };
+    
+    // --- FUNCIÓN PARA RENDERIZAR EL RESUMEN ---
+    const renderizarResumen = (presupuesto, total) => {
+        tablaPresupuestoBody.innerHTML = '';
+
+        if (presupuesto.length === 0) {
+            tablaPresupuestoBody.innerHTML = `<tr><td colspan="3" style="text-align: center;">Selecciona ingredientes para ver el resumen.</td></tr>`;
+        } else {
+            presupuesto.forEach(item => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${item.nombre}</td>
+                    <td>${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</td>
+                    <td>$${item.costo.toFixed(2)}</td>
+                `;
+                tablaPresupuestoBody.appendChild(fila);
+            });
+        }
+        costoTotalSpan.textContent = `$${total.toFixed(2)}`;
+    };
+
+
+    // --- CARGA INICIAL DE DATOS ---
+    const cargarMateriasPrimas = async () => {
         const q = query(materiasPrimasCollection, orderBy('nombre'));
         const snapshot = await getDocs(q);
         
+        ingredientesContainer.innerHTML = ''; // Limpiar el "cargando..."
+
         snapshot.forEach(doc => {
             const data = doc.data();
             const precioPorUnidad = data.precio / data.cantidad;
-            materiasPrimasDisponibles.push({
-                id: doc.id,
-                nombre: data.nombre,
-                unidad: data.unidad,
-                precioPorUnidad: precioPorUnidad
-            });
+
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('ingrediente-item');
+            itemDiv.innerHTML = `
+                <div class="ingrediente-info">
+                    <input type="checkbox" 
+                           id="${doc.id}" 
+                           data-precio-unitario="${precioPorUnidad}"
+                           data-nombre="${data.nombre}"
+                           data-unidad="${data.unidad}">
+                    <label for="${doc.id}">${data.nombre} (${data.unidad})</label>
+                </div>
+                <div class="ingrediente-cantidad">
+                    <input type="number" min="0" step="any" placeholder="Cant." disabled>
+                </div>
+            `;
+            ingredientesContainer.appendChild(itemDiv);
         });
 
-        selector.innerHTML = '<option value="" disabled selected>-- Elige un ingrediente --</option>';
-        materiasPrimasDisponibles.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item.id;
-            option.textContent = `${item.nombre} (${item.unidad})`;
-            selector.appendChild(option);
-        });
+        // Añadimos un único listener al contenedor para manejar todos los cambios
+        ingredientesContainer.addEventListener('change', actualizarPresupuesto);
+        ingredientesContainer.addEventListener('input', actualizarPresupuesto);
+    };
 
-    } catch (error) {
-        console.error("Error al cargar materias primas: ", error);
-        selector.innerHTML = '<option disabled>Error al cargar datos</option>';
-    } finally {
-        agregarBtn.textContent = 'Agregar al Presupuesto';
-        agregarBtn.disabled = false;
-    }
-});
-
-form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const selectedId = selector.value;
-    const cantidadNecesaria = parseFloat(cantidadInput.value);
-
-    if (!selectedId || isNaN(cantidadNecesaria) || cantidadNecesaria <= 0) {
-        alert('Por favor, selecciona un ingrediente y una cantidad válida.');
-        return;
-    }
-
-    const ingredienteSeleccionado = materiasPrimasDisponibles.find(item => item.id === selectedId);
-    const costoIngrediente = ingredienteSeleccionado.precioPorUnidad * cantidadNecesaria;
-
-    presupuestoActual.push({
-        nombre: ingredienteSeleccionado.nombre,
-        cantidad: cantidadNecesaria,
-        unidad: ingredienteSeleccionado.unidad,
-        costo: costoIngrediente
-    });
-
-    renderizarPresupuesto();
-    form.reset();
-    selector.focus();
-});
-
-function renderizarPresupuesto() {
-    tablaPresupuestoBody.innerHTML = '';
-    let total = 0;
-    presupuestoActual.forEach(item => {
-        const fila = document.createElement('tr');
-        fila.innerHTML = `
-            <td>${item.nombre}</td>
-            <td>${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</td>
-            <td>$${item.costo.toFixed(2)}</td>
-        `;
-        tablaPresupuestoBody.appendChild(fila);
-        total += item.costo;
-    });
-    costoTotalSpan.textContent = `$${total.toFixed(2)}`;
+    cargarMateriasPrimas().catch(console.error);
 }
