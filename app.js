@@ -31,15 +31,23 @@ let userId = null;
 let materialsCache = []; // Un caché local para no tener que consultar el DOM constantemente.
 let rawMaterialsCollectionRef = null; // Referencia a la colección de Firestore.
 
-// --- Inicialización de Firebase ---
-// ¡IMPORTANTE! Cuando despliegues tu proyecto, reemplaza estas líneas
-// con el objeto de configuración de tu propio proyecto de Firebase.
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'cotizador-tortas-default';
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyA33nr4_j2kMIeDJ-fyRqKLkUw9AToRnnM",
+  authDomain: "dscotizacion.firebaseapp.com",
+  projectId: "dscotizacion",
+  storageBucket: "dscotizacion.firebasestorage.app",
+  messagingSenderId: "103917274080",
+  appId: "1:103917274080:web:478f18b226473a70202185"
+};
+
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
 
 // =================================================================================
 // 3. MANEJO DE LA INTERFAZ (PESTAÑAS)
