@@ -1,11 +1,14 @@
-/* css/style.css (Versión con tema Rosa Viejo) */
+/* css/style.css (Versión con tema Rosa) */
 
 /* 1. Variables Globales y Reseteo Básico */
 :root {
-    --primary-color: #C08081; /* Tono Rosa Viejo */
+    --primary-color: #ff96c5; /* Tono Rosa Principal */
+    --primary-color-hover: #e686b2; /* Un tono más oscuro para hover */
+    --secondary-button-hover-bg: #ffc0dc; /* Tono Rosa Claro para hover secundario */
+    --background-color: #fff5f9; /* Fondo Rosa muy pálido */
+    
     --success-color: #28a745;
     --danger-color: #e55039;
-    --background-color: #f7f8fa;
     --card-background: #ffffff;
     --text-color: #333333;
     --text-light: #888888;
@@ -122,7 +125,7 @@ body {
 .form-group input:focus, .form-group select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(192, 128, 129, 0.2); /* Sombra ajustada al nuevo color */
+    box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3); /* Sombra ajustada al nuevo color */
 }
 
 .btn-primary {
@@ -139,7 +142,7 @@ body {
 }
 
 .btn-primary:hover {
-    background-color: #a96869; /* Un tono Rosa Viejo más oscuro */
+    background-color: var(--primary-color-hover);
 }
 
 .btn-primary:disabled {
@@ -216,6 +219,7 @@ body {
     width: 1.25em;
     height: 1.25em;
     cursor: pointer;
+    accent-color: var(--primary-color); /* Colorea el checkbox */
 }
 
 .ingrediente-info label {
@@ -321,7 +325,7 @@ body {
 }
 
 .btn-secondary:hover {
-    background-color: var(--light-grey);
+    background-color: var(--secondary-button-hover-bg);
     color: var(--text-color);
 }
 
