@@ -1,4 +1,4 @@
-/* css/style.css (Versión con tema Rosa) */
+/* css/style.css (Versión Completa y Final - 30/06/2025) */
 
 /* 1. Variables Globales y Reseteo Básico */
 :root {
@@ -415,6 +415,41 @@ body {
 }
 
 .btn-borrar-presupuesto:hover {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* 15. Estilos para la página de Stock */
+.stock-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.stock-actions button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.stock-actions button.add {
+    color: var(--success-color);
+    background: none;
+}
+.stock-actions button.add:hover {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.stock-actions button.subtract {
+    color: var(--danger-color);
+    background: none;
+}
+.stock-actions button.subtract:hover {
     background-color: var(--danger-color);
     color: white;
 }
