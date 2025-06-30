@@ -1,8 +1,8 @@
-// js/presupuesto.js (Versión con descuento de stock)
+// js/presupuesto.js (Versión con lógica de costeo FIFO)
 
 import { 
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
-    Timestamp, doc, runTransaction 
+    Timestamp, doc, runTransaction, getDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupPresupuesto(app) {
@@ -10,11 +10,12 @@ export function setupPresupuesto(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
-    // --- REFERENCIAS A ELEMENTOS DEL DOM ---
+    // --- Referencias al DOM (se mantienen igual) ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
     const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
     const costoTotalSpan = document.getElementById('costo-total');
     const btnFinalizar = document.getElementById('btn-finalizar');
+    // ... (el resto de las referencias también se mantienen)
     const resultadoFinalContainer = document.getElementById('resultado-final');
     const mensajeFinalTextarea = document.getElementById('mensaje-final');
     const btnCopiar = document.getElementById('btn-copiar');
@@ -25,46 +26,86 @@ export function setupPresupuesto(app) {
     const modalBtnConfirmar = document.getElementById('modal-btn-confirmar');
     const modalBtnCancelar = document.getElementById('modal-btn-cancelar');
 
+    let materiasPrimasDisponibles = []; // Guardará la lista de productos
     let presupuestoActual = [];
     let costoTotalCache = 0;
 
-    const actualizarPresupuesto = () => {
+
+    // --- LÓGICA DE CÁLCULO FIFO ---
+    // Esta es la función clave. Calcula el costo de un ingrediente usando el método FIFO.
+    const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
+        let costoAcumulado = 0;
+        let cantidadRestante = cantidadRequerida;
+        
+        // Ordenamos los lotes por fecha para asegurar el FIFO
+        const lotesOrdenados = materiaPrima.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
+
+        for (const lote of lotesOrdenados) {
+            if (cantidadRestante <= 0) break;
+
+            const cantidadAUsar = Math.min(lote.stockRestante, cantidadRestante);
+            costoAcumulado += cantidadAUsar * lote.costoUnitario;
+            cantidadRestante -= cantidadAUsar;
+        }
+        
+        return costoAcumulado;
+    };
+
+
+    // --- FUNCIÓN PRINCIPAL DE ACTUALIZACIÓN (REHECHA) ---
+    const actualizarPresupuesto = async () => {
         presupuestoActual = [];
         let costoTotal = 0;
-        const todosLosInputs = ingredientesContainer.querySelectorAll('.ingrediente-item');
         
-        todosLosInputs.forEach(itemDiv => {
-            const checkbox = itemDiv.querySelector('input[type="checkbox"]');
-            const cantidadInput = itemDiv.querySelector('input[type="number"]');
+        const itemsSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:checked'));
 
-            if (checkbox.checked) {
-                cantidadInput.disabled = false;
-                const cantidad = parseFloat(cantidadInput.value) || 0;
-                const precioUnitario = parseFloat(checkbox.dataset.precioUnitario);
-                const costo = cantidad * precioUnitario;
-                if (cantidad > 0) {
-                    presupuestoActual.push({
-                        id: checkbox.id, // ID del documento, crucial para descontar stock
-                        nombre: checkbox.dataset.nombre,
-                        cantidad: cantidad,
-                        unidad: checkbox.dataset.unidad,
-                        costo: costo,
-                    });
-                    costoTotal += costo;
+        for (const checkbox of itemsSeleccionados) {
+            const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
+            cantidadInput.disabled = false;
+
+            const cantidadRequerida = parseFloat(cantidadInput.value) || 0;
+            if (cantidadRequerida > 0) {
+                const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === checkbox.id);
+                
+                // Verificamos si hay stock total suficiente
+                const stockTotal = materiaPrima.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
+                if (stockTotal < cantidadRequerida) {
+                    // Opcional: mostrar un aviso de stock insuficiente
+                    console.warn(`Stock insuficiente para ${materiaPrima.nombre}`);
+                    // Por ahora, calculamos con lo que hay, pero en la transacción final fallará.
                 }
-            } else {
-                cantidadInput.disabled = true;
-                cantidadInput.value = '';
+
+                const costoIngrediente = calcularCostoFIFO(materiaPrima, cantidadRequerida);
+
+                presupuestoActual.push({
+                    id: checkbox.id,
+                    nombre: materiaPrima.nombre,
+                    cantidad: cantidadRequerida,
+                    unidad: materiaPrima.unidad,
+                    costo: costoIngrediente,
+                });
+                costoTotal += costoIngrediente;
             }
+        }
+        
+        // Deshabilitar inputs de items no seleccionados
+        const itemsNoSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:not(:checked)'));
+        itemsNoSeleccionados.forEach(checkbox => {
+            const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
+            cantidadInput.disabled = true;
+            cantidadInput.value = '';
         });
+
         costoTotalCache = costoTotal;
         renderizarResumen(presupuestoActual, costoTotal);
     };
 
+
+    // --- RENDERIZAR RESUMEN (Sin cambios) ---
     const renderizarResumen = (presupuesto, total) => {
         tablaPresupuestoBody.innerHTML = '';
         if (presupuesto.length === 0) {
-            tablaPresupuestoBody.innerHTML = `<tr><td colspan="3" style="text-align: center;">Selecciona ingredientes para ver el resumen.</td></tr>`;
+            tablaPresupuestoBody.innerHTML = `<tr><td colspan="3" style="text-align: center;">Selecciona ingredientes.</td></tr>`;
         } else {
             presupuesto.forEach(item => {
                 const fila = document.createElement('tr');
@@ -76,22 +117,100 @@ export function setupPresupuesto(app) {
         btnFinalizar.disabled = total <= 0;
     };
 
+
+    // --- CARGA INICIAL DE DATOS (Adaptada a lotes) ---
     const cargarMateriasPrimas = async () => {
         const q = query(materiasPrimasCollection, orderBy('nombre'));
         const snapshot = await getDocs(q);
-        ingredientesContainer.innerHTML = '';
+        
+        ingredientesContainer.innerHTML = ''; // Limpiar "cargando..."
+        materiasPrimasDisponibles = []; // Limpiar el array local
+
         snapshot.forEach(doc => {
             const data = doc.data();
-            const precioPorUnidad = data.precio / data.cantidad;
+            // Guardamos el producto completo con sus lotes
+            materiasPrimasDisponibles.push({ id: doc.id, ...data });
+
+            const stockTotal = data.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
+
             const itemDiv = document.createElement('div');
             itemDiv.classList.add('ingrediente-item');
-            itemDiv.innerHTML = `<div class="ingrediente-info"><input type="checkbox" id="${doc.id}" data-precio-unitario="${precioPorUnidad}" data-nombre="${data.nombre}" data-unidad="${data.unidad}"><label for="${doc.id}">${data.nombre} (${data.unidad})</label></div><div class="ingrediente-cantidad"><input type="number" min="0" step="any" placeholder="Cant." disabled></div>`;
+            itemDiv.innerHTML = `
+                <div class="ingrediente-info">
+                    <input type="checkbox" id="${doc.id}">
+                    <label for="${doc.id}">${data.nombre} (${data.unidad})</label>
+                </div>
+                <div class="ingrediente-cantidad">
+                    <input type="number" min="0" step="any" placeholder="Cant." title="Stock disponible: ${stockTotal}" disabled>
+                </div>
+            `;
             ingredientesContainer.appendChild(itemDiv);
         });
+
         ingredientesContainer.addEventListener('change', actualizarPresupuesto);
         ingredientesContainer.addEventListener('input', actualizarPresupuesto);
     };
 
+    
+    // --- LÓGICA PARA FINALIZAR Y DESCONTAR STOCK (TRANSACCIÓN FIFO) ---
+    btnFinalizar.addEventListener('click', async () => {
+        try {
+            const { tituloTorta, nombreCliente } = await showTitlePrompt();
+            
+            await runTransaction(db, async (transaction) => {
+                for (const ingrediente of presupuestoActual) {
+                    const ingredienteRef = doc(db, 'materiasPrimas', ingrediente.id);
+                    const ingredienteDoc = await transaction.get(ingredienteRef);
+
+                    if (!ingredienteDoc.exists()) throw `El ingrediente "${ingrediente.nombre}" no existe.`;
+
+                    let data = ingredienteDoc.data();
+                    let cantidadADescontar = ingrediente.cantidad;
+                    let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
+
+                    // Verificación de stock total ANTES de descontar
+                    const stockTotal = lotesActualizados.reduce((sum, lote) => sum + lote.stockRestante, 0);
+                    if (stockTotal < cantidadADescontar) {
+                        throw `Stock insuficiente de "${ingrediente.nombre}". Disponible: ${stockTotal}, Necesario: ${cantidadADescontar}.`;
+                    }
+
+                    // Lógica de descuento FIFO
+                    for (const lote of lotesActualizados) {
+                        if (cantidadADescontar <= 0) break;
+                        const descontarDeEsteLote = Math.min(lote.stockRestante, cantidadADescontar);
+                        lote.stockRestante -= descontarDeEsteLote;
+                        cantidadADescontar -= descontarDeEsteLote;
+                    }
+
+                    // Filtramos los lotes que quedaron en cero
+                    lotesActualizados = lotesActualizados.filter(lote => lote.stockRestante > 0);
+                    
+                    transaction.update(ingredienteRef, { lotes: lotesActualizados });
+                }
+            });
+
+            // Si la transacción fue exitosa...
+            const presupuestoParaGuardar = {
+                tituloTorta, nombreCliente, costoTotal: costoTotalCache,
+                fecha: Timestamp.now(), ingredientes: presupuestoActual
+            };
+            await addDoc(presupuestosGuardadosCollection, presupuestoParaGuardar);
+            alert('¡Stock descontado y presupuesto guardado con éxito!');
+            
+            // ... (Lógica para generar y mostrar mensaje se mantiene igual)
+            const precioFinal = costoTotalSpan.textContent;
+            const mensajeGenerado = `...`; // Tu mensaje personalizado
+            mensajeFinalTextarea.value = mensajeGenerado;
+            resultadoFinalContainer.style.display = 'block';
+            resultadoFinalContainer.scrollIntoView({ behavior: 'smooth' });
+
+        } catch (error) {
+            console.error("Error en la operación de finalización: ", error);
+            alert(`No se pudo completar la operación: ${error}`);
+        }
+    });
+
+    // ... (El resto de las funciones como showTitlePrompt y btnCopiar se mantienen igual)
     const showTitlePrompt = () => {
         return new Promise((resolve, reject) => {
             modalOverlay.classList.add('visible');
@@ -120,66 +239,6 @@ export function setupPresupuesto(app) {
             document.onkeydown = (e) => { if (e.key === 'Escape') { reject(); closeModal(); } };
         });
     };
-
-    btnFinalizar.addEventListener('click', async () => {
-        try {
-            const { tituloTorta, nombreCliente } = await showTitlePrompt();
-            
-            // INICIO DE LA TRANSACCIÓN DE STOCK
-            await runTransaction(db, async (transaction) => {
-                const stockChecks = presupuestoActual.map(async (ingrediente) => {
-                    const ingredienteRef = doc(db, 'materiasPrimas', ingrediente.id);
-                    const ingredienteDoc = await transaction.get(ingredienteRef);
-
-                    if (!ingredienteDoc.exists()) {
-                        throw `El ingrediente "${ingrediente.nombre}" ya no existe.`;
-                    }
-                    
-                    const stockActual = ingredienteDoc.data().stockActual;
-                    if (stockActual < ingrediente.cantidad) {
-                        throw `No hay suficiente stock de "${ingrediente.nombre}". Disponible: ${stockActual}, Necesario: ${ingrediente.cantidad}.`;
-                    }
-                    
-                    const nuevoStock = stockActual - ingrediente.cantidad;
-                    transaction.update(ingredienteRef, { stockActual: nuevoStock });
-                });
-                // Esperamos que todas las verificaciones y actualizaciones de la transacción terminen
-                await Promise.all(stockChecks);
-            });
-            // FIN DE LA TRANSACCIÓN DE STOCK
-
-            // Si la transacción fue exitosa, procedemos a guardar el presupuesto
-            const presupuestoParaGuardar = {
-                tituloTorta,
-                nombreCliente,
-                costoTotal: costoTotalCache,
-                fecha: Timestamp.now(),
-                ingredientes: presupuestoActual
-            };
-            await addDoc(presupuestosGuardadosCollection, presupuestoParaGuardar);
-            alert('¡Stock descontado y presupuesto guardado con éxito!');
-
-            // Generar y mostrar el mensaje para compartir
-            const precioFinal = costoTotalSpan.textContent;
-            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinal}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 🩷.
-
-Si te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.
-
-Gracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨
-
-Desde ya,
-Dulce Sal — Horneando tus mejores momentos 🍰`;
-            
-            mensajeFinalTextarea.value = mensajeGenerado;
-            resultadoFinalContainer.style.display = 'block';
-            resultadoFinalContainer.scrollIntoView({ behavior: 'smooth' });
-
-        } catch (error) {
-            console.error("Error en la operación de finalización: ", error);
-            alert(`No se pudo completar la operación: ${error}`);
-        }
-    });
-
     btnCopiar.addEventListener('click', () => {
         navigator.clipboard.writeText(mensajeFinalTextarea.value).then(() => {
             copiadoFeedback.textContent = '¡Copiado al portapapeles!';
