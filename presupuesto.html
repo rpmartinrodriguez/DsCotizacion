@@ -7,9 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-
     <div class="main-container">
-
         <header class="header">
             <div class="header__logo">🎂</div>
             <h1 class="header__title">Cotizador de Tortas</h1>
@@ -19,7 +17,7 @@
         <nav class="tabs">
             <a href="index.html" class="tabs__link">Materias Primas</a>
             <a href="presupuesto.html" class="tabs__link active">Presupuesto de Tortas</a>
-        </nav>
+            <a href="historial.html" class="tabs__link">Historial</a> </nav>
 
         <main>
             <div class="presupuesto-layout">
@@ -29,7 +27,6 @@
                         <p>Cargando ingredientes...</p>
                     </div>
                 </section>
-
                 <section class="card">
                     <h2 class="card__title">Resumen del Presupuesto</h2>
                     <table class="table-clean" id="tabla-presupuesto">
@@ -47,11 +44,9 @@
                         </tbody>
                     </table>
                     <h2 class="total-cost">Costo Total: <span id="costo-total">$0.00</span></h2>
-                    
-                    <button id="btn-finalizar" class="btn-primary" disabled>Finalizar Presupuesto</button>
+                    <button id="btn-finalizar" class="btn-primary" disabled>Guardar y Finalizar</button>
                 </section>
             </div>
-
             <section id="resultado-final" class="card" style="display: none;">
                 <h2 class="card__title">Mensaje para Compartir</h2>
                 <div class="form-group">
@@ -68,11 +63,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupPresupuesto } from './js/presupuesto.js';
-
         try {
             const app = initializeApp(firebaseConfig);
             setupPresupuesto(app);
-            console.log("Firebase y App de Presupuesto inicializadas.");
         } catch (error) {
             console.error("Error al inicializar:", error);
         }
@@ -80,18 +73,21 @@
 
     <div id="custom-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title">Finalizar Presupuesto</h2>
-            <p>Dale un nombre a tu creación para generar el mensaje final.</p>
+            <h2 class="card__title">Guardar Presupuesto</h2>
+            <p>Completa los datos para guardar un registro de esta cotización.</p>
             <div class="form-group">
                 <label for="torta-titulo-input">Nombre de la Torta</label>
                 <input type="text" id="torta-titulo-input" placeholder="Ej: Torta Chocotorta Premium">
             </div>
+            <div class="form-group">
+                <label for="cliente-nombre-input">Nombre del Cliente</label>
+                <input type="text" id="cliente-nombre-input" placeholder="Ej: Ana García">
+            </div>
             <div class="modal-actions">
                 <button id="modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="modal-btn-confirmar" class="btn-primary">Aceptar</button>
+                <button id="modal-btn-confirmar" class="btn-primary">Guardar y Continuar</button>
             </div>
         </div>
     </div>
-
 </body>
 </html>
