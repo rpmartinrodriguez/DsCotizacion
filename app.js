@@ -31,12 +31,8 @@ let userId = null;
 let materialsCache = []; // Un caché local para no tener que consultar el DOM constantemente.
 let rawMaterialsCollectionRef = null; // Referencia a la colección de Firestore.
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
+// --- Inicialización de Firebase ---
+// Configuración de tu proyecto de Firebase.
 const firebaseConfig = {
   apiKey: "AIzaSyA33nr4_j2kMIeDJ-fyRqKLkUw9AToRnnM",
   authDomain: "dscotizacion.firebaseapp.com",
@@ -46,8 +42,10 @@ const firebaseConfig = {
   appId: "1:103917274080:web:478f18b226473a70202185"
 };
 
-// Initialize Firebase
+// Inicializamos Firebase con tu configuración
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 // =================================================================================
 // 3. MANEJO DE LA INTERFAZ (PESTAÑAS)
@@ -81,7 +79,7 @@ function setupAuthListener() {
             userId = user.uid;
             userInfoEl.textContent = `ID de sesión: ${userId}`;
             // Creamos la referencia a su colección personal de materias primas.
-            rawMaterialsCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/rawMaterials`);
+            rawMaterialsCollectionRef = collection(db, `users/${userId}/rawMaterials`);
             listenForMaterials(); // Empezamos a escuchar los datos.
         } else {
             // Si no hay usuario, intentamos un inicio de sesión anónimo.
