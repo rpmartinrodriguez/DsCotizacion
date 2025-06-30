@@ -6,6 +6,7 @@
     <title>Presupuesto de Torta - Cotizador</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 2em; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; }
         h1, h2 { color: #333; }
         form { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         select, input, button { display: block; width: 100%; padding: 0.8em; margin-bottom: 1em; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
@@ -15,44 +16,47 @@
         th, td { border: 1px solid #ddd; padding: 0.8em; text-align: left; }
         th { background-color: #f2f2f2; }
         h2 span { color: #28a745; font-weight: bold; }
-        a { display: inline-block; margin-top: 1em; color: #007bff; text-decoration: none; }
+        .nav-link { display: inline-block; margin-top: 1.5em; padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; font-weight: bold; border-radius: 5px; }
+        .nav-link:hover { background-color: #0056b3; }
     </style>
 </head>
 <body>
-    <h1>Presupuesto de Torta</h1>
-    <form id="form-presupuesto">
-        <label for="selector-materia-prima">Seleccionar Materia Prima:</label>
-        <select id="selector-materia-prima" required>
-            <option value="" disabled selected>Cargando ingredientes...</option>
-        </select>
+    <div class="container">
+        <h1>Presupuesto de Torta</h1>
+        <form id="form-presupuesto">
+            <label for="selector-materia-prima">Seleccionar Materia Prima:</label>
+            <select id="selector-materia-prima" required>
+                <option value="" disabled selected>Cargando ingredientes...</option>
+            </select>
 
-        <label for="cantidad">Cantidad (en la unidad del ingrediente):</label>
-        <input type="number" id="cantidad" step="any" required>
+            <label for="cantidad">Cantidad (en la unidad del ingrediente):</label>
+            <input type="number" id="cantidad" step="any" required>
 
-        <button type="submit">Agregar al Presupuesto</button>
-    </form>
+            <button type="submit">Agregar al Presupuesto</button>
+        </form>
 
-    <h2>Detalle del Presupuesto</h2>
-    <table id="tabla-presupuesto">
-        <thead>
-            <tr>
-                <th>Ingrediente</th>
-                <th>Cantidad</th>
-                <th>Costo</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+        <h2>Detalle del Presupuesto</h2>
+        <table id="tabla-presupuesto">
+            <thead>
+                <tr>
+                    <th>Ingrediente</th>
+                    <th>Cantidad</th>
+                    <th>Costo</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
 
-    <h2>Costo Total: <span id="costo-total">$0.00</span></h2>
-    <br>
-    <a href="index.html">&larr; Volver a Carga de Materias Primas</a>
+        <h2>Costo Total: <span id="costo-total">$0.00</span></h2>
+        <br>
+        <a href="./index.html" class="nav-link">&larr; Volver a Carga de Materias Primas</a>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
 
     <script>
-        // --- COPIA AQUÍ EL MISMO OBJETO firebaseConfig QUE USASTE EN INDEX.HTML ---
+        // --- COPIA AQUÍ EL MISMO OBJETO firebaseConfig ---
         const firebaseConfig = {
             apiKey: "AIzaSy...xxxxxxxxxxxx", // ¡TU PROPIA CLAVE!
             authDomain: "tu-proyecto.firebaseapp.com",
@@ -61,8 +65,7 @@
             messagingSenderId: "1234567890",
             appId: "1:1234567890:web:xxxxxxxxxxxx"
         };
-
-        // Inicializar Firebase
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const materiasPrimasCollection = db.collection('materiasPrimas');
@@ -73,10 +76,9 @@
             const tablaPresupuesto = document.getElementById('tabla-presupuesto').getElementsByTagName('tbody')[0];
             const costoTotalSpan = document.getElementById('costo-total');
             
-            let materiasPrimas = []; // Array local para almacenar los datos leídos
+            let materiasPrimas = [];
             let presupuestoActual = [];
 
-            // Cargar las materias primas desde Firestore
             materiasPrimasCollection.orderBy('nombre').get().then(snapshot => {
                 selector.innerHTML = '<option value="" disabled selected>-- Elige un ingrediente --</option>';
                 snapshot.forEach(doc => {
