@@ -1,4 +1,4 @@
-/* css/style.css */
+/* css/style.css (Versión Completa y Unificada) */
 
 /* 1. Variables Globales y Reseteo Básico */
 :root {
@@ -21,7 +21,7 @@ body {
 
 /* 2. Layout Principal */
 .main-container {
-    max-width: 800px;
+    max-width: 1000px; /* Un poco más de espacio para el layout de dos columnas */
     margin: 0 auto;
 }
 
@@ -93,7 +93,7 @@ body {
 /* 6. Formularios Modernos */
 .form-modern {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1.5rem;
     margin-bottom: 1.5rem;
 }
@@ -167,7 +167,69 @@ body {
     padding: 0.2rem 0.5rem;
 }
 
-/* 8. Estilos Presupuesto */
+/* 8. Layout de la página de Presupuesto (NUEVO) */
+.presupuesto-layout {
+    display: grid;
+    grid-template-columns: 1fr; /* Una columna por defecto */
+    gap: 2rem;
+}
+
+/* En pantallas más grandes, dos columnas */
+@media (min-width: 900px) {
+    .presupuesto-layout {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* 9. Lista Interactiva de Ingredientes (NUEVO) */
+.ingredientes-container {
+    max-height: 400px; /* Altura máxima para que no sea muy largo */
+    overflow-y: auto; /* Scroll si hay muchos ingredientes */
+    padding-right: 1rem; /* Espacio para la barra de scroll */
+}
+
+.ingrediente-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ingrediente-item:last-child {
+    border-bottom: none;
+}
+
+.ingrediente-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ingrediente-info input[type="checkbox"] {
+    width: 1.25em; /* Checkbox más grande */
+    height: 1.25em;
+    cursor: pointer;
+}
+
+.ingrediente-info label {
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.ingrediente-cantidad input[type="number"] {
+    width: 80px; /* Ancho fijo para el input de cantidad */
+    padding: 0.5rem;
+    text-align: right;
+}
+
+.ingrediente-cantidad input[type="number"]:disabled {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+}
+
+
+/* 10. Estilos Específicos de Presupuesto */
 .total-cost {
     text-align: right;
     margin-top: 1.5rem;
