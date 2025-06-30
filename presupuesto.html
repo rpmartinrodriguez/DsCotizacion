@@ -47,8 +47,20 @@
                         </tbody>
                     </table>
                     <h2 class="total-cost">Costo Total: <span id="costo-total">$0.00</span></h2>
+                    
+                    <button id="btn-finalizar" class="btn-primary" disabled>Finalizar Presupuesto</button>
                 </section>
             </div>
+
+            <section id="resultado-final" class="card" style="display: none;">
+                <h2 class="card__title">Mensaje para Compartir</h2>
+                <div class="form-group">
+                    <label for="mensaje-final">Copia este mensaje para enviarlo a tu cliente:</label>
+                    <textarea id="mensaje-final" rows="15" readonly></textarea>
+                </div>
+                <button id="btn-copiar" class="btn-primary">Copiar Mensaje</button>
+                <span id="copiado-feedback"></span>
+            </section>
         </main>
 
     </div>
