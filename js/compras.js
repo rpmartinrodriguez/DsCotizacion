@@ -1,8 +1,8 @@
-// Crea un nuevo archivo: js/compras.js
+// js/compras.js (Versión corregida)
 
 import { 
     getFirestore, collection, addDoc, doc, updateDoc, 
-    query, where, getDocs, serverTimestamp, arrayUnion 
+    query, where, getDocs, arrayUnion 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupCompras(app) {
@@ -11,7 +11,8 @@ export function setupCompras(app) {
     const form = document.getElementById('form-nueva-compra');
     const datalist = document.getElementById('lista-productos-existentes');
 
-    // Cargar productos existentes para el autocompletado
+    console.log("Módulo de Compras cargado.");
+
     const cargarProductosExistentes = async () => {
         const snapshot = await getDocs(materiasPrimasCollection);
         datalist.innerHTML = '';
@@ -20,11 +21,13 @@ export function setupCompras(app) {
             option.value = doc.data().nombre;
             datalist.appendChild(option);
         });
+        console.log("Lista de productos para autocompletar cargada.");
     };
     cargarProductosExistentes();
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        console.log("Formulario de compra enviado.");
 
         const nombre = form['nombre-producto'].value.trim();
         const precio = parseFloat(form['precio-compra'].value);
@@ -36,43 +39,46 @@ export function setupCompras(app) {
             return;
         }
 
-        // Creamos el objeto para el nuevo lote
+        // --- LA CORRECCIÓN ESTÁ AQUÍ ---
         const nuevoLote = {
-            fechaCompra: serverTimestamp(), // Fecha actual del servidor
+            fechaCompra: new Date(), // Usamos la fecha del navegador en lugar de serverTimestamp()
             precioCompra: precio,
             cantidadComprada: cantidad,
-            stockRestante: cantidad, // Al inicio, el stock es la cantidad total
+            stockRestante: cantidad,
             costoUnitario: precio / cantidad
         };
+        console.log("Nuevo lote preparado:", nuevoLote);
 
         try {
-            // Buscamos si el producto ya existe
+            console.log(`Buscando si el producto "${nombre}" ya existe...`);
             const q = query(materiasPrimasCollection, where("nombre", "==", nombre));
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
-                // El producto es NUEVO. Lo creamos con su primer lote.
+                console.log(`Producto "${nombre}" no encontrado. Creando nuevo documento...`);
+                // Al crear, Firestore convierte el objeto Date() a su propio formato Timestamp
                 await addDoc(materiasPrimasCollection, {
                     nombre: nombre,
                     unidad: unidad,
-                    lotes: [nuevoLote] // Creamos el array de lotes
+                    lotes: [nuevoLote]
                 });
                 alert(`¡Nuevo producto "${nombre}" creado y primer lote guardado!`);
             } else {
-                // El producto YA EXISTE. Añadimos el nuevo lote a su array.
                 const productoDoc = querySnapshot.docs[0];
+                console.log(`Producto "${nombre}" encontrado. Añadiendo nuevo lote al documento ${productoDoc.id}`);
+                // arrayUnion funciona perfectamente con un objeto Date()
                 await updateDoc(doc(db, 'materiasPrimas', productoDoc.id), {
-                    lotes: arrayUnion(nuevoLote) // arrayUnion añade un elemento al array
+                    lotes: arrayUnion(nuevoLote)
                 });
                 alert(`¡Nuevo lote de "${nombre}" añadido al stock!`);
             }
             
             form.reset();
-            cargarProductosExistentes(); // Recargamos la lista de autocompletado
+            cargarProductosExistentes();
 
         } catch (error) {
-            console.error("Error al guardar la compra: ", error);
-            alert("Hubo un error al guardar la compra.");
+            console.error("Error detallado al guardar la compra: ", error);
+            alert("Hubo un error al guardar la compra. Revisa la consola.");
         }
     });
 }
