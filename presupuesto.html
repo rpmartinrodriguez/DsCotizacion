@@ -19,12 +19,10 @@
                     <option value="" disabled selected>Cargando ingredientes...</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label for="cantidad-necesaria">Cantidad Necesaria:</label>
                 <input type="number" id="cantidad-necesaria" placeholder="Ej: 250" step="any" required>
             </div>
-
             <div class="form-group full-width">
                 <button type="submit" id="btn-agregar">Agregar al Presupuesto</button>
             </div>
@@ -39,18 +37,14 @@
                     <th>Costo</th>
                 </tr>
             </thead>
-            <tbody>
-                </tbody>
+            <tbody></tbody>
         </table>
         
         <h2 class="total-cost">Costo Total: <span id="costo-total">$0.00</span></h2>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
-
-    <script src="js/firebase-config.js"></script>
-    <script src="js/presupuesto.js"></script>
+    <!-- Cargamos nuestro script principal como un módulo -->
+    <script type="module" src="js/presupuesto.js"></script>
 
 </body>
 </html>
