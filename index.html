@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotizador de Tortas</title>
+    
+    <!-- Tailwind CSS desde CDN para un diseño rápido -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts para una mejor tipografía -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Enlace a nuestra hoja de estilos personalizada -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-4xl">
+        <!-- Sección del Encabezado -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">🍰 Cotizador de Tortas</h1>
+            <p class="text-gray-600 mt-2">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
+        </header>
+
+        <!-- Navegación por Pestañas -->
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="flex -mb-px space-x-6" aria-label="Tabs">
+                <button id="tab-materias-primas" class="tab-active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Materias Primas
+                </button>
+                <button id="tab-presupuesto" class="whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                    Presupuesto de Tortas
+                </button>
+            </nav>
+        </div>
+
+        <!-- Área de Contenido Principal -->
+        <main>
+            <!-- Sección de Materias Primas (Visible por defecto) -->
+            <div id="content-materias-primas">
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Agregar Materia Prima</h2>
+                    <form id="form-materia-prima" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                        <div>
+                            <label for="nombre-producto" class="block text-sm font-medium text-gray-700">Nombre del Producto</label>
+                            <input type="text" id="nombre-producto" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="precio-producto" class="block text-sm font-medium text-gray-700">Precio ($)</label>
+                            <input type="number" id="precio-producto" step="0.01" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <div>
+                            <label for="unidad-producto" class="block text-sm font-medium text-gray-700">Unidad de Medida</label>
+                            <input type="text" id="unidad-producto" placeholder="Ej: kg, gr, L, unidad" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        <button type="submit" class="sm:col-span-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out mt-2">
+                            Guardar Producto
+                        </button>
+                    </form>
+                </div>
+
+                <div class="mt-8 bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-xl font-semibold mb-4">Listado de Materias Primas</h3>
+                    <div id="lista-materias-primas" class="space-y-3">
+                        <!-- Las materias primas se insertarán aquí dinámicamente con app.js -->
+                        <p class="text-gray-500">Cargando materias primas...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Presupuesto (Oculta por defecto) -->
+            <div id="content-presupuesto" class="hidden">
+                 <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Calcular Presupuesto de Torta</h2>
+                    <div id="lista-presupuesto" class="space-y-3 mb-6">
+                        <!-- Los productos seleccionables se insertarán aquí dinámicamente con app.js -->
+                         <p class="text-gray-500">Carga materias primas para poder crear un presupuesto.</p>
+                    </div>
+
+                    <div class="border-t-2 border-gray-200 pt-4 mt-4 flex justify-end items-center">
+                        <span class="text-xl font-bold text-gray-800">Costo Total:</span>
+                        <span id="total-presupuesto" class="text-2xl font-bold text-blue-600 ml-4">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Muestra del ID de usuario para información/depuración -->
+        <div id="user-info" class="text-center mt-8 text-xs text-gray-400"></div>
+
+    </div>
+
+    <!-- Enlace a nuestro archivo JavaScript principal. 'type="module"' es importante para Firebase. -->
+    <script type="module" src="app.js"></script>
+
+</body>
+</html>
