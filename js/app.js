@@ -1,24 +1,22 @@
-// js/app.js
-
+// Reemplaza el contenido de js/app.js
 import { 
     getFirestore, collection, onSnapshot, addDoc, deleteDoc, doc, 
     getDoc, updateDoc, query, orderBy 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// Cambié el nombre de la función para mayor claridad
 export function setupMateriasPrimas(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
-
     const form = document.getElementById('form-materia-prima');
     const tablaBody = document.querySelector("#tabla-materias-primas tbody");
     const editIdInput = document.getElementById('edit-id');
     const guardarBtn = document.getElementById('btn-guardar');
-    
+    const stockGroup = document.getElementById('stock-inicial-group');
+
     let modoEdicion = false;
 
-    // LÓGICA DE RENDERIZADO CORREGIDA
     const renderizarTabla = (snapshot) => {
+        // ... (esta función no necesita cambios)
         tablaBody.innerHTML = '';
         if (snapshot.empty) {
             tablaBody.innerHTML = `<tr><td colspan="4" style="text-align: center;">No hay materias primas. ¡Agrega la primera!</td></tr>`;
@@ -27,10 +25,8 @@ export function setupMateriasPrimas(app) {
         snapshot.forEach(doc => {
             const item = doc.data();
             const id = doc.id;
-            // Cálculo del costo unitario restaurado
             const precioPorUnidad = (item.precio / item.cantidad).toFixed(2);
             const fila = document.createElement('tr');
-            // Columnas de la tabla restauradas para mostrar toda la info
             fila.innerHTML = `
                 <td>${item.nombre}</td>
                 <td>$${Number(item.precio).toFixed(2)} / ${item.cantidad} ${item.unidad}</td>
@@ -47,18 +43,16 @@ export function setupMateriasPrimas(app) {
     const q = query(materiasPrimasCollection, orderBy("nombre"));
     onSnapshot(q, renderizarTabla);
 
-    // LÓGICA DE GUARDADO CORREGIDA
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        // Lectura del campo 'cantidad' restaurada
+        
         const materiaPrima = {
             nombre: form.nombre.value,
             precio: parseFloat(form.precio.value),
-            cantidad: parseFloat(form.cantidad.value), // <-- CORREGIDO
+            cantidad: parseFloat(form.cantidad.value),
             unidad: form.unidad.value,
         };
 
-        // Validar que la cantidad no sea cero para evitar divisiones por cero
         if (materiaPrima.cantidad <= 0) {
             alert("La cantidad de compra debe ser mayor que cero.");
             return;
@@ -66,27 +60,29 @@ export function setupMateriasPrimas(app) {
 
         try {
             if (modoEdicion) {
+                // En modo edición, no actualizamos el stock desde aquí.
+                // Eso se maneja en la página de Stock.
                 const docRef = doc(db, 'materiasPrimas', editIdInput.value);
                 await updateDoc(docRef, materiaPrima);
             } else {
+                // Al crear, sí guardamos el stock inicial.
+                materiaPrima.stockActual = parseFloat(form.stock.value) || 0;
                 await addDoc(materiasPrimasCollection, materiaPrima);
             }
             resetFormulario();
         } catch (error) {
-            console.error("Error al guardar en Firebase:", error);
+            console.error("Error al guardar:", error);
         }
     });
     
-    // LÓGICA DE EDICIÓN CORREGIDA
     tablaBody.addEventListener('click', async (e) => {
         const target = e.target.closest('.btn-delete, .btn-edit');
         if (!target) return;
-
         const id = target.dataset.id;
         const docRef = doc(db, 'materiasPrimas', id);
 
         if (target.classList.contains('btn-delete')) {
-            if (confirm('¿Estás seguro de que quieres eliminar esta materia prima?')) {
+            if (confirm('¿Estás seguro? Esto eliminará el producto y su stock.')) {
                 await deleteDoc(docRef);
             }
         }
@@ -97,11 +93,12 @@ export function setupMateriasPrimas(app) {
             
             form.nombre.value = item.nombre;
             form.precio.value = item.precio;
-            form.cantidad.value = item.cantidad; // <-- CORREGIDO
+            form.cantidad.value = item.cantidad;
             form.unidad.value = item.unidad;
             editIdInput.value = id;
             
             modoEdicion = true;
+            stockGroup.style.display = 'none'; // Ocultamos el campo de stock al editar
             guardarBtn.textContent = 'Actualizar Producto';
             window.scrollTo(0, 0);
         }
@@ -111,6 +108,7 @@ export function setupMateriasPrimas(app) {
         form.reset();
         editIdInput.value = '';
         modoEdicion = false;
+        stockGroup.style.display = 'flex'; // Mostramos el campo de stock al resetear
         guardarBtn.textContent = 'Guardar Producto';
     }
 }
