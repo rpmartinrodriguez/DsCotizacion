@@ -15,8 +15,8 @@
         </header>
 
         <nav class="tabs">
-            <a href="dashboard.html" class="tabs__link">Dashboard</a>
-            <a href="index.html" class="tabs__link">Registrar Compra</a>
+            <a href="index.html" class="tabs__link">Dashboard</a>
+            <a href="recetas.html" class="tabs__link">Postres</a>
             <a href="presupuesto.html" class="tabs__link active">Presupuesto</a>
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link">Historial</a>
@@ -30,7 +30,6 @@
                         <p>Cargando ingredientes...</p>
                     </div>
                 </section>
-
                 <section class="card">
                     <h2 class="card__title">Resumen de Costos</h2>
                     <table class="table-clean" id="tabla-presupuesto">
@@ -50,7 +49,6 @@
                     <h2 class="total-cost">Costo Materiales: <span id="costo-total">$0.00</span></h2>
                 </section>
             </div>
-
             <section class="card" id="calculo-precio-venta">
                 <h2 class="card__title">Cálculo de Precio de Venta</h2>
                 <div class="calculo-grid">
@@ -100,7 +98,6 @@
                 </div>
                 <button id="btn-finalizar" class="btn-primary" disabled>Guardar y Finalizar Presupuesto</button>
             </section>
-            
             <section id="resultado-final" class="card" style="display: none;">
                 <h2 class="card__title">Mensaje para Compartir</h2>
                 <div class="form-group">
@@ -112,7 +109,6 @@
             </section>
         </main>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
@@ -120,12 +116,8 @@
         try {
             const app = initializeApp(firebaseConfig);
             setupPresupuesto(app);
-            console.log("Firebase y App de Presupuesto inicializadas.");
-        } catch (error) {
-            console.error("Error al inicializar:", error);
-        }
+        } catch (error) { console.error("Error al inicializar:", error); }
     </script>
-
     <div id="custom-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title">Guardar Presupuesto</h2>
@@ -144,6 +136,5 @@
             </div>
         </div>
     </div>
-
 </body>
 </html>
