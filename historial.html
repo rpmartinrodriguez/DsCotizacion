@@ -25,26 +25,21 @@
         <main>
             <section class="card">
                 <h2 class="card__title">Presupuestos Guardados</h2>
-                <div class="buscador-container">
-                    <input type="search" id="buscador-historial" placeholder="🔍 Buscar por Torta o Cliente...">
-                </div>
+                
                 <div id="historial-container">
                     <p>Cargando historial...</p>
+                </div>
+
+                <div id="cargar-mas-container" class="cargar-mas-container">
+                    <button id="btn-cargar-mas" class="btn-secondary">Cargar Más</button>
                 </div>
             </section>
         </main>
     </div>
     
     <div id="agradecimiento-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title">¡Venta Confirmada!</h2>
-            <pre id="agradecimiento-texto" class="mensaje-agradecimiento"></pre>
-            <div class="modal-actions">
-                <button id="agradecimiento-modal-btn-cerrar" class="btn-primary">Cerrar</button>
-            </div>
         </div>
-    </div>
-
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
