@@ -13,11 +13,12 @@
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
-
         <nav class="tabs">
-            <a href="index.html" class="tabs__link">Materias Primas</a>
-            <a href="presupuesto.html" class="tabs__link active">Presupuesto de Tortas</a>
-            <a href="historial.html" class="tabs__link">Historial</a> </nav>
+            <a href="index.html" class="tabs__link">Registrar Compra</a>
+            <a href="presupuesto.html" class="tabs__link active">Presupuesto</a>
+            <a href="stock.html" class="tabs__link">Stock</a>
+            <a href="historial.html" class="tabs__link">Historial</a>
+        </nav>
 
         <main>
             <div class="presupuesto-layout">
@@ -27,8 +28,9 @@
                         <p>Cargando ingredientes...</p>
                     </div>
                 </section>
+
                 <section class="card">
-                    <h2 class="card__title">Resumen del Presupuesto</h2>
+                    <h2 class="card__title">Resumen de Costos</h2>
                     <table class="table-clean" id="tabla-presupuesto">
                         <thead>
                             <tr>
@@ -39,55 +41,68 @@
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="3" style="text-align: center;">Selecciona ingredientes para ver el resumen.</td>
+                                <td colspan="3" style="text-align: center;">Selecciona ingredientes...</td>
                             </tr>
                         </tbody>
                     </table>
-                    <h2 class="total-cost">Costo Total: <span id="costo-total">$0.00</span></h2>
-                    <button id="btn-finalizar" class="btn-primary" disabled>Guardar y Finalizar</button>
+                    <h2 class="total-cost">Costo Materiales: <span id="costo-total">$0.00</span></h2>
                 </section>
             </div>
-            <section id="resultado-final" class="card" style="display: none;">
-                <h2 class="card__title">Mensaje para Compartir</h2>
-                <div class="form-group">
-                    <label for="mensaje-final">Copia este mensaje para enviarlo a tu cliente:</label>
-                    <textarea id="mensaje-final" rows="15" readonly></textarea>
+
+            <section class="card" id="calculo-precio-venta">
+                <h2 class="card__title">Cálculo de Precio de Venta</h2>
+                <div class="calculo-grid">
+                    <div class="form-group">
+                        <label for="horas-trabajo">Horas de Trabajo</label>
+                        <input type="number" id="horas-trabajo" value="0" min="0" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="costo-hora">Costo por Hora ($)</label>
+                        <input type="number" id="costo-hora" value="0" min="0" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="costos-fijos-porcentaje">Costos Fijos (%)</label>
+                        <input type="number" id="costos-fijos-porcentaje" value="10" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="ganancia-porcentaje">Margen de Ganancia (%)</label>
+                        <input type="number" id="ganancia-porcentaje" value="50" min="0" step="5">
+                    </div>
                 </div>
-                <button id="btn-copiar" class="btn-primary">Copiar Mensaje</button>
-                <span id="copiado-feedback"></span>
+                <hr class="calculo-divisor">
+                <div class="calculo-resumen">
+                    <div class="calculo-fila">
+                        <span>Costo Materiales:</span>
+                        <span id="resumen-costo-materiales">$0.00</span>
+                    </div>
+                    <div class="calculo-fila">
+                        <span>+ Subtotal Mano de Obra:</span>
+                        <span id="subtotal-mano-obra">$0.00</span>
+                    </div>
+                    <div class="calculo-fila">
+                        <span>+ Subtotal Costos Fijos:</span>
+                        <span id="subtotal-costos-fijos">$0.00</span>
+                    </div>
+                    <div class="calculo-fila costo-produccion">
+                        <span>Costo de Producción:</span>
+                        <span id="costo-produccion">$0.00</span>
+                    </div>
+                    <div class="calculo-fila">
+                        <span>+ Ganancia Estimada:</span>
+                        <span id="total-ganancia">$0.00</span>
+                    </div>
+                </div>
+                <div class="precio-venta-final">
+                    <span>Precio de Venta Sugerido</span>
+                    <span id="precio-venta-sugerido">$0.00</span>
+                </div>
+                <button id="btn-finalizar" class="btn-primary" disabled>Guardar y Finalizar Presupuesto</button>
             </section>
+            
+            <section id="resultado-final" class="card" style="display: none;">
+                </section>
         </main>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPresupuesto } from './js/presupuesto.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupPresupuesto(app);
-        } catch (error) {
-            console.error("Error al inicializar:", error);
-        }
-    </script>
-
-    <div id="custom-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title">Guardar Presupuesto</h2>
-            <p>Completa los datos para guardar un registro de esta cotización.</p>
-            <div class="form-group">
-                <label for="torta-titulo-input">Nombre de la Torta</label>
-                <input type="text" id="torta-titulo-input" placeholder="Ej: Torta Chocotorta Premium">
-            </div>
-            <div class="form-group">
-                <label for="cliente-nombre-input">Nombre del Cliente</label>
-                <input type="text" id="cliente-nombre-input" placeholder="Ej: Ana García">
-            </div>
-            <div class="modal-actions">
-                <button id="modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="modal-btn-confirmar" class="btn-primary">Guardar y Continuar</button>
-            </div>
-        </div>
-    </div>
-</body>
+    </body>
 </html>
