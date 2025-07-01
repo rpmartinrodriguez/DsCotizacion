@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Compras</title>
+    <title>Dashboard - Cotizador de Tortas</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="main-container">
@@ -15,54 +16,55 @@
         </header>
 
         <nav class="tabs">
-            <a href="dashboard.html" class="tabs__link">Dashboard</a>
-            <a href="index.html" class="tabs__link active">Registrar Compra</a>
+            <a href="index.html" class="tabs__link active">Dashboard</a>
+            <a href="recetas.html" class="tabs__link">Postres</a>
             <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link">Historial</a>
         </nav>
-        
+
         <main>
-            <section class="card">
-                <h2 class="card__title">Registrar Nueva Compra de Materia Prima</h2>
-                <form id="form-nueva-compra">
-                    <div class="form-modern">
-                        <div class="form-group">
-                            <label for="nombre-producto">Nombre del Producto</label>
-                            <input type="text" id="nombre-producto" required list="lista-productos-existentes" placeholder="Escribe o selecciona un producto">
-                            <datalist id="lista-productos-existentes"></datalist>
-                        </div>
-                        <div class="form-group">
-                            <label for="precio-compra">Precio de Compra ($)</label>
-                            <input type="number" id="precio-compra" step="0.01" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="cantidad-compra">Cantidad Comprada</label>
-                            <input type="number" id="cantidad-compra" step="any" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="unidad-medida">Unidad de Medida</label>
-                            <select id="unidad-medida" required>
-                                <option value="gr">Gramo (gr)</option>
-                                <option value="kg">Kilogramo (kg)</option>
-                                <option value="l">Litro (l)</option>
-                                <option value="ml">Mililitro (ml)</option>
-                                <option value="unidad">Unidad</option>
-                            </select>
-                        </div>
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h4>Ingresos Totales</h4>
+                    <p id="kpi-ingresos-totales">$0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Ganancia Bruta</h4>
+                    <p id="kpi-ganancia-bruta">$0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Presupuestos Creados</h4>
+                    <p id="kpi-presupuestos-creados">0</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Valor del Stock</h4>
+                    <p id="kpi-valor-stock">$0.00</p>
+                </div>
+            </div>
+
+            <div class="dashboard-layout">
+                <section class="card">
+                    <h2 class="card__title">Ingresos por Mes</h2>
+                    <canvas id="grafico-ingresos"></canvas>
+                </section>
+                <section class="card">
+                    <h2 class="card__title">Productos con Bajo Stock</h2>
+                    <div id="lista-bajo-stock">
+                        <p>Calculando...</p>
                     </div>
-                    <button type="submit" id="btn-guardar-compra" class="btn-primary">Guardar Compra</button>
-                </form>
-            </section>
+                </section>
+            </div>
         </main>
     </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCompras } from './js/compras.js';
+        import { setupDashboard } from './js/dashboard.js';
         try {
             const app = initializeApp(firebaseConfig);
-            setupCompras(app);
+            setupDashboard(app);
         } catch (error) { console.error(error); }
     </script>
 </body>
