@@ -13,23 +13,22 @@
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
-
         <nav class="tabs">
-            <a href="dashboard.html" class="tabs__link">Dashboard</a>
-            <a href="index.html" class="tabs__link">Registrar Compra</a>
+            <a href="index.html" class="tabs__link">Dashboard</a>
+            <a href="recetas.html" class="tabs__link">Postres</a>
             <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
             <a href="stock.html" class="tabs__link active">Stock</a>
             <a href="historial.html" class="tabs__link">Historial</a>
         </nav>
-
         <main>
             <section class="card">
-                <h2 class="card__title">Inventario de Materias Primas</h2>
-
+                <div class="card-header-actions">
+                    <h2 class="card__title">Inventario de Materias Primas</h2>
+                    <a href="compras.html" class="btn-primary">Registrar Nueva Compra</a>
+                </div>
                 <div class="buscador-container">
                     <input type="search" id="buscador-stock" placeholder="🔍 Buscar por nombre...">
                 </div>
-
                 <table class="table-clean" id="tabla-stock">
                     <thead>
                         <tr>
@@ -46,7 +45,6 @@
             </section>
         </main>
     </div>
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
@@ -56,18 +54,15 @@
             setupStock(app);
         } catch (error) { console.error(error); }
     </script>
-
     <div id="edit-lotes-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title" id="lotes-modal-title">Editar Lotes de: </h2>
-            <div id="lotes-editor-container" class="lotes-editor-container">
-                </div>
+            <div id="lotes-editor-container" class="lotes-editor-container"></div>
             <div class="modal-actions">
                 <button id="lotes-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
                 <button id="lotes-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
             </div>
         </div>
     </div>
-
 </body>
 </html>
