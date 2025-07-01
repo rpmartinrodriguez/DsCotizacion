@@ -15,8 +15,8 @@
         </header>
 
         <nav class="tabs">
-            <a href="dashboard.html" class="tabs__link">Dashboard</a>
-            <a href="index.html" class="tabs__link">Registrar Compra</a>
+            <a href="index.html" class="tabs__link">Dashboard</a>
+            <a href="recetas.html" class="tabs__link">Postres</a>
             <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link active">Historial</a>
@@ -25,18 +25,15 @@
         <main>
             <section class="card">
                 <h2 class="card__title">Presupuestos Guardados</h2>
-                
                 <div class="buscador-container">
                     <input type="search" id="buscador-historial" placeholder="🔍 Buscar por Torta o Cliente...">
                 </div>
-
                 <div id="historial-container">
                     <p>Cargando historial...</p>
                 </div>
             </section>
         </main>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
