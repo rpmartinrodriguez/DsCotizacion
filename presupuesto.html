@@ -8,11 +8,13 @@
 </head>
 <body>
     <div class="main-container">
+
         <header class="header">
             <div class="header__logo">🎂</div>
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
+
         <nav class="tabs">
             <a href="index.html" class="tabs__link">Registrar Compra</a>
             <a href="presupuesto.html" class="tabs__link active">Presupuesto</a>
@@ -100,9 +102,48 @@
             </section>
             
             <section id="resultado-final" class="card" style="display: none;">
-                </section>
+                <h2 class="card__title">Mensaje para Compartir</h2>
+                <div class="form-group">
+                    <label for="mensaje-final">Copia este mensaje para enviarlo a tu cliente:</label>
+                    <textarea id="mensaje-final" rows="15" readonly></textarea>
+                </div>
+                <button id="btn-copiar" class="btn-primary">Copiar Mensaje</button>
+                <span id="copiado-feedback"></span>
+            </section>
         </main>
     </div>
 
-    </body>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupPresupuesto } from './js/presupuesto.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupPresupuesto(app);
+            console.log("Firebase y App de Presupuesto inicializadas.");
+        } catch (error) {
+            console.error("Error al inicializar:", error);
+        }
+    </script>
+
+    <div id="custom-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">Guardar Presupuesto</h2>
+            <p>Completa los datos para guardar un registro de esta cotización.</p>
+            <div class="form-group">
+                <label for="torta-titulo-input">Nombre de la Torta</label>
+                <input type="text" id="torta-titulo-input" placeholder="Ej: Torta Chocotorta Premium">
+            </div>
+            <div class="form-group">
+                <label for="cliente-nombre-input">Nombre del Cliente</label>
+                <input type="text" id="cliente-nombre-input" placeholder="Ej: Ana García">
+            </div>
+            <div class="modal-actions">
+                <button id="modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="modal-btn-confirmar" class="btn-primary">Guardar y Continuar</button>
+            </div>
+        </div>
+    </div>
+
+</body>
 </html>
