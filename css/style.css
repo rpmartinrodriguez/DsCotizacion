@@ -420,7 +420,7 @@ body {
     color: white;
 }
 
-/* 15. Estilos para la página de Stock */
+/* 15. Estilos para la página de Stock (Versión Mejorada) */
 .stock-actions {
     display: flex;
     gap: 0.75rem;
@@ -628,6 +628,8 @@ body {
     font-weight: 500;
     color: var(--danger-color);
 }
+
+/* 21. Estilos para el Editor de Recetas */
 .receta-editor-grid {
     display: grid;
     grid-template-columns: 2fr 1fr auto;
@@ -657,7 +659,7 @@ body {
 .receta-card__actions .btn-primary,
 .receta-card__actions .btn-secondary { width: auto; padding: 0.6rem 1.2rem; }
 
-/* 21. Estilos Responsive para Móviles */
+/* 22. Estilos Responsive para Móviles */
 @media (max-width: 768px) {
     body { padding: 1em; }
     .main-container { padding: 0; }
@@ -677,9 +679,11 @@ body {
     .table-clean td.action-buttons:before { content: ''; }
     .calculo-grid { grid-template-columns: 1fr; }
     .presupuesto-layout, .dashboard-layout { grid-template-columns: 1fr; }
+    .receta-editor-grid { grid-template-columns: 1fr; }
+    .receta-editor-grid button { grid-column: 1 / -1; }
 }
 
-/* 22. Estilos para el botón "Marcar como Venta" */
+/* 23. Estilos para el botón "Marcar como Venta" */
 .btn-marcar-venta {
     background: none;
     border: 1px solid var(--success-color);
@@ -704,29 +708,22 @@ body {
     text-align: center;
 }
 
-/* 23. Estilos para el Mensaje de Agradecimiento en Modal */
+/* 24. Estilos para el Mensaje de Agradecimiento en Modal */
 .mensaje-agradecimiento {
-    white-space: pre-wrap; /* Respeta los saltos de línea y espacios */
+    white-space: pre-wrap;
     text-align: center;
     font-size: 1rem;
     line-height: 1.6;
     color: var(--text-color);
 }
 
-/* 24. Estilos para Indicadores y Filtros */
-.stat-card-main {
-    font-size: 2rem;
-    font-weight: 600;
-    color: var(--primary-color);
-    text-align: center;
-    margin: 1rem 0;
+/* 25. Estilos para el botón de Paginación (Cargar Más) */
+.cargar-mas-container {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
 }
-.card__subtitle {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-light);
-    margin-top: 1.5rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
+#btn-cargar-mas {
+    width: auto;
+    padding: 0.8rem 2rem;
 }
