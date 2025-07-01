@@ -1,7 +1,7 @@
-// js/recetas.js (Versión con botones funcionales)
+// js/recetas.js (Versión con UX de carga mejorada)
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    addDoc, updateDoc, deleteDoc, getDoc, arrayUnion 
+    addDoc, updateDoc, deleteDoc, getDocs 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupRecetas(app) {
@@ -9,7 +9,7 @@ export function setupRecetas(app) {
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
 
-    // Referencias del DOM
+    // --- Referencias del DOM ---
     const btnCrearReceta = document.getElementById('btn-crear-receta');
     const recetasContainer = document.getElementById('lista-recetas-container');
     const modal = document.getElementById('receta-modal-overlay');
@@ -23,25 +23,40 @@ export function setupRecetas(app) {
     const btnCancelarReceta = document.getElementById('receta-modal-btn-cancelar');
 
     let materiasPrimasDisponibles = [];
-    let todasLasRecetas = []; // Guardaremos todas las recetas aquí
+    let todasLasRecetas = [];
     let ingredientesRecetaActual = [];
     let editandoId = null;
 
+    // --- Lógica de Carga Mejorada ---
     const cargarMateriasPrimas = async () => {
-        const snapshot = await getDocs(query(materiasPrimasCollection, orderBy('nombre')));
-        materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        selectorIngrediente.innerHTML = '<option value="">Selecciona un ingrediente</option>';
-        materiasPrimasDisponibles.forEach(mp => {
-            if (mp.lotes && mp.lotes.length > 0) {
-                const option = document.createElement('option');
-                option.value = mp.id;
-                option.textContent = `${mp.nombre} (${mp.unidad})`;
-                selectorIngrediente.appendChild(option);
-            }
-        });
+        // Deshabilitamos el botón principal mientras cargamos los datos
+        btnCrearReceta.disabled = true;
+        btnCrearReceta.textContent = 'Cargando...';
+
+        try {
+            const snapshot = await getDocs(query(materiasPrimasCollection, orderBy('nombre')));
+            materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            selectorIngrediente.innerHTML = '<option value="">Selecciona un ingrediente</option>';
+            materiasPrimasDisponibles.forEach(mp => {
+                if (mp.lotes && mp.lotes.length > 0) {
+                    const option = document.createElement('option');
+                    option.value = mp.id;
+                    option.textContent = `${mp.nombre} (${mp.unidad})`;
+                    selectorIngrediente.appendChild(option);
+                }
+            });
+        } catch (error) {
+            console.error("Error al cargar materias primas:", error);
+            selectorIngrediente.innerHTML = '<option value="">Error al cargar</option>';
+        } finally {
+            // Re-habilitamos el botón cuando la carga termina (ya sea con éxito o con error)
+            btnCrearReceta.disabled = false;
+            btnCrearReceta.textContent = 'Crear Nueva Receta';
+        }
     };
 
+    // --- Lógica de la Modal (sin cambios) ---
     const openModal = (receta = null) => {
         if (receta && receta.data) {
             editandoId = receta.id;
@@ -57,9 +72,7 @@ export function setupRecetas(app) {
         renderizarIngredientesEnReceta();
         modal.classList.add('visible');
     };
-
     const closeModal = () => modal.classList.remove('visible');
-
     const renderizarIngredientesEnReceta = () => {
         if (ingredientesRecetaActual.length === 0) {
             ingredientesEnRecetaContainer.innerHTML = '<p>Aún no has añadido ingredientes.</p>';
@@ -71,7 +84,7 @@ export function setupRecetas(app) {
         ingredientesRecetaActual.forEach((ing, index) => {
             const li = document.createElement('li');
             li.innerHTML = `
-                ${ing.nombreMateriaPrima} <span>${ing.cantidad} ${ing.unidad}</span>
+                ${ing.nombreMateriaPrima} <span>${ing.cantidad.toLocaleString('es-AR')} ${ing.unidad}</span>
                 <button class="btn-quitar-ingrediente" data-index="${index}">🗑️</button>
             `;
             ul.appendChild(li);
@@ -79,6 +92,7 @@ export function setupRecetas(app) {
         ingredientesEnRecetaContainer.appendChild(ul);
     };
 
+    // --- Listeners de la Modal (sin cambios) ---
     btnAnadirIngrediente.addEventListener('click', () => {
         const idMateriaPrima = selectorIngrediente.value;
         const cantidad = parseFloat(cantidadIngredienteInput.value);
@@ -97,7 +111,6 @@ export function setupRecetas(app) {
         selectorIngrediente.value = '';
         cantidadIngredienteInput.value = '';
     });
-    
     ingredientesEnRecetaContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-quitar-ingrediente')) {
             const index = e.target.dataset.index;
@@ -105,7 +118,6 @@ export function setupRecetas(app) {
             renderizarIngredientesEnReceta();
         }
     });
-
     btnGuardarReceta.addEventListener('click', async () => {
         const nombreTorta = recetaNombreInput.value.trim();
         if (!nombreTorta || ingredientesRecetaActual.length === 0) {
@@ -113,7 +125,6 @@ export function setupRecetas(app) {
             return;
         }
         const recetaData = { nombreTorta, ingredientes: ingredientesRecetaActual };
-
         try {
             if (editandoId) {
                 await updateDoc(doc(db, 'recetas', editandoId), recetaData);
@@ -127,7 +138,10 @@ export function setupRecetas(app) {
             console.error("Error al guardar receta:", error);
         }
     });
+    btnCrearReceta.addEventListener('click', () => openModal());
+    btnCancelarReceta.addEventListener('click', closeModal);
 
+    // --- Renderizar Tarjetas de Recetas (sin cambios) ---
     onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
         todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         if (todasLasRecetas.length === 0) {
@@ -145,26 +159,25 @@ export function setupRecetas(app) {
                 </div>
                 <div class="receta-card__actions">
                     <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
-                    <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary btn-presupuestar-receta" data-id="${receta.id}">Presupuestar</a>
+                    <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary btn-presupuestar-receta">Presupuestar</a>
                 </div>
             `;
             recetasContainer.appendChild(card);
         });
     });
     
+    // --- Listener de las Tarjetas (sin cambios) ---
     recetasContainer.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-editar-receta')) {
-            const id = e.target.dataset.id;
+        const target = e.target.closest('.btn-editar-receta');
+        if (target) {
+            const id = target.dataset.id;
             const recetaParaEditar = todasLasRecetas.find(r => r.id === id);
             if (recetaParaEditar) {
                 openModal(recetaParaEditar);
             }
         }
-        // El botón de presupuestar ahora es un enlace directo, no necesita lógica aquí.
     });
     
-    btnCrearReceta.addEventListener('click', () => openModal());
-    btnCancelarReceta.addEventListener('click', closeModal);
-    
+    // Carga inicial de datos
     cargarMateriasPrimas();
 }
