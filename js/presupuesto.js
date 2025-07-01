@@ -1,14 +1,13 @@
-// js/presupuesto.js (Versión Final, Corregida y Completa)
-
 import { 
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
-    Timestamp, doc, runTransaction 
+    Timestamp, doc, runTransaction, getDoc 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupPresupuesto(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
+    const recetasCollection = collection(db, 'recetas');
 
     // --- REFERENCIAS A ELEMENTOS DEL DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
@@ -44,12 +43,86 @@ export function setupPresupuesto(app) {
     let presupuestoActual = [];
     let costoTotalCache = 0;
 
+    const cargarMateriasPrimas = async () => {
+        const q = query(materiasPrimasCollection, orderBy('nombre'));
+        const snapshot = await getDocs(q);
+        
+        ingredientesContainer.innerHTML = '';
+        materiasPrimasDisponibles = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (!data.lotes || !Array.isArray(data.lotes) || data.lotes.length === 0) {
+                console.warn(`El producto "${data.nombre}" no tiene lotes válidos y será ignorado.`);
+                return;
+            }
+            materiasPrimasDisponibles.push({ id: doc.id, ...data });
+            const stockTotal = data.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
+            const itemDiv = document.createElement('div');
+            itemDiv.classList.add('ingrediente-item');
+            itemDiv.innerHTML = `
+                <div class="ingrediente-info">
+                    <input type="checkbox" id="${doc.id}">
+                    <label for="${doc.id}">${data.nombre} (${data.unidad})</label>
+                </div>
+                <div class="ingrediente-cantidad">
+                    <input type="number" min="0" step="any" placeholder="Cant." title="Stock disponible: ${stockTotal.toLocaleString('es-AR')}" disabled>
+                </div>
+            `;
+            ingredientesContainer.appendChild(itemDiv);
+        });
+
+        if (ingredientesContainer.innerHTML === '') {
+            ingredientesContainer.innerHTML = '<p>No se encontraron productos con stock. Registra una nueva compra primero.</p>';
+        }
+        
+        ingredientesContainer.addEventListener('change', actualizarPresupuesto);
+        ingredientesContainer.addEventListener('input', actualizarPresupuesto);
+    };
+
+    const cargarRecetaDesdeURL = async () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const recetaId = urlParams.get('recetaId');
+
+        if (!recetaId) {
+            // Si no hay receta, cargamos la lista normal de ingredientes
+            cargarMateriasPrimas();
+            return;
+        }
+
+        ingredientesContainer.innerHTML = '<p>Cargando receta seleccionada...</p>';
+
+        const recetaRef = doc(db, 'recetas', recetaId);
+        const recetaSnap = await getDoc(recetaRef);
+
+        if (recetaSnap.exists()) {
+            const receta = recetaSnap.data();
+            tortaTituloInput.value = receta.nombreTorta;
+
+            await cargarMateriasPrimas(); // Esperamos que se dibuje la lista de ingredientes
+
+            receta.ingredientes.forEach(ingredienteReceta => {
+                const checkbox = document.getElementById(ingredienteReceta.idMateriaPrima);
+                if (checkbox) {
+                    checkbox.checked = true;
+                    const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
+                    if (cantidadInput) {
+                        cantidadInput.value = ingredienteReceta.cantidad;
+                    }
+                }
+            });
+            actualizarPresupuesto();
+        } else {
+            console.error("No se encontró la receta con el ID:", recetaId);
+            ingredientesContainer.innerHTML = '<p style="color: red;">Error: No se pudo encontrar la receta seleccionada.</p>';
+        }
+    };
+    
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
         let costoAcumulado = 0;
         let cantidadRestante = cantidadRequerida;
         let desgloseLotes = [];
         const lotesOrdenados = materiaPrima.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
-
         for (const lote of lotesOrdenados) {
             if (cantidadRestante <= 0) break;
             const cantidadAUsar = Math.min(lote.stockRestante, cantidadRestante);
@@ -123,13 +196,11 @@ export function setupPresupuesto(app) {
         const costoHora = parseFloat(costoHoraInput.value) || 0;
         const costosFijosPorc = parseFloat(costosFijosPorcInput.value) || 0;
         const gananciaPorc = parseFloat(gananciaPorcInput.value) || 0;
-
         const subtotalManoObra = horasTrabajo * costoHora;
         const subtotalCostosFijos = costoMateriales * (costosFijosPorc / 100);
         const costoProduccion = costoMateriales + subtotalManoObra + subtotalCostosFijos;
         const totalGanancia = costoProduccion * (gananciaPorc / 100);
         const precioVenta = costoProduccion + totalGanancia;
-
         resumenCostoMaterialesSpan.textContent = `$${costoMateriales.toFixed(2)}`;
         subtotalManoObraSpan.textContent = `$${subtotalManoObra.toFixed(2)}`;
         subtotalCostosFijosSpan.textContent = `$${subtotalCostosFijos.toFixed(2)}`;
@@ -138,49 +209,11 @@ export function setupPresupuesto(app) {
         precioVentaSugeridoSpan.textContent = `$${precioVenta.toFixed(2)}`;
     };
 
-    const cargarMateriasPrimas = async () => {
-        const q = query(materiasPrimasCollection, orderBy('nombre'));
-        const snapshot = await getDocs(q);
-        
-        ingredientesContainer.innerHTML = '';
-        materiasPrimasDisponibles = [];
-
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            if (!data.lotes || !Array.isArray(data.lotes) || data.lotes.length === 0) {
-                console.warn(`El producto "${data.nombre}" no tiene lotes válidos y será ignorado.`);
-                return;
-            }
-            materiasPrimasDisponibles.push({ id: doc.id, ...data });
-            const stockTotal = data.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('ingrediente-item');
-            itemDiv.innerHTML = `
-                <div class="ingrediente-info">
-                    <input type="checkbox" id="${doc.id}">
-                    <label for="${doc.id}">${data.nombre} (${data.unidad})</label>
-                </div>
-                <div class="ingrediente-cantidad">
-                    <input type="number" min="0" step="any" placeholder="Cant." title="Stock disponible: ${stockTotal.toLocaleString('es-AR')}" disabled>
-                </div>
-            `;
-            ingredientesContainer.appendChild(itemDiv);
-        });
-
-        if (ingredientesContainer.innerHTML === '') {
-            ingredientesContainer.innerHTML = '<p>No se encontraron productos con stock. Registra una nueva compra primero.</p>';
-        }
-        
-        ingredientesContainer.addEventListener('change', actualizarPresupuesto);
-        ingredientesContainer.addEventListener('input', actualizarPresupuesto);
-    };
-
     const showTitlePrompt = () => {
         return new Promise((resolve, reject) => {
             modalOverlay.classList.add('visible');
             tortaTituloInput.focus();
-            tortaTituloInput.value = '';
-            clienteNombreInput.value = '';
+            clienteNombreInput.value = ''; // Limpiamos el campo de cliente
             const closeModal = () => {
                 modalOverlay.classList.remove('visible');
                 modalBtnConfirmar.onclick = null;
@@ -284,5 +317,5 @@ Dulce Sal — Horneando tus mejores momentos 🍰`;
         input.addEventListener('input', calcularPrecioVenta);
     });
 
-    cargarMateriasPrimas().catch(console.error);
+    cargarRecetaDesdeURL();
 }
