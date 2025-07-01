@@ -242,9 +242,8 @@ body {
 .total-cost {
     text-align: right;
     margin-top: 1.5rem;
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: var(--primary-color);
+    font-size: 1.2rem; /* Achicamos un poco para dar prioridad al precio final */
+    font-weight: 500;
 }
 
 /* 11. Estilos para la sección de resultado final */
@@ -258,10 +257,6 @@ body {
     line-height: 1.6;
     background-color: #fdfdfd;
     resize: vertical;
-}
-
-#btn-finalizar {
-    margin-top: 1rem;
 }
 
 #copiado-feedback {
@@ -337,31 +332,25 @@ body {
     margin-bottom: 1rem;
     transition: box-shadow 0.2s;
 }
-
 .historial-card:hover {
     box-shadow: var(--shadow);
 }
-
 .historial-card__header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
 }
-
 .historial-card__info h3 {
     margin: 0 0 0.5rem 0;
     color: var(--primary-color);
 }
-
 .historial-card__info p {
     margin: 0.25rem 0;
 }
-
 .historial-card__info .fecha {
     font-size: 0.875rem;
     color: var(--text-light);
 }
-
 .historial-card__total {
     font-size: 1.5rem;
     font-weight: 600;
@@ -369,17 +358,14 @@ body {
     white-space: nowrap;
     margin-left: 1rem;
 }
-
 .historial-card__detalle {
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
 }
-
 .historial-card__detalle h4 {
     margin: 0 0 0.5rem 0;
 }
-
 .historial-card__detalle > ul {
     padding-left: 1.5rem;
     margin: 0;
@@ -392,7 +378,6 @@ body {
     display: flex;
     gap: 0.75rem;
 }
-
 .btn-ver-detalle {
     background: none;
     border: 1px solid var(--border-color);
@@ -402,7 +387,6 @@ body {
     cursor: pointer;
     font-weight: 500;
 }
-
 .btn-borrar-presupuesto {
     background: none;
     border: 1px solid var(--danger-color);
@@ -413,19 +397,17 @@ body {
     font-weight: 500;
     transition: background-color 0.2s, color 0.2s;
 }
-
 .btn-borrar-presupuesto:hover {
     background-color: var(--danger-color);
     color: white;
 }
 
-/* 15. Estilos para la página de Stock (Versión Mejorada) */
+/* 15. Estilos para la página de Stock */
 .stock-actions {
     display: flex;
     gap: 0.75rem;
     align-items: center;
 }
-
 .stock-actions .btn-stock-link,
 .stock-actions .btn-stock {
     padding: 0.5rem 1rem;
@@ -437,7 +419,6 @@ body {
     text-decoration: none;
     font-size: 0.875rem;
 }
-
 .stock-actions .add {
     color: var(--success-color);
     border-color: var(--success-color);
@@ -447,7 +428,6 @@ body {
     background-color: var(--success-color);
     color: white;
 }
-
 .stock-actions .subtract {
     color: var(--danger-color);
     border-color: var(--danger-color);
@@ -462,14 +442,65 @@ body {
 .historial-card__detalle > ul > li {
     margin-bottom: 0.75rem;
 }
-
 .lote-detalle {
     list-style-type: circle;
     margin-top: 0.5rem;
     padding-left: 1.5rem;
 }
-
 .lote-item {
     font-size: 0.9rem;
     color: var(--text-light);
+}
+
+/* 17. Estilos para la sección de cálculo de precio */
+.calculo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.5rem;
+}
+.calculo-divisor {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1.5rem 0;
+}
+.calculo-resumen {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+.calculo-fila {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+.calculo-fila span:first-child {
+    color: var(--text-light);
+}
+.calculo-fila span:last-child {
+    font-weight: 500;
+}
+.calculo-fila.costo-produccion {
+    font-weight: bold;
+    font-size: 1rem;
+    color: var(--text-color);
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.75rem;
+}
+.precio-venta-final {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 1.5rem 0;
+}
+#calculo-precio-venta .btn-primary {
+    width: auto;
+    padding: 0.8rem 1.5rem;
+    float: right;
 }
