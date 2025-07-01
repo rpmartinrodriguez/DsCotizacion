@@ -232,6 +232,6 @@ function main() {
     setupInitialEventListeners();
     setupAuthListener();
 }
-##
+
 // Iniciar la aplicación una vez que el DOM esté completamente cargado.
 document.addEventListener('DOMContentLoaded', main);
