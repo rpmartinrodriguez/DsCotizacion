@@ -35,11 +35,12 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Stock Actual</th>
+                            <th>Precio Promedio</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td colspan="3" style="text-align: center;">Cargando stock...</td></tr>
+                        <tr><td colspan="4" style="text-align: center;">Cargando stock...</td></tr>
                     </tbody>
                 </table>
             </section>
@@ -55,5 +56,18 @@
             setupStock(app);
         } catch (error) { console.error(error); }
     </script>
+
+    <div id="edit-lotes-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title" id="lotes-modal-title">Editar Lotes de: </h2>
+            <div id="lotes-editor-container" class="lotes-editor-container">
+                </div>
+            <div class="modal-actions">
+                <button id="lotes-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="lotes-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
