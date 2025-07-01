@@ -1,7 +1,7 @@
-// Crea un nuevo archivo: js/recetas.js
+// js/recetas.js (Versión con botones funcionales)
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    addDoc, updateDoc, deleteDoc, getDocs 
+    addDoc, updateDoc, deleteDoc, getDoc, arrayUnion 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupRecetas(app) {
@@ -12,8 +12,6 @@ export function setupRecetas(app) {
     // Referencias del DOM
     const btnCrearReceta = document.getElementById('btn-crear-receta');
     const recetasContainer = document.getElementById('lista-recetas-container');
-    
-    // Referencias de la Modal
     const modal = document.getElementById('receta-modal-overlay');
     const modalTitle = document.getElementById('receta-modal-title');
     const recetaNombreInput = document.getElementById('receta-nombre-input');
@@ -25,17 +23,17 @@ export function setupRecetas(app) {
     const btnCancelarReceta = document.getElementById('receta-modal-btn-cancelar');
 
     let materiasPrimasDisponibles = [];
+    let todasLasRecetas = []; // Guardaremos todas las recetas aquí
     let ingredientesRecetaActual = [];
     let editandoId = null;
 
-    // --- Cargar Datos ---
     const cargarMateriasPrimas = async () => {
         const snapshot = await getDocs(query(materiasPrimasCollection, orderBy('nombre')));
         materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         selectorIngrediente.innerHTML = '<option value="">Selecciona un ingrediente</option>';
         materiasPrimasDisponibles.forEach(mp => {
-            if (mp.lotes && mp.lotes.length > 0) { // Solo mostrar materias primas con lotes/stock
+            if (mp.lotes && mp.lotes.length > 0) {
                 const option = document.createElement('option');
                 option.value = mp.id;
                 option.textContent = `${mp.nombre} (${mp.unidad})`;
@@ -44,13 +42,12 @@ export function setupRecetas(app) {
         });
     };
 
-    // --- Lógica de la Modal ---
     const openModal = (receta = null) => {
-        if (receta) {
+        if (receta && receta.data) {
             editandoId = receta.id;
             modalTitle.textContent = 'Editar Receta';
             recetaNombreInput.value = receta.data.nombreTorta;
-            ingredientesRecetaActual = [...receta.data.ingredientes];
+            ingredientesRecetaActual = JSON.parse(JSON.stringify(receta.data.ingredientes));
         } else {
             editandoId = null;
             modalTitle.textContent = 'Crear Nueva Receta';
@@ -131,18 +128,14 @@ export function setupRecetas(app) {
         }
     });
 
-    btnCrearReceta.addEventListener('click', () => openModal());
-    btnCancelarReceta.addEventListener('click', closeModal);
-
-    // --- Renderizar Tarjetas de Recetas ---
     onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
-        if (snapshot.empty) {
+        todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        if (todasLasRecetas.length === 0) {
             recetasContainer.innerHTML = '<p>No tienes recetas guardadas. ¡Crea la primera!</p>';
             return;
         }
         recetasContainer.innerHTML = '';
-        snapshot.forEach(doc => {
-            const receta = { id: doc.id, data: doc.data() };
+        todasLasRecetas.forEach(receta => {
             const card = document.createElement('div');
             card.className = 'receta-card';
             card.innerHTML = `
@@ -152,7 +145,7 @@ export function setupRecetas(app) {
                 </div>
                 <div class="receta-card__actions">
                     <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
-                    <a href="#" class="btn-primary btn-presupuestar-receta" data-id="${receta.id}">Presupuestar</a>
+                    <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary btn-presupuestar-receta" data-id="${receta.id}">Presupuestar</a>
                 </div>
             `;
             recetasContainer.appendChild(card);
@@ -162,14 +155,16 @@ export function setupRecetas(app) {
     recetasContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-editar-receta')) {
             const id = e.target.dataset.id;
-            const receta = { id, data: todoElHistorial.find(r => r.id === id)?.data }; // Necesitamos cargar los datos aquí
-            // Esto es un placeholder, necesitamos una forma de obtener la receta completa
+            const recetaParaEditar = todasLasRecetas.find(r => r.id === id);
+            if (recetaParaEditar) {
+                openModal(recetaParaEditar);
+            }
         }
-        if (e.target.classList.contains('btn-presupuestar-receta')) {
-            // Lógica de la Fase 2
-        }
+        // El botón de presupuestar ahora es un enlace directo, no necesita lógica aquí.
     });
     
-    // Carga inicial
+    btnCrearReceta.addEventListener('click', () => openModal());
+    btnCancelarReceta.addEventListener('click', closeModal);
+    
     cargarMateriasPrimas();
 }
