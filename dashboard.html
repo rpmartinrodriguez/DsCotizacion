@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Cotizador de Tortas</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <div class="header__logo">🎂</div>
+            <h1 class="header__title">Cotizador de Tortas</h1>
+            <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
+        </header>
+
+        <nav class="tabs">
+            <a href="dashboard.html" class="tabs__link active">Dashboard</a>
+            <a href="index.html" class="tabs__link">Registrar Compra</a>
+            <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="stock.html" class="tabs__link">Stock</a>
+            <a href="historial.html" class="tabs__link">Historial</a>
+        </nav>
+
+        <main>
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <h4>Ingresos Totales</h4>
+                    <p id="kpi-ingresos-totales">$0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Ganancia Bruta</h4>
+                    <p id="kpi-ganancia-bruta">$0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Presupuestos Creados</h4>
+                    <p id="kpi-presupuestos-creados">0</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Valor del Stock</h4>
+                    <p id="kpi-valor-stock">$0.00</p>
+                </div>
+            </div>
+
+            <div class="dashboard-layout">
+                <section class="card">
+                    <h2 class="card__title">Ingresos por Mes</h2>
+                    <canvas id="grafico-ingresos"></canvas>
+                </section>
+                <section class="card">
+                    <h2 class="card__title">Productos con Bajo Stock</h2>
+                    <div id="lista-bajo-stock">
+                        <p>Calculando...</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupDashboard } from './js/dashboard.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupDashboard(app);
+        } catch (error) { console.error(error); }
+    </script>
+</body>
+</html>
