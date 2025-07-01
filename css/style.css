@@ -336,6 +336,9 @@ body {
 .historial-card:hover {
     box-shadow: var(--shadow);
 }
+.historial-card.es-venta { /* Estilo para las tarjetas que ya son venta */
+    border-left: 5px solid var(--success-color);
+}
 .historial-card__header {
     display: flex;
     justify-content: space-between;
@@ -378,6 +381,7 @@ body {
     margin-top: 1rem;
     display: flex;
     gap: 0.75rem;
+    align-items: center;
 }
 .btn-ver-detalle {
     background: none;
@@ -614,78 +618,47 @@ body {
 
 /* 21. Estilos Responsive para Móviles */
 @media (max-width: 768px) {
+    body { padding: 1em; }
+    .main-container { padding: 0; }
+    .card { padding: 1.5rem; border-radius: 10px; }
+    .header__title { font-size: 1.8rem; }
+    .header__subtitle { font-size: 0.9rem; }
+    .tabs__link { padding: 0.8rem 0.5rem; font-size: 0.8rem; }
+    .card__title { font-size: 1.1rem; }
+    .form-modern { gap: 1rem; }
+    .card-header-actions { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .table-clean { border: none; }
+    .table-clean thead { display: none; }
+    .table-clean tr { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; }
+    .table-clean td { display: block; text-align: right; padding: 0.5rem 0; border-bottom: none; position: relative; }
+    .table-clean td:before { content: attr(data-label); position: absolute; left: 0; font-weight: 600; color: var(--text-color); text-align: left; }
+    .table-clean td.action-buttons { text-align: center; margin-top: 1rem; }
+    .table-clean td.action-buttons:before { content: ''; }
+    .calculo-grid { grid-template-columns: 1fr; }
+    .presupuesto-layout, .dashboard-layout { grid-template-columns: 1fr; }
+}
 
-    body {
-        padding: 1em;
-    }
-    .main-container {
-        padding: 0;
-    }
-    .card {
-        padding: 1.5rem;
-        border-radius: 10px;
-    }
-    .header__title {
-        font-size: 1.8rem;
-    }
-    .header__subtitle {
-        font-size: 0.9rem;
-    }
-    .tabs__link {
-        padding: 0.8rem 0.5rem;
-        font-size: 0.8rem;
-    }
-    .card__title {
-        font-size: 1.1rem;
-    }
-    .form-modern {
-        gap: 1rem;
-    }
-    .card-header-actions {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    .table-clean {
-        border: none;
-    }
-    .table-clean thead {
-        display: none;
-    }
-    .table-clean tr {
-        display: block;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        padding: 1rem;
-    }
-    .table-clean td {
-        display: block;
-        text-align: right;
-        padding: 0.5rem 0;
-        border-bottom: none;
-        position: relative;
-    }
-    .table-clean td:before {
-        content: attr(data-label);
-        position: absolute;
-        left: 0;
-        font-weight: 600;
-        color: var(--text-color);
-        text-align: left;
-    }
-    .table-clean td.action-buttons {
-        text-align: center;
-        margin-top: 1rem;
-    }
-    .table-clean td.action-buttons:before {
-        content: '';
-    }
-    .calculo-grid {
-        grid-template-columns: 1fr;
-    }
-    .presupuesto-layout,
-    .dashboard-layout {
-        grid-template-columns: 1fr;
-    }
+/* 22. Estilos para el botón "Marcar como Venta" */
+.btn-marcar-venta {
+    background: none;
+    border: 1px solid var(--success-color);
+    color: var(--success-color);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+}
+.btn-marcar-venta:hover {
+    background-color: var(--success-color);
+    color: white;
+}
+.venta-confirmada-badge {
+    padding: 0.6rem 1rem; /* 0.6rem para alinear mejor con los otros botones */
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--success-color);
+    background-color: #eaf7ed; /* Un verde muy claro */
+    border-radius: 5px;
+    text-align: center;
 }
