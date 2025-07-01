@@ -1,7 +1,7 @@
-// js/stock.js (Versión con Precio Promedio y Edición de Lotes)
+// js/stock.js
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    updateDoc, getDoc, runTransaction
+    updateDoc, getDoc, runTransaction 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupStock(app) {
@@ -37,11 +37,11 @@ export function setupStock(app) {
 
             const fila = document.createElement('tr');
             fila.innerHTML = `
-                <td>${item.nombre}</td>
-                <td>${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
-                <td>$${precioPromedio.toFixed(2)} / ${item.unidad}</td>
+                <td data-label="Nombre">${item.nombre}</td>
+                <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
+                <td data-label="Precio Promedio">$${precioPromedio.toFixed(2)} / ${item.unidad}</td>
                 <td class="action-buttons stock-actions">
-                    <a href="index.html" class="btn-stock-link add" title="Registrar Nueva Compra">+</a>
+                    <a href="compras.html" class="btn-stock-link add" title="Registrar Nueva Compra">+</a>
                     <button class="btn-stock subtract" data-id="${id}" title="Dar de baja stock">-</button>
                     <button class="btn-stock-link edit" data-id="${id}" title="Editar Precios de Lotes">💲</button>
                 </td>
@@ -117,7 +117,7 @@ export function setupStock(app) {
             if (!docSnap.exists()) throw new Error("El documento fue eliminado.");
 
             let producto = docSnap.data();
-            let lotesActualizados = JSON.parse(JSON.stringify(producto.lotes)); // Copia profunda para editar
+            let lotesActualizados = JSON.parse(JSON.stringify(producto.lotes));
 
             const inputsPorLote = {};
             inputs.forEach(input => {
@@ -165,7 +165,7 @@ export function setupStock(app) {
         
         if (target.classList.contains('add')) {
             e.preventDefault();
-            window.location.href = 'index.html';
+            window.location.href = 'compras.html';
         }
 
         if (target.classList.contains('subtract')) {
