@@ -1,4 +1,4 @@
-/* css/style.css (Versión Completa y Final - 30/06/2025) */
+/* css/style.css (Versión Completa y Final - 01/07/2025) */
 
 /* 1. Variables Globales y Reseteo Básico */
 :root {
@@ -37,7 +37,8 @@ body {
 }
 
 .header__logo {
-    font-size: 3.5rem;
+    height: 80px; /* Tamaño para el logo en imagen */
+    width: auto;   /* Ancho automático para mantener la proporción */
     margin-bottom: 0.5rem;
 }
 
@@ -510,7 +511,6 @@ body {
     margin-bottom: 1.5rem;
     width: 100%;
 }
-
 .buscador-container input[type="search"] {
     width: 100%;
     padding: 0.8rem 1rem;
@@ -610,4 +610,82 @@ body {
 .lista-sencilla li span {
     font-weight: 500;
     color: var(--danger-color);
+}
+
+/* 21. Estilos Responsive para Móviles */
+@media (max-width: 768px) {
+
+    body {
+        padding: 1em;
+    }
+    .main-container {
+        padding: 0;
+    }
+    .card {
+        padding: 1.5rem;
+        border-radius: 10px;
+    }
+    .header__title {
+        font-size: 1.8rem;
+    }
+    .header__subtitle {
+        font-size: 0.9rem;
+    }
+    .tabs__link {
+        padding: 0.8rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    .card__title {
+        font-size: 1.1rem;
+    }
+    .form-modern {
+        gap: 1rem;
+    }
+    .card-header-actions {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .table-clean {
+        border: none;
+    }
+    .table-clean thead {
+        display: none;
+    }
+    .table-clean tr {
+        display: block;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+    }
+    .table-clean td {
+        display: block;
+        text-align: right;
+        padding: 0.5rem 0;
+        border-bottom: none;
+        position: relative;
+    }
+    .table-clean td:before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        font-weight: 600;
+        color: var(--text-color);
+        text-align: left;
+    }
+    .table-clean td.action-buttons {
+        text-align: center;
+        margin-top: 1rem;
+    }
+    .table-clean td.action-buttons:before {
+        content: '';
+    }
+    .calculo-grid {
+        grid-template-columns: 1fr;
+    }
+    .presupuesto-layout,
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+    }
 }
