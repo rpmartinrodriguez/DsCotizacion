@@ -10,10 +10,12 @@
 <body>
     <div class="main-container">
         <header class="header">
-            <div class="header__logo">🎂</div>
+            <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+            
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
+
         <nav class="tabs">
             <a href="index.html" class="tabs__link active">Dashboard</a>
             <a href="recetas.html" class="tabs__link">Postres</a>
@@ -21,6 +23,7 @@
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link">Historial</a>
         </nav>
+
         <main>
             <div class="dashboard-grid">
                 <div class="stat-card">
@@ -40,6 +43,7 @@
                     <p id="kpi-valor-stock">$0.00</p>
                 </div>
             </div>
+
             <div class="dashboard-layout">
                 <section class="card">
                     <h2 class="card__title">Ingresos por Mes</h2>
@@ -54,6 +58,7 @@
             </div>
         </main>
     </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
