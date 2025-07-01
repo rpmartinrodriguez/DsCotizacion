@@ -712,3 +712,21 @@ body {
     line-height: 1.6;
     color: var(--text-color);
 }
+
+/* 24. Estilos para Indicadores y Filtros */
+.stat-card-main {
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-align: center;
+    margin: 1rem 0;
+}
+.card__subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
