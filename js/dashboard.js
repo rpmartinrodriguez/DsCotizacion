@@ -1,4 +1,4 @@
-// Crea un nuevo archivo: js/dashboard.js
+// js/dashboard.js
 import { 
     getFirestore, collection, getDocs, query, orderBy 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -15,25 +15,21 @@ export function setupDashboard(app) {
     const kpiValorStock = document.getElementById('kpi-valor-stock');
     const listaBajoStock = document.getElementById('lista-bajo-stock');
     const ctx = document.getElementById('grafico-ingresos').getContext('2d');
-    let ingresosChart = null; // Variable para guardar la instancia del gráfico
+    let ingresosChart = null; 
 
-    const UMBRAL_BAJO_STOCK = 100; // Define qué es "bajo stock" (ej: menos de 100 gr/ml)
+    const UMBRAL_BAJO_STOCK = 100;
 
-    // Función para calcular métricas de presupuestos
     const calcularMetricasPresupuestos = async () => {
         const snapshot = await getDocs(query(presupuestosGuardadosCollection, orderBy("fecha", "desc")));
         
         let ingresosTotales = 0;
-        let costoMaterialesTotal = 0;
         let gananciaBrutaTotal = 0;
         const presupuestosPorMes = {};
 
         snapshot.forEach(doc => {
             const p = doc.data();
             ingresosTotales += p.precioVenta || 0;
-            costoMaterialesTotal += p.costoMateriales || 0;
             
-            // Calculamos la ganancia de cada presupuesto
             if (p.hasOwnProperty('precioVenta')) {
                 const costoManoObra = (p.horasTrabajo || 0) * (p.costoHora || 0);
                 const costoFijos = (p.costoMateriales || 0) * ((p.porcentajeCostosFijos || 0) / 100);
@@ -41,9 +37,8 @@ export function setupDashboard(app) {
                 gananciaBrutaTotal += (p.precioVenta - costoProduccion);
             }
 
-            // Agrupamos ingresos por mes para el gráfico
             const fecha = p.fecha.toDate();
-            const mesAnio = `${fecha.getMonth() + 1}/${fecha.getFullYear()}`;
+            const mesAnio = `${fecha.getMonth() + 1}/${String(fecha.getFullYear()).slice(-2)}`;
             if (!presupuestosPorMes[mesAnio]) {
                 presupuestosPorMes[mesAnio] = 0;
             }
@@ -57,7 +52,6 @@ export function setupDashboard(app) {
         renderizarGrafico(presupuestosPorMes);
     };
 
-    // Función para calcular métricas de stock
     const calcularMetricasStock = async () => {
         const snapshot = await getDocs(query(materiasPrimasCollection));
         
@@ -81,12 +75,11 @@ export function setupDashboard(app) {
 
         kpiValorStock.textContent = `$${valorTotalStock.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
         
-        // Renderizar lista de bajo stock
         listaBajoStock.innerHTML = '';
         if (productosBajoStock.length > 0) {
             const ul = document.createElement('ul');
             ul.className = 'lista-sencilla';
-            productosBajoStock.forEach(p => {
+            productosBajoStock.sort((a,b) => a.stock - b.stock).forEach(p => {
                 const li = document.createElement('li');
                 li.innerHTML = `${p.nombre} <span>${p.stock.toLocaleString('es-AR')} ${p.unidad}</span>`;
                 ul.appendChild(li);
@@ -97,14 +90,13 @@ export function setupDashboard(app) {
         }
     };
 
-    // Función para renderizar el gráfico
     const renderizarGrafico = (datos) => {
         if (ingresosChart) {
-            ingresosChart.destroy(); // Destruimos el gráfico anterior si existe
+            ingresosChart.destroy();
         }
         
-        const labels = Object.keys(datos).reverse(); // Meses
-        const dataPoints = Object.values(datos).reverse(); // Ingresos
+        const labels = Object.keys(datos).reverse();
+        const dataPoints = Object.values(datos).reverse();
 
         ingresosChart = new Chart(ctx, {
             type: 'bar',
@@ -120,16 +112,14 @@ export function setupDashboard(app) {
             },
             options: {
                 scales: {
-                    y: {
-                        beginAtZero: true
-                    }
+                    y: { beginAtZero: true }
                 },
-                responsive: true
+                responsive: true,
+                maintainAspectRatio: false
             }
         });
     };
 
-    // Ejecutamos las funciones al cargar la página
     calcularMetricasPresupuestos();
     calcularMetricasStock();
 }
