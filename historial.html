@@ -34,6 +34,17 @@
             </section>
         </main>
     </div>
+    
+    <div id="agradecimiento-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">¡Venta Confirmada!</h2>
+            <pre id="agradecimiento-texto" class="mensaje-agradecimiento"></pre>
+            <div class="modal-actions">
+                <button id="agradecimiento-modal-btn-cerrar" class="btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
