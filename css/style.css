@@ -96,6 +96,19 @@ body {
     margin-bottom: 1.5rem;
 }
 
+.card-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.card-header-actions .btn-primary {
+    width: auto;
+    padding: 0.8rem 1.5rem;
+}
+
+
 /* 6. Formularios Modernos */
 .form-modern {
     display: grid;
@@ -336,7 +349,7 @@ body {
 .historial-card:hover {
     box-shadow: var(--shadow);
 }
-.historial-card.es-venta { /* Estilo para las tarjetas que ya son venta */
+.historial-card.es-venta {
     border-left: 5px solid var(--success-color);
 }
 .historial-card__header {
@@ -407,7 +420,7 @@ body {
     color: white;
 }
 
-/* 15. Estilos para la página de Stock (Versión Mejorada) */
+/* 15. Estilos para la página de Stock */
 .stock-actions {
     display: flex;
     gap: 0.75rem;
@@ -615,6 +628,34 @@ body {
     font-weight: 500;
     color: var(--danger-color);
 }
+.receta-editor-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+#ingredientes-en-receta-container .lista-sencilla li button {
+    background: none;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 1.2rem;
+    margin-left: 1rem;
+}
+.receta-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+.receta-card__info h3 { margin: 0 0 0.25rem 0; }
+.receta-card__info p { margin: 0; font-size: 0.9rem; color: var(--text-light); }
+.receta-card__actions { display: flex; gap: 0.75rem; }
+.receta-card__actions .btn-primary,
+.receta-card__actions .btn-secondary { width: auto; padding: 0.6rem 1.2rem; }
 
 /* 21. Estilos Responsive para Móviles */
 @media (max-width: 768px) {
@@ -654,11 +695,20 @@ body {
     color: white;
 }
 .venta-confirmada-badge {
-    padding: 0.6rem 1rem; /* 0.6rem para alinear mejor con los otros botones */
+    padding: 0.6rem 1rem;
     font-weight: 600;
     font-size: 0.875rem;
     color: var(--success-color);
-    background-color: #eaf7ed; /* Un verde muy claro */
+    background-color: #eaf7ed;
     border-radius: 5px;
     text-align: center;
+}
+
+/* 23. Estilos para el Mensaje de Agradecimiento en Modal */
+.mensaje-agradecimiento {
+    white-space: pre-wrap; /* Respeta los saltos de línea y espacios */
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-color);
 }
