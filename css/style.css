@@ -242,7 +242,7 @@ body {
 .total-cost {
     text-align: right;
     margin-top: 1.5rem;
-    font-size: 1.2rem; /* Achicamos un poco para dar prioridad al precio final */
+    font-size: 1.2rem; 
     font-weight: 500;
 }
 
@@ -402,7 +402,7 @@ body {
     color: white;
 }
 
-/* 15. Estilos para la página de Stock */
+/* 15. Estilos para la página de Stock (Versión Mejorada) */
 .stock-actions {
     display: flex;
     gap: 0.75rem;
@@ -503,4 +503,24 @@ body {
     width: auto;
     padding: 0.8rem 1.5rem;
     float: right;
+}
+
+/* 18. Estilos para el Buscador */
+.buscador-container {
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.buscador-container input[type="search"] {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+.buscador-container input[type="search"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3);
 }
