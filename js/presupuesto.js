@@ -1,3 +1,4 @@
+// js/presupuesto.js (Completo y Final)
 import { 
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
     Timestamp, doc, runTransaction, getDoc 
@@ -9,13 +10,11 @@ export function setupPresupuesto(app) {
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
     const recetasCollection = collection(db, 'recetas');
 
-    // --- REFERENCIAS A ELEMENTOS DEL DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
     const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
     const costoTotalSpan = document.getElementById('costo-total');
     const btnFinalizar = document.getElementById('btn-finalizar');
     
-    // Referencias para cálculo de precio
     const horasTrabajoInput = document.getElementById('horas-trabajo');
     const costoHoraInput = document.getElementById('costo-hora');
     const costosFijosPorcInput = document.getElementById('costos-fijos-porcentaje');
@@ -28,7 +27,6 @@ export function setupPresupuesto(app) {
     const totalGananciaSpan = document.getElementById('total-ganancia');
     const precioVentaSugeridoSpan = document.getElementById('precio-venta-sugerido');
 
-    // Referencias a sección final y modal
     const resultadoFinalContainer = document.getElementById('resultado-final');
     const mensajeFinalTextarea = document.getElementById('mensaje-final');
     const btnCopiar = document.getElementById('btn-copiar');
@@ -85,7 +83,6 @@ export function setupPresupuesto(app) {
         const recetaId = urlParams.get('recetaId');
 
         if (!recetaId) {
-            // Si no hay receta, cargamos la lista normal de ingredientes
             cargarMateriasPrimas();
             return;
         }
@@ -99,7 +96,7 @@ export function setupPresupuesto(app) {
             const receta = recetaSnap.data();
             tortaTituloInput.value = receta.nombreTorta;
 
-            await cargarMateriasPrimas(); // Esperamos que se dibuje la lista de ingredientes
+            await cargarMateriasPrimas();
 
             receta.ingredientes.forEach(ingredienteReceta => {
                 const checkbox = document.getElementById(ingredienteReceta.idMateriaPrima);
@@ -115,6 +112,7 @@ export function setupPresupuesto(app) {
         } else {
             console.error("No se encontró la receta con el ID:", recetaId);
             ingredientesContainer.innerHTML = '<p style="color: red;">Error: No se pudo encontrar la receta seleccionada.</p>';
+            await cargarMateriasPrimas();
         }
     };
     
@@ -181,7 +179,7 @@ export function setupPresupuesto(app) {
         } else {
             presupuesto.forEach(item => {
                 const fila = document.createElement('tr');
-                fila.innerHTML = `<td>${item.nombre}</td><td>${item.cantidadTotal.toLocaleString('es-AR')} ${item.unidad}</td><td>$${item.costoTotal.toFixed(2)}</td>`;
+                fila.innerHTML = `<td data-label="Ingrediente">${item.nombre}</td><td data-label="Cantidad">${item.cantidadTotal.toLocaleString('es-AR')} ${item.unidad}</td><td data-label="Costo">$${item.costoTotal.toFixed(2)}</td>`;
                 tablaPresupuestoBody.appendChild(fila);
             });
         }
@@ -196,11 +194,13 @@ export function setupPresupuesto(app) {
         const costoHora = parseFloat(costoHoraInput.value) || 0;
         const costosFijosPorc = parseFloat(costosFijosPorcInput.value) || 0;
         const gananciaPorc = parseFloat(gananciaPorcInput.value) || 0;
+
         const subtotalManoObra = horasTrabajo * costoHora;
         const subtotalCostosFijos = costoMateriales * (costosFijosPorc / 100);
         const costoProduccion = costoMateriales + subtotalManoObra + subtotalCostosFijos;
         const totalGanancia = costoProduccion * (gananciaPorc / 100);
         const precioVenta = costoProduccion + totalGanancia;
+
         resumenCostoMaterialesSpan.textContent = `$${costoMateriales.toFixed(2)}`;
         subtotalManoObraSpan.textContent = `$${subtotalManoObra.toFixed(2)}`;
         subtotalCostosFijosSpan.textContent = `$${subtotalCostosFijos.toFixed(2)}`;
@@ -213,7 +213,7 @@ export function setupPresupuesto(app) {
         return new Promise((resolve, reject) => {
             modalOverlay.classList.add('visible');
             tortaTituloInput.focus();
-            clienteNombreInput.value = ''; // Limpiamos el campo de cliente
+            clienteNombreInput.value = '';
             const closeModal = () => {
                 modalOverlay.classList.remove('visible');
                 modalBtnConfirmar.onclick = null;
@@ -312,7 +312,6 @@ Dulce Sal — Horneando tus mejores momentos 🍰`;
         }).catch(err => { console.error('Error al copiar el texto: ', err); alert("No se pudo copiar el texto."); });
     });
 
-    // Listeners para los nuevos inputs de cálculo de precio
     [horasTrabajoInput, costoHoraInput, costosFijosPorcInput, gananciaPorcInput].forEach(input => {
         input.addEventListener('input', calcularPrecioVenta);
     });
