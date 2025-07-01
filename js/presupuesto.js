@@ -1,4 +1,4 @@
-// js/presupuesto.js (Versión que guarda el desglose de lotes)
+// js/presupuesto.js (Versión con cálculo de precio de venta)
 import { 
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
     Timestamp, doc, runTransaction 
@@ -8,11 +8,28 @@ export function setupPresupuesto(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
-    // ... (referencias al DOM se mantienen igual)
+
+    // --- REFERENCIAS A ELEMENTOS DEL DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
     const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
     const costoTotalSpan = document.getElementById('costo-total');
     const btnFinalizar = document.getElementById('btn-finalizar');
+    
+    // --- NUEVAS REFERENCIAS PARA CÁLCULO DE PRECIO ---
+    const calculoContainer = document.getElementById('calculo-precio-venta');
+    const horasTrabajoInput = document.getElementById('horas-trabajo');
+    const costoHoraInput = document.getElementById('costo-hora');
+    const costosFijosPorcInput = document.getElementById('costos-fijos-porcentaje');
+    const gananciaPorcInput = document.getElementById('ganancia-porcentaje');
+    
+    const resumenCostoMaterialesSpan = document.getElementById('resumen-costo-materiales');
+    const subtotalManoObraSpan = document.getElementById('subtotal-mano-obra');
+    const subtotalCostosFijosSpan = document.getElementById('subtotal-costos-fijos');
+    const costoProduccionSpan = document.getElementById('costo-produccion');
+    const totalGananciaSpan = document.getElementById('total-ganancia');
+    const precioVentaSugeridoSpan = document.getElementById('precio-venta-sugerido');
+
+    // --- REFERENCIAS A SECCIÓN FINAL Y MODAL ---
     const resultadoFinalContainer = document.getElementById('resultado-final');
     const mensajeFinalTextarea = document.getElementById('mensaje-final');
     const btnCopiar = document.getElementById('btn-copiar');
@@ -25,73 +42,70 @@ export function setupPresupuesto(app) {
 
     let materiasPrimasDisponibles = [];
     let presupuestoActual = [];
-    let costoTotalCache = 0;
+    let costoTotalCache = 0; // Costo solo de materiales
 
-    // --- LÓGICA DE CÁLCULO FIFO (ACTUALIZADA) ---
-    // Ahora devuelve no solo el costo, sino también el desglose de lotes.
+    const calcularPrecioVenta = () => {
+        const costoMateriales = costoTotalCache;
+        const horasTrabajo = parseFloat(horasTrabajoInput.value) || 0;
+        const costoHora = parseFloat(costoHoraInput.value) || 0;
+        const costosFijosPorc = parseFloat(costosFijosPorcInput.value) || 0;
+        const gananciaPorc = parseFloat(gananciaPorcInput.value) || 0;
+
+        const subtotalManoObra = horasTrabajo * costoHora;
+        const subtotalCostosFijos = costoMateriales * (costosFijosPorc / 100);
+        const costoProduccion = costoMateriales + subtotalManoObra + subtotalCostosFijos;
+        const totalGanancia = costoProduccion * (gananciaPorc / 100);
+        const precioVenta = costoProduccion + totalGanancia;
+
+        resumenCostoMaterialesSpan.textContent = `$${costoMateriales.toFixed(2)}`;
+        subtotalManoObraSpan.textContent = `$${subtotalManoObra.toFixed(2)}`;
+        subtotalCostosFijosSpan.textContent = `$${subtotalCostosFijos.toFixed(2)}`;
+        costoProduccionSpan.textContent = `$${costoProduccion.toFixed(2)}`;
+        totalGananciaSpan.textContent = `$${totalGanancia.toFixed(2)}`;
+        precioVentaSugeridoSpan.textContent = `$${precioVenta.toFixed(2)}`;
+    };
+
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
         let costoAcumulado = 0;
         let cantidadRestante = cantidadRequerida;
-        let desgloseLotes = []; // Aquí guardaremos el detalle
-
+        let desgloseLotes = [];
         const lotesOrdenados = materiaPrima.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
-
         for (const lote of lotesOrdenados) {
             if (cantidadRestante <= 0) break;
-
             const cantidadAUsar = Math.min(lote.stockRestante, cantidadRestante);
             costoAcumulado += cantidadAUsar * lote.costoUnitario;
-            
-            // Guardamos el detalle de este paso
             desgloseLotes.push({
                 cantidadUsada: cantidadAUsar,
                 costoUnitario: lote.costoUnitario,
                 fechaLote: lote.fechaCompra
             });
-
             cantidadRestante -= cantidadAUsar;
         }
-        
-        // Devolvemos un objeto con toda la información
         return { costo: costoAcumulado, desglose: desgloseLotes };
     };
 
-    // --- FUNCIÓN PRINCIPAL DE ACTUALIZACIÓN (ACTUALIZADA) ---
     const actualizarPresupuesto = async () => {
         presupuestoActual = [];
         let costoTotal = 0;
-        
         const itemsSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:checked'));
-
         for (const checkbox of itemsSeleccionados) {
             const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
             cantidadInput.disabled = false;
             const cantidadRequerida = parseFloat(cantidadInput.value) || 0;
-
             if (cantidadRequerida > 0) {
                 const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === checkbox.id);
-                
-                const stockTotal = materiaPrima.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
-                if (stockTotal < cantidadRequerida) {
-                    console.warn(`Stock insuficiente para ${materiaPrima.nombre}`);
-                }
-
-                // Obtenemos el costo y el desglose del cálculo FIFO
                 const { costo: costoIngrediente, desglose: lotesUtilizados } = calcularCostoFIFO(materiaPrima, cantidadRequerida);
-
                 presupuestoActual.push({
                     id: checkbox.id,
                     nombre: materiaPrima.nombre,
-                    cantidadTotal: cantidadRequerida, // Renombramos para claridad
+                    cantidadTotal: cantidadRequerida,
                     unidad: materiaPrima.unidad,
-                    costoTotal: costoIngrediente, // Renombramos para claridad
-                    lotesUtilizados: lotesUtilizados // ¡Guardamos el desglose!
+                    costoTotal: costoIngrediente,
+                    lotesUtilizados: lotesUtilizados
                 });
                 costoTotal += costoIngrediente;
             }
         }
-        
-        // (El resto de la función se mantiene igual)
         const itemsNoSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:not(:checked)'));
         itemsNoSeleccionados.forEach(checkbox => {
             const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
@@ -102,7 +116,6 @@ export function setupPresupuesto(app) {
         renderizarResumen(presupuestoActual, costoTotal);
     };
 
-    // --- RENDERIZAR RESUMEN (ACTUALIZADO) ---
     const renderizarResumen = (presupuesto, total) => {
         tablaPresupuestoBody.innerHTML = '';
         if (presupuesto.length === 0) {
@@ -116,11 +129,9 @@ export function setupPresupuesto(app) {
         }
         costoTotalSpan.textContent = `$${total.toFixed(2)}`;
         btnFinalizar.disabled = total <= 0;
+        calcularPrecioVenta(); // Recalculamos el precio final cada vez que cambia el costo de materiales
     };
-    
-    // El resto del archivo (cargarMateriasPrimas, showTitlePrompt, btnFinalizar, etc.) se mantiene igual.
-    // La lógica de guardado ya es correcta porque 'presupuestoActual' ahora contiene toda la información detallada.
-    // ... (pega aquí el resto del código de la respuesta anterior para estas funciones) ...
+
     const cargarMateriasPrimas = async () => {
         const q = query(materiasPrimasCollection, orderBy('nombre'));
         const snapshot = await getDocs(q);
@@ -129,7 +140,6 @@ export function setupPresupuesto(app) {
         snapshot.forEach(doc => {
             const data = doc.data();
             if (!data.lotes || !Array.isArray(data.lotes) || data.lotes.length === 0) {
-                console.warn(`El producto "${data.nombre}" no tiene lotes válidos y será ignorado.`);
                 return;
             }
             materiasPrimasDisponibles.push({ id: doc.id, ...data });
@@ -142,7 +152,9 @@ export function setupPresupuesto(app) {
         ingredientesContainer.addEventListener('change', actualizarPresupuesto);
         ingredientesContainer.addEventListener('input', actualizarPresupuesto);
     };
+
     const showTitlePrompt = () => {
+        // ... (esta función no cambia)
         return new Promise((resolve, reject) => {
             modalOverlay.classList.add('visible');
             tortaTituloInput.focus();
@@ -170,16 +182,19 @@ export function setupPresupuesto(app) {
             document.onkeydown = (e) => { if (e.key === 'Escape') { reject(); closeModal(); } };
         });
     };
+
     btnFinalizar.addEventListener('click', async () => {
         try {
             const { tituloTorta, nombreCliente } = await showTitlePrompt();
+            
             await runTransaction(db, async (transaction) => {
+                // ... (la transacción no cambia)
                 for (const ingrediente of presupuestoActual) {
                     const ingredienteRef = doc(db, 'materiasPrimas', ingrediente.id);
                     const ingredienteDoc = await transaction.get(ingredienteRef);
                     if (!ingredienteDoc.exists()) throw `El ingrediente "${ingrediente.nombre}" no existe.`;
                     let data = ingredienteDoc.data();
-                    let cantidadADescontar = ingrediente.cantidadTotal; // Usamos la cantidad total
+                    let cantidadADescontar = ingrediente.cantidadTotal;
                     let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
                     const stockTotal = lotesActualizados.reduce((sum, lote) => sum + lote.stockRestante, 0);
                     if (stockTotal < cantidadADescontar) {
@@ -195,14 +210,24 @@ export function setupPresupuesto(app) {
                     transaction.update(ingredienteRef, { lotes: lotesActualizados });
                 }
             });
+
+            // Lógica de guardado actualizada
             const presupuestoParaGuardar = {
-                tituloTorta, nombreCliente, costoTotal: costoTotalCache,
-                fecha: Timestamp.now(), ingredientes: presupuestoActual // presupuestoActual ya tiene el desglose
+                tituloTorta, nombreCliente, fecha: Timestamp.now(), 
+                costoMateriales: costoTotalCache,
+                horasTrabajo: parseFloat(horasTrabajoInput.value) || 0,
+                costoHora: parseFloat(costoHoraInput.value) || 0,
+                porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0,
+                porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0,
+                precioVenta: parseFloat(precioVentaSugeridoSpan.textContent.replace('$', '')),
+                ingredientes: presupuestoActual
             };
             await addDoc(presupuestosGuardadosCollection, presupuestoParaGuardar);
             alert('¡Stock descontado y presupuesto guardado con éxito!');
-            const precioFinal = costoTotalSpan.textContent;
-            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinal}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💛.
+
+            // Lógica de mensaje actualizada
+            const precioFinalParaMensaje = precioVentaSugeridoSpan.textContent;
+            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💛.
 
 Si te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.
 
@@ -210,9 +235,11 @@ Gracias por considerarme, me haría mucha ilusión ser parte de un evento tan es
 
 Desde ya,
 Dulce Sal — Horneando tus mejores momentos 🍰`;
+            
             mensajeFinalTextarea.value = mensajeGenerado;
             resultadoFinalContainer.style.display = 'block';
             resultadoFinalContainer.scrollIntoView({ behavior: 'smooth' });
+
         } catch (error) {
             if (error) {
                console.error("Error en la operación de finalización: ", error);
@@ -222,11 +249,19 @@ Dulce Sal — Horneando tus mejores momentos 🍰`;
             }
         }
     });
+
     btnCopiar.addEventListener('click', () => {
+        // ... (esta función no cambia)
         navigator.clipboard.writeText(mensajeFinalTextarea.value).then(() => {
             copiadoFeedback.textContent = '¡Copiado al portapapeles!';
             setTimeout(() => { copiadoFeedback.textContent = ''; }, 2000);
         }).catch(err => { console.error('Error al copiar el texto: ', err); alert("No se pudo copiar el texto."); });
     });
+
+    // Listeners para los nuevos inputs
+    [horasTrabajoInput, costoHoraInput, costosFijosPorcInput, gananciaPorcInput].forEach(input => {
+        input.addEventListener('input', calcularPrecioVenta);
+    });
+
     cargarMateriasPrimas().catch(console.error);
 }
