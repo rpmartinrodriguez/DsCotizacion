@@ -1,26 +1,28 @@
-// js/dashboard.js (Versión con filtro por mes y cálculos correctos)
+// js/dashboard.js (Versión con aviso de faltantes)
 import { 
-    getFirestore, collection, getDocs, query, where, Timestamp
+    getFirestore, collection, getDocs, query, where, Timestamp, orderBy, limit, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { Chart, registerables } from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.js/+esm';
+Chart.register(...registerables);
 
 export function setupDashboard(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
-    // Referencias a los elementos del DOM
     const filtroMesSelect = document.getElementById('filtro-mes');
     const kpiIngresos = document.getElementById('kpi-ingresos-ventas');
-    const kpiValorCotizado = document.getElementById('kpi-valor-cotizado'); // Nuevo
+    const kpiValorCotizado = document.getElementById('kpi-valor-cotizado');
     const kpiGanancia = document.getElementById('kpi-ganancia-bruta');
     const kpiPresupuestos = document.getElementById('kpi-presupuestos-creados');
     const kpiValorStock = document.getElementById('kpi-valor-stock');
-    const listaBajoStock = document.getElementById('lista-bajo-stock');
+    const listaFaltantesContainer = document.getElementById('lista-faltantes-dashboard');
     const ctx = document.getElementById('grafico-ingresos').getContext('2d');
     let ingresosChart = null;
 
     const UMBRAL_BAJO_STOCK = 100;
-    let todosLosPresupuestos = []; // Guardamos los presupuestos para no pedirlos de nuevo
+    let todosLosPresupuestos = [];
+    let materiasPrimasDisponibles = [];
 
     const formatCurrency = (value) => value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -58,44 +60,63 @@ export function setupDashboard(app) {
         kpiPresupuestos.textContent = presupuestosFiltrados.length;
     };
 
-    const calcularMetricasStock = async () => {
-        const snapshot = await getDocs(query(materiasPrimasCollection));
-        let valorTotalStock = 0;
-        const productosBajoStock = [];
+    const actualizarListaFaltantes = async () => {
+        try {
+            const stockActualMap = new Map();
+            materiasPrimasDisponibles.forEach(item => {
+                const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
+                stockActualMap.set(item.id, stockTotal);
+            });
 
-        snapshot.forEach(doc => {
-            const item = doc.data();
-            if (item.lotes && Array.isArray(item.lotes)) {
-                let stockTotalProducto = 0;
-                item.lotes.forEach(lote => {
-                    valorTotalStock += lote.stockRestante * lote.costoUnitario;
-                    stockTotalProducto += lote.stockRestante;
+            const qVentas = query(presupuestosGuardadosCollection, where("esVenta", "==", true), where("fechaEntrega", ">=", new Date()), orderBy("fechaEntrega", "asc"), limit(5));
+            const ventasSnap = await getDocs(qVentas);
+            
+            const ingredientesNecesariosMap = new Map();
+            ventasSnap.forEach(doc => {
+                (doc.data().ingredientes || []).forEach(ing => {
+                    const id = ing.idMateriaPrima || ing.id;
+                    const cantidad = ing.cantidadTotal || ing.cantidad;
+                    ingredientesNecesariosMap.set(id, (ingredientesNecesariosMap.get(id) || 0) + cantidad);
                 });
-                if (stockTotalProducto < UMBRAL_BAJO_STOCK && item.unidad !== 'unidad') {
-                    productosBajoStock.push({ nombre: item.nombre, stock: stockTotalProducto, unidad: item.unidad });
+            });
+
+            const listaDeCompras = [];
+            for (const [id, cantidadNecesaria] of ingredientesNecesariosMap.entries()) {
+                const cantidadAComprar = cantidadNecesaria - (stockActualMap.get(id) || 0);
+                if (cantidadAComprar > 0) {
+                    const mpDoc = materiasPrimasDisponibles.find(mp => mp.id === id);
+                    if (mpDoc) listaDeCompras.push({ nombre: mpDoc.nombre, cantidad: cantidadAComprar, unidad: mpDoc.unidad });
                 }
             }
-        });
 
-        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
-        listaBajoStock.innerHTML = '';
-        if (productosBajoStock.length > 0) {
-            const ul = document.createElement('ul');
-            ul.className = 'lista-sencilla';
-            productosBajoStock.sort((a,b) => a.stock - b.stock).forEach(p => {
-                const li = document.createElement('li');
-                li.innerHTML = `${p.nombre} <span>${p.stock.toLocaleString('es-AR')} ${p.unidad}</span>`;
-                ul.appendChild(li);
-            });
-            listaBajoStock.appendChild(ul);
-        } else {
-            listaBajoStock.innerHTML = '<p>¡Todo en orden! No hay productos con bajo stock.</p>';
+            listaFaltantesContainer.innerHTML = '';
+            if (listaDeCompras.length > 0) {
+                const ul = document.createElement('ul');
+                ul.className = 'lista-sencilla';
+                listaDeCompras.sort((a,b) => b.cantidad - a.cantidad).slice(0, 5).forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `${item.nombre} <span>${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</span>`;
+                    ul.appendChild(li);
+                });
+                if (listaDeCompras.length > 5) {
+                    const liMas = document.createElement('li');
+                    liMas.innerHTML = `<strong>y ${listaDeCompras.length - 5} más...</strong>`;
+                    liMas.style.justifyContent = 'center';
+                    liMas.style.color = 'var(--text-light)';
+                    ul.appendChild(liMas);
+                }
+                listaFaltantesContainer.appendChild(ul);
+            } else {
+                listaFaltantesContainer.innerHTML = '<p>✅ Tienes stock suficiente para las próximas 5 ventas.</p>';
+            }
+        } catch (error) {
+            console.error("Error calculando faltantes:", error);
+            listaFaltantesContainer.innerHTML = '<p style="color:red;">Error al calcular.</p>';
         }
     };
-
+    
     const renderizarGrafico = () => {
         if (ingresosChart) ingresosChart.destroy();
-        
         const ventasPorMes = {};
         todosLosPresupuestos.forEach(p => {
             if (p.esVenta) {
@@ -105,31 +126,31 @@ export function setupDashboard(app) {
                 ventasPorMes[mesAnio] += p.precioVenta || 0;
             }
         });
-
         const labels = Object.keys(ventasPorMes).reverse();
         const dataPoints = Object.values(ventasPorMes).reverse();
-
-        ingresosChart = new Chart(ctx, { /* ... (la configuración del gráfico no cambia) ... */ });
+        ingresosChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] },
+            options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }
+        });
     };
 
-    const initialLoad = async () => {
-        const snapshot = await getDocs(query(presupuestosGuardadosCollection));
-        todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
+    filtroMesSelect.addEventListener('change', (e) => {
+        recalcularDashboard(e.target.value);
+    });
 
-        // Llenar el filtro de meses
+    onSnapshot(query(presupuestosGuardadosCollection), (snapshot) => {
+        todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
         const mesesDisponibles = new Set();
         todosLosPresupuestos.forEach(p => {
             const fecha = p.fecha.toDate();
-            // Formato 'YYYY-M' para poder ordenar fácil, ej: '2025-7'
             mesesDisponibles.add(`${fecha.getFullYear()}-${fecha.getMonth() + 1}`);
         });
+        
+        // Limpiamos el select excepto la primera opción
+        while(filtroMesSelect.options.length > 1) filtroMesSelect.remove(1);
 
-        const mesesOrdenados = Array.from(mesesDisponibles).sort((a,b) => {
-            const [anioA, mesA] = a.split('-').map(Number);
-            const [anioB, mesB] = b.split('-').map(Number);
-            return anioB - anioA || mesB - mesA;
-        });
-
+        const mesesOrdenados = Array.from(mesesDisponibles).sort((a,b)=>(new Date(b.split('-')[0],b.split('-')[1]-1))-(new Date(a.split('-')[0],a.split('-')[1]-1)));
         mesesOrdenados.forEach(mesAnio => {
             const [anio, mes] = mesAnio.split('-').map(Number);
             const nombreMes = new Date(anio, mes - 1).toLocaleString('es-AR', { month: 'long' });
@@ -139,14 +160,20 @@ export function setupDashboard(app) {
             filtroMesSelect.appendChild(option);
         });
 
-        filtroMesSelect.addEventListener('change', (e) => {
-            recalcularDashboard(e.target.value);
+        recalcularDashboard(filtroMesSelect.value);
+        renderizarGrafico();
+        actualizarListaFaltantes();
+    });
+
+    onSnapshot(query(materiasPrimasCollection), (snapshot) => {
+        materiasPrimasDisponibles = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+        let valorTotalStock = 0;
+        materiasPrimasDisponibles.forEach(item => {
+            if(item.lotes && Array.isArray(item.lotes)) {
+                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
+            }
         });
-
-        recalcularDashboard('todos'); // Carga inicial con todos los datos
-        calcularMetricasStock();
-        renderizarGrafico(); // El gráfico siempre muestra la tendencia general
-    };
-
-    initialLoad();
+        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
+        actualizarListaFaltantes();
+    });
 }
