@@ -1,6 +1,5 @@
-// js/dashboard.js (Versión con aviso de faltantes)
 import { 
-    getFirestore, collection, getDocs, query, where, Timestamp, orderBy, limit, onSnapshot 
+    getFirestore, collection, onSnapshot, query, where, Timestamp, orderBy, limit, getDocs 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { Chart, registerables } from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.js/+esm';
 Chart.register(...registerables);
@@ -10,6 +9,7 @@ export function setupDashboard(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
+    // Referencias al DOM
     const filtroMesSelect = document.getElementById('filtro-mes');
     const kpiIngresos = document.getElementById('kpi-ingresos-ventas');
     const kpiValorCotizado = document.getElementById('kpi-valor-cotizado');
@@ -17,18 +17,18 @@ export function setupDashboard(app) {
     const kpiPresupuestos = document.getElementById('kpi-presupuestos-creados');
     const kpiValorStock = document.getElementById('kpi-valor-stock');
     const listaFaltantesContainer = document.getElementById('lista-faltantes-dashboard');
+    const topClientesContainer = document.getElementById('lista-top-clientes');
     const ctx = document.getElementById('grafico-ingresos').getContext('2d');
+    
     let ingresosChart = null;
-
     const UMBRAL_BAJO_STOCK = 100;
     let todosLosPresupuestos = [];
     let materiasPrimasDisponibles = [];
 
-    const formatCurrency = (value) => value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const recalcularDashboard = (mesFiltro) => {
         let presupuestosFiltrados = todosLosPresupuestos;
-
         if (mesFiltro !== "todos") {
             const [mes, anio] = mesFiltro.split('-').map(Number);
             presupuestosFiltrados = todosLosPresupuestos.filter(p => {
@@ -48,7 +48,7 @@ export function setupDashboard(app) {
                 if (p.hasOwnProperty('precioVenta')) {
                     const costoManoObra = (p.horasTrabajo || 0) * (p.costoHora || 0);
                     const costoFijos = (p.costoMateriales || 0) * ((p.porcentajeCostosFijos || 0) / 100);
-                    const costoProduccion = p.costoMateriales + costoManoObra + costoFijos;
+                    const costoProduccion = (p.costoMateriales || 0) + costoManoObra + costoFijos;
                     gananciaBrutaVentas += (p.precioVenta - costoProduccion);
                 }
             }
@@ -60,6 +60,34 @@ export function setupDashboard(app) {
         kpiPresupuestos.textContent = presupuestosFiltrados.length;
     };
 
+    const actualizarTopClientes = () => {
+        const ventasPorCliente = {};
+        todosLosPresupuestos.forEach(p => {
+            if (p.esVenta && p.nombreCliente) {
+                const nombre = p.nombreCliente;
+                ventasPorCliente[nombre] = (ventasPorCliente[nombre] || 0) + (p.precioVenta || 0);
+            }
+        });
+        
+        const clientesOrdenados = Object.entries(ventasPorCliente)
+            .sort(([, totalA], [, totalB]) => totalB - totalA)
+            .slice(0, 5);
+
+        topClientesContainer.innerHTML = '';
+        if (clientesOrdenados.length > 0) {
+            const ol = document.createElement('ol');
+            ol.className = 'top-lista';
+            clientesOrdenados.forEach(([nombre, total]) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${nombre}</span> <strong>$${formatCurrency(total)}</strong>`;
+                ol.appendChild(li);
+            });
+            topClientesContainer.appendChild(ol);
+        } else {
+            topClientesContainer.innerHTML = '<p>Aún no hay ventas registradas.</p>';
+        }
+    };
+
     const actualizarListaFaltantes = async () => {
         try {
             const stockActualMap = new Map();
@@ -67,10 +95,8 @@ export function setupDashboard(app) {
                 const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
                 stockActualMap.set(item.id, stockTotal);
             });
-
             const qVentas = query(presupuestosGuardadosCollection, where("esVenta", "==", true), where("fechaEntrega", ">=", new Date()), orderBy("fechaEntrega", "asc"), limit(5));
             const ventasSnap = await getDocs(qVentas);
-            
             const ingredientesNecesariosMap = new Map();
             ventasSnap.forEach(doc => {
                 (doc.data().ingredientes || []).forEach(ing => {
@@ -79,7 +105,6 @@ export function setupDashboard(app) {
                     ingredientesNecesariosMap.set(id, (ingredientesNecesariosMap.get(id) || 0) + cantidad);
                 });
             });
-
             const listaDeCompras = [];
             for (const [id, cantidadNecesaria] of ingredientesNecesariosMap.entries()) {
                 const cantidadAComprar = cantidadNecesaria - (stockActualMap.get(id) || 0);
@@ -88,7 +113,6 @@ export function setupDashboard(app) {
                     if (mpDoc) listaDeCompras.push({ nombre: mpDoc.nombre, cantidad: cantidadAComprar, unidad: mpDoc.unidad });
                 }
             }
-
             listaFaltantesContainer.innerHTML = '';
             if (listaDeCompras.length > 0) {
                 const ul = document.createElement('ul');
@@ -107,7 +131,7 @@ export function setupDashboard(app) {
                 }
                 listaFaltantesContainer.appendChild(ul);
             } else {
-                listaFaltantesContainer.innerHTML = '<p>✅ Tienes stock suficiente para las próximas 5 ventas.</p>';
+                listaFaltantesContainer.innerHTML = '<p>✅ Tienes stock suficiente.</p>';
             }
         } catch (error) {
             console.error("Error calculando faltantes:", error);
@@ -126,19 +150,19 @@ export function setupDashboard(app) {
                 ventasPorMes[mesAnio] += p.precioVenta || 0;
             }
         });
-        const labels = Object.keys(ventasPorMes).reverse();
-        const dataPoints = Object.values(ventasPorMes).reverse();
+        const labels = Object.keys(ventasPorMes).sort((a,b) => {
+            const [mesA, anioA] = a.split('/');
+            const [mesB, anioB] = b.split('/');
+            return (anioA - anioB) || (mesA - mesB);
+        });
+        const dataPoints = labels.map(label => ventasPorMes[label]);
         ingresosChart = new Chart(ctx, {
             type: 'bar',
             data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] },
             options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }
         });
     };
-
-    filtroMesSelect.addEventListener('change', (e) => {
-        recalcularDashboard(e.target.value);
-    });
-
+    
     onSnapshot(query(presupuestosGuardadosCollection), (snapshot) => {
         todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
         const mesesDisponibles = new Set();
@@ -146,11 +170,11 @@ export function setupDashboard(app) {
             const fecha = p.fecha.toDate();
             mesesDisponibles.add(`${fecha.getFullYear()}-${fecha.getMonth() + 1}`);
         });
-        
-        // Limpiamos el select excepto la primera opción
-        while(filtroMesSelect.options.length > 1) filtroMesSelect.remove(1);
-
         const mesesOrdenados = Array.from(mesesDisponibles).sort((a,b)=>(new Date(b.split('-')[0],b.split('-')[1]-1))-(new Date(a.split('-')[0],a.split('-')[1]-1)));
+        
+        const valorActualFiltro = filtroMesSelect.value;
+        while(filtroMesSelect.options.length > 1) filtroMesSelect.remove(1);
+        
         mesesOrdenados.forEach(mesAnio => {
             const [anio, mes] = mesAnio.split('-').map(Number);
             const nombreMes = new Date(anio, mes - 1).toLocaleString('es-AR', { month: 'long' });
@@ -159,10 +183,11 @@ export function setupDashboard(app) {
             option.textContent = `${nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)} ${anio}`;
             filtroMesSelect.appendChild(option);
         });
+        filtroMesSelect.value = valorActualFiltro;
 
         recalcularDashboard(filtroMesSelect.value);
         renderizarGrafico();
-        actualizarListaFaltantes();
+        actualizarTopClientes();
     });
 
     onSnapshot(query(materiasPrimasCollection), (snapshot) => {
@@ -175,5 +200,9 @@ export function setupDashboard(app) {
         });
         kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
         actualizarListaFaltantes();
+    });
+
+    filtroMesSelect.addEventListener('change', (e) => {
+        recalcularDashboard(e.target.value);
     });
 }
