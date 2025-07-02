@@ -14,32 +14,24 @@
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
-
         <nav class="tabs">
-            <a href="index.html" class="tabs__link">Indicadores</a>
+            <a href="index.html" class="tabs__link active">Indicadores</a>
             <a href="recetas.html" class="tabs__link">Postres</a>
-            <a href="clientes.html" class="tabs__link active">Clientes</a> <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="clientes.html" class="tabs__link">Clientes</a>
+            <a href="agenda.html" class="tabs__link">Agenda</a>
+            <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link">Historial</a>
         </nav>
-        
         <main>
-            <div class="card">
-                <div class="form-group">
-                    <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
-                    <select id="filtro-mes">
-                        <option value="todos">Todos los Tiempos</option>
-                        </select>
-                </div>
-            </div>
-
             <div class="dashboard-grid">
                 <div class="stat-card">
                     <h4>Ingresos por Ventas</h4>
                     <p id="kpi-ingresos-ventas">$0.00</p>
                 </div>
                 <div class="stat-card">
-                    <h4>Valor Total Cotizado</h4> <p id="kpi-valor-cotizado">$0.00</p>
+                    <h4>Valor Total Cotizado</h4>
+                    <p id="kpi-valor-cotizado">$0.00</p>
                 </div>
                 <div class="stat-card">
                     <h4>Ganancia Bruta (Ventas)</h4>
@@ -50,11 +42,16 @@
                     <p id="kpi-presupuestos-creados">0</p>
                 </div>
             </div>
-
             <div class="dashboard-layout">
                 <section class="card">
                     <h2 class="card__title">Ingresos por Mes (Ventas Reales)</h2>
-                    <canvas id="grafico-ingresos"></canvas>
+                    <div class="form-group">
+                        <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
+                        <select id="filtro-mes">
+                            <option value="todos">Todos los Tiempos</option>
+                        </select>
+                    </div>
+                    <canvas id="grafico-ingresos" style="margin-top: 1.5rem;"></canvas>
                 </section>
                 <section class="card">
                     <h2 class="card__title">Valor Actual del Stock</h2>
@@ -68,7 +65,6 @@
             </div>
         </main>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
