@@ -809,3 +809,37 @@ body {
     background-color: var(--danger-color);
     color: white;
 }
+
+/* 27. Estilos para el Resumen de Clientes */
+.cliente-resumen-card {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.cliente-resumen-card h3 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.cliente-resumen-stats {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+}
+
+.cliente-resumen-stats .stat span {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.cliente-resumen-stats .stat p {
+    margin: 0.25rem 0 0 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
