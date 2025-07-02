@@ -1,3 +1,4 @@
+// js/dashboard.js (Versión final con sincronización corregida)
 import { 
     getFirestore, collection, onSnapshot, query, where, Timestamp, orderBy, limit, getDocs 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -24,8 +25,22 @@ export function setupDashboard(app) {
     const UMBRAL_BAJO_STOCK = 100;
     let todosLosPresupuestos = [];
     let materiasPrimasDisponibles = [];
+    let datosListos = { presupuestos: false, materiasPrimas: false };
 
     const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    // --- FUNCIÓN CENTRAL QUE ACTUALIZA TODA LA UI ---
+    const actualizarTodaLaUI = () => {
+        // Nos aseguramos de que ambos conjuntos de datos hayan llegado
+        if (!datosListos.presupuestos || !datosListos.materiasPrimas) return;
+
+        recalcularDashboard(filtroMesSelect.value);
+        renderizarGrafico();
+        actualizarTopClientes();
+        actualizarProximasEntregas();
+        actualizarListaFaltantes();
+        calcularMetricasStock();
+    };
 
     const recalcularDashboard = (mesFiltro) => {
         let presupuestosFiltrados = todosLosPresupuestos;
@@ -36,11 +51,7 @@ export function setupDashboard(app) {
                 return fecha.getFullYear() === anio && fecha.getMonth() === (mes - 1);
             });
         }
-
-        let ingresosVentas = 0;
-        let valorCotizado = 0;
-        let gananciaBrutaVentas = 0;
-
+        let ingresosVentas = 0, valorCotizado = 0, gananciaBrutaVentas = 0;
         presupuestosFiltrados.forEach(p => {
             valorCotizado += p.precioVenta || 0;
             if (p.esVenta) {
@@ -53,7 +64,6 @@ export function setupDashboard(app) {
                 }
             }
         });
-
         kpiIngresos.textContent = `$${formatCurrency(ingresosVentas)}`;
         kpiValorCotizado.textContent = `$${formatCurrency(valorCotizado)}`;
         kpiGanancia.textContent = `$${formatCurrency(gananciaBrutaVentas)}`;
@@ -64,15 +74,10 @@ export function setupDashboard(app) {
         const ventasPorCliente = {};
         todosLosPresupuestos.forEach(p => {
             if (p.esVenta && p.nombreCliente) {
-                const nombre = p.nombreCliente;
-                ventasPorCliente[nombre] = (ventasPorCliente[nombre] || 0) + (p.precioVenta || 0);
+                ventasPorCliente[p.nombreCliente] = (ventasPorCliente[p.nombreCliente] || 0) + (p.precioVenta || 0);
             }
         });
-        
-        const clientesOrdenados = Object.entries(ventasPorCliente)
-            .sort(([, totalA], [, totalB]) => totalB - totalA)
-            .slice(0, 5);
-
+        const clientesOrdenados = Object.entries(ventasPorCliente).sort(([, a], [, b]) => b - a).slice(0, 5);
         topClientesContainer.innerHTML = '';
         if (clientesOrdenados.length > 0) {
             const ol = document.createElement('ol');
@@ -87,90 +92,81 @@ export function setupDashboard(app) {
             topClientesContainer.innerHTML = '<p>Aún no hay ventas registradas.</p>';
         }
     };
-    
+
     const actualizarProximasEntregas = () => {
         const proximasVentas = todosLosPresupuestos
             .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
-            .sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
+            .sort((a, b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
             .slice(0, 3);
-
         proximasEntregasContainer.innerHTML = '';
-        if(proximasVentas.length > 0) {
+        if (proximasVentas.length > 0) {
             proximasVentas.forEach(venta => {
                 const fecha = venta.fechaEntrega.toDate();
                 const item = document.createElement('div');
                 item.className = 'entrega-item';
-                item.innerHTML = `
-                    <div class="entrega-fecha">
-                        <strong>${fecha.getDate()}</strong>
-                        <span>${fecha.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '').toUpperCase()}</span>
-                    </div>
-                    <div class="entrega-info">
-                        <strong>${venta.tituloTorta}</strong>
-                        <span>Cliente: ${venta.nombreCliente}</span>
-                    </div>
-                `;
+                item.innerHTML = `<div class="entrega-fecha"><strong>${fecha.getDate()}</strong><span>${fecha.toLocaleDateString('es-AR',{month:'short'}).replace('.','').toUpperCase()}</span></div><div class="entrega-info"><strong>${venta.tituloTorta}</strong><span>Cliente: ${venta.nombreCliente}</span></div>`;
                 proximasEntregasContainer.appendChild(item);
             });
         } else {
             proximasEntregasContainer.innerHTML = '<p>No hay entregas próximas agendadas.</p>';
         }
     };
+    
+    const calcularMetricasStock = () => {
+        let valorTotalStock = 0;
+        materiasPrimasDisponibles.forEach(item => {
+            if(item.lotes && Array.isArray(item.lotes)) {
+                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
+            }
+        });
+        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
+    };
 
     const actualizarListaFaltantes = async () => {
-        try {
-            const stockActualMap = new Map();
-            materiasPrimasDisponibles.forEach(item => {
-                const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
-                stockActualMap.set(item.id, stockTotal);
+        const stockActualMap = new Map();
+        materiasPrimasDisponibles.forEach(item => {
+            const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
+            stockActualMap.set(item.id, stockTotal);
+        });
+        const proximasVentas = todosLosPresupuestos
+            .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
+            .sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
+            .slice(0, 5);
+        const ingredientesNecesariosMap = new Map();
+        proximasVentas.forEach(venta => {
+            (venta.ingredientes || []).forEach(ing => {
+                const id = ing.idMateriaPrima || ing.id;
+                const cantidad = ing.cantidadTotal || ing.cantidad;
+                ingredientesNecesariosMap.set(id, (ingredientesNecesariosMap.get(id) || 0) + cantidad);
             });
-
-            const proximasVentas = todosLosPresupuestos
-                .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
-                .sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
-                .slice(0, 5);
-            
-            const ingredientesNecesariosMap = new Map();
-            proximasVentas.forEach(venta => {
-                (venta.ingredientes || []).forEach(ing => {
-                    const id = ing.idMateriaPrima || ing.id;
-                    const cantidad = ing.cantidadTotal || ing.cantidad;
-                    ingredientesNecesariosMap.set(id, (ingredientesNecesariosMap.get(id) || 0) + cantidad);
-                });
+        });
+        const listaDeCompras = [];
+        for (const [id, cantidadNecesaria] of ingredientesNecesariosMap.entries()) {
+            const cantidadAComprar = cantidadNecesaria - (stockActualMap.get(id) || 0);
+            if (cantidadAComprar > 0) {
+                const mpDoc = materiasPrimasDisponibles.find(mp => mp.id === id);
+                if (mpDoc) listaDeCompras.push({ nombre: mpDoc.nombre, cantidad: cantidadAComprar, unidad: mpDoc.unidad });
+            }
+        }
+        listaFaltantesContainer.innerHTML = '';
+        if (listaDeCompras.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'lista-sencilla';
+            listaDeCompras.sort((a,b) => b.cantidad - a.cantidad).slice(0, 5).forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `${item.nombre} <span>${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</span>`;
+                ul.appendChild(li);
             });
-
-            const listaDeCompras = [];
-            for (const [id, cantidadNecesaria] of ingredientesNecesariosMap.entries()) {
-                const cantidadAComprar = cantidadNecesaria - (stockActualMap.get(id) || 0);
-                if (cantidadAComprar > 0) {
-                    const mpDoc = materiasPrimasDisponibles.find(mp => mp.id === id);
-                    if (mpDoc) listaDeCompras.push({ nombre: mpDoc.nombre, cantidad: cantidadAComprar, unidad: mpDoc.unidad });
-                }
+            if (listaDeCompras.length > 5) {
+                const liMas = document.createElement('li');
+                liMas.innerHTML = `<strong>y ${listaDeCompras.length - 5} más...</strong>`;
+                liMas.style.justifyContent = 'center';
+                liMas.style.color = 'var(--text-light)';
+                ul.appendChild(liMas);
             }
-
-            listaFaltantesContainer.innerHTML = '';
-            if (listaDeCompras.length > 0) {
-                const ul = document.createElement('ul');
-                ul.className = 'lista-sencilla';
-                listaDeCompras.sort((a,b) => b.cantidad - a.cantidad).slice(0, 5).forEach(item => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `${item.nombre} <span>${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</span>`;
-                    ul.appendChild(li);
-                });
-                if (listaDeCompras.length > 5) {
-                    const liMas = document.createElement('li');
-                    liMas.innerHTML = `<strong>y ${listaDeCompras.length - 5} más...</strong>`;
-                    liMas.style.justifyContent = 'center';
-                    liMas.style.color = 'var(--text-light)';
-                    ul.appendChild(liMas);
-                }
-                listaFaltantesContainer.appendChild(ul);
-            } else {
-                listaFaltantesContainer.innerHTML = '<p>✅ Tienes stock suficiente.</p>';
-            }
-        } catch (error) {
-            console.error("Error calculando faltantes:", error);
-            listaFaltantesContainer.innerHTML = '<p style="color:red;">Error al calcular.</p>';
+            listaFaltantesContainer.appendChild(ul);
+        } else {
+            listaFaltantesContainer.innerHTML = '<p>✅ Tienes stock suficiente.</p>';
         }
     };
     
@@ -198,18 +194,19 @@ export function setupDashboard(app) {
         });
     };
     
+    // --- NUEVA ESTRUCTURA DE CARGA ---
     onSnapshot(query(presupuestosGuardadosCollection), (snapshot) => {
         todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
+        datosListos.presupuestos = true;
+        
         const mesesDisponibles = new Set();
         todosLosPresupuestos.forEach(p => {
             const fecha = p.fecha.toDate();
             mesesDisponibles.add(`${fecha.getFullYear()}-${fecha.getMonth() + 1}`);
         });
         const mesesOrdenados = Array.from(mesesDisponibles).sort((a,b)=>(new Date(b.split('-')[0],b.split('-')[1]-1))-(new Date(a.split('-')[0],a.split('-')[1]-1)));
-        
         const valorActualFiltro = filtroMesSelect.value;
         while(filtroMesSelect.options.length > 1) filtroMesSelect.remove(1);
-        
         mesesOrdenados.forEach(mesAnio => {
             const [anio, mes] = mesAnio.split('-').map(Number);
             const nombreMes = new Date(anio, mes - 1).toLocaleString('es-AR', { month: 'long' });
@@ -220,22 +217,13 @@ export function setupDashboard(app) {
         });
         filtroMesSelect.value = valorActualFiltro;
 
-        recalcularDashboard(filtroMesSelect.value);
-        renderizarGrafico();
-        actualizarTopClientes();
-        actualizarProximasEntregas();
+        actualizarTodaLaUI();
     });
 
     onSnapshot(query(materiasPrimasCollection), (snapshot) => {
         materiasPrimasDisponibles = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-        let valorTotalStock = 0;
-        materiasPrimasDisponibles.forEach(item => {
-            if(item.lotes && Array.isArray(item.lotes)) {
-                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
-            }
-        });
-        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
-        actualizarListaFaltantes();
+        datosListos.materiasPrimas = true;
+        actualizarTodaLaUI();
     });
 
     filtroMesSelect.addEventListener('change', (e) => {
