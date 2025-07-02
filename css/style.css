@@ -48,10 +48,12 @@ body {
     margin: 0;
 }
 
-.header__subtitle {
-    font-size: 1rem;
-    color: var(--text-light);
-    margin-top: 0.5rem;
+.header__slogan {
+    font-family: 'Dancing Script', cursive; /* Usamos la nueva fuente */
+    font-size: 1.8rem;
+    color: var(--text-color);
+    margin: 0.25rem 0 1rem 0;
+    font-weight: 700;
 }
 
 /* 4. NUEVO HEADER CON MENÚ HAMBURGUESA */
