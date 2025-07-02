@@ -17,11 +17,12 @@
         <nav class="tabs">
             <a href="index.html" class="tabs__link">Indicadores</a>
             <a href="recetas.html" class="tabs__link">Postres</a>
-            <a href="clientes.html" class="tabs__link active">Clientes</a> <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="clientes.html" class="tabs__link">Clientes</a>
+            <a href="presupuesto.html" class="tabs__link active">Presupuesto</a>
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link">Historial</a>
         </nav>
-        
+
         <main>
             <div class="presupuesto-layout">
                 <section class="card">
@@ -128,7 +129,8 @@
             </div>
             <div class="form-group">
                 <label for="cliente-nombre-input">Nombre del Cliente</label>
-                <input type="text" id="cliente-nombre-input" placeholder="Ej: Ana García">
+                <input type="text" id="cliente-nombre-input" placeholder="Escribe o selecciona un cliente" list="lista-clientes-existentes">
+                <datalist id="lista-clientes-existentes"></datalist>
             </div>
             <div class="modal-actions">
                 <button id="modal-btn-cancelar" class="btn-secondary">Cancelar</button>
