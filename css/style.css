@@ -108,6 +108,7 @@ body {
     padding: 0.8rem 1.5rem;
 }
 
+
 /* 6. Formularios Modernos */
 .form-modern {
     display: grid;
@@ -450,7 +451,6 @@ body {
     text-align: center;
 }
 
-
 /* 15. Estilos para la página de Stock */
 .stock-actions {
     display: flex;
@@ -661,6 +661,8 @@ body {
 }
 .lista-sencilla li span {
     font-weight: 500;
+}
+#lista-bajo-stock li span {
     color: var(--danger-color);
 }
 
@@ -752,7 +754,7 @@ body {
     color: var(--text-color);
 }
 
-/* 25. Estilos para el botón de Paginación (Cargar Más) - Desactivado por ahora */
+/* 25. Estilos para el botón de Paginación (Cargar Más) */
 .cargar-mas-container {
     display: none; /* Ocultamos por defecto ya que no se usa */
     justify-content: center;
@@ -769,4 +771,66 @@ body {
 }
 .btn-primary.danger:hover {
     background-color: #c82333;
+}
+
+/* 27. Estilos para el Resumen de Clientes */
+.cliente-resumen-card {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+.cliente-resumen-card h3 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+.cliente-resumen-stats {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+}
+.cliente-resumen-stats .stat span {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+.cliente-resumen-stats .stat p {
+    margin: 0.25rem 0 0 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* 28. Estilos para el Detalle de Historial en Clientes */
+.cliente-historial-detalle {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+.cliente-historial-detalle h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+.cliente-historial-detalle ul {
+    list-style: none;
+    padding: 0;
+    max-height: 250px;
+    overflow-y: auto;
+}
+.presupuesto-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.presupuesto-item span {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+.venta-confirmada-badge.mini {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-left: 0.5rem;
+    vertical-align: middle;
 }
