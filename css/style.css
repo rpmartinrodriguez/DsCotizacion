@@ -770,3 +770,42 @@ body {
 .btn-primary.danger:hover {
     background-color: #c82333;
 }
+
+/* 26. Estilos para la página de Clientes */
+.cliente-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+.cliente-card__info h3 {
+    margin: 0 0 0.5rem 0;
+}
+.cliente-card__info p {
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+.cliente-card__actions {
+    display: flex;
+    gap: 0.75rem;
+}
+.cliente-card__actions button {
+    background: none;
+    border: 1px solid var(--border-color);
+    padding: 0.6rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+}
+.cliente-card__actions .btn-borrar-cliente {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+.cliente-card__actions .btn-borrar-cliente:hover {
+    background-color: var(--danger-color);
+    color: white;
+}
