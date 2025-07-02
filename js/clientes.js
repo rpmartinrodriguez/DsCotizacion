@@ -1,4 +1,4 @@
-// js/clientes.js (Nueva lógica de resumen automático)
+// js/clientes.js (Versión con detalle de presupuestos)
 import { 
     getFirestore, collection, onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -9,23 +9,32 @@ export function setupClientes(app) {
     const container = document.getElementById('resumen-clientes-container');
     const buscadorInput = document.getElementById('buscador-clientes');
 
-    let todosLosClientesAgrupados = {}; // Objeto para guardar los datos
+    let todosLosClientesAgrupados = {};
 
-    // Función para renderizar las tarjetas de resumen
     const renderizarResumen = (clientes) => {
         container.innerHTML = '';
         if (Object.keys(clientes).length === 0) {
-            container.innerHTML = '<p>No se encontraron clientes en el historial de presupuestos.</p>';
+            container.innerHTML = '<p>No se encontraron clientes.</p>';
             return;
         }
 
-        // Ordenamos los clientes alfabéticamente por nombre
         const clientesOrdenados = Object.keys(clientes).sort();
 
         for (const nombreCliente of clientesOrdenados) {
             const data = clientes[nombreCliente];
             const card = document.createElement('div');
             card.className = 'cliente-resumen-card';
+
+            // Generamos la lista de presupuestos para el detalle
+            const detallePresupuestosHtml = data.presupuestos
+                .sort((a, b) => b.fecha.toDate() - a.fecha.toDate()) // Ordenamos por fecha
+                .map(p => {
+                    const fecha = p.fecha.toDate().toLocaleDateString('es-AR');
+                    const precio = p.precioVenta || p.costoTotal || 0;
+                    const ventaBadge = p.esVenta ? `<span class="venta-confirmada-badge mini">VENTA</span>` : '';
+                    return `<li class="presupuesto-item">${p.tituloTorta} - $${precio.toFixed(2)} <span>(${fecha})</span> ${ventaBadge}</li>`;
+                }).join('');
+
             card.innerHTML = `
                 <h3>${nombreCliente}</h3>
                 <div class="cliente-resumen-stats">
@@ -42,52 +51,57 @@ export function setupClientes(app) {
                         <p>${data.presupuestos.length}</p>
                     </div>
                 </div>
+                <div class="historial-card__actions" style="justify-content: flex-end;">
+                     <button class="btn-ver-detalle" data-cliente-nombre="${nombreCliente}">Ver Historial</button>
+                </div>
+                <div class="cliente-historial-detalle" id="detalle-${nombreCliente.replace(/\s+/g, '-')}" style="display:none;">
+                    <h4>Historial de Presupuestos</h4>
+                    <ul>${detallePresupuestosHtml}</ul>
+                </div>
             `;
             container.appendChild(card);
         }
     };
 
-    // Escuchamos cambios en los presupuestos para mantener el resumen actualizado
     const q = query(presupuestosGuardadosCollection, orderBy('fecha', 'desc'));
     onSnapshot(q, (snapshot) => {
-        todosLosClientesAgrupados = {}; // Reseteamos para recalcular
+        todosLosClientesAgrupados = {};
         snapshot.forEach(doc => {
             const presupuesto = doc.data();
             const nombre = presupuesto.nombreCliente;
-
-            // Si el cliente no existe en nuestro objeto, lo inicializamos
             if (!todosLosClientesAgrupados[nombre]) {
-                todosLosClientesAgrupados[nombre] = {
-                    presupuestos: [],
-                    totalVendido: 0,
-                    cantidadVentas: 0,
-                };
+                todosLosClientesAgrupados[nombre] = { presupuestos: [], totalVendido: 0, cantidadVentas: 0 };
             }
-
-            // Agregamos la data a nuestro cliente
             todosLosClientesAgrupados[nombre].presupuestos.push(presupuesto);
             if (presupuesto.esVenta) {
                 todosLosClientesAgrupados[nombre].totalVendido += presupuesto.precioVenta || 0;
                 todosLosClientesAgrupados[nombre].cantidadVentas += 1;
             }
         });
-        
-        // Disparamos un evento 'input' para que la lista se filtre con el término actual
         buscadorInput.dispatchEvent(new Event('input'));
     });
-
-    // Listener para el buscador
+    
     buscadorInput.addEventListener('input', (e) => {
         const termino = e.target.value.toLowerCase();
-        
-        // Filtramos el objeto de clientes, no un array
         const clientesFiltrados = Object.keys(todosLosClientesAgrupados)
             .filter(nombreCliente => nombreCliente.toLowerCase().includes(termino))
             .reduce((res, key) => {
                 res[key] = todosLosClientesAgrupados[key];
                 return res;
             }, {});
-
         renderizarResumen(clientesFiltrados);
+    });
+    
+    container.addEventListener('click', (e) => {
+        if(e.target.classList.contains('btn-ver-detalle')) {
+            const nombreCliente = e.target.dataset.clienteNombre;
+            const detalleId = `detalle-${nombreCliente.replace(/\s+/g, '-')}`;
+            const detalleDiv = document.getElementById(detalleId);
+            if (detalleDiv) {
+                const isVisible = detalleDiv.style.display === 'block';
+                detalleDiv.style.display = isVisible ? 'none' : 'block';
+                e.target.textContent = isVisible ? 'Ver Historial' : 'Ocultar Historial';
+            }
+        }
     });
 }
