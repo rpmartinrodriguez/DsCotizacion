@@ -13,15 +13,15 @@
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
-
         <nav class="tabs">
             <a href="index.html" class="tabs__link">Indicadores</a>
             <a href="recetas.html" class="tabs__link">Postres</a>
-            <a href="clientes.html" class="tabs__link active">Clientes</a> <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="clientes.html" class="tabs__link">Clientes</a>
+            <a href="agenda.html" class="tabs__link">Agenda</a>
+            <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
             <a href="stock.html" class="tabs__link">Stock</a>
-            <a href="historial.html" class="tabs__link">Historial</a>
+            <a href="historial.html" class="tabs__link active">Historial</a>
         </nav>
-        
         <main>
             <section class="card">
                 <h2 class="card__title">Presupuestos Guardados</h2>
@@ -34,7 +34,6 @@
             </section>
         </main>
     </div>
-    
     <div id="agradecimiento-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title">¡Venta Confirmada!</h2>
@@ -46,18 +45,20 @@
             <span id="copiado-feedback-historial" class="copiado-feedback-modal"></span>
         </div>
     </div>
-
-    <div id="confirm-modal-overlay" class="modal-overlay">
+    <div id="confirm-venta-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="confirm-modal-title">Confirmar Acción</h2>
-            <p id="confirm-modal-text">¿Estás seguro de que quieres realizar esta acción?</p>
+            <h2 class="card__title">Confirmar Venta y Agendar Entrega</h2>
+            <p>Este presupuesto se marcará como una venta. Por favor, asigna una fecha de entrega.</p>
+            <div class="form-group">
+                <label for="fecha-entrega-input">Fecha de Entrega</label>
+                <input type="date" id="fecha-entrega-input" required>
+            </div>
             <div class="modal-actions">
-                <button id="confirm-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="confirm-modal-btn-confirmar" class="btn-primary">Confirmar</button>
+                <button id="confirm-venta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="confirm-venta-modal-btn-confirmar" class="btn-primary">Confirmar Venta</button>
             </div>
         </div>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
