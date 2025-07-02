@@ -982,3 +982,38 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 #lista-faltantes-dashboard .lista-sencilla span {
     color: var(--danger-color); /* Resaltamos la cantidad faltante */
 }
+
+/* Estilos para el Ranking de Clientes */
+.top-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.top-lista li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+.top-lista li:last-child {
+    border-bottom: none;
+}
+.top-lista li strong {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+/* Numeración para la lista ordenada */
+.top-lista {
+    counter-reset: top-clientes-counter;
+}
+.top-lista li {
+    counter-increment: top-clientes-counter;
+}
+.top-lista li::before {
+    content: counter(top-clientes-counter) ".";
+    font-weight: 600;
+    color: var(--text-light);
+    margin-right: 1rem;
+}
