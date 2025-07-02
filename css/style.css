@@ -273,12 +273,20 @@ body {
     resize: vertical;
 }
 
-#copiado-feedback {
+#copiado-feedback,
+.copiado-feedback-modal {
     display: inline-block;
     margin-left: 1rem;
     color: var(--success-color);
     font-weight: 500;
     transition: opacity 0.3s;
+}
+.copiado-feedback-modal {
+    display: block;
+    text-align: right;
+    font-size: 0.9rem;
+    height: 1em;
+    margin-top: 0.5rem;
 }
 
 /* 12. Estilos para la Ventana Modal Personalizada */
@@ -419,8 +427,31 @@ body {
     background-color: var(--danger-color);
     color: white;
 }
+.btn-marcar-venta {
+    background: none;
+    border: 1px solid var(--success-color);
+    color: var(--success-color);
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+}
+.btn-marcar-venta:hover {
+    background-color: var(--success-color);
+    color: white;
+}
+.venta-confirmada-badge {
+    padding: 0.6rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--success-color);
+    background-color: #eaf7ed;
+    border-radius: 5px;
+    text-align: center;
+}
 
-/* 15. Estilos para la página de Stock (Versión Mejorada) */
+/* 15. Estilos para la página de Stock */
 .stock-actions {
     display: flex;
     gap: 0.75rem;
@@ -591,11 +622,15 @@ body {
     color: var(--text-light);
     font-weight: 500;
 }
-.stat-card p {
+.stat-card p, .stat-card-main {
     margin: 0;
     font-size: 2rem;
     font-weight: 600;
     color: var(--primary-color);
+}
+.stat-card-main {
+    text-align: center;
+    margin: 1rem 0;
 }
 .dashboard-layout {
     display: grid;
@@ -726,4 +761,12 @@ body {
 #btn-cargar-mas {
     width: auto;
     padding: 0.8rem 2rem;
+}
+
+/* 26. Estilo para botón de confirmación peligroso */
+.btn-primary.danger {
+    background-color: var(--danger-color);
+}
+.btn-primary.danger:hover {
+    background-color: #c82333;
 }
