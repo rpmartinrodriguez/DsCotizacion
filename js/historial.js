@@ -1,8 +1,5 @@
-// js/historial.js (Versión final con corrección en "Marcar como Venta")
-
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    deleteDoc, updateDoc, limit, startAfter, getDocs 
+    getFirestore, collection, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupHistorial(app) {
@@ -10,22 +7,51 @@ export function setupHistorial(app) {
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
     const historialContainer = document.getElementById('historial-container');
     const buscadorInput = document.getElementById('buscador-historial');
-    const btnCargarMas = document.getElementById('btn-cargar-mas');
-    const cargarMasContainer = document.getElementById('cargar-mas-container');
     
+    // Referencias a Modales
     const agradecimientoModal = document.getElementById('agradecimiento-modal-overlay');
     const agradecimientoTexto = document.getElementById('agradecimiento-texto');
     const btnCerrarAgradecimiento = document.getElementById('agradecimiento-modal-btn-cerrar');
+    const confirmModal = document.getElementById('confirm-modal-overlay');
+    const confirmModalTitle = document.getElementById('confirm-modal-title');
+    const confirmModalText = document.getElementById('confirm-modal-text');
+    const confirmModalBtnConfirmar = document.getElementById('confirm-modal-btn-confirmar');
+    const confirmModalBtnCancelar = document.getElementById('confirm-modal-btn-cancelar');
 
     let todoElHistorial = [];
-    let ultimoDocumentoVisible = null;
-    let estaCargando = false;
-    const LIMITE_POR_PAGINA = 10;
-    
+
+    const showConfirmationModal = (title, text, confirmButtonClass = '') => {
+        return new Promise((resolve, reject) => {
+            confirmModalTitle.textContent = title;
+            confirmModalText.textContent = text;
+            confirmModalBtnConfirmar.className = `btn-primary ${confirmButtonClass}`;
+            confirmModal.classList.add('visible');
+
+            const close = (didConfirm) => {
+                confirmModal.classList.remove('visible');
+                // Remove one-time listeners
+                confirmModalBtnConfirmar.onclick = null;
+                confirmModalBtnCancelar.onclick = null;
+                confirmModal.onclick = null;
+                document.onkeydown = null;
+                if (didConfirm) {
+                    resolve();
+                } else {
+                    reject();
+                }
+            };
+
+            confirmModalBtnConfirmar.onclick = () => close(true);
+            confirmModalBtnCancelar.onclick = () => close(false);
+            confirmModal.onclick = (e) => { if (e.target === confirmModal) close(false); };
+            document.onkeydown = (e) => { if(e.key === 'Escape') close(false); };
+        });
+    };
+
     const renderizarHistorial = (datos) => {
         historialContainer.innerHTML = '';
         if (datos.length === 0) {
-            historialContainer.innerHTML = '<p>No se encontraron presupuestos.</p>';
+            historialContainer.innerHTML = '<p>No se encontraron presupuestos que coincidan con la búsqueda.</p>';
             return;
         }
         
@@ -51,11 +77,27 @@ export function setupHistorial(app) {
 
             let detalleCostosHtml = '';
             if (presupuesto.hasOwnProperty('precioVenta')) {
-                const costoManoObra = (presupuesto.horasTrabajo || 0) * (presupuesto.costoHora || 0);
-                const costoFijos = (presupuesto.costoMateriales || 0) * ((presupuesto.porcentajeCostosFijos || 0) / 100);
-                const costoProduccion = presupuesto.costoMateriales + costoManoObra + costoFijos;
+                const costoMateriales = presupuesto.costoMateriales || 0;
+                const horasTrabajo = presupuesto.horasTrabajo || 0;
+                const costoHora = presupuesto.costoHora || 0;
+                const porcentajeCostosFijos = presupuesto.porcentajeCostosFijos || 0;
+                const porcentajeGanancia = presupuesto.porcentajeGanancia || 0;
+                const costoManoObra = horasTrabajo * costoHora;
+                const costoFijos = costoMateriales * (porcentajeCostosFijos / 100);
+                const costoProduccion = costoMateriales + costoManoObra + costoFijos;
                 const ganancia = presupuesto.precioVenta - costoProduccion;
-                detalleCostosHtml = `<h4>Desglose de Precio de Venta</h4><div class="calculo-resumen" style="margin-bottom: 1rem; gap: 0.5rem;"><div class="calculo-fila"><span>Costo Materiales:</span> <span>$${presupuesto.costoMateriales.toFixed(2)}</span></div><div class="calculo-fila"><span>+ Mano de Obra:</span> <span>$${costoManoObra.toFixed(2)}</span></div><div class="calculo-fila"><span>+ Costos Fijos (${presupuesto.porcentajeCostosFijos || 0}%):</span> <span>$${costoFijos.toFixed(2)}</span></div><div class="calculo-fila costo-produccion"><span>Costo de Producción:</span> <span>$${costoProduccion.toFixed(2)}</span></div><div class="calculo-fila"><span>+ Ganancia (${presupuesto.porcentajeGanancia || 0}%):</span> <span>$${ganancia.toFixed(2)}</span></div></div><hr class="calculo-divisor" style="margin: 1rem 0;">`;
+                
+                detalleCostosHtml = `
+                    <h4>Desglose de Precio de Venta</h4>
+                    <div class="calculo-resumen" style="margin-bottom: 1rem; gap: 0.5rem;">
+                        <div class="calculo-fila"><span>Costo Materiales:</span> <span>$${costoMateriales.toFixed(2)}</span></div>
+                        <div class="calculo-fila"><span>+ Mano de Obra:</span> <span>$${costoManoObra.toFixed(2)}</span></div>
+                        <div class="calculo-fila"><span>+ Costos Fijos (${porcentajeCostosFijos}%):</span> <span>$${costoFijos.toFixed(2)}</span></div>
+                        <div class="calculo-fila costo-produccion"><span>Costo de Producción:</span> <span>$${costoProduccion.toFixed(2)}</span></div>
+                        <div class="calculo-fila"><span>+ Ganancia (${porcentajeGanancia}%):</span> <span>$${ganancia.toFixed(2)}</span></div>
+                    </div>
+                    <hr class="calculo-divisor" style="margin: 1rem 0;">
+                `;
             }
             
             const botonVentaHtml = presupuesto.esVenta ? `<span class="venta-confirmada-badge">✅ Venta Confirmada</span>` : `<button class="btn-marcar-venta" data-id="${id}">✅ Convertir a Venta</button>`;
@@ -89,110 +131,81 @@ export function setupHistorial(app) {
         });
     };
     
-    const cargarPresupuestos = async (inicial = false) => {
-        if (estaCargando) return;
-        estaCargando = true;
-        btnCargarMas.textContent = 'Cargando...';
-        btnCargarMas.disabled = true;
+    const q = query(presupuestosGuardadosCollection, orderBy("fecha", "desc"));
+    onSnapshot(q, (snapshot) => {
+        todoElHistorial = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        // Disparamos un evento 'input' para que la lista se filtre con el término actual
+        buscadorInput.dispatchEvent(new Event('input'));
+    });
 
-        if (inicial) {
-            historialContainer.innerHTML = '<p>Cargando historial...</p>';
-            ultimoDocumentoVisible = null;
-            todoElHistorial = [];
-        }
+    buscadorInput.addEventListener('input', (e) => {
+        const termino = e.target.value.toLowerCase();
+        const filtrados = todoElHistorial.filter(p => {
+            const data = p.data;
+            const titulo = data.tituloTorta || '';
+            const cliente = data.nombreCliente || '';
+            return titulo.toLowerCase().includes(termino) || 
+                   cliente.toLowerCase().includes(termino);
+        });
+        renderizarHistorial(filtrados);
+    });
 
-        try {
-            let q;
-            const constraints = [orderBy("fecha", "desc"), limit(LIMITE_POR_PAGINA)];
-            if (ultimoDocumentoVisible && !inicial) {
-                constraints.push(startAfter(ultimoDocumentoVisible));
-            }
-            q = query(presupuestosGuardadosCollection, ...constraints);
-
-            const querySnapshot = await getDocs(q);
-            const docs = querySnapshot.docs;
-            
-            if(inicial) historialContainer.innerHTML = '';
-
-            if (docs.length > 0) {
-                ultimoDocumentoVisible = docs[docs.length - 1];
-                const nuevosPresupuestos = docs.map(doc => ({ id: doc.id, data: doc.data() }));
-                todoElHistorial = todoElHistorial.concat(nuevosPresupuestos); // Acumulamos los datos
-                renderizarHistorial(todoElHistorial); // Siempre renderizamos la lista completa
-            }
-
-            if (docs.length < LIMITE_POR_PAGINA) {
-                cargarMasContainer.style.display = 'none';
-            } else {
-                 cargarMasContainer.style.display = 'flex';
-            }
-
-            if (historialContainer.innerHTML === '') {
-                historialContainer.innerHTML = '<p>No hay presupuestos guardados todavía.</p>';
-            }
-
-        } catch (error) {
-            console.error("Error al cargar presupuestos:", error);
-        } finally {
-            estaCargando = false;
-            btnCargarMas.textContent = 'Cargar Más';
-            btnCargarMas.disabled = false;
-        }
-    };
-
-    // Hemos quitado el buscador, por lo que este listener ya no es necesario
-    // buscadorInput.addEventListener('input', ...);
-    
     historialContainer.addEventListener('click', async (e) => {
         const target = e.target;
+        const id = target.dataset.id;
+        
+        if (!id && !target.classList.contains('btn-ver-detalle')) return;
+
         if (target.classList.contains('btn-marcar-venta')) {
-            const id = target.dataset.id;
-            if (confirm('¿Estás seguro de que quieres marcar este presupuesto como una venta concretada?')) {
-                try {
-                    const docRef = doc(db, 'presupuestosGuardados', id);
-                    await updateDoc(docRef, { esVenta: true });
+            try {
+                await showConfirmationModal('Confirmar Venta', '¿Estás seguro de que quieres marcar este presupuesto como una venta concretada?');
+                
+                const docRef = doc(db, 'presupuestosGuardados', id);
+                await updateDoc(docRef, { esVenta: true });
 
-                    // --- INICIO DE LA CORRECCIÓN ---
-                    // Actualizamos el estado en nuestra lista local para que la UI sea consistente
-                    const index = todoElHistorial.findIndex(item => item.id === id);
-                    if (index > -1) {
-                        todoElHistorial[index].data.esVenta = true;
-                    }
-                    // --- FIN DE LA CORRECCIÓN ---
+                const mensaje = `¡Gracias de corazón por elegirme! 🩷
+Me llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨
 
-                    // Reemplazamos el botón en la UI para una respuesta visual instantánea
-                    const card = target.closest('.historial-card');
-                    target.outerHTML = `<span class="venta-confirmada-badge">✅ Venta Confirmada</span>`;
-                    card.classList.add('es-venta');
-                    
-                    const mensaje = `¡Gracias de corazón por elegirme! 🩷\nMe llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨\n\nCualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄\n\nGracias por confiar,\nDulce Sal — Horneando tus mejores momentos`;
-                    agradecimientoTexto.innerText = mensaje;
-                    agradecimientoModal.classList.add('visible');
+Cualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄
 
-                } catch (error) {
-                    console.error("Error al marcar como venta: ", error);
-                    alert("No se pudo marcar como venta.");
-                }
+Gracias por confiar,
+Dulce Sal — Horneando tus mejores momentos`;
+                
+                agradecimientoTexto.innerText = mensaje;
+                agradecimientoModal.classList.add('visible');
+
+            } catch (error) {
+                if (error) console.error("Error al marcar como venta:", error);
+                else console.log("Acción 'marcar como venta' cancelada por el usuario.");
+            }
+        } else if (target.classList.contains('btn-borrar-presupuesto')) {
+            try {
+                await showConfirmationModal('Eliminar Presupuesto', 'Esta acción es permanente. ¿Estás seguro de que quieres eliminar este presupuesto?', 'danger');
+                
+                await deleteDoc(doc(db, 'presupuestosGuardados', id));
+                // onSnapshot se encargará de actualizar la vista
+                
+            } catch (error) {
+                if(error) console.error("Error al eliminar:", error);
+                else console.log("Borrado cancelado por el usuario.");
             }
         } else if (target.classList.contains('btn-ver-detalle')) {
-            // ... (lógica sin cambios)
-        } else if (target.classList.contains('btn-borrar-presupuesto')) {
-            // ... (lógica sin cambios)
+            const targetId = target.dataset.target;
+            const detalleDiv = document.getElementById(targetId);
+            if (detalleDiv) {
+                const isVisible = detalleDiv.style.display === 'block';
+                detalleDiv.style.display = isVisible ? 'none' : 'block';
+                target.textContent = isVisible ? 'Ver Detalle' : 'Ocultar Detalle';
+            }
         }
     });
 
-    btnCargarMas.addEventListener('click', () => cargarPresupuestos(false));
-
-    // Listeners para cerrar la modal de agradecimiento
-    if(btnCerrarAgradecimiento) {
+    if (btnCerrarAgradecimiento) {
         btnCerrarAgradecimiento.addEventListener('click', () => agradecimientoModal.classList.remove('visible'));
     }
-    if(agradecimientoModal) {
+    if (agradecimientoModal) {
         agradecimientoModal.addEventListener('click', (e) => {
             if (e.target === agradecimientoModal) agradecimientoModal.classList.remove('visible');
         });
     }
-
-    // Carga inicial
-    cargarPresupuestos(true);
 }
