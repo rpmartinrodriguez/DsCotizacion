@@ -21,9 +21,15 @@ export function setupListaCompras(app) {
     fechaDesdeInput.valueAsDate = hoy;
     fechaHastaInput.valueAsDate = proximaSemana;
 
+    let materiasPrimasDisponibles = [];
+    getDocs(materiasPrimasCollection).then(snap => {
+        materiasPrimasDisponibles = snap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+    });
+
     btnGenerar.addEventListener('click', async () => {
-        const fechaDesde = new Date(fechaDesdeInput.value + 'T00:00:00');
-        const fechaHasta = new Date(fechaHastaInput.value + 'T23:59:59');
+        const fechaDesde = new Date(fechaDesdeInput.value);
+        const fechaHasta = new Date(fechaHastaInput.value);
+        fechaHasta.setHours(23, 59, 59, 999); // Aseguramos que incluya todo el día
 
         if (isNaN(fechaDesde) || isNaN(fechaHasta)) {
             alert('Por favor, selecciona un rango de fechas válido.');
@@ -32,7 +38,7 @@ export function setupListaCompras(app) {
 
         btnGenerar.disabled = true;
         btnGenerar.textContent = 'Calculando...';
-        resultadoContainer.style.display = 'none';
+        resultadoContainer.style.display = 'block';
         listaContainer.innerHTML = '<p>Calculando...</p>';
 
         try {
@@ -61,7 +67,7 @@ export function setupListaCompras(app) {
             ventasSnap.forEach(doc => {
                 const venta = doc.data();
                 (venta.ingredientes || []).forEach(ing => {
-                    const id = ing.idMateriaPrima || ing.id; // Compatibilidad con datos viejos
+                    const id = ing.idMateriaPrima || ing.id;
                     const cantidad = ing.cantidadTotal || ing.cantidad;
                     const totalActual = ingredientesNecesariosMap.get(id) || 0;
                     ingredientesNecesariosMap.set(id, totalActual + cantidad);
@@ -75,7 +81,6 @@ export function setupListaCompras(app) {
                 const cantidadAComprar = cantidadNecesaria - stockDisponible;
 
                 if (cantidadAComprar > 0) {
-                    // Buscamos el nombre y la unidad de la materia prima
                     const mpDoc = materiasPrimasDisponibles.find(mp => mp.id === id);
                     if (mpDoc) {
                         listaDeCompras.push({
@@ -88,7 +93,6 @@ export function setupListaCompras(app) {
             }
             
             // 5. RENDERIZAR EL RESULTADO
-            resultadoContainer.style.display = 'block';
             listaContainer.innerHTML = '';
             if (listaDeCompras.length > 0) {
                 const ul = document.createElement('ul');
@@ -105,16 +109,10 @@ export function setupListaCompras(app) {
 
         } catch (error) {
             console.error("Error al generar la lista de compras:", error);
-            listaContainer.innerHTML = '<p style="color:red;">Hubo un error al generar la lista.</p>';
+            listaContainer.innerHTML = '<p style="color:red;">Hubo un error al generar la lista. Revisa la consola.</p>';
         } finally {
             btnGenerar.disabled = false;
             btnGenerar.textContent = 'Generar Lista';
         }
-    });
-
-    // Pequeño truco para que la primera carga funcione
-    const materiasPrimasDisponibles = [];
-    getDocs(materiasPrimasCollection).then(snap => {
-        snap.forEach(doc => materiasPrimasDisponibles.push({id: doc.id, ...doc.data()}));
     });
 }
