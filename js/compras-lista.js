@@ -1,4 +1,4 @@
-// js/compras-lista.js (Lógica Automática)
+// js/compras-lista.js
 import { 
     getFirestore, collection, getDocs, query, where, Timestamp, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -12,7 +12,7 @@ export function setupListaCompras(app) {
     const generarListaAutomatica = async () => {
         listaContainer.innerHTML = '<p>Calculando...</p>';
         try {
-            // 1. OBTENER STOCK ACTUAL
+            // 1. OBTENER STOCK ACTUAL Y DATOS DE MATERIAS PRIMAS
             const stockActualMap = new Map();
             const materiasPrimasSnap = await getDocs(materiasPrimasCollection);
             const materiasPrimasDisponibles = materiasPrimasSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
@@ -84,5 +84,5 @@ export function setupListaCompras(app) {
         }
     };
 
-    generarListaAutomatica(); // Ejecutar al cargar la página
+    generarListaAutomatica();
 }
