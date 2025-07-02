@@ -9,7 +9,6 @@ export function setupDashboard(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
-    // Referencias al DOM
     const filtroMesSelect = document.getElementById('filtro-mes');
     const kpiIngresos = document.getElementById('kpi-ingresos-ventas');
     const kpiValorCotizado = document.getElementById('kpi-valor-cotizado');
@@ -18,6 +17,7 @@ export function setupDashboard(app) {
     const kpiValorStock = document.getElementById('kpi-valor-stock');
     const listaFaltantesContainer = document.getElementById('lista-faltantes-dashboard');
     const topClientesContainer = document.getElementById('lista-top-clientes');
+    const proximasEntregasContainer = document.getElementById('lista-proximas-entregas');
     const ctx = document.getElementById('grafico-ingresos').getContext('2d');
     
     let ingresosChart = null;
@@ -87,6 +87,35 @@ export function setupDashboard(app) {
             topClientesContainer.innerHTML = '<p>Aún no hay ventas registradas.</p>';
         }
     };
+    
+    const actualizarProximasEntregas = () => {
+        const proximasVentas = todosLosPresupuestos
+            .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
+            .sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
+            .slice(0, 3);
+
+        proximasEntregasContainer.innerHTML = '';
+        if(proximasVentas.length > 0) {
+            proximasVentas.forEach(venta => {
+                const fecha = venta.fechaEntrega.toDate();
+                const item = document.createElement('div');
+                item.className = 'entrega-item';
+                item.innerHTML = `
+                    <div class="entrega-fecha">
+                        <strong>${fecha.getDate()}</strong>
+                        <span>${fecha.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '').toUpperCase()}</span>
+                    </div>
+                    <div class="entrega-info">
+                        <strong>${venta.tituloTorta}</strong>
+                        <span>Cliente: ${venta.nombreCliente}</span>
+                    </div>
+                `;
+                proximasEntregasContainer.appendChild(item);
+            });
+        } else {
+            proximasEntregasContainer.innerHTML = '<p>No hay entregas próximas agendadas.</p>';
+        }
+    };
 
     const actualizarListaFaltantes = async () => {
         try {
@@ -95,16 +124,21 @@ export function setupDashboard(app) {
                 const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
                 stockActualMap.set(item.id, stockTotal);
             });
-            const qVentas = query(presupuestosGuardadosCollection, where("esVenta", "==", true), where("fechaEntrega", ">=", new Date()), orderBy("fechaEntrega", "asc"), limit(5));
-            const ventasSnap = await getDocs(qVentas);
+
+            const proximasVentas = todosLosPresupuestos
+                .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
+                .sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
+                .slice(0, 5);
+            
             const ingredientesNecesariosMap = new Map();
-            ventasSnap.forEach(doc => {
-                (doc.data().ingredientes || []).forEach(ing => {
+            proximasVentas.forEach(venta => {
+                (venta.ingredientes || []).forEach(ing => {
                     const id = ing.idMateriaPrima || ing.id;
                     const cantidad = ing.cantidadTotal || ing.cantidad;
                     ingredientesNecesariosMap.set(id, (ingredientesNecesariosMap.get(id) || 0) + cantidad);
                 });
             });
+
             const listaDeCompras = [];
             for (const [id, cantidadNecesaria] of ingredientesNecesariosMap.entries()) {
                 const cantidadAComprar = cantidadNecesaria - (stockActualMap.get(id) || 0);
@@ -113,6 +147,7 @@ export function setupDashboard(app) {
                     if (mpDoc) listaDeCompras.push({ nombre: mpDoc.nombre, cantidad: cantidadAComprar, unidad: mpDoc.unidad });
                 }
             }
+
             listaFaltantesContainer.innerHTML = '';
             if (listaDeCompras.length > 0) {
                 const ul = document.createElement('ul');
@@ -145,7 +180,7 @@ export function setupDashboard(app) {
         todosLosPresupuestos.forEach(p => {
             if (p.esVenta) {
                 const fecha = p.fecha.toDate();
-                const mesAnio = `${fecha.getMonth() + 1}/${String(fecha.getFullYear()).slice(-2)}`;
+                const mesAnio = `${String(fecha.getMonth() + 1).padStart(2,'0')}/${fecha.getFullYear()}`;
                 if (!ventasPorMes[mesAnio]) ventasPorMes[mesAnio] = 0;
                 ventasPorMes[mesAnio] += p.precioVenta || 0;
             }
@@ -188,6 +223,7 @@ export function setupDashboard(app) {
         recalcularDashboard(filtroMesSelect.value);
         renderizarGrafico();
         actualizarTopClientes();
+        actualizarProximasEntregas();
     });
 
     onSnapshot(query(materiasPrimasCollection), (snapshot) => {
