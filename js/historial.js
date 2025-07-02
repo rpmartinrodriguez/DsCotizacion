@@ -12,6 +12,9 @@ export function setupHistorial(app) {
     const agradecimientoModal = document.getElementById('agradecimiento-modal-overlay');
     const agradecimientoTexto = document.getElementById('agradecimiento-texto');
     const btnCerrarAgradecimiento = document.getElementById('agradecimiento-modal-btn-cerrar');
+    const btnCopiarAgradecimiento = document.getElementById('agradecimiento-modal-btn-copiar');
+    const copiadoFeedback = document.getElementById('copiado-feedback-historial');
+
     const confirmModal = document.getElementById('confirm-modal-overlay');
     const confirmModalTitle = document.getElementById('confirm-modal-title');
     const confirmModalText = document.getElementById('confirm-modal-text');
@@ -24,16 +27,21 @@ export function setupHistorial(app) {
         return new Promise((resolve, reject) => {
             confirmModalTitle.textContent = title;
             confirmModalText.textContent = text;
-            confirmModalBtnConfirmar.className = `btn-primary ${confirmButtonClass}`;
+            
+            confirmModalBtnConfirmar.className = 'btn-primary';
+            if(confirmButtonClass) {
+                confirmModalBtnConfirmar.classList.add(confirmButtonClass);
+            }
+
             confirmModal.classList.add('visible');
 
             const close = (didConfirm) => {
                 confirmModal.classList.remove('visible');
-                // Remove one-time listeners
                 confirmModalBtnConfirmar.onclick = null;
                 confirmModalBtnCancelar.onclick = null;
                 confirmModal.onclick = null;
                 document.onkeydown = null;
+
                 if (didConfirm) {
                     resolve();
                 } else {
@@ -130,11 +138,10 @@ export function setupHistorial(app) {
             historialContainer.appendChild(card);
         });
     };
-    
+
     const q = query(presupuestosGuardadosCollection, orderBy("fecha", "desc"));
     onSnapshot(q, (snapshot) => {
         todoElHistorial = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-        // Disparamos un evento 'input' para que la lista se filtre con el término actual
         buscadorInput.dispatchEvent(new Event('input'));
     });
 
@@ -144,19 +151,16 @@ export function setupHistorial(app) {
             const data = p.data;
             const titulo = data.tituloTorta || '';
             const cliente = data.nombreCliente || '';
-            return titulo.toLowerCase().includes(termino) || 
-                   cliente.toLowerCase().includes(termino);
+            return titulo.toLowerCase().includes(termino) || cliente.toLowerCase().includes(termino);
         });
         renderizarHistorial(filtrados);
     });
 
     historialContainer.addEventListener('click', async (e) => {
         const target = e.target;
-        const id = target.dataset.id;
         
-        if (!id && !target.classList.contains('btn-ver-detalle')) return;
-
         if (target.classList.contains('btn-marcar-venta')) {
+            const id = target.dataset.id;
             try {
                 await showConfirmationModal('Confirmar Venta', '¿Estás seguro de que quieres marcar este presupuesto como una venta concretada?');
                 
@@ -175,16 +179,16 @@ Dulce Sal — Horneando tus mejores momentos`;
                 agradecimientoModal.classList.add('visible');
 
             } catch (error) {
-                if (error) console.error("Error al marcar como venta:", error);
+                if(error) console.error("Error al marcar como venta:", error);
                 else console.log("Acción 'marcar como venta' cancelada por el usuario.");
             }
         } else if (target.classList.contains('btn-borrar-presupuesto')) {
+            const id = target.dataset.id;
             try {
-                await showConfirmationModal('Eliminar Presupuesto', 'Esta acción es permanente. ¿Estás seguro de que quieres eliminar este presupuesto?', 'danger');
+                await showConfirmationModal('Eliminar Presupuesto', 'Esta acción es permanente. ¿Estás seguro?', 'danger');
                 
                 await deleteDoc(doc(db, 'presupuestosGuardados', id));
-                // onSnapshot se encargará de actualizar la vista
-                
+                // onSnapshot se encarga de actualizar la vista automáticamente
             } catch (error) {
                 if(error) console.error("Error al eliminar:", error);
                 else console.log("Borrado cancelado por el usuario.");
@@ -195,13 +199,22 @@ Dulce Sal — Horneando tus mejores momentos`;
             if (detalleDiv) {
                 const isVisible = detalleDiv.style.display === 'block';
                 detalleDiv.style.display = isVisible ? 'none' : 'block';
-                target.textContent = isVisible ? 'Ver Detalle' : 'Ocultar Detalle';
+                target.textContent = isVisible ? 'Ocultar Detalle' : 'Ver Detalle';
             }
         }
     });
 
+    // Listeners para las modales
     if (btnCerrarAgradecimiento) {
         btnCerrarAgradecimiento.addEventListener('click', () => agradecimientoModal.classList.remove('visible'));
+    }
+    if (btnCopiarAgradecimiento) {
+        btnCopiarAgradecimiento.addEventListener('click', () => {
+            navigator.clipboard.writeText(agradecimientoTexto.innerText).then(() => {
+                copiadoFeedback.textContent = '¡Copiado!';
+                setTimeout(() => { copiadoFeedback.textContent = ''; }, 2000);
+            }).catch(err => console.error('Error al copiar: ', err));
+        });
     }
     if (agradecimientoModal) {
         agradecimientoModal.addEventListener('click', (e) => {
