@@ -1,4 +1,3 @@
-// js/presupuesto.js (Completo y Final)
 import { 
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
     Timestamp, doc, runTransaction, getDoc 
@@ -10,11 +9,14 @@ export function setupPresupuesto(app) {
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
     const recetasCollection = collection(db, 'recetas');
 
+    // --- REFERENCIAS A ELEMENTOS DEL DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
     const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
     const costoTotalSpan = document.getElementById('costo-total');
     const btnFinalizar = document.getElementById('btn-finalizar');
+    const datalistClientes = document.getElementById('lista-clientes-existentes');
     
+    // Referencias para cálculo de precio
     const horasTrabajoInput = document.getElementById('horas-trabajo');
     const costoHoraInput = document.getElementById('costo-hora');
     const costosFijosPorcInput = document.getElementById('costos-fijos-porcentaje');
@@ -27,6 +29,7 @@ export function setupPresupuesto(app) {
     const totalGananciaSpan = document.getElementById('total-ganancia');
     const precioVentaSugeridoSpan = document.getElementById('precio-venta-sugerido');
 
+    // Referencias a sección final y modal
     const resultadoFinalContainer = document.getElementById('resultado-final');
     const mensajeFinalTextarea = document.getElementById('mensaje-final');
     const btnCopiar = document.getElementById('btn-copiar');
@@ -41,6 +44,23 @@ export function setupPresupuesto(app) {
     let presupuestoActual = [];
     let costoTotalCache = 0;
 
+    const cargarClientesExistentes = async () => {
+        const snapshot = await getDocs(query(presupuestosGuardadosCollection));
+        const nombresClientes = new Set();
+        snapshot.forEach(doc => {
+            if(doc.data().nombreCliente) {
+                nombresClientes.add(doc.data().nombreCliente);
+            }
+        });
+
+        datalistClientes.innerHTML = '';
+        nombresClientes.forEach(nombre => {
+            const option = document.createElement('option');
+            option.value = nombre;
+            datalistClientes.appendChild(option);
+        });
+    };
+
     const cargarMateriasPrimas = async () => {
         const q = query(materiasPrimasCollection, orderBy('nombre'));
         const snapshot = await getDocs(q);
@@ -51,7 +71,6 @@ export function setupPresupuesto(app) {
         snapshot.forEach(doc => {
             const data = doc.data();
             if (!data.lotes || !Array.isArray(data.lotes) || data.lotes.length === 0) {
-                console.warn(`El producto "${data.nombre}" no tiene lotes válidos y será ignorado.`);
                 return;
             }
             materiasPrimasDisponibles.push({ id: doc.id, ...data });
@@ -83,21 +102,18 @@ export function setupPresupuesto(app) {
         const recetaId = urlParams.get('recetaId');
 
         if (!recetaId) {
-            cargarMateriasPrimas();
+            await cargarMateriasPrimas();
             return;
         }
 
         ingredientesContainer.innerHTML = '<p>Cargando receta seleccionada...</p>';
-
         const recetaRef = doc(db, 'recetas', recetaId);
         const recetaSnap = await getDoc(recetaRef);
 
         if (recetaSnap.exists()) {
             const receta = recetaSnap.data();
             tortaTituloInput.value = receta.nombreTorta;
-
             await cargarMateriasPrimas();
-
             receta.ingredientes.forEach(ingredienteReceta => {
                 const checkbox = document.getElementById(ingredienteReceta.idMateriaPrima);
                 if (checkbox) {
@@ -139,7 +155,6 @@ export function setupPresupuesto(app) {
         presupuestoActual = [];
         let costoTotal = 0;
         const itemsSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:checked'));
-
         for (const checkbox of itemsSeleccionados) {
             const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
             cantidadInput.disabled = false;
@@ -160,14 +175,12 @@ export function setupPresupuesto(app) {
                 }
             }
         }
-        
         const itemsNoSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:not(:checked)'));
         itemsNoSeleccionados.forEach(checkbox => {
             const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
             cantidadInput.disabled = true;
             cantidadInput.value = '';
         });
-
         costoTotalCache = costoTotal;
         renderizarResumen(presupuestoActual, costoTotal);
     };
@@ -194,13 +207,11 @@ export function setupPresupuesto(app) {
         const costoHora = parseFloat(costoHoraInput.value) || 0;
         const costosFijosPorc = parseFloat(costosFijosPorcInput.value) || 0;
         const gananciaPorc = parseFloat(gananciaPorcInput.value) || 0;
-
         const subtotalManoObra = horasTrabajo * costoHora;
         const subtotalCostosFijos = costoMateriales * (costosFijosPorc / 100);
         const costoProduccion = costoMateriales + subtotalManoObra + subtotalCostosFijos;
         const totalGanancia = costoProduccion * (gananciaPorc / 100);
         const precioVenta = costoProduccion + totalGanancia;
-
         resumenCostoMaterialesSpan.textContent = `$${costoMateriales.toFixed(2)}`;
         subtotalManoObraSpan.textContent = `$${subtotalManoObra.toFixed(2)}`;
         subtotalCostosFijosSpan.textContent = `$${subtotalCostosFijos.toFixed(2)}`;
@@ -210,6 +221,7 @@ export function setupPresupuesto(app) {
     };
 
     const showTitlePrompt = () => {
+        cargarClientesExistentes();
         return new Promise((resolve, reject) => {
             modalOverlay.classList.add('visible');
             tortaTituloInput.focus();
@@ -246,23 +258,19 @@ export function setupPresupuesto(app) {
                     const ingredienteRef = doc(db, 'materiasPrimas', ingrediente.id);
                     const ingredienteDoc = await transaction.get(ingredienteRef);
                     if (!ingredienteDoc.exists()) throw `El ingrediente "${ingrediente.nombre}" no existe.`;
-                    
                     let data = ingredienteDoc.data();
                     let cantidadADescontar = ingrediente.cantidadTotal;
                     let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
-                    
                     const stockTotal = lotesActualizados.reduce((sum, lote) => sum + lote.stockRestante, 0);
                     if (stockTotal < cantidadADescontar) {
                         throw `Stock insuficiente de "${ingrediente.nombre}". Disponible: ${stockTotal}, Necesario: ${cantidadADescontar}.`;
                     }
-                    
                     for (const lote of lotesActualizados) {
                         if (cantidadADescontar <= 0) break;
                         const descontarDeEsteLote = Math.min(lote.stockRestante, cantidadADescontar);
                         lote.stockRestante -= descontarDeEsteLote;
                         cantidadADescontar -= descontarDeEsteLote;
                     }
-                    
                     lotesActualizados = lotesActualizados.filter(lote => lote.stockRestante > 0);
                     transaction.update(ingredienteRef, { lotes: lotesActualizados });
                 }
@@ -294,7 +302,6 @@ Dulce Sal — Horneando tus mejores momentos 🍰`;
             mensajeFinalTextarea.value = mensajeGenerado;
             resultadoFinalContainer.style.display = 'block';
             resultadoFinalContainer.scrollIntoView({ behavior: 'smooth' });
-
         } catch (error) {
             if (error) {
                console.error("Error en la operación de finalización: ", error);
