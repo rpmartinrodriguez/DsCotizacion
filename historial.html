@@ -13,6 +13,7 @@
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
+
         <nav class="tabs">
             <a href="index.html" class="tabs__link">Indicadores</a>
             <a href="recetas.html" class="tabs__link">Postres</a>
@@ -22,6 +23,7 @@
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link active">Historial</a>
         </nav>
+
         <main>
             <section class="card">
                 <h2 class="card__title">Presupuestos Guardados</h2>
@@ -34,6 +36,7 @@
             </section>
         </main>
     </div>
+    
     <div id="agradecimiento-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title">¡Venta Confirmada!</h2>
@@ -45,6 +48,7 @@
             <span id="copiado-feedback-historial" class="copiado-feedback-modal"></span>
         </div>
     </div>
+
     <div id="confirm-venta-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title">Confirmar Venta y Agendar Entrega</h2>
@@ -59,6 +63,18 @@
             </div>
         </div>
     </div>
+
+    <div id="confirm-delete-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title" id="confirm-delete-modal-title">Confirmar Acción</h2>
+            <p id="confirm-delete-modal-text">¿Estás seguro?</p>
+            <div class="modal-actions">
+                <button id="confirm-delete-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="confirm-delete-modal-btn-confirmar" class="btn-primary danger">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
