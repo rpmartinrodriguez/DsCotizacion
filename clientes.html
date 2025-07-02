@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clientes - Cotizador de Tortas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+            <h1 class="header__title">Cotizador de Tortas</h1>
+            <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
+        </header>
+
+        <nav class="tabs">
+            <a href="index.html" class="tabs__link">Indicadores</a>
+            <a href="recetas.html" class="tabs__link">Postres</a>
+            <a href="clientes.html" class="tabs__link active">Clientes</a> <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="stock.html" class="tabs__link">Stock</a>
+            <a href="historial.html" class="tabs__link">Historial</a>
+        </nav>
+
+        <main>
+            <section class="card">
+                <div class="card-header-actions">
+                    <h2 class="card__title">Mis Clientes</h2>
+                    <button id="btn-crear-cliente" class="btn-primary">Añadir Nuevo Cliente</button>
+                </div>
+                <div class="buscador-container">
+                    <input type="search" id="buscador-clientes" placeholder="🔍 Buscar por nombre...">
+                </div>
+                <div id="lista-clientes-container">
+                    <p>Cargando clientes...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="cliente-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title" id="cliente-modal-title">Añadir Nuevo Cliente</h2>
+            <div class="form-modern" style="grid-template-columns: 1fr;">
+                <div class="form-group">
+                    <label for="cliente-nombre-input">Nombre y Apellido</label>
+                    <input type="text" id="cliente-nombre-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="cliente-telefono-input">Teléfono</label>
+                    <input type="tel" id="cliente-telefono-input">
+                </div>
+                <div class="form-group">
+                    <label for="cliente-email-input">Email</label>
+                    <input type="email" id="cliente-email-input">
+                </div>
+                <div class="form-group">
+                    <label for="cliente-notas-input">Notas (Alergias, preferencias, etc.)</label>
+                    <textarea id="cliente-notas-input" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="cliente-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="cliente-modal-btn-guardar" class="btn-primary">Guardar Cliente</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupClientes } from './js/clientes.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupClientes(app);
+        } catch (error) { console.error(error); }
+    </script>
+</body>
+</html>
