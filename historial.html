@@ -13,6 +13,7 @@
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
+
         <nav class="tabs">
             <a href="index.html" class="tabs__link">Indicadores</a>
             <a href="recetas.html" class="tabs__link">Postres</a>
@@ -20,6 +21,7 @@
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link active">Historial</a>
         </nav>
+
         <main>
             <section class="card">
                 <h2 class="card__title">Presupuestos Guardados</h2>
@@ -38,8 +40,10 @@
             <h2 class="card__title">¡Venta Confirmada!</h2>
             <pre id="agradecimiento-texto" class="mensaje-agradecimiento"></pre>
             <div class="modal-actions">
+                <button id="agradecimiento-modal-btn-copiar" class="btn-secondary">Copiar Mensaje</button>
                 <button id="agradecimiento-modal-btn-cerrar" class="btn-primary">Cerrar</button>
             </div>
+            <span id="copiado-feedback-historial" class="copiado-feedback-modal"></span>
         </div>
     </div>
 
