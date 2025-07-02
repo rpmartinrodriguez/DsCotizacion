@@ -4,11 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores - Cotizador de Tortas</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-    
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -50,7 +45,7 @@
                     <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
                     <select id="filtro-mes">
                         <option value="todos">Todos los Tiempos</option>
-                    </select>
+                        </select>
                 </div>
             </section>
 
@@ -80,11 +75,18 @@
                 </section>
                 
                 <div class="dashboard-sidebar">
+                    <a href="agenda.html" class="card-link">
+                        <section class="card">
+                            <h2 class="card__title">Próximas Entregas</h2>
+                            <div id="lista-proximas-entregas">
+                                <p>Calculando...</p>
+                            </div>
+                        </section>
+                    </a>
                     <section class="card">
                         <h2 class="card__title">Valor Actual del Stock</h2>
                         <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
                     </section>
-
                     <a href="compras-lista.html" class="card-link">
                         <section class="card card-aviso">
                             <h2 class="card__title">Faltantes para Próximas Ventas</h2>
@@ -93,7 +95,6 @@
                             </div>
                         </section>
                     </a>
-
                     <a href="clientes.html" class="card-link">
                         <section class="card">
                             <h2 class="card__title">Top 5 Clientes</h2>
