@@ -959,3 +959,26 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     white-space: nowrap;
     text-transform: capitalize;
 }
+
+/* Estilos para la tarjeta de aviso en el Dashboard */
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.card-link:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow);
+}
+.card-aviso {
+    border-left: 5px solid var(--danger-color);
+}
+#lista-faltantes-dashboard .lista-sencilla span {
+    color: var(--danger-color); /* Resaltamos la cantidad faltante */
+}
