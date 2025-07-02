@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Compras - Cotizador de Tortas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+            <h1 class="header__title">Cotizador de Tortas</h1>
+            <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
+        </header>
+
+        <nav class="tabs">
+            <a href="index.html" class="tabs__link">Indicadores</a>
+            <a href="recetas.html" class="tabs__link">Postres</a>
+            <a href="clientes.html" class="tabs__link">Clientes</a>
+            <a href="agenda.html" class="tabs__link">Agenda</a>
+            <a href="compras-lista.html" class="tabs__link active">Lista de Compras</a> <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
+            <a href="stock.html" class="tabs__link">Stock</a>
+            <a href="historial.html" class="tabs__link">Historial</a>
+        </nav>
+
+        <main>
+            <section class="card">
+                <h2 class="card__title">Generar Lista de Compras</h2>
+                <p class="text-light" style="margin-top: -1rem; margin-bottom: 1.5rem;">Selecciona un rango de fechas para calcular los ingredientes que necesitas comprar basándote en tus ventas agendadas.</p>
+                <div class="form-modern">
+                    <div class="form-group">
+                        <label for="fecha-desde">Fecha Desde</label>
+                        <input type="date" id="fecha-desde">
+                    </div>
+                    <div class="form-group">
+                        <label for="fecha-hasta">Fecha Hasta</label>
+                        <input type="date" id="fecha-hasta">
+                    </div>
+                </div>
+                <button id="btn-generar-lista" class="btn-primary">Generar Lista</button>
+            </section>
+
+            <section class="card" id="resultado-lista-compras" style="display: none;">
+                <h2 class="card__title">Necesitas Comprar:</h2>
+                <div id="lista-compras-container">
+                    </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupListaCompras } from './js/compras-lista.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupListaCompras(app);
+        } catch (error) { console.error(error); }
+    </script>
+</body>
+</html>
