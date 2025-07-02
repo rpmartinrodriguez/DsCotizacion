@@ -13,7 +13,6 @@
             <h1 class="header__title">Cotizador de Tortas</h1>
             <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
         </header>
-
         <nav class="tabs">
             <a href="index.html" class="tabs__link">Indicadores</a>
             <a href="recetas.html" class="tabs__link">Postres</a>
@@ -21,25 +20,40 @@
             <a href="stock.html" class="tabs__link">Stock</a>
             <a href="historial.html" class="tabs__link active">Historial</a>
         </nav>
-
         <main>
             <section class="card">
                 <h2 class="card__title">Presupuestos Guardados</h2>
-                
+                <div class="buscador-container">
+                    <input type="search" id="buscador-historial" placeholder="🔍 Buscar por Torta o Cliente...">
+                </div>
                 <div id="historial-container">
                     <p>Cargando historial...</p>
-                </div>
-
-                <div id="cargar-mas-container" class="cargar-mas-container">
-                    <button id="btn-cargar-mas" class="btn-secondary">Cargar Más</button>
                 </div>
             </section>
         </main>
     </div>
     
     <div id="agradecimiento-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">¡Venta Confirmada!</h2>
+            <pre id="agradecimiento-texto" class="mensaje-agradecimiento"></pre>
+            <div class="modal-actions">
+                <button id="agradecimiento-modal-btn-cerrar" class="btn-primary">Cerrar</button>
+            </div>
         </div>
-    
+    </div>
+
+    <div id="confirm-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title" id="confirm-modal-title">Confirmar Acción</h2>
+            <p id="confirm-modal-text">¿Estás seguro de que quieres realizar esta acción?</p>
+            <div class="modal-actions">
+                <button id="confirm-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="confirm-modal-btn-confirmar" class="btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
