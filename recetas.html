@@ -9,19 +9,29 @@
 <body>
     <div class="main-container">
         <header class="header">
-            <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
-            <h1 class="header__title">Cotizador de Tortas</h1>
-            <p class="header__subtitle">Gestiona tus materias primas y calcula el costo de tus tortas fácilmente.</p>
+            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <a href="index.html" class="header__logo-link">
+                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+            </a>
+            <div class="header__spacer"></div>
         </header>
 
-        <nav class="tabs">
-            <a href="index.html" class="tabs__link">Indicadores</a>
-            <a href="recetas.html" class="tabs__link">Postres</a>
-            <a href="clientes.html" class="tabs__link active">Clientes</a> <a href="presupuesto.html" class="tabs__link">Presupuesto</a>
-            <a href="stock.html" class="tabs__link">Stock</a>
-            <a href="historial.html" class="tabs__link">Historial</a>
+        <nav class="nav-menu" id="nav-menu">
+            <a href="index.html" class="nav-menu__link">Indicadores</a>
+            <a href="recetas.html" class="nav-menu__link">Postres</a>
+            <a href="clientes.html" class="nav-menu__link">Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">Agenda</a>
+            <a href="presupuesto.html" class="nav-menu__link">Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link">Stock</a>
+            <a href="historial.html" class="nav-menu__link">Historial</a>
+            <a href="compras.html" class="nav-menu__link">Registrar Compra</a>
         </nav>
-        
+        <div class="nav-menu__overlay" id="nav-overlay"></div>
+
         <main>
             <section class="card">
                 <div class="card-header-actions">
@@ -76,5 +86,6 @@
             setupRecetas(app);
         } catch (error) { console.error(error); }
     </script>
+    <script src="js/menu.js" defer></script>
 </body>
 </html>
