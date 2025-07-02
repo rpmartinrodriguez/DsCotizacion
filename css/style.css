@@ -37,8 +37,8 @@ body {
 }
 
 .header__logo {
-    height: 80px; /* Tamaño para el logo en imagen */
-    width: auto;   /* Ancho automático para mantener la proporción */
+    height: 80px;
+    width: auto;
     margin-bottom: 0.5rem;
 }
 
@@ -108,7 +108,6 @@ body {
     padding: 0.8rem 1.5rem;
 }
 
-
 /* 6. Formularios Modernos */
 .form-modern {
     display: grid;
@@ -139,7 +138,7 @@ body {
 .form-group input:focus, .form-group select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3); /* Sombra ajustada al nuevo color */
+    box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3);
 }
 
 .btn-primary {
@@ -233,7 +232,7 @@ body {
     width: 1.25em;
     height: 1.25em;
     cursor: pointer;
-    accent-color: var(--primary-color); /* Colorea el checkbox */
+    accent-color: var(--primary-color);
 }
 
 .ingrediente-info label {
@@ -450,6 +449,7 @@ body {
     border-radius: 5px;
     text-align: center;
 }
+
 
 /* 15. Estilos para la página de Stock */
 .stock-actions {
@@ -752,9 +752,9 @@ body {
     color: var(--text-color);
 }
 
-/* 25. Estilos para el botón de Paginación (Cargar Más) */
+/* 25. Estilos para el botón de Paginación (Cargar Más) - Desactivado por ahora */
 .cargar-mas-container {
-    display: flex;
+    display: none; /* Ocultamos por defecto ya que no se usa */
     justify-content: center;
     padding: 1rem 0;
 }
@@ -769,77 +769,4 @@ body {
 }
 .btn-primary.danger:hover {
     background-color: #c82333;
-}
-
-/* 26. Estilos para la página de Clientes */
-.cliente-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    margin-bottom: 1rem;
-}
-.cliente-card__info h3 {
-    margin: 0 0 0.5rem 0;
-}
-.cliente-card__info p {
-    margin: 0.25rem 0;
-    font-size: 0.9rem;
-    color: var(--text-light);
-}
-.cliente-card__actions {
-    display: flex;
-    gap: 0.75rem;
-}
-.cliente-card__actions button {
-    background: none;
-    border: 1px solid var(--border-color);
-    padding: 0.6rem 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 500;
-}
-.cliente-card__actions .btn-borrar-cliente {
-    color: var(--danger-color);
-    border-color: var(--danger-color);
-}
-.cliente-card__actions .btn-borrar-cliente:hover {
-    background-color: var(--danger-color);
-    color: white;
-}
-
-/* 27. Estilos para el Resumen de Clientes */
-.cliente-resumen-card {
-    background-color: var(--card-background);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.cliente-resumen-card h3 {
-    margin: 0 0 1rem 0;
-    color: var(--primary-color);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 1rem;
-}
-
-.cliente-resumen-stats {
-    display: flex;
-    justify-content: space-around;
-    text-align: center;
-}
-
-.cliente-resumen-stats .stat span {
-    font-size: 0.9rem;
-    color: var(--text-light);
-}
-
-.cliente-resumen-stats .stat p {
-    margin: 0.25rem 0 0 0;
-    font-size: 1.5rem;
-    font-weight: 600;
 }
