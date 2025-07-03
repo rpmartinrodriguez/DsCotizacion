@@ -93,22 +93,36 @@ body {
     width: 40px; /* Ancho similar al botón de menú para centrar el logo */
 }
 
-/* MENÚ DESPLEGABLE */
+/* NUEVO MENÚ DESPLEGABLE ESTILIZADO */
 .nav-menu {
     position: fixed;
     top: 0;
     left: 0;
-    width: 280px; /* Ancho del menú */
+    width: 280px;
     height: 100%;
     background-color: var(--card-background);
     box-shadow: 4px 0 15px rgba(0,0,0,0.1);
-    transform: translateX(-100%); /* Oculto a la izquierda */
+    transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     z-index: 1001;
-    padding-top: 80px; /* Espacio para el header */
     display: flex;
     flex-direction: column;
 }
+
+.nav-menu__header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-top: 65px; /* Espacio para el header principal fijo */
+}
+
+.nav-menu__title {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
 .nav-menu__link {
     color: var(--text-color);
     text-decoration: none;
@@ -116,9 +130,33 @@ body {
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
     transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Espacio entre el emoji y el texto */
 }
+
 .nav-menu__link:hover {
     background-color: var(--background-color);
+}
+
+/* Nuevo estilo para el enlace activo */
+.nav-menu__link.active {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+}
+
+.nav-menu__overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
 }
 
 /* OVERLAY DE FONDO */
