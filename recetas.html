@@ -49,13 +49,63 @@
     </div>
     
     <div id="receta-modal-overlay" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 700px;">
+            <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
+            
+            <div class="form-modern">
+                <div class="form-group">
+                    <label for="receta-nombre-input">Nombre del Postre</label>
+                    <input type="text" id="receta-nombre-input" placeholder="Ej: Torta Oreo">
+                </div>
+                <div class="form-group">
+                    <label for="receta-categoria-select">Categoría</label>
+                    <select id="receta-categoria-select">
+                        <option value="" disabled selected>Selecciona una categoría</option>
+                        <option value="Tortas">Tortas</option>
+                        <option value="Tartas">Tartas</option>
+                        <option value="Alfajores">Alfajores</option>
+                        <option value="Budines">Budines</option>
+                        <option value="Mix D's">Mix D's</option>
+                        <option value="Sin TACC">Sin TACC</option>
+                    </select>
+                </div>
+            </div>
+
+            <h4 class="card__subtitle">Ingredientes de la Receta</h4>
+            <div class="receta-editor-grid">
+                <div class="form-group">
+                    <label for="selector-ingrediente-receta">Añadir Ingrediente</label>
+                    <input type="text" id="selector-ingrediente-receta" list="lista-materias-primas-receta" placeholder="Busca un ingrediente...">
+                    <datalist id="lista-materias-primas-receta"></datalist>
+                </div>
+                <div class="form-group">
+                    <label for="cantidad-ingrediente-receta">Cantidad</label>
+                    <input type="number" id="cantidad-ingrediente-receta" min="0" step="any">
+                </div>
+                <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
+            </div>
+            
+            <hr class="calculo-divisor">
+
+            <div id="ingredientes-en-receta-container">
+                <p>Aún no has añadido ingredientes.</p>
+            </div>
+
+            <div class="modal-actions">
+                <button id="receta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="receta-modal-btn-guardar" class="btn-primary">Guardar Receta</button>
+            </div>
         </div>
+    </div>
     
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupRecetas } from './js/recetas.js';
-        try { const app = initializeApp(firebaseConfig); setupRecetas(app); } catch (error) { console.error(error); }
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupRecetas(app);
+        } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
 </body>
