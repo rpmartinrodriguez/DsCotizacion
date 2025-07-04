@@ -810,28 +810,105 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 
 /* 22. Estilos Responsive para Móviles */
 @media (max-width: 768px) {
-    body { padding: 1em; }
-    .main-container { padding: 0; }
-    .card { padding: 1.5rem; border-radius: 10px; }
-    .header__title { font-size: 1.8rem; }
-    .header__subtitle { font-size: 0.9rem; }
-    .tabs__link { padding: 0.8rem 0.5rem; font-size: 0.8rem; }
-    .card__title { font-size: 1.1rem; }
-    .form-modern { gap: 1rem; }
-    .card-header-actions { flex-direction: column; align-items: flex-start; gap: 1rem; }
-    .table-clean { border: none; }
-    .table-clean thead { display: none; }
-    .table-clean tr { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; }
-    .table-clean td { display: block; text-align: right; padding: 0.5rem 0; border-bottom: none; position: relative; }
-    .table-clean td:before { content: attr(data-label); position: absolute; left: 0; font-weight: 600; color: var(--text-color); text-align: left; }
-    .table-clean td.action-buttons { text-align: center; margin-top: 1rem; }
-    .table-clean td.action-buttons:before { content: ''; }
-    .calculo-grid { grid-template-columns: 1fr; }
-    .presupuesto-layout, .dashboard-layout { grid-template-columns: 1fr; }
-    .receta-editor-grid { grid-template-columns: 1fr; }
-    .receta-editor-grid button { grid-column: 1 / -1; }
+    body { 
+        padding: 1em; 
+        padding-top: 70px; 
+    }
+    .main-container { 
+        padding: 0 1em; 
+    }
+    .card { 
+        padding: 1.5rem; 
+        border-radius: 10px; 
+    }
+    .header__title { 
+        font-size: 1.8rem; 
+    }
+    .header__slogan { 
+        font-size: 1.5rem; 
+    }
+    .card__title { 
+        font-size: 1.1rem; 
+    }
+    .form-modern { 
+        grid-template-columns: 1fr; /* Hacemos que todos los grids de formulario sean de 1 columna */
+        gap: 1rem; 
+    }
+    .card-header-actions { 
+        flex-direction: column; 
+        align-items: flex-start; 
+        gap: 1rem; 
+    }
+    .table-clean { 
+        border: none; 
+    }
+    .table-clean thead { 
+        display: none; 
+    }
+    .table-clean tr { 
+        display: block; 
+        border: 1px solid var(--border-color); 
+        border-radius: 8px; 
+        margin-bottom: 1rem; 
+        padding: 1rem; 
+    }
+    .table-clean td { 
+        display: block; 
+        text-align: right; 
+        padding: 0.5rem 0; 
+        border-bottom: none; 
+        position: relative; 
+    }
+    .table-clean td:before { 
+        content: attr(data-label); 
+        position: absolute; 
+        left: 0; 
+        font-weight: 600; 
+        color: var(--text-color); 
+        text-align: left; 
+    }
+    .table-clean td.action-buttons { 
+        text-align: center; 
+        margin-top: 1rem; 
+    }
+    .table-clean td.action-buttons:before { 
+        content: ''; 
+    }
+    .calculo-grid { 
+        grid-template-columns: 1fr; 
+    }
+    .presupuesto-layout, .dashboard-layout { 
+        grid-template-columns: 1fr; 
+    }
+    .modal-content { 
+        width: 95%; 
+    }
+    .cliente-resumen-stats { 
+        flex-direction: column; 
+        gap: 1rem; 
+    }
+
+    /* --- NUEVOS AJUSTES RESPONSIVE PARA EL EDITOR DE RECETAS --- */
+    .receta-editor-grid {
+        grid-template-columns: 1fr; /* La grilla de añadir ingrediente pasa a 1 columna */
+    }
+    .receta-editor-grid button {
+        grid-column: 1 / -1; /* El botón ocupa todo el ancho */
+    }
+    .receta-card {
+        flex-direction: column; /* Apila la info y los botones */
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .receta-card__actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Botones uno al lado del otro */
+    }
+    /* --- FIN DE NUEVOS AJUSTES --- */
 }
 
+/* ... (El resto del CSS desde la sección 23 en adelante no ha cambiado) ... */
 /* 23. Estilos para el botón "Marcar como Venta" */
 .btn-marcar-venta {
     background: none;
