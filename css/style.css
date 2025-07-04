@@ -1102,3 +1102,17 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 0.85rem;
     color: var(--text-light);
 }
+
+/* Estilos para los Títulos de Categoría en la página de Recetas */
+.categoria-titulo {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.categoria-titulo:first-child {
+    margin-top: 0;
+}
