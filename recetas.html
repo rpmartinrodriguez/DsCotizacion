@@ -18,8 +18,7 @@
             <div class="header__spacer"></div>
         </header>
 
-        <nav class="nav-menu" id="nav-menu">
-            </nav>
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -62,9 +61,8 @@
             <div class="receta-editor-grid">
                 <div class="form-group">
                     <label for="selector-ingrediente-receta">Añadir Ingrediente</label>
-                    <select id="selector-ingrediente-receta">
-                        <option value="">Cargando...</option>
-                    </select>
+                    <input type="text" id="selector-ingrediente-receta" list="lista-materias-primas-receta" placeholder="Busca un ingrediente...">
+                    <datalist id="lista-materias-primas-receta"></datalist>
                 </div>
                 <div class="form-group">
                     <label for="cantidad-ingrediente-receta">Cantidad</label>
@@ -72,10 +70,13 @@
                 </div>
                 <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
             </div>
+            
             <hr class="calculo-divisor">
+
             <div id="ingredientes-en-receta-container">
                 <p>Aún no has añadido ingredientes.</p>
             </div>
+
             <div class="modal-actions">
                 <button id="receta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
                 <button id="receta-modal-btn-guardar" class="btn-primary">Guardar Receta</button>
