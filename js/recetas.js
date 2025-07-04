@@ -8,11 +8,11 @@ export function setupRecetas(app) {
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
 
-    // Referencias al DOM
+    // --- Referencias al DOM ---
     const listaRecetasContainer = document.getElementById('lista-recetas-container');
     const btnCrearReceta = document.getElementById('btn-crear-receta');
     
-    // Referencias de la Modal
+    // --- Referencias de la Modal ---
     const modal = document.getElementById('receta-modal-overlay');
     const modalTitle = document.getElementById('receta-modal-title');
     const recetaNombreInput = document.getElementById('receta-nombre-input');
@@ -28,6 +28,9 @@ export function setupRecetas(app) {
     let todasLasRecetas = [];
     let ingredientesRecetaActual = [];
     let editandoId = null;
+
+    // --- Definimos el orden de las categorías ---
+    const ordenDeCategorias = ['Tortas', 'Tartas', 'Alfajores', 'Budines', "Mix D's", 'Sin TACC', 'Sin Categoría'];
 
     const cargarMateriasPrimas = async () => {
         btnCrearReceta.disabled = true;
@@ -94,26 +97,23 @@ export function setupRecetas(app) {
         });
         ingredientesEnRecetaContainer.appendChild(ul);
     };
-
+    
     const anadirIngrediente = () => {
         const idMateriaPrima = selectorIngrediente.value;
         const cantidad = parseFloat(cantidadIngredienteInput.value);
-
         if (!idMateriaPrima || isNaN(cantidad) || cantidad <= 0) {
             alert('Selecciona un ingrediente y una cantidad válida.');
             return;
         }
-
         if (ingredientesRecetaActual.some(ing => ing.idMateriaPrima === idMateriaPrima)) {
             alert('Este ingrediente ya está en la receta.');
             return;
         }
-
         const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === idMateriaPrima);
         ingredientesRecetaActual.push({
-            idMateriaPrima: idMateriaPrima,
+            idMateriaPrima,
             nombreMateriaPrima: materiaPrima.nombre,
-            cantidad: cantidad,
+            cantidad,
             unidad: materiaPrima.unidad
         });
         renderizarIngredientesEnReceta();
@@ -124,18 +124,13 @@ export function setupRecetas(app) {
     const guardarReceta = async () => {
         const nombreTorta = recetaNombreInput.value.trim();
         const categoria = categoriaSelect.value;
-
         if (!nombreTorta || !categoria || ingredientesRecetaActual.length === 0) {
             alert('Por favor, completa el nombre, selecciona una categoría y añade al menos un ingrediente.');
             return;
         }
         
-        const id = editandoId || doc(recetasCollection).id; // Si estamos editando, usamos el ID existente
-        const recetaData = {
-            nombreTorta,
-            categoria,
-            ingredientes: ingredientesRecetaActual
-        };
+        const id = editandoId || doc(collection(db, 'recetas')).id;
+        const recetaData = { nombreTorta, categoria, ingredientes: ingredientesRecetaActual };
 
         try {
             await setDoc(doc(db, 'recetas', id), recetaData);
@@ -146,20 +141,21 @@ export function setupRecetas(app) {
             alert("Hubo un error al guardar la receta.");
         }
     };
-    
+
     const mostrarRecetas = (recetas) => {
         listaRecetasContainer.innerHTML = '';
-        
-        const recetasPorCategoria = {
-            'Tortas': [], 'Tartas': [], 'Alfajores': [], 'Sin Categoría': []
-        };
+        const recetasPorCategoria = {};
+        ordenDeCategorias.forEach(cat => recetasPorCategoria[cat] = []);
 
         recetas.forEach(receta => {
             const categoria = receta.data.categoria || 'Sin Categoría';
-            if (!recetasPorCategoria[categoria]) { // Para categorías futuras
-                recetasPorCategoria[categoria] = [];
+            if (recetasPorCategoria[categoria]) {
+                recetasPorCategoria[categoria].push(receta);
+            } else {
+                // Si alguna vez se crea una categoría no listada, la añadimos al final
+                if(!recetasPorCategoria[categoria]) recetasPorCategoria[categoria] = [];
+                recetasPorCategoria[categoria].push(receta);
             }
-            recetasPorCategoria[categoria].push(receta);
         });
 
         if (recetas.length === 0) {
@@ -167,12 +163,11 @@ export function setupRecetas(app) {
             return;
         }
 
-        for (const categoria in recetasPorCategoria) {
+        ordenDeCategorias.forEach(categoria => {
             const listaDeRecetas = recetasPorCategoria[categoria];
-            if (listaDeRecetas.length > 0) {
+            if (listaDeRecetas && listaDeRecetas.length > 0) {
                 const acordeonItem = document.createElement('div');
                 acordeonItem.className = 'categoria-acordeon';
-
                 const contenidoHtml = listaDeRecetas.map(receta => `
                     <div class="receta-card">
                         <div class="receta-card__info">
@@ -191,13 +186,11 @@ export function setupRecetas(app) {
                         <span class="categoria-acordeon__titulo">${categoria}</span>
                         <span class="acordeon-icono">+</span>
                     </button>
-                    <div class="categoria-acordeon__content">
-                        ${contenidoHtml}
-                    </div>
+                    <div class="categoria-acordeon__content">${contenidoHtml}</div>
                 `;
                 listaRecetasContainer.appendChild(acordeonItem);
             }
-        }
+        });
     };
     
     // --- Listeners Principales ---
@@ -212,16 +205,16 @@ export function setupRecetas(app) {
             header.parentElement.classList.toggle('active');
         }
         
-        if (e.target.classList.contains('btn-editar-receta')) {
-            const id = e.target.dataset.id;
+        const targetEditar = e.target.closest('.btn-editar-receta');
+        if (targetEditar) {
+            const id = targetEditar.dataset.id;
             const recetaParaEditar = todasLasRecetas.find(r => r.id === id);
-            if (recetaParaEditar) {
-                openModal(recetaParaEditar);
-            }
+            if (recetaParaEditar) openModal(recetaParaEditar);
         }
-
-        if (e.target.classList.contains('btn-borrar-receta')) {
-            const id = e.target.dataset.id;
+        
+        const targetBorrar = e.target.closest('.btn-borrar-receta');
+        if (targetBorrar) {
+            const id = targetBorrar.dataset.id;
             if (confirm('¿Estás seguro de que quieres borrar esta receta? Esta acción no se puede deshacer.')) {
                 deleteDoc(doc(db, 'recetas', id));
             }
@@ -236,11 +229,10 @@ export function setupRecetas(app) {
         }
     });
     
-    btnCrearReceta.addEventListener('click', () => openModal());
+    btnCrearReceta.addEventListener('click', () => openModal(null));
     btnCancelarReceta.addEventListener('click', closeModal);
     btnGuardarReceta.addEventListener('click', guardarReceta);
     btnAnadirIngrediente.addEventListener('click', anadirIngrediente);
     
-    // Carga inicial
     cargarMateriasPrimas();
 }
