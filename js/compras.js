@@ -1,73 +1,94 @@
-// js/compras.js
-import { 
-    getFirestore, collection, addDoc, doc, updateDoc, 
-    query, where, getDocs, arrayUnion 
-} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Postres - Recetas</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="header__logo-link">
+                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+            </a>
+            <div class="header__spacer"></div>
+        </header>
 
-export function setupCompras(app) {
-    const db = getFirestore(app);
-    const materiasPrimasCollection = collection(db, 'materiasPrimas');
-    const form = document.getElementById('form-nueva-compra');
-    const datalist = document.getElementById('lista-productos-existentes');
+        <nav class="nav-menu" id="nav-menu">
+            </nav>
+        <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-    const cargarProductosExistentes = async () => {
-        const snapshot = await getDocs(materiasPrimasCollection);
-        datalist.innerHTML = '';
-        snapshot.forEach(doc => {
-            const option = document.createElement('option');
-            option.value = doc.data().nombre;
-            datalist.appendChild(option);
-        });
-    };
+        <main>
+            <section class="card">
+                <div class="card-header-actions">
+                    <h2 class="card__title">Mis Recetas de Postres</h2>
+                    <button id="btn-crear-receta" class="btn-primary">Crear Nueva Receta</button>
+                </div>
+                <div id="lista-recetas-container">
+                    <p>Cargando recetas...</p>
+                </div>
+            </section>
+        </main>
+    </div>
     
-    cargarProductosExistentes();
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const nombre = form['nombre-producto'].value.trim();
-        const precio = parseFloat(form['precio-compra'].value);
-        const cantidad = parseFloat(form['cantidad-compra'].value);
-        const unidad = form['unidad-medida'].value;
-
-        if (!nombre || isNaN(precio) || isNaN(cantidad) || cantidad <= 0) {
-            alert("Por favor, completa todos los campos con valores válidos.");
-            return;
-        }
-
-        const nuevoLote = {
-            fechaCompra: new Date(),
-            precioCompra: precio,
-            cantidadComprada: cantidad,
-            stockRestante: cantidad,
-            costoUnitario: precio / cantidad
-        };
-
-        try {
-            const q = query(materiasPrimasCollection, where("nombre", "==", nombre));
-            const querySnapshot = await getDocs(q);
-
-            if (querySnapshot.empty) {
-                await addDoc(materiasPrimasCollection, {
-                    nombre: nombre,
-                    unidad: unidad,
-                    lotes: [nuevoLote]
-                });
-                alert(`¡Nuevo producto "${nombre}" creado y primer lote guardado!`);
-            } else {
-                const productoDoc = querySnapshot.docs[0];
-                await updateDoc(doc(db, 'materiasPrimas', productoDoc.id), {
-                    lotes: arrayUnion(nuevoLote)
-                });
-                alert(`¡Nuevo lote de "${nombre}" añadido al stock!`);
-            }
+    <div id="receta-modal-overlay" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 700px;">
+            <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
             
-            form.reset();
-            cargarProductosExistentes();
+            <div class="form-modern" style="grid-template-columns: 1fr 1fr;">
+                <div class="form-group">
+                    <label for="receta-nombre-input">Nombre del Postre</label>
+                    <input type="text" id="receta-nombre-input" placeholder="Ej: Torta Oreo">
+                </div>
+                <div class="form-group">
+                    <label for="receta-categoria-select">Categoría</label>
+                    <select id="receta-categoria-select">
+                        <option value="" disabled selected>Selecciona una categoría</option>
+                        <option value="Tortas">Tortas</option>
+                        <option value="Tartas">Tartas</option>
+                        <option value="Alfajores">Alfajores</option>
+                    </select>
+                </div>
+            </div>
 
-        } catch (error) {
-            console.error("Error detallado al guardar la compra: ", error);
-            alert("Hubo un error al guardar la compra. Revisa la consola.");
-        }
-    });
-}
+            <h4 class="card__subtitle">Ingredientes de la Receta</h4>
+            <div class="receta-editor-grid">
+                <div class="form-group">
+                    <label for="selector-ingrediente-receta">Añadir Ingrediente</label>
+                    <select id="selector-ingrediente-receta">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="cantidad-ingrediente-receta">Cantidad</label>
+                    <input type="number" id="cantidad-ingrediente-receta" min="0" step="any">
+                </div>
+                <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
+            </div>
+            <hr class="calculo-divisor">
+            <div id="ingredientes-en-receta-container">
+                <p>Aún no has añadido ingredientes.</p>
+            </div>
+            <div class="modal-actions">
+                <button id="receta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="receta-modal-btn-guardar" class="btn-primary">Guardar Receta</button>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupRecetas } from './js/recetas.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupRecetas(app);
+        } catch (error) { console.error(error); }
+    </script>
+    <script src="js/menu.js" defer></script>
+</body>
+</html>
