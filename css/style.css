@@ -1116,3 +1116,61 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .categoria-titulo:first-child {
     margin-top: 0;
 }
+
+/* Estilos para el nuevo Acordeón de Categorías */
+.categoria-acordeon {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden; /* Clave para la animación */
+}
+
+.categoria-acordeon__header {
+    background-color: var(--card-background);
+    padding: 1rem 1.5rem;
+    width: 100%;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.categoria-acordeon__header:hover {
+    background-color: var(--background-color);
+}
+
+.acordeon-icono {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    transition: transform 0.3s ease;
+}
+
+.categoria-acordeon__content {
+    max-height: 0; /* Oculto por defecto */
+    transition: max-height 0.4s ease-out, padding 0.4s ease-out;
+    background-color: var(--background-color);
+    padding: 0 1.5rem; /* Padding horizontal para el contenido */
+}
+
+/* Estilos para cuando el acordeón está activo/abierto */
+.categoria-acordeon.active .categoria-acordeon__content {
+    max-height: 1000px; /* Un valor alto para permitir que el contenido se vea */
+    padding: 1.5rem;
+    transition: max-height 0.5s ease-in, padding 0.5s ease-in;
+}
+
+.categoria-acordeon.active .acordeon-icono {
+    transform: rotate(45deg);
+}
+
+/* Ajustamos las tarjetas de receta dentro del acordeón */
+.categoria-acordeon__content .receta-card {
+    border-radius: 8px;
+    background-color: var(--card-background);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
