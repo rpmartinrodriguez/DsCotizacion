@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Postres - Recetas</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff96c5">
 </head>
 <body>
     <div class="main-container">
@@ -17,7 +19,6 @@
             </a>
             <div class="header__spacer"></div>
         </header>
-
         <nav class="nav-menu" id="nav-menu">
             <div class="nav-menu__header">
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
@@ -34,7 +35,6 @@
             <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
-
         <main>
             <section class="card">
                 <div class="card-header-actions">
@@ -47,11 +47,9 @@
             </section>
         </main>
     </div>
-    
     <div id="receta-modal-overlay" class="modal-overlay">
         <div class="modal-content card" style="max-width: 700px;">
             <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
-            
             <div class="form-modern">
                 <div class="form-group">
                     <label for="receta-nombre-input">Nombre del Postre</label>
@@ -70,7 +68,6 @@
                     </select>
                 </div>
             </div>
-
             <h4 class="card__subtitle">Ingredientes de la Receta</h4>
             <div class="receta-editor-grid">
                 <div class="form-group">
@@ -84,29 +81,29 @@
                 </div>
                 <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
             </div>
-            
             <hr class="calculo-divisor">
-
             <div id="ingredientes-en-receta-container">
                 <p>Aún no has añadido ingredientes.</p>
             </div>
-
             <div class="modal-actions">
                 <button id="receta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
                 <button id="receta-modal-btn-guardar" class="btn-primary">Guardar Receta</button>
             </div>
         </div>
     </div>
-    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupRecetas } from './js/recetas.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupRecetas(app);
-        } catch (error) { console.error(error); }
+        try { const app = initializeApp(firebaseConfig); setupRecetas(app); } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
