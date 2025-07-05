@@ -1,6 +1,6 @@
 // sw.js - Service Worker Mejorado con versionado y limpieza
 
-const CACHE_NAME = 'cotizador-tortas-cache-v3'; // <--- Cambiamos la versión aquí
+const CACHE_NAME = 'cotizador-tortas-cache-v4'; // <--- Cambiamos la versión aquí
 // Lista de archivos esenciales para que la aplicación funcione sin conexión.
 const urlsToCache = [
   '/',
