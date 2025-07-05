@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span><span></span><span></span>
+                <span></span>
+                <span></span>
+                <span></span>
             </button>
             <a href="index.html" class="header__logo-link">
                 <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
@@ -40,74 +45,71 @@
 
         <main>
             <div style="text-align: center;">
-                 <h1 class="header__title">.</h1>
+                 <h1 class="header__title"> </h1>
                  <p class="header__slogan">Horneando tus Mejores Momentos</p>
             </div>
             
-            <section class="card">
-                <div class="form-group">
-                    <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
-                    <select id="filtro-mes">
-                        <option value="todos">Todos los Tiempos</option>
-                    </select>
-                </div>
-            </section>
+            <div class="dashboard-main-grid">
 
-            <div class="dashboard-grid">
-                <div class="stat-card">
-                    <h4>Ingresos por Ventas</h4>
-                    <p id="kpi-ingresos-ventas">$0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h4>Valor Total Cotizado</h4>
-                    <p id="kpi-valor-cotizado">$0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h4>Ganancia Bruta (Ventas)</h4>
-                    <p id="kpi-ganancia-bruta">$0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h4>Presupuestos Creados</h4>
-                    <p id="kpi-presupuestos-creados">0</p>
-                </div>
-            </div>
+                <section class="card filter-card">
+                    <div class="form-group">
+                        <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
+                        <select id="filtro-mes">
+                            <option value="todos">Todos los Tiempos</option>
+                        </select>
+                    </div>
+                </section>
 
-            <div class="dashboard-layout">
-                <section class="card">
+                <div class="dashboard-grid kpi-cards">
+                    <div class="stat-card">
+                        <h4>Ingresos por Ventas</h4>
+                        <p id="kpi-ingresos-ventas">$0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Valor Total Cotizado</h4>
+                        <p id="kpi-valor-cotizado">$0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Ganancia Bruta (Ventas)</h4>
+                        <p id="kpi-ganancia-bruta">$0.00</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Presupuestos Creados</h4>
+                        <p id="kpi-presupuestos-creados">0</p>
+                    </div>
+                </div>
+
+                <section class="card chart-card">
                     <h2 class="card__title">Ingresos por Mes (Ventas Reales)</h2>
                     <canvas id="grafico-ingresos"></canvas>
                 </section>
                 
-                <div class="dashboard-sidebar">
-                    <a href="agenda.html" class="card-link">
-                        <section class="card">
-                            <h2 class="card__title">Próximas Entregas</h2>
-                            <div id="lista-proximas-entregas">
-                                <p>Calculando...</p>
-                            </div>
-                        </section>
-                    </a>
+                <a href="agenda.html" class="card-link sidebar-card sidebar-card--entregas">
                     <section class="card">
-                        <h2 class="card__title">Valor Actual del Stock</h2>
-                        <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
+                        <h2 class="card__title">Próximas Entregas</h2>
+                        <div id="lista-proximas-entregas"><p>Calculando...</p></div>
                     </section>
-                    <a href="compras-lista.html" class="card-link">
-                        <section class="card card-aviso">
-                            <h2 class="card__title">Faltantes para Próximas Ventas</h2>
-                            <div id="lista-faltantes-dashboard">
-                                <p>Calculando...</p>
-                            </div>
-                        </section>
-                    </a>
-                    <a href="clientes.html" class="card-link">
-                        <section class="card">
-                            <h2 class="card__title">Top 5 Clientes</h2>
-                            <div id="lista-top-clientes">
-                                <p>Calculando...</p>
-                            </div>
-                        </section>
-                    </a>
-                </div>
+                </a>
+
+                <a href="compras-lista.html" class="card-link sidebar-card sidebar-card--faltantes">
+                    <section class="card card-aviso">
+                        <h2 class="card__title">Faltantes para Próximas Ventas</h2>
+                        <div id="lista-faltantes-dashboard"><p>Calculando...</p></div>
+                    </section>
+                </a>
+                
+                <section class="card sidebar-card sidebar-card--stock">
+                    <h2 class="card__title">Valor Actual del Stock</h2>
+                    <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
+                </section>
+
+                <a href="clientes.html" class="card-link sidebar-card sidebar-card--clientes">
+                    <section class="card">
+                        <h2 class="card__title">Top 5 Clientes</h2>
+                        <div id="lista-top-clientes"><p>Calculando...</p></div>
+                    </section>
+                </a>
+                
             </div>
         </main>
     </div>
