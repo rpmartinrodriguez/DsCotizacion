@@ -1,6 +1,5 @@
-// js/dashboard.js (Versión final con sincronización corregida)
 import { 
-    getFirestore, collection, onSnapshot, query, where, Timestamp, orderBy, limit, getDocs 
+    getFirestore, collection, onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { Chart, registerables } from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.js/+esm';
 Chart.register(...registerables);
@@ -22,18 +21,12 @@ export function setupDashboard(app) {
     const ctx = document.getElementById('grafico-ingresos').getContext('2d');
     
     let ingresosChart = null;
-    const UMBRAL_BAJO_STOCK = 100;
     let todosLosPresupuestos = [];
     let materiasPrimasDisponibles = [];
-    let datosListos = { presupuestos: false, materiasPrimas: false };
 
     const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    
-    // --- FUNCIÓN CENTRAL QUE ACTUALIZA TODA LA UI ---
-    const actualizarTodaLaUI = () => {
-        // Nos aseguramos de que ambos conjuntos de datos hayan llegado
-        if (!datosListos.presupuestos || !datosListos.materiasPrimas) return;
 
+    const actualizarTodaLaUI = () => {
         recalcularDashboard(filtroMesSelect.value);
         renderizarGrafico();
         actualizarTopClientes();
@@ -57,9 +50,7 @@ export function setupDashboard(app) {
             if (p.esVenta) {
                 ingresosVentas += p.precioVenta || 0;
                 if (p.hasOwnProperty('precioVenta')) {
-                    const costoManoObra = (p.horasTrabajo || 0) * (p.costoHora || 0);
-                    const costoFijos = (p.costoMateriales || 0) * ((p.porcentajeCostosFijos || 0) / 100);
-                    const costoProduccion = (p.costoMateriales || 0) + costoManoObra + costoFijos;
+                    const costoProduccion = (p.costoMateriales || 0) + ((p.horasTrabajo || 0) * (p.costoHora || 0)) + ((p.costoMateriales || 0) * ((p.porcentajeCostosFijos || 0) / 100));
                     gananciaBrutaVentas += (p.precioVenta - costoProduccion);
                 }
             }
@@ -98,40 +89,36 @@ export function setupDashboard(app) {
             .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
             .sort((a, b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
             .slice(0, 3);
+        
         proximasEntregasContainer.innerHTML = '';
         if (proximasVentas.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'lista-sencilla dashboard-lista'; // Usamos la clase unificada
             proximasVentas.forEach(venta => {
                 const fecha = venta.fechaEntrega.toDate();
-                const item = document.createElement('div');
-                item.className = 'entrega-item';
-                item.innerHTML = `<div class="entrega-fecha"><strong>${fecha.getDate()}</strong><span>${fecha.toLocaleDateString('es-AR',{month:'short'}).replace('.','').toUpperCase()}</span></div><div class="entrega-info"><strong>${venta.tituloTorta}</strong><span>Cliente: ${venta.nombreCliente}</span></div>`;
-                proximasEntregasContainer.appendChild(item);
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="dashboard-lista-item">
+                        <span>${venta.tituloTorta}</span>
+                        <small>(${venta.nombreCliente})</small>
+                    </div>
+                    <span>${fecha.toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'})}</span>
+                `;
+                ul.appendChild(li);
             });
+            proximasEntregasContainer.appendChild(ul);
         } else {
             proximasEntregasContainer.innerHTML = '<p>No hay entregas próximas agendadas.</p>';
         }
     };
     
-    const calcularMetricasStock = () => {
-        let valorTotalStock = 0;
-        materiasPrimasDisponibles.forEach(item => {
-            if(item.lotes && Array.isArray(item.lotes)) {
-                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
-            }
-        });
-        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
-    };
-
-    const actualizarListaFaltantes = async () => {
+    const actualizarListaFaltantes = () => {
         const stockActualMap = new Map();
         materiasPrimasDisponibles.forEach(item => {
             const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
             stockActualMap.set(item.id, stockTotal);
         });
-        const proximasVentas = todosLosPresupuestos
-            .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
-            .sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
-            .slice(0, 5);
+        const proximasVentas = todosLosPresupuestos.filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date()).sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate()).slice(0, 5);
         const ingredientesNecesariosMap = new Map();
         proximasVentas.forEach(venta => {
             (venta.ingredientes || []).forEach(ing => {
@@ -151,17 +138,16 @@ export function setupDashboard(app) {
         listaFaltantesContainer.innerHTML = '';
         if (listaDeCompras.length > 0) {
             const ul = document.createElement('ul');
-            ul.className = 'lista-sencilla';
+            ul.className = 'lista-sencilla dashboard-lista';
             listaDeCompras.sort((a,b) => b.cantidad - a.cantidad).slice(0, 5).forEach(item => {
                 const li = document.createElement('li');
-                li.innerHTML = `${item.nombre} <span>${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</span>`;
+                li.innerHTML = `<span>${item.nombre}</span> <span class="faltante-cantidad">${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</span>`;
                 ul.appendChild(li);
             });
             if (listaDeCompras.length > 5) {
                 const liMas = document.createElement('li');
                 liMas.innerHTML = `<strong>y ${listaDeCompras.length - 5} más...</strong>`;
                 liMas.style.justifyContent = 'center';
-                liMas.style.color = 'var(--text-light)';
                 ul.appendChild(liMas);
             }
             listaFaltantesContainer.appendChild(ul);
@@ -170,6 +156,16 @@ export function setupDashboard(app) {
         }
     };
     
+    const calcularMetricasStock = () => {
+        let valorTotalStock = 0;
+        materiasPrimasDisponibles.forEach(item => {
+            if(item.lotes && Array.isArray(item.lotes)) {
+                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
+            }
+        });
+        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
+    };
+
     const renderizarGrafico = () => {
         if (ingresosChart) ingresosChart.destroy();
         const ventasPorMes = {};
@@ -187,18 +183,15 @@ export function setupDashboard(app) {
             return (anioA - anioB) || (mesA - mesB);
         });
         const dataPoints = labels.map(label => ventasPorMes[label]);
-        ingresosChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] },
-            options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }
-        });
+        ingresosChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] }, options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }});
     };
     
-    // --- NUEVA ESTRUCTURA DE CARGA ---
+    // --- Lógica de Carga y Sincronización ---
     onSnapshot(query(presupuestosGuardadosCollection), (snapshot) => {
         todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
         datosListos.presupuestos = true;
         
+        // Llenar filtro de meses
         const mesesDisponibles = new Set();
         todosLosPresupuestos.forEach(p => {
             const fecha = p.fecha.toDate();
