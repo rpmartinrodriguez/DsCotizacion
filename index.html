@@ -22,8 +22,7 @@
             <div class="header__spacer"></div>
         </header>
 
-        <nav class="nav-menu" id="nav-menu">
-            </nav>
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -32,61 +31,70 @@
                  <p class="header__slogan">Horneando tus Mejores Momentos</p>
             </div>
             
-            <div class="dashboard-main-grid">
-
-                <a href="agenda.html" class="card-link sidebar-card sidebar-card--entregas">
-                    <section class="card">
-                        <h2 class="card__title">Próximas Entregas</h2>
-                        <div id="lista-proximas-entregas"><p>Calculando...</p></div>
-                    </section>
-                </a>
-                <a href="compras-lista.html" class="card-link sidebar-card sidebar-card--faltantes">
-                    <section class="card card-aviso">
-                        <h2 class="card__title">Faltantes para Próximas Ventas</h2>
-                        <div id="lista-faltantes-dashboard"><p>Calculando...</p></div>
-                    </section>
-                </a>
-                <section class="card filter-card">
-                    <div class="form-group">
-                        <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
-                        <select id="filtro-mes">
-                            <option value="todos">Todos los Tiempos</option>
-                        </select>
-                    </div>
-                </section>
-
-                <div class="dashboard-grid kpi-cards">
-                    <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
-                    <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
-                    <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
-                    <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
+            <section class="card">
+                <div class="form-group">
+                    <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
+                    <select id="filtro-mes">
+                        <option value="todos">Todos los Tiempos</option>
+                    </select>
                 </div>
+            </section>
 
-                <section class="card chart-card">
+            <div class="dashboard-grid">
+                <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
+                <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
+                <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
+                <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
+            </div>
+
+            <div class="dashboard-layout">
+                <section class="card">
                     <h2 class="card__title">Ingresos por Mes (Ventas Reales)</h2>
                     <canvas id="grafico-ingresos"></canvas>
                 </section>
                 
-                <section class="card sidebar-card sidebar-card--stock">
-                    <h2 class="card__title">Valor Actual del Stock</h2>
-                    <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
-                </section>
-
-                <a href="clientes.html" class="card-link sidebar-card sidebar-card--clientes">
+                <div class="dashboard-sidebar">
+                    <a href="agenda.html" class="card-link">
+                        <section class="card">
+                            <h2 class="card__title">Próximas Entregas</h2>
+                            <div id="lista-proximas-entregas">
+                                <p>Calculando...</p>
+                            </div>
+                        </section>
+                    </a>
                     <section class="card">
-                        <h2 class="card__title">Top 5 Clientes</h2>
-                        <div id="lista-top-clientes"><p>Calculando...</p></div>
+                        <h2 class="card__title">Valor Actual del Stock</h2>
+                        <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
                     </section>
-                </a>
-                
+                    <a href="compras-lista.html" class="card-link">
+                        <section class="card card-aviso">
+                            <h2 class="card__title">Faltantes para Próximas Ventas</h2>
+                            <div id="lista-faltantes-dashboard">
+                                <p>Calculando...</p>
+                            </div>
+                        </section>
+                    </a>
+                    <a href="clientes.html" class="card-link">
+                        <section class="card">
+                            <h2 class="card__title">Top 5 Clientes</h2>
+                            <div id="lista-top-clientes">
+                                <p>Calculando...</p>
+                            </div>
+                        </section>
+                    </a>
+                </div>
             </div>
         </main>
     </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupDashboard } from './js/dashboard.js';
-        try { const app = initializeApp(firebaseConfig); setupDashboard(app); } catch (error) { console.error(error); }
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupDashboard(app);
+        } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
     <script>
