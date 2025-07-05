@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista de Compras - Cotizador de Tortas</title>
     <link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff96c5">    
 </head>
 <body>
     <div class="main-container">
@@ -58,5 +60,12 @@
         } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js');
+        });
+    }
+</script>
 </body>
 </html>
