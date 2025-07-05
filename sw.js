@@ -1,30 +1,32 @@
-// sw.js - Service Worker Mejorado con versionado y limpieza
+// sw.js (Versión final con estrategia "Network First")
 
-const CACHE_NAME = 'cotizador-tortas-cache-v5'; // <--- Cambiamos la versión aquí
-// Lista de archivos esenciales para que la aplicación funcione sin conexión.
-const urlsToCache = [
+// Cambiamos la versión una última vez para forzar esta actualización
+const CACHE_NAME = 'cotizador-tortas-cache-vFinal'; 
+
+// Lista de archivos esenciales de la "carcasa" de la app
+const APP_SHELL_URLS = [
   '/',
   'index.html',
   'css/style.css',
   'js/menu.js',
   'assets/logo.png',
   'assets/logo-192.png',
-  'assets/logo-512.png'
+  'assets/logo-512.png',
+  'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap'
 ];
 
-// Evento 'install': Guarda los archivos básicos en el caché.
+// Evento 'install': Se guarda la carcasa básica de la app.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache abierto y guardando archivos de la nueva versión.');
-        return cache.addAll(urlsToCache);
+        console.log('Cache abierto y guardando carcasa de la app');
+        return cache.addAll(APP_SHELL_URLS);
       })
   );
 });
 
-// Evento 'activate': Se dispara cuando el nuevo Service Worker se activa.
-// Aquí es donde limpiamos los cachés viejos.
+// Evento 'activate': Se limpian los cachés antiguos.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -40,13 +42,21 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Evento 'fetch': Intercepta las peticiones de la app.
+// Evento 'fetch': La nueva estrategia "Network First".
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Si el recurso está en el caché, lo devuelve. Si no, lo busca en la red.
-        return response || fetch(event.request);
+    // 1. Primero, intenta ir a la red
+    fetch(event.request)
+      .then(networkResponse => {
+        // Si hay respuesta de la red, la guardamos en caché y la devolvemos
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => {
+        // 2. Si la red falla (estás offline), busca en el caché
+        return caches.match(event.request);
       })
   );
 });
