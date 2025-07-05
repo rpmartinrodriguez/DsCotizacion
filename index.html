@@ -3,22 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indicadores</title>
+    <title>Indicadores </title>
     <link rel="stylesheet" href="css/style.css">
-    
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
                 <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
@@ -27,30 +23,29 @@
         </header>
 
         <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
-            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-        </nav>
+            </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
             <div style="text-align: center;">
-                 <h1 class="header__title"> </h1>
+                 <h1 class="header__title">Dulce App</h1>
                  <p class="header__slogan">Horneando tus Mejores Momentos</p>
             </div>
             
             <div class="dashboard-main-grid">
 
+                <a href="agenda.html" class="card-link sidebar-card sidebar-card--entregas">
+                    <section class="card">
+                        <h2 class="card__title">Próximas Entregas</h2>
+                        <div id="lista-proximas-entregas"><p>Calculando...</p></div>
+                    </section>
+                </a>
+                <a href="compras-lista.html" class="card-link sidebar-card sidebar-card--faltantes">
+                    <section class="card card-aviso">
+                        <h2 class="card__title">Faltantes para Próximas Ventas</h2>
+                        <div id="lista-faltantes-dashboard"><p>Calculando...</p></div>
+                    </section>
+                </a>
                 <section class="card filter-card">
                     <div class="form-group">
                         <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
@@ -61,42 +56,16 @@
                 </section>
 
                 <div class="dashboard-grid kpi-cards">
-                    <div class="stat-card">
-                        <h4>Ingresos por Ventas</h4>
-                        <p id="kpi-ingresos-ventas">$0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Valor Total Cotizado</h4>
-                        <p id="kpi-valor-cotizado">$0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Ganancia Bruta (Ventas)</h4>
-                        <p id="kpi-ganancia-bruta">$0.00</p>
-                    </div>
-                    <div class="stat-card">
-                        <h4>Presupuestos Creados</h4>
-                        <p id="kpi-presupuestos-creados">0</p>
-                    </div>
+                    <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
+                    <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
+                    <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
+                    <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
                 </div>
 
                 <section class="card chart-card">
                     <h2 class="card__title">Ingresos por Mes (Ventas Reales)</h2>
                     <canvas id="grafico-ingresos"></canvas>
                 </section>
-                
-                <a href="agenda.html" class="card-link sidebar-card sidebar-card--entregas">
-                    <section class="card">
-                        <h2 class="card__title">Próximas Entregas</h2>
-                        <div id="lista-proximas-entregas"><p>Calculando...</p></div>
-                    </section>
-                </a>
-
-                <a href="compras-lista.html" class="card-link sidebar-card sidebar-card--faltantes">
-                    <section class="card card-aviso">
-                        <h2 class="card__title">Faltantes para Próximas Ventas</h2>
-                        <div id="lista-faltantes-dashboard"><p>Calculando...</p></div>
-                    </section>
-                </a>
                 
                 <section class="card sidebar-card sidebar-card--stock">
                     <h2 class="card__title">Valor Actual del Stock</h2>
@@ -113,22 +82,16 @@
             </div>
         </main>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupDashboard } from './js/dashboard.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupDashboard(app);
-        } catch (error) { console.error(error); }
+        try { const app = initializeApp(firebaseConfig); setupDashboard(app); } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
         }
     </script>
 </body>
