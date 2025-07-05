@@ -1,12 +1,16 @@
-/* css/style.css (Versión Completa y Final - 01/07/2025) */
+@font-face {
+    font-family: 'Dancing Script';
+    src: url('../assets/fonts/Sttuing.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 
-/* 1. Variables Globales y Reseteo Básico */
 :root {
-    --primary-color: #ff96c5; /* Tono Rosa Principal */
-    --primary-color-hover: #e686b2; /* Un tono más oscuro para hover */
-    --secondary-button-hover-bg: #ffc0dc; /* Tono Rosa Claro para hover secundario */
-    --background-color: #fff5f9; /* Fondo Rosa muy pálido */
-    
+    --primary-color: #ff96c5;
+    --primary-color-hover: #e686b2;
+    --secondary-button-hover-bg: #ffc0dc;
+    --background-color: #fff5f9;
     --success-color: #28a745;
     --danger-color: #e55039;
     --card-background: #ffffff;
@@ -19,50 +23,37 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
-    padding: 2em;
+    padding-top: 80px;
     background-color: var(--background-color);
     color: var(--text-color);
+    transition: padding-left 0.3s ease-in-out;
 }
 
-/* 2. Layout Principal */
+body.menu-open {
+    overflow: hidden;
+}
+
 .main-container {
     max-width: 1000px;
     margin: 0 auto;
+    padding: 2em;
 }
 
-/* 3. Header (Logo y Títulos) */
 .header {
-    text-align: center;
-    margin-bottom: 2.5rem;
-}
-
-.header__logo {
-    height: 100px;
-    width: auto;
-    margin-bottom: 0.5rem;
-}
-
-.header__title {
-    font-size: 2rem;
-    font-weight: 600;
-    margin: 0;
-}
-
-.header__slogan {
-    font-family: 'Dancing Script', cursive; /* Usamos la nueva fuente */
-    font-size: 1.8rem;
-    color: var(--text-color);
-    margin: 0.25rem 0 1rem 0;
-    font-weight: 700;
-}
-
-/* 4. NUEVO HEADER CON MENÚ HAMBURGUESA */
-.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid var(--border-color);
+    z-index: 1002;
+    box-sizing: border-box;
 }
 .header__menu-icon {
     background: none;
@@ -72,7 +63,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    z-index: 1002; /* Para que esté por encima del overlay */
+    z-index: 1003;
 }
 .header__menu-icon span {
     display: block;
@@ -83,17 +74,28 @@ body {
     transition: all 0.3s ease-in-out;
 }
 .header__logo-link {
-    line-height: 0; /* Para quitar espacio extra de la imagen */
+    line-height: 0;
 }
 .header__logo {
-    height: 50px; /* Logo un poco más pequeño para el header */
+    height: 50px;
+    width: auto;
     margin-bottom: 0;
 }
 .header__spacer {
-    width: 40px; /* Ancho similar al botón de menú para centrar el logo */
+    width: 40px;
+}
+.header__title {
+    text-align: center;
+}
+.header__slogan {
+    font-family: 'Dancing Script', cursive;
+    font-size: 1.8rem;
+    color: var(--text-color);
+    margin: 0.5rem 0 1.5rem 0;
+    font-weight: 700;
+    text-align: center;
 }
 
-/* NUEVO MENÚ DESPLEGABLE ESTILIZADO */
 .nav-menu {
     position: fixed;
     top: 0;
@@ -101,87 +103,64 @@ body {
     width: 280px;
     height: 100%;
     background-color: var(--card-background);
-    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     z-index: 1001;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
 }
-
 .nav-menu__header {
     display: flex;
     align-items: center;
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    margin-top: 65px; /* Espacio para el header principal fijo */
+    margin-top: 65px;
 }
-
 .nav-menu__title {
     font-weight: 600;
     font-size: 1.1rem;
 }
-
 .nav-menu__link {
     color: var(--text-color);
     text-decoration: none;
     font-weight: 500;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, color 0.2s;
     display: flex;
     align-items: center;
-    gap: 1rem; /* Espacio entre el emoji y el texto */
+    gap: 1rem;
 }
-
 .nav-menu__link:hover {
     background-color: var(--background-color);
 }
-
-/* Nuevo estilo para el enlace activo */
 .nav-menu__link.active {
     background-color: var(--primary-color);
     color: white;
     font-weight: 600;
 }
-
 .nav-menu__overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
 }
-
-/* OVERLAY DE FONDO */
-.nav-menu__overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-}
-
-/* LÓGICA DE ABRIR/CERRAR MENÚ */
 body.menu-open .nav-menu {
-    transform: translateX(0); /* Muestra el menú */
+    transform: translateX(0);
 }
 body.menu-open .nav-menu__overlay {
     opacity: 1;
     visibility: visible;
 }
-/* Animación del ícono a una 'X' */
 body.menu-open .header__menu-icon span:nth-child(1) {
     transform: rotate(45deg) translate(5px, 5px);
 }
@@ -192,7 +171,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     transform: rotate(-45deg) translate(7px, -7px);
 }
 
-/* 5. Componente Card */
 .card {
     background: var(--card-background);
     padding: 2rem;
@@ -200,55 +178,58 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     box-shadow: var(--shadow);
     margin-bottom: 2rem;
 }
-
 .card__title {
     font-size: 1.25rem;
     font-weight: 600;
     margin-top: 0;
     margin-bottom: 1.5rem;
 }
-
+.card__subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
 .card-header-actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
 }
-
 .card-header-actions .btn-primary {
     width: auto;
     padding: 0.8rem 1.5rem;
 }
 
-
-/* 6. Formularios Modernos */
 .form-modern {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 1.5rem;
     margin-bottom: 1.5rem;
 }
-
 .form-group {
     display: flex;
     flex-direction: column;
 }
-
 .form-group label {
     font-size: 0.875rem;
     color: var(--text-light);
     margin-bottom: 0.5rem;
 }
-
-.form-group input, .form-group select {
+.form-group input, .form-group select, .form-group textarea {
     padding: 0.8rem 1rem;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
+    font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    width: 100%;
 }
-
-.form-group input:focus, .form-group select:focus {
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3);
@@ -266,181 +247,13 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     width: 100%;
     transition: background-color 0.2s;
 }
-
 .btn-primary:hover {
     background-color: var(--primary-color-hover);
 }
-
 .btn-primary:disabled {
     background-color: #a0a0a0;
     cursor: not-allowed;
 }
-
-/* 7. Tabla Limpia */
-.table-clean {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.table-clean th, .table-clean td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.table-clean th {
-    font-size: 0.875rem;
-    color: var(--text-light);
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.table-clean td .action-buttons button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 0.2rem 0.5rem;
-}
-
-/* 8. Layout de la página de Presupuesto */
-.presupuesto-layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
-}
-
-@media (min-width: 900px) {
-    .presupuesto-layout {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-/* 9. Lista Interactiva de Ingredientes */
-.ingredientes-container {
-    max-height: 400px;
-    overflow-y: auto;
-    padding-right: 1rem;
-}
-
-.ingrediente-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.ingrediente-item:last-child {
-    border-bottom: none;
-}
-
-.ingrediente-info {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.ingrediente-info input[type="checkbox"] {
-    width: 1.25em;
-    height: 1.25em;
-    cursor: pointer;
-    accent-color: var(--primary-color);
-}
-
-.ingrediente-info label {
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.ingrediente-cantidad input[type="number"] {
-    width: 80px;
-    padding: 0.5rem;
-    text-align: right;
-}
-
-.ingrediente-cantidad input[type="number"]:disabled {
-    background-color: #f0f0f0;
-    cursor: not-allowed;
-}
-
-/* 10. Estilos Específicos de Presupuesto */
-.total-cost {
-    text-align: right;
-    margin-top: 1.5rem;
-    font-size: 1.2rem; 
-    font-weight: 500;
-}
-
-/* 11. Estilos para la sección de resultado final */
-#mensaje-final {
-    width: 100%;
-    box-sizing: border-box;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 1rem;
-    font-size: 1rem;
-    line-height: 1.6;
-    background-color: #fdfdfd;
-    resize: vertical;
-}
-
-#copiado-feedback,
-.copiado-feedback-modal {
-    display: inline-block;
-    margin-left: 1rem;
-    color: var(--success-color);
-    font-weight: 500;
-    transition: opacity 0.3s;
-}
-.copiado-feedback-modal {
-    display: block;
-    text-align: right;
-    font-size: 0.9rem;
-    height: 1em;
-    margin-top: 0.5rem;
-}
-
-/* 12. Estilos para la Ventana Modal Personalizada */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-
-.modal-overlay.visible {
-    opacity: 1;
-    visibility: visible;
-}
-
-.modal-content {
-    max-width: 500px;
-    width: 90%;
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
-}
-
-.modal-overlay.visible .modal-content {
-    transform: scale(1);
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
 .btn-secondary {
     background-color: transparent;
     color: var(--text-light);
@@ -452,13 +265,168 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
 }
-
 .btn-secondary:hover {
     background-color: var(--secondary-button-hover-bg);
     color: var(--text-color);
 }
+.btn-primary.danger {
+    background-color: var(--danger-color);
+}
+.btn-primary.danger:hover {
+    background-color: #c82333;
+}
 
-/* 13. Estilos para la página de Historial */
+.table-clean {
+    width: 100%;
+    border-collapse: collapse;
+}
+.table-clean th, .table-clean td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+.table-clean th {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+.table-clean td .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+.table-clean td .action-buttons button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.2rem 0.5rem;
+}
+
+.presupuesto-layout,
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+}
+@media (min-width: 900px) {
+    .presupuesto-layout {
+        grid-template-columns: 1fr 1fr;
+    }
+    .dashboard-layout {
+        grid-template-columns: 2fr 1fr;
+    }
+}
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.ingredientes-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 1rem;
+}
+.ingrediente-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.ingrediente-item:last-child {
+    border-bottom: none;
+}
+.ingrediente-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.ingrediente-info input[type="checkbox"] {
+    width: 1.25em;
+    height: 1.25em;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+.ingrediente-info label {
+    font-weight: 500;
+    cursor: pointer;
+}
+.ingrediente-cantidad input[type="number"] {
+    width: 80px;
+    padding: 0.5rem;
+    text-align: right;
+}
+.ingrediente-cantidad input[type="number"]:disabled {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.total-cost {
+    text-align: right;
+    margin-top: 1.5rem;
+    font-size: 1.2rem; 
+    font-weight: 500;
+}
+
+#mensaje-final {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    font-size: 1rem;
+    line-height: 1.6;
+    background-color: #fdfdfd;
+    resize: vertical;
+}
+.copiado-feedback-modal {
+    display: block;
+    text-align: right;
+    font-size: 0.9rem;
+    color: var(--success-color);
+    font-weight: 500;
+    height: 1em;
+    margin-top: 0.5rem;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+.modal-content {
+    max-width: 500px;
+    width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+.modal-overlay.visible .modal-content {
+    transform: scale(1);
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
 .historial-card {
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -508,46 +476,37 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin: 0;
     list-style: disc;
 }
-
-/* 14. Estilos para Acciones del Historial */
 .historial-card__actions {
     margin-top: 1rem;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
     align-items: center;
 }
-.btn-ver-detalle {
+.btn-ver-detalle, .btn-marcar-venta, .btn-borrar-presupuesto {
     background: none;
-    border: 1px solid var(--border-color);
-    color: var(--primary-color);
     padding: 0.5rem 1rem;
     border-radius: 5px;
     cursor: pointer;
     font-weight: 500;
+    border: 1px solid;
+    transition: background-color 0.2s, color 0.2s;
+}
+.btn-ver-detalle {
+    border-color: var(--border-color);
+    color: var(--primary-color);
 }
 .btn-borrar-presupuesto {
-    background: none;
-    border: 1px solid var(--danger-color);
+    border-color: var(--danger-color);
     color: var(--danger-color);
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
 }
 .btn-borrar-presupuesto:hover {
     background-color: var(--danger-color);
     color: white;
 }
 .btn-marcar-venta {
-    background: none;
-    border: 1px solid var(--success-color);
+    border-color: var(--success-color);
     color: var(--success-color);
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
 }
 .btn-marcar-venta:hover {
     background-color: var(--success-color);
@@ -562,15 +521,22 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     border-radius: 5px;
     text-align: center;
 }
+.lote-detalle {
+    list-style-type: circle;
+    margin-top: 0.5rem;
+    padding-left: 1.5rem;
+}
+.lote-item {
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
 
-/* 15. Estilos para la página de Stock */
 .stock-actions {
     display: flex;
     gap: 0.75rem;
     align-items: center;
 }
-.stock-actions .btn-stock-link,
-.stock-actions .btn-stock {
+.stock-actions .btn-stock-link, .stock-actions .btn-stock {
     padding: 0.5rem 1rem;
     border-radius: 5px;
     font-weight: 500;
@@ -599,21 +565,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     color: white;
 }
 
-/* 16. Estilos para el Desglose de Lotes en Historial */
-.historial-card__detalle > ul > li {
-    margin-bottom: 0.75rem;
-}
-.lote-detalle {
-    list-style-type: circle;
-    margin-top: 0.5rem;
-    padding-left: 1.5rem;
-}
-.lote-item {
-    font-size: 0.9rem;
-    color: var(--text-light);
-}
-
-/* 17. Estilos para la sección de cálculo de precio */
 .calculo-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -666,7 +617,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     float: right;
 }
 
-/* 18. Estilos para el Buscador */
 .buscador-container {
     margin-bottom: 1.5rem;
     width: 100%;
@@ -685,7 +635,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3);
 }
 
-/* 19. Estilos para la Modal de Edición de Lotes */
 .lotes-editor-container {
     max-height: 40vh;
     overflow-y: auto;
@@ -714,7 +663,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin: 0;
 }
 
-/* 20. Estilos para el Dashboard */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -744,19 +692,10 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     text-align: center;
     margin: 1rem 0;
 }
-.dashboard-layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 2rem;
-}
-@media (min-width: 900px) {
-    .dashboard-layout {
-        grid-template-columns: 2fr 1fr;
-    }
-}
 #grafico-ingresos {
     max-height: 300px;
 }
+
 .lista-sencilla {
     list-style: none;
     padding: 0;
@@ -767,6 +706,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     justify-content: space-between;
     padding: 0.75rem 0;
     border-bottom: 1px solid var(--border-color);
+    align-items: center;
 }
 .lista-sencilla li:last-child {
     border-bottom: none;
@@ -777,8 +717,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 #lista-bajo-stock li span {
     color: var(--danger-color);
 }
-
-/* 21. Estilos para el Editor de Recetas */
 .receta-editor-grid {
     display: grid;
     grid-template-columns: 2fr 1fr auto;
@@ -805,136 +743,10 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .receta-card__info h3 { margin: 0 0 0.25rem 0; }
 .receta-card__info p { margin: 0; font-size: 0.9rem; color: var(--text-light); }
 .receta-card__actions { display: flex; gap: 0.75rem; }
-.receta-card__actions .btn-primary,
-.receta-card__actions .btn-secondary { width: auto; padding: 0.6rem 1.2rem; }
-
-/* 22. Estilos Responsive para Móviles */
-@media (max-width: 768px) {
-    body { 
-        padding: 1em; 
-        padding-top: 70px; 
-    }
-    .main-container { 
-        padding: 0 1em; 
-    }
-    .card { 
-        padding: 1.5rem; 
-        border-radius: 10px; 
-    }
-    .header__title { 
-        font-size: 1.8rem; 
-    }
-    .header__slogan { 
-        font-size: 1.5rem; 
-    }
-    .card__title { 
-        font-size: 1.1rem; 
-    }
-    .form-modern { 
-        grid-template-columns: 1fr; /* Hacemos que todos los grids de formulario sean de 1 columna */
-        gap: 1rem; 
-    }
-    .card-header-actions { 
-        flex-direction: column; 
-        align-items: flex-start; 
-        gap: 1rem; 
-    }
-    .table-clean { 
-        border: none; 
-    }
-    .table-clean thead { 
-        display: none; 
-    }
-    .table-clean tr { 
-        display: block; 
-        border: 1px solid var(--border-color); 
-        border-radius: 8px; 
-        margin-bottom: 1rem; 
-        padding: 1rem; 
-    }
-    .table-clean td { 
-        display: block; 
-        text-align: right; 
-        padding: 0.5rem 0; 
-        border-bottom: none; 
-        position: relative; 
-    }
-    .table-clean td:before { 
-        content: attr(data-label); 
-        position: absolute; 
-        left: 0; 
-        font-weight: 600; 
-        color: var(--text-color); 
-        text-align: left; 
-    }
-    .table-clean td.action-buttons { 
-        text-align: center; 
-        margin-top: 1rem; 
-    }
-    .table-clean td.action-buttons:before { 
-        content: ''; 
-    }
-    .calculo-grid { 
-        grid-template-columns: 1fr; 
-    }
-    .presupuesto-layout, .dashboard-layout { 
-        grid-template-columns: 1fr; 
-    }
-    .modal-content { 
-        width: 95%; 
-    }
-    .cliente-resumen-stats { 
-        flex-direction: column; 
-        gap: 1rem; 
-    }
-
-    /* --- NUEVOS AJUSTES RESPONSIVE PARA EL EDITOR DE RECETAS --- */
-    .receta-editor-grid {
-        grid-template-columns: 1fr; /* La grilla de añadir ingrediente pasa a 1 columna */
-    }
-    .receta-editor-grid button {
-        grid-column: 1 / -1; /* El botón ocupa todo el ancho */
-    }
-    .receta-card {
-        flex-direction: column; /* Apila la info y los botones */
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    .receta-card__actions {
-        width: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr; /* Botones uno al lado del otro */
-    }
-    /* --- FIN DE NUEVOS AJUSTES --- */
+.receta-card__actions .btn-primary, .receta-card__actions .btn-secondary {
+    width: auto;
+    padding: 0.6rem 1.2rem;
 }
-
-/* ... (El resto del CSS desde la sección 23 en adelante no ha cambiado) ... */
-/* 23. Estilos para el botón "Marcar como Venta" */
-.btn-marcar-venta {
-    background: none;
-    border: 1px solid var(--success-color);
-    color: var(--success-color);
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
-}
-.btn-marcar-venta:hover {
-    background-color: var(--success-color);
-    color: white;
-}
-.venta-confirmada-badge {
-    padding: 0.6rem 1rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: var(--success-color);
-    background-color: #eaf7ed;
-    border-radius: 5px;
-    text-align: center;
-}
-
-/* 24. Estilos para el Mensaje de Agradecimiento en Modal */
 .mensaje-agradecimiento {
     white-space: pre-wrap;
     text-align: center;
@@ -942,27 +754,36 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     line-height: 1.6;
     color: var(--text-color);
 }
-
-/* 25. Estilos para el botón de Paginación (Cargar Más) */
-.cargar-mas-container {
-    display: none; /* Ocultamos por defecto ya que no se usa */
-    justify-content: center;
-    padding: 1rem 0;
+.top-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: top-clientes-counter;
 }
-#btn-cargar-mas {
-    width: auto;
-    padding: 0.8rem 2rem;
+.top-lista li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
 }
-
-/* 26. Estilo para botón de confirmación peligroso */
-.btn-primary.danger {
-    background-color: var(--danger-color);
+.top-lista li:last-child {
+    border-bottom: none;
 }
-.btn-primary.danger:hover {
-    background-color: #c82333;
+.top-lista li::before {
+    content: counter(top-clientes-counter) ".";
+    font-weight: 600;
+    color: var(--text-light);
+    margin-right: 1rem;
 }
-
-/* 27. Estilos para el Resumen de Clientes */
+.top-lista li strong {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+.card-aviso {
+    border-left: 5px solid var(--danger-color);
+}
 .cliente-resumen-card {
     background-color: var(--card-background);
     border: 1px solid var(--border-color);
@@ -991,8 +812,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 1.5rem;
     font-weight: 600;
 }
-
-/* 28. Estilos para el Detalle de Historial en Clientes */
 .cliente-historial-detalle {
     margin-top: 1.5rem;
     padding-top: 1.5rem;
@@ -1011,6 +830,8 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .presupuesto-item {
     padding: 0.5rem 0;
     border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
 }
 .presupuesto-item span {
     font-size: 0.85rem;
@@ -1022,14 +843,15 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-weight: bold;
     margin-left: 0.5rem;
     vertical-align: middle;
+    background-color: #eaf7ed;
+    color: var(--success-color);
+    border-radius: 5px;
 }
-
-/* 29. Estilos para la página de Agenda */
 .agenda-card {
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    padding: 1.25rem;
+    padding: 1.25rem 0;
     border-bottom: 1px solid var(--border-color);
 }
 .agenda-card:last-child {
@@ -1076,66 +898,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     white-space: nowrap;
     text-transform: capitalize;
 }
-
-/* Estilos para la tarjeta de aviso en el Dashboard */
-.dashboard-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
-}
-.card-link {
-    text-decoration: none;
-    color: inherit;
-    display: block;
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-.card-link:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow);
-}
-.card-aviso {
-    border-left: 5px solid var(--danger-color);
-}
-#lista-faltantes-dashboard .lista-sencilla span {
-    color: var(--danger-color); /* Resaltamos la cantidad faltante */
-}
-
-/* Estilos para el Ranking de Clientes */
-.top-lista {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-.top-lista li {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
-}
-.top-lista li:last-child {
-    border-bottom: none;
-}
-.top-lista li strong {
-    font-weight: 600;
-    color: var(--primary-color);
-}
-/* Numeración para la lista ordenada */
-.top-lista {
-    counter-reset: top-clientes-counter;
-}
-.top-lista li {
-    counter-increment: top-clientes-counter;
-}
-.top-lista li::before {
-    content: counter(top-clientes-counter) ".";
-    font-weight: 600;
-    color: var(--text-light);
-    margin-right: 1rem;
-}
-
-/* Estilos para la tarjeta "Próximas Entregas" */
 .entrega-item {
     display: flex;
     align-items: center;
@@ -1150,7 +912,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .entrega-item:first-child {
     padding-top: 0;
 }
-
 .entrega-fecha {
     background-color: var(--primary-color);
     color: white;
@@ -1179,29 +940,12 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 0.85rem;
     color: var(--text-light);
 }
-
-/* Estilos para los Títulos de Categoría en la página de Recetas */
-.categoria-titulo {
-    font-size: 1.5rem;
-    color: var(--primary-color);
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--primary-color);
-    margin-top: 2.5rem;
-    margin-bottom: 1rem;
-}
-
-.categoria-titulo:first-child {
-    margin-top: 0;
-}
-
-/* Estilos para el nuevo Acordeón de Categorías */
 .categoria-acordeon {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-bottom: 1rem;
-    overflow: hidden; /* Clave para la animación */
+    overflow: hidden;
 }
-
 .categoria-acordeon__header {
     background-color: var(--card-background);
     padding: 1rem 1.5rem;
@@ -1215,60 +959,57 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 1.25rem;
     font-weight: 600;
 }
-
 .categoria-acordeon__header:hover {
     background-color: var(--background-color);
 }
-
 .acordeon-icono {
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--primary-color);
     transition: transform 0.3s ease;
 }
-
 .categoria-acordeon__content {
-    max-height: 0; /* Oculto por defecto */
+    max-height: 0;
     transition: max-height 0.4s ease-out, padding 0.4s ease-out;
     background-color: var(--background-color);
-    padding: 0 1.5rem; /* Padding horizontal para el contenido */
+    padding: 0 1.5rem;
+    overflow: hidden;
 }
-
-/* Estilos para cuando el acordeón está activo/abierto */
 .categoria-acordeon.active .categoria-acordeon__content {
-    max-height: 1000px; /* Un valor alto para permitir que el contenido se vea */
+    max-height: 1000px;
     padding: 1.5rem;
     transition: max-height 0.5s ease-in, padding 0.5s ease-in;
 }
-
 .categoria-acordeon.active .acordeon-icono {
     transform: rotate(45deg);
 }
-
-/* Ajustamos las tarjetas de receta dentro del acordeón */
 .categoria-acordeon__content .receta-card {
     border-radius: 8px;
     background-color: var(--card-background);
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-/* Estilos Responsive Adicionales para el Editor de Recetas */
+/* Estilos Responsive para Móviles */
 @media (max-width: 768px) {
-    .receta-editor-grid {
-        grid-template-columns: 1fr; /* Cambia a una sola columna en móvil */
-        gap: 1rem;
-    }
-    .receta-editor-grid button {
-        grid-column: 1 / -1; /* El botón ocupa todo el ancho */
-    }
-    .receta-card {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    .receta-card__actions {
-        width: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
+    body { padding: 1em; padding-top: 70px; }
+    .main-container { padding: 0 1em; }
+    .card { padding: 1.5rem; border-radius: 10px; }
+    .header__slogan { font-size: 1.5rem; }
+    .card__title { font-size: 1.1rem; }
+    .form-modern { grid-template-columns: 1fr; gap: 1rem; }
+    .card-header-actions { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .table-clean { border: none; }
+    .table-clean thead { display: none; }
+    .table-clean tr { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; }
+    .table-clean td { display: block; text-align: right; padding: 0.5rem 0; border-bottom: none; position: relative; }
+    .table-clean td:before { content: attr(data-label); position: absolute; left: 0; font-weight: 600; color: var(--text-color); text-align: left; }
+    .table-clean td.action-buttons { text-align: center; margin-top: 1rem; }
+    .table-clean td.action-buttons:before { content: ''; }
+    .calculo-grid, .presupuesto-layout, .dashboard-layout { grid-template-columns: 1fr; }
+    .modal-content { width: 95%; }
+    .cliente-resumen-stats { flex-direction: column; gap: 1rem; }
+    .receta-editor-grid { grid-template-columns: 1fr; }
+    .receta-editor-grid button { grid-column: 1 / -1; }
+    .receta-card { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .receta-card__actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
 }
