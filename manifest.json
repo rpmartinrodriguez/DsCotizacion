@@ -1,0 +1,21 @@
+{
+  "name": "Cotizador de Tortas",
+  "short_name": "Cotizador",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#fff5f9",
+  "theme_color": "#ff96c5",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/logo-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "assets/logo-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
