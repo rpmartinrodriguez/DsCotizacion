@@ -6,14 +6,14 @@
     <title>Indicadores - Cotizador de Tortas</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff96c5">
 </head>
 <body>
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
                 <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
@@ -21,26 +21,26 @@
             <div class="header__spacer"></div>
         </header>
 
-       <nav class="nav-menu" id="nav-menu">
-    <div class="nav-menu__header">
-        <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-        <span class="nav-menu__title">Dulce App</span>
-    </div>
-    <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-    <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-    <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-    <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-    <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-    <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-    <a href="stock.html" class="nav-menu__link">📦 Stock</a>
-    <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-    <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-</nav>
+        <nav class="nav-menu" id="nav-menu">
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Cotizador de Tortas</span>
+            </div>
+            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
+            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
+            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
             <div style="text-align: center;">
-                 <h1 class="header__title"></h1>
+                 <h1 class="header__title">Cotizador de Tortas</h1>
                  <p class="header__slogan">Horneando tus Mejores Momentos</p>
             </div>
             
@@ -49,7 +49,7 @@
                     <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
                     <select id="filtro-mes">
                         <option value="todos">Todos los Tiempos</option>
-                        </select>
+                    </select>
                 </div>
             </section>
 
@@ -122,5 +122,12 @@
         } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
