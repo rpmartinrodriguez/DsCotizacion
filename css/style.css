@@ -1319,3 +1319,24 @@ body.menu-open .header__menu-icon span:nth-child(3) {
         grid-template-columns: 1fr 1fr;
     }
 }
+@media (max-width: 768px) {
+    .agenda-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .agenda-fecha-completa {
+        margin-top: 0.5rem;
+        width: 100%;
+        text-align: left;
+    }
+}
+.dashboard-lista .fecha-tag {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
