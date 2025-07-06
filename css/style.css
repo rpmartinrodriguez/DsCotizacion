@@ -1,12 +1,16 @@
-/* css/style.css (VersiÃ³n Completa y Final - 01/07/2025) */
+@font-face {
+    font-family: 'Dancing Script';
+    src: url('../assets/fonts/Sttuing.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
 
-/* 1. Variables Globales y Reseteo BÃ¡sico */
 :root {
-    --primary-color: #ff96c5; /* Tono Rosa Principal */
-    --primary-color-hover: #e686b2; /* Un tono mÃ¡s oscuro para hover */
-    --secondary-button-hover-bg: #ffc0dc; /* Tono Rosa Claro para hover secundario */
-    --background-color: #fff5f9; /* Fondo Rosa muy pÃ¡lido */
-    
+    --primary-color: #ff96c5;
+    --primary-color-hover: #e686b2;
+    --secondary-button-hover-bg: #ffc0dc;
+    --background-color: #fff5f9;
     --success-color: #28a745;
     --danger-color: #e55039;
     --card-background: #ffffff;
@@ -19,51 +23,39 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
-    padding: 2em;
+    padding-top: 80px;
     background-color: var(--background-color);
     color: var(--text-color);
 }
 
-/* 2. Layout Principal */
+body.menu-open {
+    overflow: hidden;
+}
+
 .main-container {
     max-width: 1000px;
     margin: 0 auto;
+    padding: 2em;
 }
 
-/* 3. Header (Logo y TÃ­tulos) */
+/* ------------------ Header y Menú ------------------ */
 .header {
-    text-align: center;
-    margin-bottom: 2.5rem;
-}
-
-.header__logo {
-    height: 100px;
-    width: auto;
-    margin-bottom: 0.5rem;
-}
-
-.header__title {
-    font-size: 2rem;
-    font-weight: 600;
-    margin: 0;
-}
-
-.header__slogan {
-    font-family: 'Dancing Script', cursive; /* Usamos la nueva fuente */
-    font-size: 1.8rem;
-    color: var(--text-color);
-    margin: 0.25rem 0 1rem 0;
-    font-weight: 700;
-}
-
-/* 4. NUEVO HEADER CON MENÃš HAMBURGUESA */
-.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
+    padding: 0.5rem 1rem;
     border-bottom: 1px solid var(--border-color);
+    z-index: 1002;
+    box-sizing: border-box;
 }
+
 .header__menu-icon {
     background: none;
     border: none;
@@ -72,8 +64,9 @@ body {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    z-index: 1002; /* Para que estÃ© por encima del overlay */
+    z-index: 1003;
 }
+
 .header__menu-icon span {
     display: block;
     width: 24px;
@@ -82,18 +75,37 @@ body {
     border-radius: 3px;
     transition: all 0.3s ease-in-out;
 }
+
 .header__logo-link {
-    line-height: 0; /* Para quitar espacio extra de la imagen */
-}
-.header__logo {
-    height: 50px; /* Logo un poco mÃ¡s pequeÃ±o para el header */
-    margin-bottom: 0;
-}
-.header__spacer {
-    width: 40px; /* Ancho similar al botÃ³n de menÃº para centrar el logo */
+    line-height: 0;
 }
 
-/* NUEVO MENÃš DESPLEGABLE ESTILIZADO */
+.header__logo {
+    height: 50px;
+    width: auto;
+    margin-bottom: 0;
+}
+
+.header__spacer {
+    width: 40px;
+}
+
+.header__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+}
+
+.header__slogan {
+    font-family: 'Dancing Script', cursive;
+    font-size: 1.8rem;
+    color: var(--text-color);
+    margin: 0.5rem 0 1.5rem 0;
+    font-weight: 700;
+    text-align: center;
+}
+
 .nav-menu {
     position: fixed;
     top: 0;
@@ -101,12 +113,13 @@ body {
     width: 280px;
     height: 100%;
     background-color: var(--card-background);
-    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     z-index: 1001;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
 }
 
 .nav-menu__header {
@@ -115,7 +128,7 @@ body {
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    margin-top: 65px; /* Espacio para el header principal fijo */
+    margin-top: 65px;
 }
 
 .nav-menu__title {
@@ -129,17 +142,16 @@ body {
     font-weight: 500;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s;
+    transition: background-color 0.2s, color 0.2s;
     display: flex;
     align-items: center;
-    gap: 1rem; /* Espacio entre el emoji y el texto */
+    gap: 1rem;
 }
 
 .nav-menu__link:hover {
     background-color: var(--background-color);
 }
 
-/* Nuevo estilo para el enlace activo */
 .nav-menu__link.active {
     background-color: var(--primary-color);
     color: white;
@@ -152,47 +164,35 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0, 0, 0, 0.5);
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
 }
 
-/* OVERLAY DE FONDO */
-.nav-menu__overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-}
-
-/* LÃ“GICA DE ABRIR/CERRAR MENÃš */
 body.menu-open .nav-menu {
-    transform: translateX(0); /* Muestra el menÃº */
+    transform: translateX(0);
 }
+
 body.menu-open .nav-menu__overlay {
     opacity: 1;
     visibility: visible;
 }
-/* AnimaciÃ³n del Ã­cono a una 'X' */
+
 body.menu-open .header__menu-icon span:nth-child(1) {
     transform: rotate(45deg) translate(5px, 5px);
 }
+
 body.menu-open .header__menu-icon span:nth-child(2) {
     opacity: 0;
 }
+
 body.menu-open .header__menu-icon span:nth-child(3) {
     transform: rotate(-45deg) translate(7px, -7px);
 }
 
-/* 5. Componente Card */
+/* --- Componentes Generales --- */
 .card {
     background: var(--card-background);
     padding: 2rem;
@@ -208,6 +208,16 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-bottom: 1.5rem;
 }
 
+.card__subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
 .card-header-actions {
     display: flex;
     justify-content: space-between;
@@ -220,8 +230,22 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     padding: 0.8rem 1.5rem;
 }
 
+.card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
 
-/* 6. Formularios Modernos */
+.card-link:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow);
+}
+
+.card-aviso {
+    border-left: 5px solid var(--danger-color);
+}
+
 .form-modern {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -240,15 +264,22 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-bottom: 0.5rem;
 }
 
-.form-group input, .form-group select {
+.form-group input,
+.form-group select,
+.form-group textarea {
     padding: 0.8rem 1rem;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
+    font-family: inherit;
     transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    width: 100%;
 }
 
-.form-group input:focus, .form-group select:focus {
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3);
@@ -276,13 +307,38 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     cursor: not-allowed;
 }
 
-/* 7. Tabla Limpia */
+.btn-secondary {
+    background-color: transparent;
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-button-hover-bg);
+    color: var(--text-color);
+}
+
+.btn-primary.danger {
+    background-color: var(--danger-color);
+}
+
+.btn-primary.danger:hover {
+    background-color: #c82333;
+}
+
 .table-clean {
     width: 100%;
     border-collapse: collapse;
 }
 
-.table-clean th, .table-clean td {
+.table-clean th,
+.table-clean td {
     padding: 1rem;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
@@ -294,15 +350,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     text-transform: uppercase;
     font-weight: 600;
 }
-
-.table-clean td .action-buttons button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 1.2rem;
-    padding: 0.2rem 0.5rem;
-}
-
 /* 8. Layout de la pÃ¡gina de Presupuesto */
 .presupuesto-layout {
     display: grid;
