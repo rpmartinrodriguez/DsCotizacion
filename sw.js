@@ -1,9 +1,8 @@
-// sw.js (Versión final con estrategia "Network First")
+// sw.js (Versión final con estrategia "Stale-While-Revalidate")
 
-// Cambiamos la versión una última vez para forzar esta actualización
-const CACHE_NAME = 'cotizador-tortas-cache-vFinal'; 
+// Aumentamos la versión para forzar la actualización de este archivo
+const CACHE_NAME = 'cotizador-tortas-cache-vFinal-1.0'; 
 
-// Lista de archivos esenciales de la "carcasa" de la app
 const APP_SHELL_URLS = [
   '/',
   'index.html',
@@ -15,25 +14,21 @@ const APP_SHELL_URLS = [
   'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap'
 ];
 
-// Evento 'install': Se guarda la carcasa básica de la app.
+// Evento 'install': Guarda la carcasa básica de la app
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Cache abierto y guardando carcasa de la app');
-        return cache.addAll(APP_SHELL_URLS);
-      })
+      .then(cache => cache.addAll(APP_SHELL_URLS))
   );
 });
 
-// Evento 'activate': Se limpian los cachés antiguos.
+// Evento 'activate': Limpia los cachés antiguos
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cache => {
           if (cache !== CACHE_NAME) {
-            console.log('Borrando caché antiguo:', cache);
             return caches.delete(cache);
           }
         })
@@ -42,21 +37,22 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Evento 'fetch': La nueva estrategia "Network First".
+// Evento 'fetch': La nueva estrategia "Stale-While-Revalidate"
 self.addEventListener('fetch', event => {
   event.respondWith(
-    // 1. Primero, intenta ir a la red
-    fetch(event.request)
-      .then(networkResponse => {
-        // Si hay respuesta de la red, la guardamos en caché y la devolvemos
-        return caches.open(CACHE_NAME).then(cache => {
+    caches.open(CACHE_NAME).then(cache => {
+      // 1. Responde inmediatamente con el caché si está disponible
+      return cache.match(event.request).then(cachedResponse => {
+        // 2. Mientras tanto, busca una versión nueva en la red
+        const fetchPromise = fetch(event.request).then(networkResponse => {
+          // Si la obtiene, la guarda en el caché para la próxima vez
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
         });
-      })
-      .catch(() => {
-        // 2. Si la red falla (estás offline), busca en el caché
-        return caches.match(event.request);
-      })
+
+        // Devuelve la versión del caché al instante, o espera a la red si no hay nada en caché
+        return cachedResponse || fetchPromise;
+      });
+    })
   );
 });
