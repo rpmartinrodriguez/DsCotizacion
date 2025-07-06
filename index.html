@@ -3,16 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indicadores - Cotizador de Tortas</title>
+    <title>Indicadores - Dulce App</title>
     <link rel="stylesheet" href="css/style.css">
-    
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
-    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -22,17 +17,13 @@
                 <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
 
         <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="index.html" class="nav-menu__link active">📊 Indicadores</a>
             <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
             <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
             <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
@@ -74,22 +65,10 @@
             </section>
 
             <div class="dashboard-grid">
-                <div class="stat-card">
-                    <h4>Ingresos por Ventas</h4>
-                    <p id="kpi-ingresos-ventas">$0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h4>Valor Total Cotizado</h4>
-                    <p id="kpi-valor-cotizado">$0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h4>Ganancia Bruta (Ventas)</h4>
-                    <p id="kpi-ganancia-bruta">$0.00</p>
-                </div>
-                <div class="stat-card">
-                    <h4>Presupuestos Creados</h4>
-                    <p id="kpi-presupuestos-creados">0</p>
-                </div>
+                <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
+                <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
+                <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
+                <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
             </div>
 
             <section class="card">
@@ -104,10 +83,21 @@
 
             <a href="clientes.html" class="card-link">
                 <section class="card">
-                    <h2 class="card__title">Top 5 Clientes</h2>
+                    <h2 class="card__title">Top 5 Clientes (por Monto)</h2>
                     <div id="lista-top-clientes"><p>Calculando...</p></div>
                 </section>
             </a>
+
+            <section class="card">
+                <h2 class="card__title">🏆 Postres Más Vendidos (Top 5)</h2>
+                <div id="reporte-mas-vendidos"><p>Calculando...</p></div>
+            </section>
+
+            <section class="card">
+                <h2 class="card__title">💰 Postres Más Rentables (Top 5)</h2>
+                <div id="reporte-mas-rentables"><p>Calculando...</p></div>
+            </section>
+
         </main>
     </div>
 
