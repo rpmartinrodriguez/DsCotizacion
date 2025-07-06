@@ -51,14 +51,12 @@
                     <div id="lista-proximas-entregas"><p>Calculando...</p></div>
                 </section>
             </a>
-
             <a href="compras-lista.html" class="card-link">
                 <section class="card card-aviso">
                     <h2 class="card__title">Faltantes para Próximas Ventas</h2>
                     <div id="lista-faltantes-dashboard"><p>Calculando...</p></div>
                 </section>
             </a>
-
             <section class="card">
                 <div class="form-group">
                     <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
@@ -67,43 +65,36 @@
                     </select>
                 </div>
             </section>
-
             <div class="dashboard-grid">
                 <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
                 <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
                 <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
                 <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
             </div>
-
             <section class="card">
                 <h2 class="card__title">Ingresos por Mes (Ventas Reales)</h2>
                 <canvas id="grafico-ingresos"></canvas>
             </section>
-            
             <section class="card">
                 <h2 class="card__title">Valor Actual del Stock</h2>
                 <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
             </section>
-
             <a href="clientes.html" class="card-link">
                 <section class="card">
                     <h2 class="card__title">Top 5 Clientes (por Monto)</h2>
                     <div id="lista-top-clientes"><p>Calculando...</p></div>
                 </section>
             </a>
-
             <section class="card">
                 <h2 class="card__title">🏆 Postres Más Vendidos (Top 5)</h2>
                 <div id="reporte-mas-vendidos"><p>Calculando...</p></div>
             </section>
-
             <section class="card">
                 <h2 class="card__title">💰 Postres Más Rentables (Top 5)</h2>
                 <div id="reporte-mas-rentables"><p>Calculando...</p></div>
             </section>
         </main>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
@@ -116,9 +107,7 @@
     <script src="js/menu.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
         }
     </script>
 </body>
