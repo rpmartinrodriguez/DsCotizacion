@@ -1,6 +1,6 @@
 {
-  "name": "Cotizador de Tortas",
-  "short_name": "Cotizador",
+  "name": "Dulce App",
+  "short_name": "Dulce App",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#fff5f9",
@@ -16,6 +16,11 @@
       "src": "assets/logo-512.png",
       "type": "image/png",
       "sizes": "512x512"
+    },
+    {
+      "src": "assets/apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
     }
   ]
 }
