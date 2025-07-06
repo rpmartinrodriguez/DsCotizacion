@@ -304,24 +304,17 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     padding: 0.2rem 0.5rem;
 }
 
-.presupuesto-layout,
-.dashboard-layout {
+/* --- Layouts de Páginas Específicas --- */
+.presupuesto-layout {
     display: grid;
     grid-template-columns: 1fr;
     gap: 2rem;
 }
-@media (min-width: 900px) {
-    .presupuesto-layout {
-        grid-template-columns: 1fr 1fr;
-    }
-    .dashboard-layout {
-        grid-template-columns: 2fr 1fr;
-    }
-}
-.dashboard-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
 }
 
 .ingredientes-container {
