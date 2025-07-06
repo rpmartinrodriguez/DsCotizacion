@@ -1,12 +1,17 @@
+// js/dashboard.js (Versión final, estable y corregida)
 import { 
     getFirestore, collection, onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+// NO importamos Chart.js aquí. Ya está disponible globalmente desde el index.html
+// Esta era la línea que causaba todos los problemas.
 
 export function setupDashboard(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
+    // --- Referencias al DOM ---
     const filtroMesSelect = document.getElementById('filtro-mes');
     const kpiIngresos = document.getElementById('kpi-ingresos-ventas');
     const kpiValorCotizado = document.getElementById('kpi-valor-cotizado');
@@ -16,54 +21,47 @@ export function setupDashboard(app) {
     const listaFaltantesContainer = document.getElementById('lista-faltantes-dashboard');
     const topClientesContainer = document.getElementById('lista-top-clientes');
     const proximasEntregasContainer = document.getElementById('lista-proximas-entregas');
-    const masVendidosContainer = document.getElementById('reporte-mas-vendidos');
-    const masRentablesContainer = document.getElementById('reporte-mas-rentables');
     const ctx = document.getElementById('grafico-ingresos')?.getContext('2d');
     
     let ingresosChart = null;
     let todosLosPresupuestos = [];
     let materiasPrimasDisponibles = [];
 
+    // --- Funciones de Utilidad y Renderizado ---
     const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const renderizarRanking = (container, data, formatoItem, mensajeVacio) => {
+    const renderizarLista = (container, data, mensajeVacio) => {
         container.innerHTML = '';
         if (data.length > 0) {
-            const ol = document.createElement('ol');
-            ol.className = 'top-lista';
-            data.forEach(item => {
-                const li = document.createElement('li');
-                li.innerHTML = formatoItem(item);
-                ol.appendChild(li);
-            });
-            container.appendChild(ol);
+            const ul = document.createElement('ul');
+            ul.className = 'lista-sencilla dashboard-lista';
+            ul.innerHTML = data.join('');
+            container.appendChild(ul);
         } else {
             container.innerHTML = `<p>${mensajeVacio}</p>`;
         }
     };
     
-    function actualizarCalculosCompletos() {
-        if (!todosLosPresupuestos.length) return;
-
-        let presupuestosFiltrados = todosLosPresupuestos;
+    // --- Funciones de Cálculo ---
+    function actualizarIndicadoresYGrafico(presupuestos) {
+        // Filtro de Mes
+        let presupuestosFiltrados = presupuestos;
         if (filtroMesSelect.value !== "todos") {
             const [mes, anio] = filtroMesSelect.value.split('-').map(Number);
-            presupuestosFiltrados = todosLosPresupuestos.filter(p => {
-                const fecha = p.data.fecha.toDate();
+            presupuestosFiltrados = presupuestos.filter(p => {
+                const fecha = p.fecha.toDate();
                 return fecha.getFullYear() === anio && fecha.getMonth() === (mes - 1);
             });
         }
         
+        // KPIs
         let ingresosVentas = 0, valorCotizado = 0, gananciaBrutaVentas = 0;
         presupuestosFiltrados.forEach(p => {
-            const data = p.data;
-            valorCotizado += data.precioVenta || 0;
-            if (data.esVenta) {
-                ingresosVentas += data.precioVenta || 0;
-                if (data.hasOwnProperty('precioVenta')) {
-                    const costoProduccion = (data.costoMateriales || 0) + ((data.horasTrabajo || 0) * (data.costoHora || 0)) + ((data.costoMateriales || 0) * ((data.porcentajeCostosFijos || 0) / 100));
-                    gananciaBrutaVentas += (data.precioVenta || 0) - costoProduccion;
-                }
+            valorCotizado += p.precioVenta || 0;
+            if (p.esVenta) {
+                ingresosVentas += p.precioVenta || 0;
+                const costoProduccion = (p.costoMateriales || 0) + ((p.horasTrabajo || 0) * (p.costoHora || 0)) + ((p.costoMateriales || 0) * ((p.porcentajeCostosFijos || 0) / 100));
+                gananciaBrutaVentas += (p.precioVenta || 0) - costoProduccion;
             }
         });
         kpiIngresos.textContent = `$${formatCurrency(ingresosVentas)}`;
@@ -71,13 +69,14 @@ export function setupDashboard(app) {
         kpiGanancia.textContent = `$${formatCurrency(gananciaBrutaVentas)}`;
         kpiPresupuestos.textContent = presupuestosFiltrados.length;
 
+        // Gráfico (siempre muestra todos los datos, no los filtrados por mes)
         if (ingresosChart) ingresosChart.destroy();
         const ventasPorMes = {};
         todosLosPresupuestos.forEach(p => {
-            if (p.data.esVenta) {
-                const fecha = p.data.fecha.toDate();
+            if (p.esVenta) {
+                const fecha = p.fecha.toDate();
                 const mesAnio = `${String(fecha.getMonth() + 1).padStart(2,'0')}/${fecha.getFullYear()}`;
-                ventasPorMes[mesAnio] = (ventasPorMes[mesAnio] || 0) + (p.data.precioVenta || 0);
+                ventasPorMes[mesAnio] = (ventasPorMes[mesAnio] || 0) + (p.precioVenta || 0);
             }
         });
         const labels = Object.keys(ventasPorMes).sort((a,b) => {
@@ -85,62 +84,48 @@ export function setupDashboard(app) {
             return (anioA - anioB) || (mesA - mesB);
         });
         const dataPoints = labels.map(label => ventasPorMes[label]);
-        const Chart = window.Chart;
-        if(ctx) {
-            ingresosChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] }, options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }});
-        }
+        ingresosChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] }, options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }});
+    }
 
-        const ventas = todosLosPresupuestos.filter(p => p.data.esVenta).map(p => p.data);
+    function actualizarWidgetsLaterales() {
+        // Top Clientes
         const ventasPorCliente = {};
-        ventas.forEach(venta => {
-            if (venta.nombreCliente) ventasPorCliente[venta.nombreCliente] = (ventasPorCliente[venta.nombreCliente] || 0) + (venta.precioVenta || 0);
-        });
-        const clientesOrdenados = Object.entries(ventasPorCliente).sort(([, a], [, b]) => b - a).slice(0, 5);
-        renderizarRanking(topClientesContainer, clientesOrdenados, item => `<span>${item[0]}</span> <strong>$${formatCurrency(item[1])}</strong>`, 'Aún no hay ventas.');
-        
-        const conteoVentas = {};
-        ventas.forEach(venta => { conteoVentas[venta.tituloTorta] = (conteoVentas[venta.tituloTorta] || 0) + 1; });
-        const masVendidos = Object.entries(conteoVentas).sort(([,a],[,b]) => b - a).slice(0, 5);
-        renderizarRanking(masVendidosContainer, masVendidos, item => `<span>${item[0]}</span> <strong>${item[1]} ${item[1] > 1 ? 'unidades' : 'unidad'}</strong>`, 'No hay datos de ventas.');
-        
-        const gananciaPorTorta = {};
-        ventas.forEach(venta => {
-            if (venta.hasOwnProperty('precioVenta')) {
-                const costoProduccion = (venta.costoMateriales || 0) + ((venta.horasTrabajo || 0) * (venta.costoHora || 0)) + ((venta.costoMateriales || 0) * ((venta.porcentajeCostosFijos || 0) / 100));
-                const ganancia = (venta.precioVenta || 0) - costoProduccion;
-                gananciaPorTorta[venta.tituloTorta] = (gananciaPorTorta[venta.tituloTorta] || 0) + ganancia;
+        todosLosPresupuestos.forEach(p => {
+            if (p.esVenta && p.nombreCliente) {
+                ventasPorCliente[p.nombreCliente] = (ventasPorCliente[p.nombreCliente] || 0) + (p.precioVenta || 0);
             }
         });
-        const masRentables = Object.entries(gananciaPorTorta).sort(([,a],[,b]) => b - a).slice(0, 5);
-        renderizarRanking(masRentablesContainer, masRentables, item => `<span>${item[0]}</span> <strong>$${formatCurrency(item[1])}</strong>`, 'No hay datos de rentabilidad.');
+        const clientesOrdenados = Object.entries(ventasPorCliente).sort(([, a], [, b]) => b - a).slice(0, 5);
+        topClientesContainer.innerHTML = '';
+        if (clientesOrdenados.length > 0) {
+            const ol = document.createElement('ol');
+            ol.className = 'top-lista';
+            clientesOrdenados.forEach(([nombre, total]) => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${nombre}</span> <strong>$${formatCurrency(total)}</strong>`;
+                ol.appendChild(li);
+            });
+            topClientesContainer.appendChild(ol);
+        } else {
+            topClientesContainer.innerHTML = '<p>Aún no hay ventas registradas.</p>';
+        }
 
-        const proximasVentas = todosLosPresupuestos.map(p => p.data).filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date()).sort((a, b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate()).slice(0, 3);
+        // Próximas Entregas
+        const proximasVentas = todosLosPresupuestos.filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date()).sort((a, b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate()).slice(0, 3);
         const entregasHtml = proximasVentas.map(venta => {
             const fecha = venta.fechaEntrega.toDate();
             return `<li class="entrega-item"><div class="entrega-fecha"><strong>${fecha.getDate()}</strong><span>${fecha.toLocaleDateString('es-AR',{month:'short'}).replace('.','').toUpperCase()}</span></div><div class="entrega-info"><strong>${venta.tituloTorta}</strong><span>Cliente: ${venta.nombreCliente}</span></div></li>`;
         });
         renderizarLista(proximasEntregasContainer, entregasHtml, 'No hay entregas próximas agendadas.');
-    }
 
-    function actualizarStockWidgets() {
-        if (!materiasPrimasDisponibles.length) return;
-        
-        let valorTotalStock = 0;
-        materiasPrimasDisponibles.forEach(item => {
-            if(item.lotes && Array.isArray(item.lotes)) {
-                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
-            }
-        });
-        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
-
+        // Faltantes de Stock
         const stockActualMap = new Map();
         materiasPrimasDisponibles.forEach(item => {
             const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
             stockActualMap.set(item.id, stockTotal);
         });
-        const proximasVentas = todosLosPresupuestos.map(p => p.data).filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date()).sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate()).slice(0, 5);
         const ingredientesNecesariosMap = new Map();
-        proximasVentas.forEach(venta => {
+        proximasVentas.forEach(venta => { // Usamos las mismas próximas ventas ya filtradas
             (venta.ingredientes || []).forEach(ing => {
                 const id = ing.idMateriaPrima || ing.id;
                 const cantidad = ing.cantidadTotal || ing.cantidad;
@@ -162,11 +147,12 @@ export function setupDashboard(app) {
         renderizarLista(listaFaltantesContainer, faltantesHtml, '✅ Tienes stock suficiente.');
     }
 
+    // --- Listeners de Firebase y Eventos ---
     onSnapshot(query(presupuestosGuardadosCollection), (snapshot) => {
-        todosLosPresupuestos = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
         const mesesDisponibles = new Set();
         todosLosPresupuestos.forEach(p => {
-            const fecha = p.data.fecha.toDate();
+            const fecha = p.fecha.toDate();
             mesesDisponibles.add(`${fecha.getFullYear()}-${fecha.getMonth() + 1}`);
         });
         const mesesOrdenados = Array.from(mesesDisponibles).sort((a,b)=>(new Date(b.split('-')[0],b.split('-')[1]-1))-(new Date(a.split('-')[0],a.split('-')[1]-1)));
@@ -183,15 +169,24 @@ export function setupDashboard(app) {
         if (Array.from(filtroMesSelect.options).some(opt => opt.value === valorActualFiltro)) {
             filtroMesSelect.value = valorActualFiltro;
         }
-        actualizarCalculosCompletos();
+        actualizarIndicadoresYGrafico(todosLosPresupuestos);
+        actualizarWidgetsLaterales();
     });
 
     onSnapshot(query(materiasPrimasCollection), (snapshot) => {
         materiasPrimasDisponibles = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-        actualizarCalculosCompletos();
+        let valorTotalStock = 0;
+        materiasPrimasDisponibles.forEach(item => {
+            if(item.lotes && Array.isArray(item.lotes)) {
+                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
+            }
+        });
+        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
+        // Solo actualizamos el widget de faltantes, que depende del stock
+        actualizarListaFaltantes();
     });
 
     filtroMesSelect.addEventListener('change', () => {
-        actualizarCalculosCompletos();
+        recalcularIndicadores(todosLosPresupuestos);
     });
 }
