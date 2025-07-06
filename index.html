@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indicadores </title>
+    <title>Indicadores</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -22,7 +22,21 @@
             <div class="header__spacer"></div>
         </header>
 
-        <nav class="nav-menu" id="nav-menu"></nav>
+        <nav class="nav-menu" id="nav-menu">
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Dulce App </span>
+            </div>
+            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
+            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
+            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -41,10 +55,22 @@
             </section>
 
             <div class="dashboard-grid">
-                <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
-                <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
-                <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
-                <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
+                <div class="stat-card">
+                    <h4>Ingresos por Ventas</h4>
+                    <p id="kpi-ingresos-ventas">$0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Valor Total Cotizado</h4>
+                    <p id="kpi-valor-cotizado">$0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Ganancia Bruta (Ventas)</h4>
+                    <p id="kpi-ganancia-bruta">$0.00</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Presupuestos Creados</h4>
+                    <p id="kpi-presupuestos-creados">0</p>
+                </div>
             </div>
 
             <div class="dashboard-layout">
@@ -86,7 +112,7 @@
             </div>
         </main>
     </div>
-
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
@@ -99,7 +125,9 @@
     <script src="js/menu.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
         }
     </script>
 </body>
