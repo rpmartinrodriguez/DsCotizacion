@@ -1,16 +1,15 @@
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy
+    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, Timestamp, limit
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-// No es necesario importar Chart.js aquí, ya que se carga globalmente desde el HTML.
-// Esto soluciona el conflicto principal.
+// NO importamos Chart.js aquí, ya que se carga desde el HTML. Esta era la causa del error.
 
 export function setupDashboard(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
-    // Referencias al DOM
+    // Referencias a todos los elementos del DOM
     const filtroMesSelect = document.getElementById('filtro-mes');
     const kpiIngresos = document.getElementById('kpi-ingresos-ventas');
     const kpiValorCotizado = document.getElementById('kpi-valor-cotizado');
@@ -23,16 +22,14 @@ export function setupDashboard(app) {
     const ctx = document.getElementById('grafico-ingresos').getContext('2d');
     
     let ingresosChart = null;
-    const UMBRAL_BAJO_STOCK = 100;
-
     let todosLosPresupuestos = [];
     let materiasPrimasDisponibles = [];
 
-    // --- Funciones de Cálculo y Renderizado ---
-
     const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const actualizarIndicadores = (presupuestos) => {
+    // --- FUNCIONES DE ACTUALIZACIÓN DE LA UI ---
+
+    function recalcularIndicadores(presupuestos) {
         let ingresosVentas = 0, valorCotizado = 0, gananciaBrutaVentas = 0;
         presupuestos.forEach(p => {
             valorCotizado += p.precioVenta || 0;
@@ -48,9 +45,29 @@ export function setupDashboard(app) {
         kpiValorCotizado.textContent = `$${formatCurrency(valorCotizado)}`;
         kpiGanancia.textContent = `$${formatCurrency(gananciaBrutaVentas)}`;
         kpiPresupuestos.textContent = presupuestos.length;
-    };
+    }
 
-    const actualizarTopClientes = () => {
+    function actualizarGrafico() {
+        if (ingresosChart) ingresosChart.destroy();
+        const ventasPorMes = {};
+        todosLosPresupuestos.forEach(p => {
+            if (p.esVenta) {
+                const fecha = p.fecha.toDate();
+                const mesAnio = `${String(fecha.getMonth() + 1).padStart(2,'0')}/${fecha.getFullYear()}`;
+                ventasPorMes[mesAnio] = (ventasPorMes[mesAnio] || 0) + (p.precioVenta || 0);
+            }
+        });
+        const labels = Object.keys(ventasPorMes).sort((a,b) => {
+            const [mesA, anioA] = a.split('/');
+            const [mesB, anioB] = b.split('/');
+            return (anioA - anioB) || (mesA - mesB);
+        });
+        const dataPoints = labels.map(label => ventasPorMes[label]);
+        ingresosChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] }, options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }});
+    }
+
+    function actualizarWidgetsLaterales() {
+        // Top Clientes
         const ventasPorCliente = {};
         todosLosPresupuestos.forEach(p => {
             if (p.esVenta && p.nombreCliente) {
@@ -71,33 +88,38 @@ export function setupDashboard(app) {
         } else {
             topClientesContainer.innerHTML = '<p>Aún no hay ventas registradas.</p>';
         }
-    };
 
-    const actualizarProximasEntregas = () => {
+        // Próximas Entregas
         const proximasVentas = todosLosPresupuestos
             .filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date())
             .sort((a, b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate())
             .slice(0, 3);
         proximasEntregasContainer.innerHTML = '';
         if (proximasVentas.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'lista-sencilla dashboard-lista';
             proximasVentas.forEach(venta => {
                 const fecha = venta.fechaEntrega.toDate();
-                const item = document.createElement('div');
-                item.className = 'entrega-item';
-                item.innerHTML = `<div class="entrega-fecha"><strong>${fecha.getDate()}</strong><span>${fecha.toLocaleDateString('es-AR',{month:'short'}).replace('.','').toUpperCase()}</span></div><div class="entrega-info"><strong>${venta.tituloTorta}</strong><span>Cliente: ${venta.nombreCliente}</span></div>`;
-                proximasEntregasContainer.appendChild(item);
+                const li = document.createElement('li');
+                li.innerHTML = `<div class="dashboard-lista-item"><strong>${venta.tituloTorta}</strong><small>Cliente: ${venta.nombreCliente}</small></div><span class="fecha-tag">${fecha.toLocaleDateString('es-AR', {day: '2-digit', month: 'short'}).replace('.','')}</span>`;
+                ul.appendChild(li);
             });
+            proximasEntregasContainer.appendChild(ul);
         } else {
             proximasEntregasContainer.innerHTML = '<p>No hay entregas próximas agendadas.</p>';
         }
-    };
-
-    const actualizarListaFaltantes = () => {
+    }
+    
+    function actualizarStockYFaltantes() {
+        let valorTotalStock = 0;
         const stockActualMap = new Map();
         materiasPrimasDisponibles.forEach(item => {
             const stockTotal = (item.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
             stockActualMap.set(item.id, stockTotal);
+            if(item.lotes) item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
         });
+        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
+
         const proximasVentas = todosLosPresupuestos.filter(p => p.esVenta && p.fechaEntrega && p.fechaEntrega.toDate() >= new Date()).sort((a,b) => a.fechaEntrega.toDate() - b.fechaEntrega.toDate()).slice(0, 5);
         const ingredientesNecesariosMap = new Map();
         proximasVentas.forEach(venta => {
@@ -118,7 +140,7 @@ export function setupDashboard(app) {
         listaFaltantesContainer.innerHTML = '';
         if (listaDeCompras.length > 0) {
             const ul = document.createElement('ul');
-            ul.className = 'lista-sencilla';
+            ul.className = 'lista-sencilla dashboard-lista';
             listaDeCompras.sort((a,b) => b.cantidad - a.cantidad).slice(0, 5).forEach(item => {
                 const li = document.createElement('li');
                 li.innerHTML = `<span>${item.nombre}</span> <span class="faltante-cantidad">${item.cantidad.toLocaleString('es-AR')} ${item.unidad}</span>`;
@@ -127,35 +149,15 @@ export function setupDashboard(app) {
             if (listaDeCompras.length > 5) {
                 const liMas = document.createElement('li');
                 liMas.innerHTML = `<strong>y ${listaDeCompras.length - 5} más...</strong>`;
-                liMas.style.justifyContent = 'center';
                 ul.appendChild(liMas);
             }
             listaFaltantesContainer.appendChild(ul);
         } else {
             listaFaltantesContainer.innerHTML = '<p>✅ Tienes stock suficiente.</p>';
         }
-    };
-    
-    const renderizarGrafico = () => {
-        if (ingresosChart) ingresosChart.destroy();
-        const ventasPorMes = {};
-        todosLosPresupuestos.forEach(p => {
-            if (p.esVenta) {
-                const fecha = p.fecha.toDate();
-                const mesAnio = `${String(fecha.getMonth() + 1).padStart(2,'0')}/${fecha.getFullYear()}`;
-                ventasPorMes[mesAnio] = (ventasPorMes[mesAnio] || 0) + (p.precioVenta || 0);
-            }
-        });
-        const labels = Object.keys(ventasPorMes).sort((a,b) => {
-            const [mesA, anioA] = a.split('/');
-            const [mesB, anioB] = b.split('/');
-            return (anioA - anioB) || (mesA - mesB);
-        });
-        const dataPoints = labels.map(label => ventasPorMes[label]);
-        ingresosChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Ingresos por Ventas', data: dataPoints, backgroundColor: 'rgba(255, 150, 197, 0.6)', borderColor: 'rgba(255, 150, 197, 1)', borderWidth: 1 }] }, options: { scales: { y: { beginAtZero: true } }, responsive: true, maintainAspectRatio: false }});
-    };
-    
-    // --- Lógica de Carga y Sincronización ---
+    }
+
+    // --- Carga de Datos y Listeners ---
     onSnapshot(query(presupuestosGuardadosCollection), (snapshot) => {
         todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
         const mesesDisponibles = new Set();
@@ -175,19 +177,17 @@ export function setupDashboard(app) {
             filtroMesSelect.appendChild(option);
         });
         filtroMesSelect.value = valorActualFiltro;
-        actualizarTodaLaUI();
+        recalcularDashboard(filtroMesSelect.value);
+        renderizarGrafico();
+        actualizarTopClientes();
+        if(materiasPrimasDisponibles.length > 0) actualizarListaFaltantes();
+        actualizarProximasEntregas();
     });
 
     onSnapshot(query(materiasPrimasCollection), (snapshot) => {
         materiasPrimasDisponibles = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
-        let valorTotalStock = 0;
-        materiasPrimasDisponibles.forEach(item => {
-            if(item.lotes && Array.isArray(item.lotes)) {
-                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
-            }
-        });
-        kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
-        actualizarTodaLaUI();
+        calcularMetricasStock();
+        if(todosLosPresupuestos.length > 0) actualizarListaFaltantes();
     });
 
     filtroMesSelect.addEventListener('change', (e) => {
