@@ -22,7 +22,16 @@
         </header>
 
         <nav class="nav-menu" id="nav-menu">
-            </nav>
+            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
+            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
+            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -84,6 +93,18 @@
             <div class="modal-actions">
                 <button id="producto-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
                 <button id="producto-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="historial-movimientos-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title" id="movimientos-modal-title">Historial de Movimientos</h2>
+            <div id="movimientos-lista-container" class="movimientos-container">
+                <p>Cargando historial...</p>
+            </div>
+            <div class="modal-actions">
+                <button id="movimientos-modal-btn-cerrar" class="btn-primary">Cerrar</button>
             </div>
         </div>
     </div>
