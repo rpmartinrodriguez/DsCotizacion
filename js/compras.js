@@ -1,94 +1,93 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Postres - Recetas</title>
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <div class="main-container">
-        <header class="header">
-            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span><span></span><span></span>
-            </button>
-            <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
-            </a>
-            <div class="header__spacer"></div>
-        </header>
+import { 
+    getFirestore, collection, addDoc, doc, updateDoc, 
+    query, where, getDocs, arrayUnion, writeBatch
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        <nav class="nav-menu" id="nav-menu">
-            </nav>
-        <div class="nav-menu__overlay" id="nav-overlay"></div>
+export function setupCompras(app) {
+    const db = getFirestore(app);
+    const materiasPrimasCollection = collection(db, 'materiasPrimas');
+    const movimientosStockCollection = collection(db, 'movimientosStock');
 
-        <main>
-            <section class="card">
-                <div class="card-header-actions">
-                    <h2 class="card__title">Mis Recetas de Postres</h2>
-                    <button id="btn-crear-receta" class="btn-primary">Crear Nueva Receta</button>
-                </div>
-                <div id="lista-recetas-container">
-                    <p>Cargando recetas...</p>
-                </div>
-            </section>
-        </main>
-    </div>
+    const form = document.getElementById('form-nueva-compra');
+    const datalist = document.getElementById('lista-productos-existentes');
+    const unidadSelect = document.getElementById('unidad-medida');
+    const nombreInput = document.getElementById('nombre-producto');
+
+    let productosExistentes = [];
+    const cargarProductosExistentes = async () => {
+        const snapshot = await getDocs(materiasPrimasCollection);
+        productosExistentes = [];
+        datalist.innerHTML = '';
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            productosExistentes.push(data);
+            const option = document.createElement('option');
+            option.value = data.nombre;
+            datalist.appendChild(option);
+        });
+    };
     
-    <div id="receta-modal-overlay" class="modal-overlay">
-        <div class="modal-content card" style="max-width: 700px;">
-            <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
-            
-            <div class="form-modern" style="grid-template-columns: 1fr 1fr;">
-                <div class="form-group">
-                    <label for="receta-nombre-input">Nombre del Postre</label>
-                    <input type="text" id="receta-nombre-input" placeholder="Ej: Torta Oreo">
-                </div>
-                <div class="form-group">
-                    <label for="receta-categoria-select">Categoría</label>
-                    <select id="receta-categoria-select">
-                        <option value="" disabled selected>Selecciona una categoría</option>
-                        <option value="Tortas">Tortas</option>
-                        <option value="Tartas">Tartas</option>
-                        <option value="Alfajores">Alfajores</option>
-                    </select>
-                </div>
-            </div>
+    nombreInput.addEventListener('input', () => {
+        const productoSeleccionado = productosExistentes.find(p => p.nombre === nombreInput.value);
+        if (productoSeleccionado) {
+            unidadSelect.value = productoSeleccionado.unidad;
+            unidadSelect.disabled = true;
+        } else {
+            unidadSelect.disabled = false;
+        }
+    });
 
-            <h4 class="card__subtitle">Ingredientes de la Receta</h4>
-            <div class="receta-editor-grid">
-                <div class="form-group">
-                    <label for="selector-ingrediente-receta">Añadir Ingrediente</label>
-                    <select id="selector-ingrediente-receta">
-                        <option value="">Cargando...</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="cantidad-ingrediente-receta">Cantidad</label>
-                    <input type="number" id="cantidad-ingrediente-receta" min="0" step="any">
-                </div>
-                <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
-            </div>
-            <hr class="calculo-divisor">
-            <div id="ingredientes-en-receta-container">
-                <p>Aún no has añadido ingredientes.</p>
-            </div>
-            <div class="modal-actions">
-                <button id="receta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="receta-modal-btn-guardar" class="btn-primary">Guardar Receta</button>
-            </div>
-        </div>
-    </div>
-    
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { setupRecetas } from './js/recetas.js';
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nombre = nombreInput.value.trim();
+        const precio = parseFloat(form['precio-compra'].value);
+        const cantidad = parseFloat(form['cantidad-compra'].value);
+        const unidad = unidadSelect.value;
+        if (!nombre || isNaN(precio) || isNaN(cantidad) || cantidad <= 0) {
+            alert("Por favor, completa todos los campos con valores válidos.");
+            return;
+        }
+
+        const nuevoLote = { fechaCompra: new Date(), precioCompra: precio, cantidadComprada: cantidad, stockRestante: cantidad, costoUnitario: precio / cantidad };
+
         try {
-            const app = initializeApp(firebaseConfig);
-            setupRecetas(app);
-        } catch (error) { console.error(error); }
-    </script>
-    <script src="js/menu.js" defer></script>
-</body>
-</html>
+            const q = query(materiasPrimasCollection, where("nombre", "==", nombre));
+            const querySnapshot = await getDocs(q);
+
+            const batch = writeBatch(db);
+            let productoId;
+            
+            if (querySnapshot.empty) {
+                const nuevoProductoRef = doc(collection(db, 'materiasPrimas'));
+                productoId = nuevoProductoRef.id;
+                batch.set(nuevoProductoRef, { nombre, unidad, lotes: [nuevoLote] });
+            } else {
+                const productoDocRef = querySnapshot.docs[0].ref;
+                productoId = productoDocRef.id;
+                batch.update(productoDocRef, { lotes: arrayUnion(nuevoLote) });
+            }
+
+            const nuevoMovimientoRef = doc(collection(db, 'movimientosStock'));
+            batch.set(nuevoMovimientoRef, {
+                materiaPrimaId: productoId,
+                materiaPrimaNombre: nombre,
+                tipo: 'Compra',
+                cantidad: cantidad,
+                fecha: new Date(),
+                descripcion: `Compra de ${cantidad} ${unidad}`
+            });
+
+            await batch.commit();
+            
+            alert(`¡Compra de "${nombre}" registrada con éxito!`);
+            form.reset();
+            unidadSelect.disabled = false;
+            await cargarProductosExistentes();
+        } catch (error) {
+            console.error("Error al guardar la compra: ", error);
+            alert("Hubo un error al guardar la compra.");
+        }
+    });
+    
+    cargarProductosExistentes();
+}
