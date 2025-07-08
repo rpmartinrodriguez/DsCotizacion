@@ -1,16 +1,18 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    updateDoc, getDoc, runTransaction, where, addDoc, Timestamp
+    updateDoc, getDoc, runTransaction, where, addDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupStock(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
-
+    
+    // Referencias DOM principales
     const tablaStockBody = document.querySelector("#tabla-stock tbody");
     const buscadorInput = document.getElementById('buscador-stock');
 
+    // Referencias Modal Edición
     const modal = document.getElementById('edit-producto-modal-overlay');
     const modalTitle = document.getElementById('producto-modal-title');
     const nombreInput = document.getElementById('producto-nombre-input');
@@ -20,6 +22,7 @@ export function setupStock(app) {
     const btnGuardar = document.getElementById('producto-modal-btn-guardar');
     const btnCancelar = document.getElementById('producto-modal-btn-cancelar');
     
+    // Referencias Modal Historial
     const historialModal = document.getElementById('historial-movimientos-modal-overlay');
     const historialModalTitle = document.getElementById('movimientos-modal-title');
     const historialListaContainer = document.getElementById('movimientos-lista-container');
@@ -36,29 +39,41 @@ export function setupStock(app) {
             return;
         }
         datos.forEach(itemConId => {
-            const item = itemConId.data;
-            const id = itemConId.id;
-            if (!item.lotes || !Array.isArray(item.lotes) || item.lotes.length === 0) return;
-            
-            const stockTotal = item.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
-            const lotesOrdenados = [...item.lotes].sort((a, b) => (b.fechaCompra.seconds || 0) - (a.fechaCompra.seconds || 0));
-            const ultimoLote = lotesOrdenados[0];
-            
-            const fila = document.createElement('tr');
-            fila.innerHTML = `
-                <td data-label="Nombre">${item.nombre}</td>
-                <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
-                <td data-label="Precio Base">$${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${item.unidad}</td>
-                <td class="action-buttons stock-actions">
-                    <button class="btn-stock subtract" data-id="${id}" title="Dar de baja stock">-</button>
-                    <button class="btn-stock-link edit" data-id="${id}" title="Editar Producto">✏️</button>
-                    <button class="btn-stock-link history" data-id="${id}" data-nombre="${item.nombre}" title="Ver Historial de Movimientos">📜</button>
-                </td>
-            `;
-            tablaStockBody.appendChild(fila);
+            try { // --- INICIO DEL BLOQUE DE SEGURIDAD ---
+                const item = itemConId.data;
+                const id = itemConId.id;
+
+                if (!item.lotes || !Array.isArray(item.lotes) || item.lotes.length === 0) {
+                    return; 
+                }
+                
+                const stockTotal = item.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
+                
+                const lotesOrdenados = [...item.lotes].sort((a, b) => {
+                    const fechaA = a.fechaCompra?.seconds || 0;
+                    const fechaB = b.fechaCompra?.seconds || 0;
+                    return fechaB - fechaA;
+                });
+                const ultimoLote = lotesOrdenados[0];
+                
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td data-label="Nombre">${item.nombre}</td>
+                    <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
+                    <td data-label="Precio Base">$${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${item.unidad}</td>
+                    <td class="action-buttons stock-actions">
+                        <button class="btn-stock subtract" data-id="${id}" title="Dar de baja stock">-</button>
+                        <button class="btn-stock-link edit" data-id="${id}" title="Editar Producto">✏️</button>
+                        <button class="btn-stock-link history" data-id="${id}" data-nombre="${item.nombre}" title="Ver Historial de Movimientos">📜</button>
+                    </td>
+                `;
+                tablaStockBody.appendChild(fila);
+            } catch (error) {
+                console.error(`Error al renderizar el producto: ${itemConId.data.nombre}. Este producto puede tener datos corruptos.`, error);
+            } // --- FIN DEL BLOQUE DE SEGURIDAD ---
         });
     };
-
+    
     const openModalParaEditar = async (id) => {
         editandoId = id;
         const docRef = doc(db, 'materiasPrimas', id);
@@ -100,6 +115,7 @@ export function setupStock(app) {
             if (indiceUltimoLote > -1) {
                 lotesActualizados[indiceUltimoLote].precioCompra = parseFloat(precioLoteInput.value);
                 lotesActualizados[indiceUltimoLote].cantidadComprada = parseFloat(cantidadLoteInput.value);
+                
                 if (lotesActualizados[indiceUltimoLote].cantidadComprada > 0) {
                     lotesActualizados[indiceUltimoLote].costoUnitario = lotesActualizados[indiceUltimoLote].precioCompra / lotesActualizados[indiceUltimoLote].cantidadComprada;
                 } else {
@@ -144,6 +160,9 @@ export function setupStock(app) {
                 itemDiv.innerHTML = `<div class="movimiento-info"><span class="movimiento-fecha">${fecha}</span><strong class="movimiento-descripcion">${mov.descripcion}</strong></div><div class="movimiento-cantidad ${esEntrada ? 'entrada' : 'salida'}">${esEntrada ? '+' : ''}${mov.cantidad.toLocaleString('es-AR')}</div>`;
                 historialListaContainer.appendChild(itemDiv);
             });
+        }, (error) => {
+            console.error("Error al cargar historial:", error);
+            historialListaContainer.innerHTML = `<p style="color:var(--danger-color);">Error al cargar. Revisa la consola para crear el índice en Firebase.</p>`;
         });
     };
 
@@ -173,8 +192,7 @@ export function setupStock(app) {
         if (target.classList.contains('edit')) {
             openModalParaEditar(id);
         } else if (target.classList.contains('history')) {
-            const nombre = target.dataset.nombre;
-            openHistorialModal(id, nombre);
+            openHistorialModal(id, target.dataset.nombre);
         } else if (target.classList.contains('subtract')) {
             const amountStr = prompt("¿Qué cantidad de stock deseas dar de baja? (Ej: rotura, uso personal)");
             if (amountStr) {
