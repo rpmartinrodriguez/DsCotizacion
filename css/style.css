@@ -1340,3 +1340,48 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 0.8rem;
     font-weight: 500;
 }
+
+/* Estilos para la Modal de Historial de Movimientos */
+.movimientos-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 1em; /* Espacio para la barra de scroll */
+}
+
+.movimiento-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.movimiento-item:last-child {
+    border-bottom: none;
+}
+
+.movimiento-info .movimiento-fecha {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    display: block;
+}
+
+.movimiento-info .movimiento-descripcion {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.movimiento-cantidad {
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    margin-left: 1rem;
+}
+
+.movimiento-cantidad.entrada {
+    color: var(--success-color);
+}
+
+.movimiento-cantidad.salida {
+    color: var(--danger-color);
+}
+
