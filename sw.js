@@ -1,7 +1,7 @@
 // sw.js (Versión final con apple-touch-icon y estrategia "Stale-While-Revalidate")
 
 // Aumentamos la versión para forzar la actualización de este archivo
-const CACHE_NAME = 'cotizador-tortas-cache-vFinal-1.1'; 
+const CACHE_NAME = 'cotizador-tortas-cache-vFinal-1.2'; 
 
 const APP_SHELL_URLS = [
   '/',
