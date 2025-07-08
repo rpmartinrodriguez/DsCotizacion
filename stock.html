@@ -5,40 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Stock</title>
     <link rel="stylesheet" href="css/style.css">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff96c5">    
 </head>
 <body>
     <div class="main-container">
-        <header class="header">
-            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
-            </a>
-            <div class="header__spacer"></div>
-        </header>
-
-<nav class="nav-menu" id="nav-menu">
-    <div class="nav-menu__header">
-        <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-        <span class="nav-menu__title">Dulce app</span>
-    </div>
-    <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-    <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-    <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-    <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-    <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-    <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-    <a href="stock.html" class="nav-menu__link">📦 Stock</a>
-    <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-    <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-</nav>
-        <div class="nav-menu__overlay" id="nav-overlay"></div>
-
         <main>
             <section class="card">
                 <div class="card-header-actions">
@@ -53,7 +22,7 @@
                         <tr>
                             <th>Nombre</th>
                             <th>Stock Actual</th>
-                            <th>Precio Promedio</th>
+                            <th>Precio Base (Última Compra)</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -64,32 +33,43 @@
             </section>
         </main>
     </div>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { setupStock } from './js/stock.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupStock(app);
-        } catch (error) { console.error(error); }
-    </script>
-    <div id="edit-lotes-modal-overlay" class="modal-overlay">
+    
+    <div id="edit-producto-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="lotes-modal-title">Editar Lotes de: </h2>
-            <div id="lotes-editor-container" class="lotes-editor-container"></div>
+            <h2 class="card__title" id="producto-modal-title">Editar Materia Prima</h2>
+            <div class="form-modern" style="grid-template-columns: 1fr;">
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="producto-nombre-input">
+                </div>
+                 <div class="form-group">
+                    <label>Unidad de Medida</label>
+                    <select id="producto-unidad-select">
+                        <option value="gr">Gramo (gr)</option>
+                        <option value="kg">Kilogramo (kg)</option>
+                        <option value="l">Litro (l)</option>
+                        <option value="ml">Mililitro (ml)</option>
+                        <option value="unidad">Unidad</option>
+                    </select>
+                </div>
+                <h4 class="card__subtitle">Última Compra</h4>
+                <div class="form-modern" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label>Precio de Compra ($)</label>
+                        <input type="number" id="lote-precio-input" step="any">
+                    </div>
+                    <div class="form-group">
+                        <label>Cantidad Comprada</label>
+                        <input type="number" id="lote-cantidad-input" step="any">
+                    </div>
+                </div>
+            </div>
             <div class="modal-actions">
-                <button id="lotes-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="lotes-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
+                <button id="producto-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="producto-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
             </div>
         </div>
     </div>
-    <script src="js/menu.js" defer></script>
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js');
-        });
-    }
-</script>    
-</body>
+
+    </body>
 </html>
