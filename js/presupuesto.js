@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
-    Timestamp, doc, runTransaction, getDoc 
+    Timestamp, doc, runTransaction, getDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupPresupuesto(app) {
@@ -8,28 +8,24 @@ export function setupPresupuesto(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
     const recetasCollection = collection(db, 'recetas');
+    const movimientosStockCollection = collection(db, 'movimientosStock');
 
-    // --- REFERENCIAS A ELEMENTOS DEL DOM ---
+    // --- Referencias al DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
     const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
     const costoTotalSpan = document.getElementById('costo-total');
     const btnFinalizar = document.getElementById('btn-finalizar');
     const datalistClientes = document.getElementById('lista-clientes-existentes');
-    
-    // Referencias para cálculo de precio
     const horasTrabajoInput = document.getElementById('horas-trabajo');
     const costoHoraInput = document.getElementById('costo-hora');
     const costosFijosPorcInput = document.getElementById('costos-fijos-porcentaje');
     const gananciaPorcInput = document.getElementById('ganancia-porcentaje');
-    
     const resumenCostoMaterialesSpan = document.getElementById('resumen-costo-materiales');
     const subtotalManoObraSpan = document.getElementById('subtotal-mano-obra');
     const subtotalCostosFijosSpan = document.getElementById('subtotal-costos-fijos');
     const costoProduccionSpan = document.getElementById('costo-produccion');
     const totalGananciaSpan = document.getElementById('total-ganancia');
     const precioVentaSugeridoSpan = document.getElementById('precio-venta-sugerido');
-
-    // Referencias a sección final y modal
     const resultadoFinalContainer = document.getElementById('resultado-final');
     const mensajeFinalTextarea = document.getElementById('mensaje-final');
     const btnCopiar = document.getElementById('btn-copiar');
@@ -40,59 +36,51 @@ export function setupPresupuesto(app) {
     const modalBtnConfirmar = document.getElementById('modal-btn-confirmar');
     const modalBtnCancelar = document.getElementById('modal-btn-cancelar');
 
+    // --- Variables de Estado ---
     let materiasPrimasDisponibles = [];
     let presupuestoActual = [];
     let costoTotalCache = 0;
 
-    const cargarClientesExistentes = async () => {
-        const snapshot = await getDocs(query(presupuestosGuardadosCollection));
-        const nombresClientes = new Set();
-        snapshot.forEach(doc => {
-            if(doc.data().nombreCliente) {
-                nombresClientes.add(doc.data().nombreCliente);
-            }
-        });
+    // --- FUNCIONES ---
 
-        datalistClientes.innerHTML = '';
-        nombresClientes.forEach(nombre => {
-            const option = document.createElement('option');
-            option.value = nombre;
-            datalistClientes.appendChild(option);
-        });
+    const cargarClientesExistentes = async () => {
+        try {
+            const snapshot = await getDocs(query(presupuestosGuardadosCollection));
+            const nombresClientes = new Set();
+            snapshot.forEach(doc => {
+                if (doc.data().nombreCliente) {
+                    nombresClientes.add(doc.data().nombreCliente);
+                }
+            });
+            datalistClientes.innerHTML = '';
+            nombresClientes.forEach(nombre => {
+                const option = document.createElement('option');
+                option.value = nombre;
+                datalistClientes.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Error al cargar clientes existentes:", error);
+        }
     };
 
     const cargarMateriasPrimas = async () => {
         const q = query(materiasPrimasCollection, orderBy('nombre'));
         const snapshot = await getDocs(q);
-        
         ingredientesContainer.innerHTML = '';
         materiasPrimasDisponibles = [];
-
         snapshot.forEach(doc => {
             const data = doc.data();
-            if (!data.lotes || !Array.isArray(data.lotes) || data.lotes.length === 0) {
-                return;
-            }
+            if (!data.lotes || !Array.isArray(data.lotes) || data.lotes.length === 0) return;
             materiasPrimasDisponibles.push({ id: doc.id, ...data });
-            const stockTotal = data.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
+            const stockTotal = data.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
             const itemDiv = document.createElement('div');
-            itemDiv.classList.add('ingrediente-item');
-            itemDiv.innerHTML = `
-                <div class="ingrediente-info">
-                    <input type="checkbox" id="${doc.id}">
-                    <label for="${doc.id}">${data.nombre} (${data.unidad})</label>
-                </div>
-                <div class="ingrediente-cantidad">
-                    <input type="number" min="0" step="any" placeholder="Cant." title="Stock disponible: ${stockTotal.toLocaleString('es-AR')}" disabled>
-                </div>
-            `;
+            itemDiv.className = 'ingrediente-item';
+            itemDiv.innerHTML = `<div class="ingrediente-info"><input type="checkbox" id="${doc.id}"><label for="${doc.id}">${data.nombre} (${data.unidad})</label></div><div class="ingrediente-cantidad"><input type="number" min="0" step="any" placeholder="Cant." title="Stock disponible: ${stockTotal.toLocaleString('es-AR')}" disabled></div>`;
             ingredientesContainer.appendChild(itemDiv);
         });
-
         if (ingredientesContainer.innerHTML === '') {
-            ingredientesContainer.innerHTML = '<p>No se encontraron productos con stock. Registra una nueva compra primero.</p>';
+            ingredientesContainer.innerHTML = '<p>No hay productos con stock. Registra una nueva compra primero.</p>';
         }
-        
         ingredientesContainer.addEventListener('change', actualizarPresupuesto);
         ingredientesContainer.addEventListener('input', actualizarPresupuesto);
     };
@@ -100,16 +88,13 @@ export function setupPresupuesto(app) {
     const cargarRecetaDesdeURL = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const recetaId = urlParams.get('recetaId');
-
         if (!recetaId) {
             await cargarMateriasPrimas();
             return;
         }
-
         ingredientesContainer.innerHTML = '<p>Cargando receta seleccionada...</p>';
         const recetaRef = doc(db, 'recetas', recetaId);
         const recetaSnap = await getDoc(recetaRef);
-
         if (recetaSnap.exists()) {
             const receta = recetaSnap.data();
             tortaTituloInput.value = receta.nombreTorta;
@@ -119,9 +104,7 @@ export function setupPresupuesto(app) {
                 if (checkbox) {
                     checkbox.checked = true;
                     const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
-                    if (cantidadInput) {
-                        cantidadInput.value = ingredienteReceta.cantidad;
-                    }
+                    if (cantidadInput) cantidadInput.value = ingredienteReceta.cantidad;
                 }
             });
             actualizarPresupuesto();
@@ -134,18 +117,14 @@ export function setupPresupuesto(app) {
     
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
         let costoAcumulado = 0;
-        let cantidadRestante = cantidadRequerida;
         let desgloseLotes = [];
-        const lotesOrdenados = materiaPrima.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
+        const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
+        let cantidadRestante = cantidadRequerida;
         for (const lote of lotesOrdenados) {
             if (cantidadRestante <= 0) break;
             const cantidadAUsar = Math.min(lote.stockRestante, cantidadRestante);
             costoAcumulado += cantidadAUsar * lote.costoUnitario;
-            desgloseLotes.push({
-                cantidadUsada: cantidadAUsar,
-                costoUnitario: lote.costoUnitario,
-                fechaLote: lote.fechaCompra
-            });
+            desgloseLotes.push({ cantidadUsada: cantidadAUsar, costoUnitario: lote.costoUnitario, fechaLote: lote.fechaCompra });
             cantidadRestante -= cantidadAUsar;
         }
         return { costo: costoAcumulado, desglose: desgloseLotes };
@@ -155,7 +134,7 @@ export function setupPresupuesto(app) {
         presupuestoActual = [];
         let costoTotal = 0;
         const itemsSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:checked'));
-        for (const checkbox of itemsSeleccionados) {
+        itemsSeleccionados.forEach(checkbox => {
             const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
             cantidadInput.disabled = false;
             const cantidadRequerida = parseFloat(cantidadInput.value) || 0;
@@ -163,20 +142,12 @@ export function setupPresupuesto(app) {
                 const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === checkbox.id);
                 if (materiaPrima) {
                     const { costo: costoIngrediente, desglose: lotesUtilizados } = calcularCostoFIFO(materiaPrima, cantidadRequerida);
-                    presupuestoActual.push({
-                        id: checkbox.id,
-                        nombre: materiaPrima.nombre,
-                        cantidadTotal: cantidadRequerida,
-                        unidad: materiaPrima.unidad,
-                        costoTotal: costoIngrediente,
-                        lotesUtilizados: lotesUtilizados
-                    });
+                    presupuestoActual.push({ id: checkbox.id, nombre: materiaPrima.nombre, cantidadTotal: cantidadRequerida, unidad: materiaPrima.unidad, costoTotal: costoIngrediente, lotesUtilizados: lotesUtilizados });
                     costoTotal += costoIngrediente;
                 }
             }
-        }
-        const itemsNoSeleccionados = Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:not(:checked)'));
-        itemsNoSeleccionados.forEach(checkbox => {
+        });
+        Array.from(ingredientesContainer.querySelectorAll('input[type="checkbox"]:not(:checked)')).forEach(checkbox => {
             const cantidadInput = checkbox.closest('.ingrediente-item').querySelector('input[type="number"]');
             cantidadInput.disabled = true;
             cantidadInput.value = '';
@@ -225,27 +196,17 @@ export function setupPresupuesto(app) {
         return new Promise((resolve, reject) => {
             modalOverlay.classList.add('visible');
             tortaTituloInput.focus();
+            if(!tortaTituloInput.value) tortaTituloInput.value = ''; // Evitar que quede con "undefined" si se cargó de receta
             clienteNombreInput.value = '';
-            const closeModal = () => {
-                modalOverlay.classList.remove('visible');
-                modalBtnConfirmar.onclick = null;
-                modalBtnCancelar.onclick = null;
-                modalOverlay.onclick = null;
-                document.onkeydown = null;
-            };
+            const closeModal = () => { modalOverlay.classList.remove('visible'); };
             modalBtnConfirmar.onclick = () => {
                 const titulo = tortaTituloInput.value.trim();
                 const cliente = clienteNombreInput.value.trim();
-                if (titulo === '' || cliente === '') {
-                    alert('Por favor, completa todos los campos.');
-                    return;
-                }
+                if (titulo === '' || cliente === '') { alert('Por favor, completa todos los campos.'); return; }
                 resolve({ tituloTorta: titulo, nombreCliente: cliente });
                 closeModal();
             };
             modalBtnCancelar.onclick = () => { reject(); closeModal(); };
-            modalOverlay.onclick = (e) => { if (e.target === modalOverlay) { reject(); closeModal(); } };
-            document.onkeydown = (e) => { if (e.key === 'Escape') { reject(); closeModal(); } };
         });
     };
 
@@ -253,51 +214,43 @@ export function setupPresupuesto(app) {
         try {
             const { tituloTorta, nombreCliente } = await showTitlePrompt();
             
+            const batch = writeBatch(db);
             await runTransaction(db, async (transaction) => {
                 for (const ingrediente of presupuestoActual) {
                     const ingredienteRef = doc(db, 'materiasPrimas', ingrediente.id);
                     const ingredienteDoc = await transaction.get(ingredienteRef);
                     if (!ingredienteDoc.exists()) throw `El ingrediente "${ingrediente.nombre}" no existe.`;
+                    
                     let data = ingredienteDoc.data();
                     let cantidadADescontar = ingrediente.cantidadTotal;
-                    let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.toMillis() - b.fechaCompra.toMillis());
+                    let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
+                    
                     const stockTotal = lotesActualizados.reduce((sum, lote) => sum + lote.stockRestante, 0);
-                    if (stockTotal < cantidadADescontar) {
-                        throw `Stock insuficiente de "${ingrediente.nombre}". Disponible: ${stockTotal}, Necesario: ${cantidadADescontar}.`;
-                    }
+                    if (stockTotal < cantidadADescontar) throw `Stock insuficiente de "${ingrediente.nombre}".`;
+                    
                     for (const lote of lotesActualizados) {
                         if (cantidadADescontar <= 0) break;
                         const descontarDeEsteLote = Math.min(lote.stockRestante, cantidadADescontar);
                         lote.stockRestante -= descontarDeEsteLote;
                         cantidadADescontar -= descontarDeEsteLote;
                     }
+                    
                     lotesActualizados = lotesActualizados.filter(lote => lote.stockRestante > 0);
                     transaction.update(ingredienteRef, { lotes: lotesActualizados });
+
+                    const nuevoMovimientoRef = doc(collection(db, 'movimientosStock'));
+                    batch.set(nuevoMovimientoRef, { materiaPrimaId: ingrediente.id, materiaPrimaNombre: ingrediente.nombre, tipo: 'Venta', cantidad: -ingrediente.cantidadTotal, fecha: new Date(), descripcion: `Uso para "${tituloTorta}"` });
                 }
             });
 
-            const presupuestoParaGuardar = {
-                tituloTorta, nombreCliente, fecha: Timestamp.now(), 
-                costoMateriales: costoTotalCache,
-                horasTrabajo: parseFloat(horasTrabajoInput.value) || 0,
-                costoHora: parseFloat(costoHoraInput.value) || 0,
-                porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0,
-                porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0,
-                precioVenta: parseFloat(precioVentaSugeridoSpan.textContent.replace('$', '')),
-                ingredientes: presupuestoActual
-            };
+            const presupuestoParaGuardar = { tituloTorta, nombreCliente, fecha: Timestamp.now(), costoMateriales: costoTotalCache, horasTrabajo: parseFloat(horasTrabajoInput.value) || 0, costoHora: parseFloat(costoHoraInput.value) || 0, porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0, porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0, precioVenta: parseFloat(precioVentaSugeridoSpan.textContent.replace('$', '')), ingredientes: presupuestoActual };
             await addDoc(presupuestosGuardadosCollection, presupuestoParaGuardar);
-            alert('¡Stock descontado y presupuesto guardado con éxito!');
+            await batch.commit();
 
+            alert('¡Stock descontado, movimientos registrados y presupuesto guardado!');
+            
             const precioFinalParaMensaje = precioVentaSugeridoSpan.textContent;
-            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💛.
-
-Si te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.
-
-Gracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨
-
-Desde ya,
-Dulce Sal — Horneando tus mejores momentos 🍰`;
+            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💕.\n\nSi te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.\n\nGracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨\n\nDesde ya,\nDulce Sal — Horneando tus mejores momentos 🍰`;
             
             mensajeFinalTextarea.value = mensajeGenerado;
             resultadoFinalContainer.style.display = 'block';
@@ -314,9 +267,9 @@ Dulce Sal — Horneando tus mejores momentos 🍰`;
 
     btnCopiar.addEventListener('click', () => {
         navigator.clipboard.writeText(mensajeFinalTextarea.value).then(() => {
-            copiadoFeedback.textContent = '¡Copiado al portapapeles!';
+            copiadoFeedback.textContent = '¡Copiado!';
             setTimeout(() => { copiadoFeedback.textContent = ''; }, 2000);
-        }).catch(err => { console.error('Error al copiar el texto: ', err); alert("No se pudo copiar el texto."); });
+        }).catch(err => console.error('Error al copiar: ', err));
     });
 
     [horasTrabajoInput, costoHoraInput, costosFijosPorcInput, gananciaPorcInput].forEach(input => {
