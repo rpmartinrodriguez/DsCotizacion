@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
-    Timestamp, doc, runTransaction, getDoc, writeBatch
+    Timestamp, doc, getDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupPresupuesto(app) {
@@ -8,7 +8,6 @@ export function setupPresupuesto(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
     const recetasCollection = collection(db, 'recetas');
-    const movimientosStockCollection = collection(db, 'movimientosStock');
 
     // --- Referencias al DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
@@ -120,7 +119,6 @@ export function setupPresupuesto(app) {
         let desgloseLotes = [];
         let cantidadRestante = cantidadRequerida;
         const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
-
         for (const lote of lotesOrdenados) {
             if (cantidadRestante <= 0) break;
             const cantidadAUsar = Math.min(lote.stockRestante, cantidadRestante);
@@ -128,14 +126,12 @@ export function setupPresupuesto(app) {
             desgloseLotes.push({ cantidadUsada: cantidadAUsar, costoUnitario: lote.costoUnitario, fechaLote: lote.fechaCompra });
             cantidadRestante -= cantidadAUsar;
         }
-
         if (cantidadRestante > 0 && lotesOrdenados.length > 0) {
             const ultimoLote = lotesOrdenados[lotesOrdenados.length - 1];
             const costoProyectado = cantidadRestante * ultimoLote.costoUnitario;
             costoAcumulado += costoProyectado;
             desgloseLotes.push({ cantidadUsada: cantidadRestante, costoUnitario: ultimoLote.costoUnitario, fechaLote: null, esProyectado: true });
         }
-        
         return { costo: costoAcumulado, desglose: desgloseLotes };
     };
 
@@ -210,7 +206,11 @@ export function setupPresupuesto(app) {
             tortaTituloInput.focus();
             if(!tortaTituloInput.value) tortaTituloInput.value = '';
             clienteNombreInput.value = '';
-            const closeModal = () => { modalOverlay.classList.remove('visible'); };
+            const closeModal = () => {
+                modalOverlay.classList.remove('visible');
+                modalBtnConfirmar.onclick = null;
+                modalBtnCancelar.onclick = null;
+            };
             modalBtnConfirmar.onclick = () => {
                 const titulo = tortaTituloInput.value.trim();
                 const cliente = clienteNombreInput.value.trim();
@@ -226,73 +226,36 @@ export function setupPresupuesto(app) {
         try {
             const { tituloTorta, nombreCliente } = await showTitlePrompt();
             
-            // --- LÓGICA DE TRANSACCIÓN CORREGIDA ---
-            const datosParaActualizar = [];
+            const presupuestoParaGuardar = {
+                tituloTorta,
+                nombreCliente,
+                fecha: Timestamp.now(),
+                costoMateriales: costoTotalCache,
+                horasTrabajo: parseFloat(horasTrabajoInput.value) || 0,
+                costoHora: parseFloat(costoHoraInput.value) || 0,
+                porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0,
+                porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0,
+                precioVenta: parseFloat(precioVentaSugeridoSpan.textContent.replace('$', '')),
+                ingredientes: presupuestoActual,
+                esVenta: false,
+                fechaEntrega: null
+            };
 
-            // 1. FASE DE LECTURA Y LÓGICA (fuera de la transacción de escritura)
-            for (const ingrediente of presupuestoActual) {
-                const materiaPrimaOriginal = materiasPrimasDisponibles.find(mp => mp.id === ingrediente.id);
-                if (!materiaPrimaOriginal) throw new Error(`Materia prima no encontrada: ${ingrediente.nombre}`);
+            await addDoc(presupuestosGuardadosCollection, presupuestoParaGuardar);
 
-                let data = JSON.parse(JSON.stringify(materiaPrimaOriginal)); // Copia segura
-                let cantidadADescontar = ingrediente.cantidadTotal;
-                let lotesActualizados = data.lotes.sort((a, b) => (a.fechaCompra.seconds || 0) - (b.fechaCompra.seconds || 0));
-                const stockTotal = lotesActualizados.reduce((sum, lote) => sum + lote.stockRestante, 0);
-
-                if (cantidadADescontar > stockTotal) {
-                    if (!confirm(`⚠️ Stock insuficiente para "${ingrediente.nombre}". Se usará el stock disponible (${stockTotal} ${ingrediente.unidad}) y se registrará la venta. ¿Continuar?`)) {
-                        throw new Error("Operación cancelada por el usuario.");
-                    }
-                    cantidadADescontar = stockTotal;
-                }
-
-                let restante = cantidadADescontar;
-                for (const lote of lotesActualizados) {
-                    if (restante <= 0) break;
-                    const descontar = Math.min(lote.stockRestante, restante);
-                    lote.stockRestante -= descontar;
-                    restante -= descontar;
-                }
-                lotesActualizados = lotesActualizados.filter(lote => lote.stockRestante > 0);
-                
-                datosParaActualizar.push({ id: ingrediente.id, lotes: lotesActualizados });
-            }
-
-            // 2. FASE DE ESCRITURA (Transacción + Batch)
-            const batch = writeBatch(db);
-            
-            // Escribimos los cambios en el stock
-            datosParaActualizar.forEach(d => {
-                const docRef = doc(db, 'materiasPrimas', d.id);
-                batch.update(docRef, { lotes: d.lotes });
-            });
-
-            // Escribimos el nuevo presupuesto
-            const presupuestoParaGuardar = { tituloTorta, nombreCliente, fecha: Timestamp.now(), costoMateriales: costoTotalCache, horasTrabajo: parseFloat(horasTrabajoInput.value) || 0, costoHora: parseFloat(costoHoraInput.value) || 0, porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0, porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0, precioVenta: parseFloat(precioVentaSugeridoSpan.textContent.replace('$', '')), ingredientes: presupuestoActual };
-            const nuevoPresupuestoRef = doc(collection(db, 'presupuestosGuardados'));
-            batch.set(nuevoPresupuestoRef, presupuestoParaGuardar);
-
-            // Escribimos los movimientos de stock
-            presupuestoActual.forEach(ingrediente => {
-                const nuevoMovimientoRef = doc(collection(db, 'movimientosStock'));
-                batch.set(nuevoMovimientoRef, { materiaPrimaId: ingrediente.id, materiaPrimaNombre: ingrediente.nombre, tipo: 'Venta', cantidad: -ingrediente.cantidadTotal, fecha: new Date(), descripcion: `Uso para "${tituloTorta}"` });
-            });
-            
-            // Ejecutamos todas las escrituras a la vez
-            await batch.commit();
-
-            alert('¡Stock descontado, movimientos registrados y presupuesto guardado!');
+            alert('¡Presupuesto guardado con éxito en el historial! Ahora puedes confirmarlo como venta desde allí.');
             
             const precioFinalParaMensaje = precioVentaSugeridoSpan.textContent;
-            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*.\n\nSi te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.\n\nGracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨\n\nDesde ya,\nDulce Sal — Horneando tus mejores momentos 🍰`;
+            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💛.\n\nSi te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.\n\nGracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨\n\nDesde ya,\nDulce Sal — Horneando tus mejores momentos 🍰`;
             
             mensajeFinalTextarea.value = mensajeGenerado;
             resultadoFinalContainer.style.display = 'block';
             resultadoFinalContainer.scrollIntoView({ behavior: 'smooth' });
+
         } catch (error) {
             if (error) {
                console.error("Error en la operación de finalización: ", error);
-               alert(`No se pudo completar la operación: ${error.message}`);
+               alert(`No se pudo guardar el presupuesto: ${error.message}`);
             } else {
                console.log("El usuario canceló la acción.");
             }
