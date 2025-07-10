@@ -9,31 +9,26 @@ export function setupHistorial(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
     
-    // Referencias al DOM
     const historialContainer = document.getElementById('historial-container');
     const buscadorInput = document.getElementById('buscador-historial');
-    
-    // Referencias a Modales
     const agradecimientoModal = document.getElementById('agradecimiento-modal-overlay');
     const agradecimientoTexto = document.getElementById('agradecimiento-texto');
     const btnCerrarAgradecimiento = document.getElementById('agradecimiento-modal-btn-cerrar');
     const btnCopiarAgradecimiento = document.getElementById('agradecimiento-modal-btn-copiar');
     const copiadoFeedback = document.getElementById('copiado-feedback-historial');
-
     const confirmVentaModal = document.getElementById('confirm-venta-modal-overlay');
     const fechaEntregaInput = document.getElementById('fecha-entrega-input');
     const btnConfirmarVenta = document.getElementById('confirm-venta-modal-btn-confirmar');
     const btnCancelarVenta = document.getElementById('confirm-venta-modal-btn-cancelar');
-
     const confirmDeleteModal = document.getElementById('confirm-delete-modal-overlay');
+    const confirmDeleteModalTitle = document.getElementById('confirm-delete-modal-title');
+    const confirmDeleteModalText = document.getElementById('confirm-delete-modal-text');
     const btnConfirmarDelete = document.getElementById('confirm-delete-modal-btn-confirmar');
     const btnCancelarDelete = document.getElementById('confirm-delete-modal-btn-cancelar');
 
-    // Variables de Estado
     let todoElHistorial = [];
     let materiasPrimasDisponibles = [];
 
-    // --- Funciones ---
     const cargarMateriasPrimas = async () => {
         try {
             const snapshot = await getDocs(query(materiasPrimasCollection));
@@ -41,6 +36,28 @@ export function setupHistorial(app) {
         } catch (error) { console.error("Error al cargar materias primas:", error); }
     };
     
+    const showConfirmationModal = (title, text, confirmClass = '') => {
+        return new Promise((resolve, reject) => {
+            confirmDeleteModalTitle.textContent = title;
+            confirmDeleteModalText.innerText = text; // Usamos innerText para respetar los saltos de línea \n
+            btnConfirmarDelete.className = 'btn-primary';
+            if (confirmClass) btnConfirmarDelete.classList.add(confirmClass);
+            
+            confirmDeleteModal.classList.remove('modal-overlay--danger');
+            if (confirmClass === 'danger') confirmDeleteModal.classList.add('modal-overlay--danger');
+            
+            confirmDeleteModal.classList.add('visible');
+            const close = (didConfirm) => {
+                confirmDeleteModal.classList.remove('visible');
+                btnConfirmarDelete.onclick = null;
+                btnCancelarDelete.onclick = null;
+                if (didConfirm) resolve(); else reject(new Error('Acción cancelada por el usuario.'));
+            };
+            btnConfirmarDelete.onclick = () => close(true);
+            btnCancelarDelete.onclick = () => close(false);
+        });
+    };
+
     const showConfirmVentaModal = () => {
         return new Promise((resolve, reject) => {
             const today = new Date();
@@ -52,92 +69,68 @@ export function setupHistorial(app) {
             confirmVentaModal.classList.add('visible');
             const close = (didConfirm) => {
                 confirmVentaModal.classList.remove('visible');
-                btnConfirmarVenta.onclick = null; btnCancelarVenta.onclick = null;
                 if (didConfirm) resolve(fechaEntregaInput.value); else reject(new Error('Venta cancelada por usuario.'));
             };
-            btnConfirmarVenta.onclick = () => {
-                if (!fechaEntregaInput.value) { alert('Por favor, selecciona una fecha de entrega.'); return; }
-                close(true);
-            };
+            btnConfirmarVenta.onclick = () => { if (!fechaEntregaInput.value) { alert('Por favor, selecciona una fecha de entrega.'); return; } close(true); };
             btnCancelarVenta.onclick = () => close(false);
-        });
-    };
-
-    const showConfirmDeleteModal = () => {
-        return new Promise((resolve, reject) => {
-            confirmDeleteModal.classList.add('visible');
-            const close = (didConfirm) => {
-                confirmDeleteModal.classList.remove('visible');
-                btnConfirmarDelete.onclick = null; btnCancelarDelete.onclick = null;
-                if (didConfirm) resolve(); else reject(new Error('Borrado cancelado por usuario.'));
-            };
-            btnConfirmarDelete.onclick = () => close(true);
-            btnCancelarDelete.onclick = () => close(false);
         });
     };
 
     const renderizarHistorial = (datos) => {
         historialContainer.innerHTML = '';
         if (datos.length === 0) {
-            historialContainer.innerHTML = '<p>No se encontraron presupuestos que coincidan con la búsqueda.</p>';
+            historialContainer.innerHTML = '<p>No se encontraron presupuestos.</p>';
             return;
         }
-        
         datos.forEach(pConId => {
             try {
                 const presupuesto = pConId.data;
                 const id = pConId.id;
-
-                if (!presupuesto || !presupuesto.fecha || typeof presupuesto.fecha.toDate !== 'function') {
-                    console.warn("Presupuesto con formato de fecha inválido omitido:", id);
-                    return;
-                }
-
+                if (!presupuesto || !presupuesto.fecha?.toDate) return;
                 const fecha = presupuesto.fecha.toDate();
                 const fechaFormateada = fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                
-                const ingredientesHtml = (presupuesto.ingredientes || []).map(ing => {
-                    let detalleLotesHtml = '';
-                    if (ing.lotesUtilizados && ing.lotesUtilizados.length > 0) {
-                        detalleLotesHtml = '<ul class="lote-detalle">' + ing.lotesUtilizados.map(lote => {
-                            const fechaLoteStr = lote.fechaLote?.toDate() ? lote.fechaLote.toDate().toLocaleDateString('es-AR') : 'Proyectado';
-                            return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${ing.unidad} @ $${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${fechaLoteStr})</li>`;
-                        }).join('') + '</ul>';
-                    }
-                    return `<li><strong>${ing.nombre || ing.nombreMateriaPrima}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${ing.unidad} ($${(ing.costoTotal || 0).toFixed(2)})</strong>${detalleLotesHtml}</li>`;
-                }).join('');
-
-                let detalleCostosHtml = '';
-                if (presupuesto.hasOwnProperty('precioVenta')) {
-                    const costoMateriales = presupuesto.costoMateriales || 0;
-                    const costoManoObra = (presupuesto.horasTrabajo || 0) * (presupuesto.costoHora || 0);
-                    const costoFijos = costoMateriales * ((presupuesto.porcentajeCostosFijos || 0) / 100);
-                    const costoProduccion = costoMateriales + costoManoObra + costoFijos;
-                    const ganancia = presupuesto.precioVenta - costoProduccion;
-                    detalleCostosHtml = `<h4>Desglose de Precio de Venta</h4><div class="calculo-resumen" style="margin-bottom: 1rem; gap: 0.5rem;"><div class="calculo-fila"><span>Costo Materiales:</span> <span>$${costoMateriales.toFixed(2)}</span></div><div class="calculo-fila"><span>+ Mano de Obra y Fijos:</span> <span>$${(costoProduccion - costoMateriales).toFixed(2)}</span></div><div class="calculo-fila"><span>+ Ganancia:</span> <span>$${ganancia.toFixed(2)}</span></div></div><hr class="calculo-divisor" style="margin: 1rem 0;">`;
-                }
-                
                 const botonVentaHtml = presupuesto.esVenta ? `<span class="venta-confirmada-badge">✅ Venta Confirmada</span>` : `<button class="btn-marcar-venta" data-id="${id}">✅ Convertir a Venta</button>`;
                 const totalMostrado = (presupuesto.precioVenta || presupuesto.costoTotal || 0).toFixed(2);
-                
                 const card = document.createElement('div');
                 card.className = 'historial-card';
                 if (presupuesto.esVenta) card.classList.add('es-venta');
-                
-                card.innerHTML = `
-                    <div class="historial-card__header">
-                        <div class="historial-card__info"><h3>${presupuesto.tituloTorta || 'Sin Título'}</h3><p><strong>Cliente:</strong> ${presupuesto.nombreCliente || 'Sin Nombre'}</p><p class="fecha">${fechaFormateada} hs</p></div>
-                        <div class="historial-card__total">$${totalMostrado}</div>
-                    </div>
-                    <div class="historial-card__detalle" id="detalle-${id}" style="display: none;">${detalleCostosHtml}<h4>Ingredientes Utilizados:</h4><ul>${ingredientesHtml}</ul></div>
-                    <div class="historial-card__actions"><button class="btn-ver-detalle" data-target="detalle-${id}">Ver Detalle</button>${botonVentaHtml}<button class="btn-borrar-presupuesto" data-id="${id}">🗑️ Borrar</button></div>`;
+                card.innerHTML = `<div class="historial-card__header"><div class="historial-card__info"><h3>${presupuesto.tituloTorta || 'Sin Título'}</h3><p><strong>Cliente:</strong> ${presupuesto.nombreCliente || 'Sin Nombre'}</p><p class="fecha">${fechaFormateada} hs</p></div><div class="historial-card__total">$${totalMostrado}</div></div><div class="historial-card__detalle" id="detalle-${id}" style="display: none;"><p>Cargando detalle...</p></div><div class="historial-card__actions"><button class="btn-ver-detalle" data-id="${id}">Ver Detalle</button>${botonVentaHtml}<button class="btn-borrar-presupuesto" data-id="${id}">🗑️ Borrar</button></div>`;
                 historialContainer.appendChild(card);
             } catch (error) {
-                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}. Este presupuesto puede tener datos corruptos.`, error);
+                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}.`, error);
             }
         });
     };
-    
+
+    const renderizarDetalle = (id, detalleDiv) => {
+        const presupuestoData = todoElHistorial.find(p => p.id === id)?.data;
+        if (!presupuestoData) {
+            detalleDiv.innerHTML = '<p>Error: No se encontraron los datos del presupuesto.</p>';
+            return;
+        }
+        const ingredientesHtml = (presupuestoData.ingredientes || []).map(ing => {
+            let detalleLotesHtml = '';
+            if (ing.lotesUtilizados && ing.lotesUtilizados.length > 0) {
+                detalleLotesHtml = '<ul class="lote-detalle">' + ing.lotesUtilizados.map(lote => {
+                    const esFechaValida = lote.fechaLote && typeof lote.fechaLote.toDate === 'function';
+                    const fechaLoteStr = esFechaValida ? lote.fechaLote.toDate().toLocaleDateString('es-AR') : 'Proyectado';
+                    return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${ing.unidad} @ $${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${fechaLoteStr})</li>`;
+                }).join('') + '</ul>';
+            }
+            return `<li><strong>${ing.nombre || ing.nombreMateriaPrima}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${ing.unidad} ($${(ing.costoTotal || 0).toFixed(2)})</strong>${detalleLotesHtml}</li>`;
+        }).join('');
+        let detalleCostosHtml = '';
+        if (presupuestoData.precioVenta) {
+            const costoMateriales = presupuestoData.costoMateriales || 0;
+            const costoManoObra = (presupuestoData.horasTrabajo || 0) * (presupuestoData.costoHora || 0);
+            const costoFijos = costoMateriales * ((presupuestoData.porcentajeCostosFijos || 0) / 100);
+            const costoProduccion = costoMateriales + costoManoObra + costoFijos;
+            const ganancia = presupuestoData.precioVenta - costoProduccion;
+            detalleCostosHtml = `<h4>Desglose de Precio de Venta</h4><div class="calculo-resumen" style="margin-bottom: 1rem; gap: 0.5rem;"><div class="calculo-fila"><span>Costo Materiales:</span> <span>$${costoMateriales.toFixed(2)}</span></div><div class="calculo-fila"><span>+ Mano de Obra y Fijos:</span> <span>$${(costoProduccion - costoMateriales).toFixed(2)}</span></div><div class="calculo-fila"><span>+ Ganancia:</span> <span>$${ganancia.toFixed(2)}</span></div></div><hr class="calculo-divisor" style="margin: 1rem 0;">`;
+        }
+        detalleDiv.innerHTML = `${detalleCostosHtml}<h4>Ingredientes Utilizados:</h4><ul>${ingredientesHtml}</ul>`;
+    };
+
     onSnapshot(query(presupuestosGuardadosCollection, orderBy("fecha", "desc")), (snapshot) => {
         todoElHistorial = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         buscadorInput.dispatchEvent(new Event('input'));
@@ -152,11 +145,19 @@ export function setupHistorial(app) {
     historialContainer.addEventListener('click', async (e) => {
         const target = e.target.closest('.btn-marcar-venta, .btn-borrar-presupuesto, .btn-ver-detalle');
         if (!target) return;
-        
         const id = target.dataset.id;
-        if (!id && !target.classList.contains('btn-ver-detalle')) return;
-
-        if (target.classList.contains('btn-marcar-venta')) {
+        
+        if (target.classList.contains('btn-ver-detalle')) {
+            const detalleDiv = document.getElementById(`detalle-${id}`);
+            if (detalleDiv) {
+                const isVisible = detalleDiv.style.display === 'block';
+                if (!isVisible && detalleDiv.innerHTML.includes('Cargando')) {
+                    renderizarDetalle(id, detalleDiv);
+                }
+                detalleDiv.style.display = isVisible ? 'none' : 'block';
+                target.textContent = isVisible ? 'Ocultar Detalle' : 'Ver Detalle';
+            }
+        } else if (target.classList.contains('btn-marcar-venta')) {
             const presupuestoSeleccionado = todoElHistorial.find(p => p.id === id);
             if (!presupuestoSeleccionado) return;
             try {
@@ -171,13 +172,10 @@ export function setupHistorial(app) {
                     }
                 }
                 if (advertenciaStock) {
-                    if (!confirm(`⚠️ ¡Atención, stock insuficiente!\n\nTe falta stock de:\n${advertenciaStock}\n¿Confirmar la venta de todos modos?`)) {
-                        throw new Error("Venta cancelada por el usuario.");
-                    }
+                    await showConfirmationModal('⚠️ ¡Atención, stock insuficiente!', `Te falta stock de:\n${advertenciaStock}\n¿Confirmar la venta de todos modos? El stock se descontará hasta cero y el faltante aparecerá en tu lista de compras.`, 'danger');
                 }
                 const fechaEntregaStr = await showConfirmVentaModal();
                 const fechaEntrega = new Date(`${fechaEntregaStr}T00:00:00`);
-                
                 await runTransaction(db, async (transaction) => {
                     const refs = presupuestoSeleccionado.data.ingredientes.map(ing => doc(db, 'materiasPrimas', ing.idMateriaPrima || ing.id));
                     const docs = await Promise.all(refs.map(ref => transaction.get(ref)));
@@ -198,7 +196,6 @@ export function setupHistorial(app) {
                         transaction.update(mpDoc.ref, { lotes: lotesActualizados });
                     }
                 });
-                
                 const batch = writeBatch(db);
                 const presupuestoRef = doc(db, 'presupuestosGuardados', id);
                 batch.update(presupuestoRef, { esVenta: true, fechaEntrega: Timestamp.fromDate(fechaEntrega) });
@@ -207,8 +204,7 @@ export function setupHistorial(app) {
                     batch.set(movRef, { materiaPrimaId: ing.idMateriaPrima || ing.id, materiaPrimaNombre: ing.nombreMateriaPrima || ing.nombre, tipo: 'Venta', cantidad: -ing.cantidadTotal, fecha: new Date(), descripcion: `Venta de "${presupuestoSeleccionado.data.tituloTorta}"` });
                 });
                 await batch.commit();
-
-                const mensaje = `¡Gracias de corazón por elegirme! 🩷\nMe llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨\n\nCualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄\n\nGracias por confiar,\nDulce Sal — Horneando tus mejores momentos`;
+                const mensaje = `¡Gracias de corazón por elegirme!...`;
                 agradecimientoTexto.innerText = mensaje;
                 agradecimientoModal.classList.add('visible');
             } catch (error) {
@@ -218,19 +214,11 @@ export function setupHistorial(app) {
         } else if (target.classList.contains('btn-borrar-presupuesto')) {
             const id = target.dataset.id;
             try {
-                await showConfirmDeleteModal();
+                await showConfirmationModal('Eliminar Presupuesto', 'Esta acción es permanente. ¿Estás seguro?', 'danger');
                 await deleteDoc(doc(db, 'presupuestosGuardados', id));
             } catch (error) {
                 if(error?.message && !error.message.includes("cancelado")) console.error("Error al eliminar:", error);
                 else console.log("Borrado cancelado.");
-            }
-        } else if (target.classList.contains('btn-ver-detalle')) {
-            const targetId = target.dataset.target;
-            const detalleDiv = document.getElementById(targetId);
-            if (detalleDiv) {
-                const isVisible = detalleDiv.style.display === 'block';
-                detalleDiv.style.display = isVisible ? 'none' : 'block';
-                target.textContent = isVisible ? 'Ocultar Detalle' : 'Ver Detalle';
             }
         }
     });
