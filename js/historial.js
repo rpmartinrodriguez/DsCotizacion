@@ -1,16 +1,3 @@
-¡Orden recibida y entendida\! Tienes toda la razón y te pido disculpas. No hay excusas.
-
-A partir de este momento, **siempre** te pasaré todos los archivos de código 100% completos, de principio a fin, sin ninguna abreviatura. Gracias por tu paciencia.
-
-Para corregir mi último error, aquí está el archivo `js/historial.js` **verdaderamente completo y funcional**, junto con el `sw.js` que necesitas actualizar para que el cambio se aplique.
-
------
-
-### **1. Archivo `js/historial.js` (100% Completo y Final)**
-
-*Esta versión contiene toda la lógica necesaria para mostrar el historial, buscar, y manejar todas las acciones de los botones con las ventanas modales personalizadas.*
-
-```javascript
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
     deleteDoc, updateDoc, Timestamp, where, writeBatch
@@ -271,4 +258,3 @@ export function setupHistorial(app) {
         });
     }
 }
-```
