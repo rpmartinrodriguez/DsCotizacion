@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    deleteDoc, updateDoc, Timestamp, writeBatch, runTransaction, getDocs
+    deleteDoc, updateDoc, Timestamp, writeBatch, runTransaction, getDocs, where
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupHistorial(app) {
@@ -9,24 +9,31 @@ export function setupHistorial(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
     
+    // Referencias al DOM
     const historialContainer = document.getElementById('historial-container');
     const buscadorInput = document.getElementById('buscador-historial');
+    
+    // Referencias a Modales
     const agradecimientoModal = document.getElementById('agradecimiento-modal-overlay');
     const agradecimientoTexto = document.getElementById('agradecimiento-texto');
     const btnCerrarAgradecimiento = document.getElementById('agradecimiento-modal-btn-cerrar');
     const btnCopiarAgradecimiento = document.getElementById('agradecimiento-modal-btn-copiar');
     const copiadoFeedback = document.getElementById('copiado-feedback-historial');
+
     const confirmVentaModal = document.getElementById('confirm-venta-modal-overlay');
     const fechaEntregaInput = document.getElementById('fecha-entrega-input');
     const btnConfirmarVenta = document.getElementById('confirm-venta-modal-btn-confirmar');
     const btnCancelarVenta = document.getElementById('confirm-venta-modal-btn-cancelar');
+
     const confirmDeleteModal = document.getElementById('confirm-delete-modal-overlay');
     const btnConfirmarDelete = document.getElementById('confirm-delete-modal-btn-confirmar');
     const btnCancelarDelete = document.getElementById('confirm-delete-modal-btn-cancelar');
 
+    // Variables de Estado
     let todoElHistorial = [];
     let materiasPrimasDisponibles = [];
 
+    // --- Funciones ---
     const cargarMateriasPrimas = async () => {
         try {
             const snapshot = await getDocs(query(materiasPrimasCollection));
@@ -72,7 +79,7 @@ export function setupHistorial(app) {
     const renderizarHistorial = (datos) => {
         historialContainer.innerHTML = '';
         if (datos.length === 0) {
-            historialContainer.innerHTML = '<p>No se encontraron presupuestos.</p>';
+            historialContainer.innerHTML = '<p>No se encontraron presupuestos que coincidan con la búsqueda.</p>';
             return;
         }
         
@@ -82,7 +89,7 @@ export function setupHistorial(app) {
                 const id = pConId.id;
 
                 if (!presupuesto || !presupuesto.fecha || typeof presupuesto.fecha.toDate !== 'function') {
-                    console.warn("Presupuesto omitido por formato de fecha inválido:", id);
+                    console.warn("Presupuesto con formato de fecha inválido omitido:", id);
                     return;
                 }
 
@@ -93,9 +100,7 @@ export function setupHistorial(app) {
                     let detalleLotesHtml = '';
                     if (ing.lotesUtilizados && ing.lotesUtilizados.length > 0) {
                         detalleLotesHtml = '<ul class="lote-detalle">' + ing.lotesUtilizados.map(lote => {
-                            // --- CORRECCIÓN FINAL AQUÍ ---
-                            const esFechaValida = lote.fechaLote && typeof lote.fechaLote.toDate === 'function';
-                            const fechaLoteStr = esFechaValida ? lote.fechaLote.toDate().toLocaleDateString('es-AR') : 'Proyectado';
+                            const fechaLoteStr = lote.fechaLote?.toDate() ? lote.fechaLote.toDate().toLocaleDateString('es-AR') : 'Proyectado';
                             return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${ing.unidad} @ $${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${fechaLoteStr})</li>`;
                         }).join('') + '</ul>';
                     }
@@ -103,7 +108,7 @@ export function setupHistorial(app) {
                 }).join('');
 
                 let detalleCostosHtml = '';
-                if (presupuesto.precioVenta) {
+                if (presupuesto.hasOwnProperty('precioVenta')) {
                     const costoMateriales = presupuesto.costoMateriales || 0;
                     const costoManoObra = (presupuesto.horasTrabajo || 0) * (presupuesto.costoHora || 0);
                     const costoFijos = costoMateriales * ((presupuesto.porcentajeCostosFijos || 0) / 100);
@@ -128,7 +133,7 @@ export function setupHistorial(app) {
                     <div class="historial-card__actions"><button class="btn-ver-detalle" data-target="detalle-${id}">Ver Detalle</button>${botonVentaHtml}<button class="btn-borrar-presupuesto" data-id="${id}">🗑️ Borrar</button></div>`;
                 historialContainer.appendChild(card);
             } catch (error) {
-                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}.`, error);
+                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}. Este presupuesto puede tener datos corruptos.`, error);
             }
         });
     };
@@ -147,8 +152,10 @@ export function setupHistorial(app) {
     historialContainer.addEventListener('click', async (e) => {
         const target = e.target.closest('.btn-marcar-venta, .btn-borrar-presupuesto, .btn-ver-detalle');
         if (!target) return;
-        const id = target.dataset.id;
         
+        const id = target.dataset.id;
+        if (!id && !target.classList.contains('btn-ver-detalle')) return;
+
         if (target.classList.contains('btn-marcar-venta')) {
             const presupuestoSeleccionado = todoElHistorial.find(p => p.id === id);
             if (!presupuestoSeleccionado) return;
@@ -159,11 +166,10 @@ export function setupHistorial(app) {
                     if (materiaPrima) {
                         const stockTotal = (materiaPrima.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
                         if (stockTotal < ing.cantidadTotal) {
-                            // Usamos el nombre correcto del ingrediente
                             advertenciaStock += `- ${ing.nombre || ing.nombreMateriaPrima}\n`;
                         }
                     }
-                }               
+                }
                 if (advertenciaStock) {
                     if (!confirm(`⚠️ ¡Atención, stock insuficiente!\n\nTe falta stock de:\n${advertenciaStock}\n¿Confirmar la venta de todos modos?`)) {
                         throw new Error("Venta cancelada por el usuario.");
@@ -171,7 +177,7 @@ export function setupHistorial(app) {
                 }
                 const fechaEntregaStr = await showConfirmVentaModal();
                 const fechaEntrega = new Date(`${fechaEntregaStr}T00:00:00`);
-
+                
                 await runTransaction(db, async (transaction) => {
                     const refs = presupuestoSeleccionado.data.ingredientes.map(ing => doc(db, 'materiasPrimas', ing.idMateriaPrima || ing.id));
                     const docs = await Promise.all(refs.map(ref => transaction.get(ref)));
@@ -202,12 +208,7 @@ export function setupHistorial(app) {
                 });
                 await batch.commit();
 
-                const mensaje = `¡Gracias de corazón por elegirme!  🩷Me llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨
-
-Cualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄
-
-Gracias por confiar,
-Dulce Sal — Horneando tus mejores momentos`;
+                const mensaje = `¡Gracias de corazón por elegirme! 🩷\nMe llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨\n\nCualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄\n\nGracias por confiar,\nDulce Sal — Horneando tus mejores momentos`;
                 agradecimientoTexto.innerText = mensaje;
                 agradecimientoModal.classList.add('visible');
             } catch (error) {
@@ -215,6 +216,7 @@ Dulce Sal — Horneando tus mejores momentos`;
                 else { console.log("Acción cancelada."); }
             }
         } else if (target.classList.contains('btn-borrar-presupuesto')) {
+            const id = target.dataset.id;
             try {
                 await showConfirmDeleteModal();
                 await deleteDoc(doc(db, 'presupuestosGuardados', id));
