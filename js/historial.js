@@ -154,15 +154,16 @@ export function setupHistorial(app) {
             if (!presupuestoSeleccionado) return;
             try {
                 let advertenciaStock = "";
-                for (const ingrediente of presupuestoSeleccionado.data.ingredientes) {
-                    const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === (ingrediente.idMateriaPrima || ing.id));
+                for (const ing of presupuestoSeleccionado.data.ingredientes) {
+                    const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === (ing.idMateriaPrima || ing.id));
                     if (materiaPrima) {
                         const stockTotal = (materiaPrima.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
-                        if (stockTotal < ingrediente.cantidadTotal) {
-                            advertenciaStock += `- ${ingrediente.nombre || ingrediente.nombreMateriaPrima}\n`;
+                        if (stockTotal < ing.cantidadTotal) {
+                            // Usamos el nombre correcto del ingrediente
+                            advertenciaStock += `- ${ing.nombre || ing.nombreMateriaPrima}\n`;
                         }
                     }
-                }
+                }               
                 if (advertenciaStock) {
                     if (!confirm(`⚠️ ¡Atención, stock insuficiente!\n\nTe falta stock de:\n${advertenciaStock}\n¿Confirmar la venta de todos modos?`)) {
                         throw new Error("Venta cancelada por el usuario.");
