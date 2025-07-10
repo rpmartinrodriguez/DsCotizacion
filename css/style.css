@@ -1385,3 +1385,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     color: var(--danger-color);
 }
 
+.warning-icon {
+    margin-left: 0.5rem;
+    cursor: help;
+}
