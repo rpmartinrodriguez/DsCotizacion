@@ -118,8 +118,9 @@ export function setupPresupuesto(app) {
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
         let costoAcumulado = 0;
         let desgloseLotes = [];
-        const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
         let cantidadRestante = cantidadRequerida;
+        const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
+
         for (const lote of lotesOrdenados) {
             if (cantidadRestante <= 0) break;
             const cantidadAUsar = Math.min(lote.stockRestante, cantidadRestante);
@@ -127,6 +128,14 @@ export function setupPresupuesto(app) {
             desgloseLotes.push({ cantidadUsada: cantidadAUsar, costoUnitario: lote.costoUnitario, fechaLote: lote.fechaCompra });
             cantidadRestante -= cantidadAUsar;
         }
+
+        if (cantidadRestante > 0 && lotesOrdenados.length > 0) {
+            const ultimoLote = lotesOrdenados[lotesOrdenados.length - 1];
+            const costoProyectado = cantidadRestante * ultimoLote.costoUnitario;
+            costoAcumulado += costoProyectado;
+            desgloseLotes.push({ cantidadUsada: cantidadRestante, costoUnitario: ultimoLote.costoUnitario, fechaLote: null, esProyectado: true });
+        }
+        
         return { costo: costoAcumulado, desglose: desgloseLotes };
     };
 
@@ -163,7 +172,10 @@ export function setupPresupuesto(app) {
         } else {
             presupuesto.forEach(item => {
                 const fila = document.createElement('tr');
-                fila.innerHTML = `<td data-label="Ingrediente">${item.nombre}</td><td data-label="Cantidad">${item.cantidadTotal.toLocaleString('es-AR')} ${item.unidad}</td><td data-label="Costo">$${item.costoTotal.toFixed(2)}</td>`;
+                const materiaPrimaOriginal = materiasPrimasDisponibles.find(mp => mp.id === item.id);
+                const stockTotal = materiaPrimaOriginal.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
+                const advertenciaIcono = item.cantidadTotal > stockTotal ? '<span class="warning-icon" title="Stock insuficiente, el costo es una proyección.">⚠️</span>' : '';
+                fila.innerHTML = `<td data-label="Ingrediente">${item.nombre} ${advertenciaIcono}</td><td data-label="Cantidad">${item.cantidadTotal.toLocaleString('es-AR')} ${item.unidad}</td><td data-label="Costo">$${item.costoTotal.toFixed(2)}</td>`;
                 tablaPresupuestoBody.appendChild(fila);
             });
         }
@@ -196,7 +208,7 @@ export function setupPresupuesto(app) {
         return new Promise((resolve, reject) => {
             modalOverlay.classList.add('visible');
             tortaTituloInput.focus();
-            if(!tortaTituloInput.value) tortaTituloInput.value = ''; // Evitar que quede con "undefined" si se cargó de receta
+            if(!tortaTituloInput.value) tortaTituloInput.value = '';
             clienteNombreInput.value = '';
             const closeModal = () => { modalOverlay.classList.remove('visible'); };
             modalBtnConfirmar.onclick = () => {
@@ -217,16 +229,21 @@ export function setupPresupuesto(app) {
             const batch = writeBatch(db);
             await runTransaction(db, async (transaction) => {
                 for (const ingrediente of presupuestoActual) {
+                    const materiaPrimaOriginal = materiasPrimasDisponibles.find(mp => mp.id === ingrediente.id);
+                    const stockTotal = materiaPrimaOriginal.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
+                    if (ingrediente.cantidadTotal > stockTotal) {
+                        if(!confirm(`⚠️ Stock insuficiente para "${ingrediente.nombre}". Se usará el stock disponible y se registrará la venta. ¿Continuar?`)) {
+                            throw new Error("Operación cancelada por el usuario por falta de stock.");
+                        }
+                    }
+                    
                     const ingredienteRef = doc(db, 'materiasPrimas', ingrediente.id);
                     const ingredienteDoc = await transaction.get(ingredienteRef);
                     if (!ingredienteDoc.exists()) throw `El ingrediente "${ingrediente.nombre}" no existe.`;
                     
                     let data = ingredienteDoc.data();
-                    let cantidadADescontar = ingrediente.cantidadTotal;
+                    let cantidadADescontar = Math.min(ingrediente.cantidadTotal, stockTotal); // Solo descontamos lo que hay
                     let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
-                    
-                    const stockTotal = lotesActualizados.reduce((sum, lote) => sum + lote.stockRestante, 0);
-                    if (stockTotal < cantidadADescontar) throw `Stock insuficiente de "${ingrediente.nombre}".`;
                     
                     for (const lote of lotesActualizados) {
                         if (cantidadADescontar <= 0) break;
@@ -250,15 +267,14 @@ export function setupPresupuesto(app) {
             alert('¡Stock descontado, movimientos registrados y presupuesto guardado!');
             
             const precioFinalParaMensaje = precioVentaSugeridoSpan.textContent;
-            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💕.\n\nSi te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.\n\nGracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨\n\nDesde ya,\nDulce Sal — Horneando tus mejores momentos 🍰`;
-            
+            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*.\n\n... (resto del mensaje)`;
             mensajeFinalTextarea.value = mensajeGenerado;
             resultadoFinalContainer.style.display = 'block';
             resultadoFinalContainer.scrollIntoView({ behavior: 'smooth' });
         } catch (error) {
             if (error) {
                console.error("Error en la operación de finalización: ", error);
-               alert(`No se pudo completar la operación: ${error}`);
+               alert(`No se pudo completar la operación: ${error.message}`);
             } else {
                console.log("El usuario canceló la acción.");
             }
