@@ -1,109 +1,108 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historial de Presupuestos</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <meta name="theme-color" content="#ff96c5">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historial de Presupuestos</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <meta name="theme-color" content="#ff96c5">
 </head>
-
 <body>
-    <div class="main-container">
-        <header class="header">
-            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span><span></span><span></span>
-            </button>
-            <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
-            </a>
-            <div class="header__spacer"></div>
-        </header>
-        <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
-            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-        </nav>
-        <div class="nav-menu__overlay" id="nav-overlay"></div>
+    <div class="main-container">
+        <header class="header">
+            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="header__logo-link">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+            </a>
+            <div class="header__spacer"></div>
+        </header>
 
-        <main>
-            <section class="card">
-                <h2 class="card__title">Presupuestos Guardados</h2>
-                <div class="buscador-container">
-                    <input type="search" id="buscador-historial" placeholder="🔍 Buscar por Torta o Cliente...">
-                </div>
-                <div id="historial-container">
-                    <p>Cargando historial...</p>
-                </div>
-            </section>
-        </main>
-    </div>
-    <div id="agradecimiento-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title">¡Venta Confirmada!</h2>
-            <pre id="agradecimiento-texto" class="mensaje-agradecimiento"></pre>
-            <div class="modal-actions">
-                <button id="agradecimiento-modal-btn-copiar" class="btn-secondary">Copiar Mensaje</button>
-                <button id="agradecimiento-modal-btn-cerrar" class="btn-primary">Cerrar</button>
-            </div>
-            <span id="copiado-feedback-historial" class="copiado-feedback-modal"></span>
-        </div>
-    </div>
-
-    <div id="confirm-venta-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title">Confirmar Venta y Agendar Entrega</h2>
-            <p>Este presupuesto se marcará como una venta. Por favor, asigna una fecha de entrega.</p>
-            <div class="form-group">
-                <label for="fecha-entrega-input">Fecha de Entrega</label>
-                <input type="date" id="fecha-entrega-input" required>
-            </div>
-            <div class="modal-actions">
-                <button id="confirm-venta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="confirm-venta-modal-btn-confirmar" class="btn-primary">Confirmar Venta</button>
-            </div>
-        </div>
-    </div>
-
-
-
-    <div id="confirm-delete-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title">Confirmar Eliminación</h2>
-            <p>Esta acción es permanente. ¿Estás seguro de que quieres eliminar este registro?</p>
-            <div class="modal-actions">
-                <button id="confirm-delete-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="confirm-delete-modal-btn-confirmar" class="btn-primary danger">Eliminar</button>
+        <nav class="nav-menu" id="nav-menu">
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Dulce App</span>
             </div>
-        </div>
-    </div>
+            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
+            <a href="historial.html" class="nav-menu__link active">📚 Historial</a>
+            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+        </nav>
+        <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { setupHistorial } from './js/historial.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupHistorial(app);
-        } catch (error) { console.error(error); }
-    </script>
-    <script src="js/menu.js" defer></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
-        }
-    </script>
+        <main>
+            <section class="card">
+                <h2 class="card__title">Presupuestos Guardados</h2>
+                <div class="buscador-container">
+                    <input type="search" id="buscador-historial" placeholder="🔍 Buscar por Torta o Cliente...">
+                </div>
+                <div id="historial-container">
+                    <p>Cargando historial...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <div id="agradecimiento-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">¡Venta Confirmada!</h2>
+            <pre id="agradecimiento-texto" class="mensaje-agradecimiento"></pre>
+            <div class="modal-actions">
+                <button id="agradecimiento-modal-btn-copiar" class="btn-secondary">Copiar Mensaje</button>
+                <button id="agradecimiento-modal-btn-cerrar" class="btn-primary">Cerrar</button>
+            </div>
+            <span id="copiado-feedback-historial" class="copiado-feedback-modal"></span>
+        </div>
+    </div>
+
+    <div id="confirm-venta-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">Confirmar Venta y Agendar Entrega</h2>
+            <p>Este presupuesto se marcará como una venta. Por favor, asigna una fecha de entrega.</p>
+            <div class="form-group">
+                <label for="fecha-entrega-input">Fecha de Entrega</label>
+                <input type="date" id="fecha-entrega-input" required>
+            </div>
+            <div class="modal-actions">
+                <button id="confirm-venta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="confirm-venta-modal-btn-confirmar" class="btn-primary">Confirmar Venta</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-delete-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">Confirmar Eliminación</h2>
+            <p>Esta acción es permanente. ¿Estás seguro de que quieres eliminar este registro?</p>
+            <div class="modal-actions">
+                <button id="confirm-delete-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="confirm-delete-modal-btn-confirmar" class="btn-primary danger">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupHistorial } from './js/historial.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupHistorial(app);
+        } catch (error) { console.error(error); }
+    </script>
+    <script src="js/menu.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+        }
+    </script>
 </body>
 </html>
