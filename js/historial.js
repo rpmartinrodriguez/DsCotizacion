@@ -202,7 +202,12 @@ export function setupHistorial(app) {
                 });
                 await batch.commit();
 
-                const mensaje = `¡Gracias de corazón por elegirme! 🩷\nMe llena de alegría saber que voy a ser parte de un momento tan especial...`;
+                const mensaje = `¡Gracias de corazón por elegirme!  🩷Me llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨
+
+Cualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄
+
+Gracias por confiar,
+Dulce Sal — Horneando tus mejores momentos`;
                 agradecimientoTexto.innerText = mensaje;
                 agradecimientoModal.classList.add('visible');
             } catch (error) {
