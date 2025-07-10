@@ -1389,3 +1389,12 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-left: 0.5rem;
     cursor: help;
 }
+
+/* Estilos para Modales de Advertencia/Peligro */
+.modal-overlay--danger .modal-content {
+    border-left: 5px solid var(--danger-color);
+}
+
+.modal-overlay--danger .card__title {
+    color: var(--danger-color);
+}
