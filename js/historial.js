@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    deleteDoc, updateDoc, Timestamp, where, writeBatch
+    deleteDoc, updateDoc, Timestamp, writeBatch, getDocs
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupHistorial(app) {
@@ -9,7 +9,7 @@ export function setupHistorial(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
     
-    // Referencias al DOM
+    // --- Referencias al DOM ---
     const historialContainer = document.getElementById('historial-container');
     const buscadorInput = document.getElementById('buscador-historial');
     
@@ -29,8 +29,10 @@ export function setupHistorial(app) {
     const btnConfirmarDelete = document.getElementById('confirm-delete-modal-btn-confirmar');
     const btnCancelarDelete = document.getElementById('confirm-delete-modal-btn-cancelar');
 
+    // --- Variables de Estado ---
     let todoElHistorial = [];
-
+    
+    // --- Funciones para manejar las modales ---
     const showConfirmVentaModal = () => {
         return new Promise((resolve, reject) => {
             const today = new Date();
@@ -39,6 +41,7 @@ export function setupHistorial(app) {
             const dd = String(today.getDate()).padStart(2, '0');
             fechaEntregaInput.min = `${yyyy}-${mm}-${dd}`;
             fechaEntregaInput.value = `${yyyy}-${mm}-${dd}`;
+
             confirmVentaModal.classList.add('visible');
             const close = (didConfirm) => {
                 confirmVentaModal.classList.remove('visible');
@@ -68,10 +71,11 @@ export function setupHistorial(app) {
         });
     };
 
+    // --- Función de Renderizado Principal ---
     const renderizarHistorial = (datos) => {
         historialContainer.innerHTML = '';
         if (datos.length === 0) {
-            historialContainer.innerHTML = '<p>No se encontraron presupuestos que coincidan con la búsqueda.</p>';
+            historialContainer.innerHTML = '<p>No se encontraron presupuestos.</p>';
             return;
         }
         
@@ -80,8 +84,8 @@ export function setupHistorial(app) {
                 const presupuesto = pConId.data;
                 const id = pConId.id;
 
-                if (!presupuesto || !presupuesto.fecha || !presupuesto.fecha.toDate) {
-                    console.warn("Presupuesto con formato de fecha inválido omitido:", id);
+                if (!presupuesto || !presupuesto.fecha || typeof presupuesto.fecha.toDate !== 'function') {
+                    console.warn("Presupuesto con formato inválido omitido:", id);
                     return;
                 }
 
@@ -138,11 +142,12 @@ export function setupHistorial(app) {
                 `;
                 historialContainer.appendChild(card);
             } catch (error) {
-                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}.`, error);
+                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}. Este presupuesto puede tener datos corruptos.`, error);
             }
         });
     };
     
+    // --- Listeners de Firebase y Eventos de la Página ---
     onSnapshot(query(presupuestosGuardadosCollection, orderBy("fecha", "desc")), (snapshot) => {
         todoElHistorial = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         buscadorInput.dispatchEvent(new Event('input'));
@@ -152,9 +157,7 @@ export function setupHistorial(app) {
         const termino = e.target.value.toLowerCase();
         const filtrados = todoElHistorial.filter(p => {
             const data = p.data;
-            const titulo = data.tituloTorta || '';
-            const cliente = data.nombreCliente || '';
-            return titulo.toLowerCase().includes(termino) || cliente.toLowerCase().includes(termino);
+            return (data.tituloTorta || '').toLowerCase().includes(termino) || (data.nombreCliente || '').toLowerCase().includes(termino);
         });
         renderizarHistorial(filtrados);
     });
@@ -175,6 +178,7 @@ export function setupHistorial(app) {
                 await runTransaction(db, async (transaction) => {
                     const refsMateriasPrimas = presupuestoSeleccionado.data.ingredientes.map(ing => doc(db, 'materiasPrimas', ing.idMateriaPrima || ing.id));
                     const docsMateriasPrimas = await Promise.all(refsMateriasPrimas.map(ref => transaction.get(ref)));
+
                     for (let i = 0; i < docsMateriasPrimas.length; i++) {
                         const mpDoc = docsMateriasPrimas[i];
                         const ingrediente = presupuestoSeleccionado.data.ingredientes[i];
@@ -184,6 +188,7 @@ export function setupHistorial(app) {
                             throw new Error(`¡Stock insuficiente de "${ingrediente.nombre}" para confirmar esta venta!`);
                         }
                     }
+                    
                     for (let i = 0; i < docsMateriasPrimas.length; i++) {
                         const mpDoc = docsMateriasPrimas[i];
                         const ingrediente = presupuestoSeleccionado.data.ingredientes[i];
@@ -204,6 +209,7 @@ export function setupHistorial(app) {
                 const batch = writeBatch(db);
                 const presupuestoRef = doc(db, 'presupuestosGuardados', id);
                 batch.update(presupuestoRef, { esVenta: true, fechaEntrega: Timestamp.fromDate(fechaEntrega) });
+                
                 presupuestoSeleccionado.data.ingredientes.forEach(ing => {
                     const nuevoMovimientoRef = doc(collection(db, 'movimientosStock'));
                     batch.set(nuevoMovimientoRef, {
@@ -221,12 +227,8 @@ export function setupHistorial(app) {
                 agradecimientoTexto.innerText = mensaje;
                 agradecimientoModal.classList.add('visible');
             } catch (error) {
-                if (error) {
-                    console.error("Error al confirmar la venta:", error);
-                    alert(`No se pudo completar la venta: ${error.message}`);
-                } else {
-                    console.log("Acción cancelada.");
-                }
+                if (error) { console.error("Error al confirmar la venta:", error); alert(`No se pudo completar la venta: ${error.message}`); } 
+                else { console.log("Acción cancelada."); }
             }
         } else if (target.classList.contains('btn-borrar-presupuesto')) {
             const id = target.dataset.id;
@@ -243,7 +245,7 @@ export function setupHistorial(app) {
             if (detalleDiv) {
                 const isVisible = detalleDiv.style.display === 'block';
                 detalleDiv.style.display = isVisible ? 'none' : 'block';
-                target.textContent = isVisible ? 'Ver Detalle' : 'Ocultar Detalle';
+                target.textContent = isVisible ? 'Ocultar Detalle' : 'Ver Detalle';
             }
         }
     });
