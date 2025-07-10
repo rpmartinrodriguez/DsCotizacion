@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    deleteDoc, updateDoc, Timestamp, writeBatch, runTransaction, getDocs
+    deleteDoc, updateDoc, Timestamp, writeBatch, runTransaction, getDocs, where
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupHistorial(app) {
@@ -42,7 +42,7 @@ export function setupHistorial(app) {
             console.error("Error al cargar materias primas:", error);
         }
     };
-    
+
     const showConfirmVentaModal = () => {
         return new Promise((resolve, reject) => {
             const today = new Date();
@@ -51,7 +51,6 @@ export function setupHistorial(app) {
             const dd = String(today.getDate()).padStart(2, '0');
             fechaEntregaInput.min = `${yyyy}-${mm}-${dd}`;
             fechaEntregaInput.value = `${yyyy}-${mm}-${dd}`;
-
             confirmVentaModal.classList.add('visible');
             const close = (didConfirm) => {
                 confirmVentaModal.classList.remove('visible');
@@ -84,7 +83,7 @@ export function setupHistorial(app) {
     const renderizarHistorial = (datos) => {
         historialContainer.innerHTML = '';
         if (datos.length === 0) {
-            historialContainer.innerHTML = '<p>No se encontraron presupuestos.</p>';
+            historialContainer.innerHTML = '<p>No se encontraron presupuestos que coincidan con la búsqueda.</p>';
             return;
         }
         
@@ -94,7 +93,7 @@ export function setupHistorial(app) {
                 const id = pConId.id;
 
                 if (!presupuesto || !presupuesto.fecha || typeof presupuesto.fecha.toDate !== 'function') {
-                    console.warn("Presupuesto omitido por formato de fecha inválido:", id);
+                    console.warn("Presupuesto con formato de fecha inválido omitido:", id);
                     return;
                 }
 
@@ -113,7 +112,7 @@ export function setupHistorial(app) {
                 }).join('');
 
                 let detalleCostosHtml = '';
-                if (presupuesto.hasOwnProperty('precioVenta')) {
+                if (presupuesto.precioVenta) {
                     const costoMateriales = presupuesto.costoMateriales || 0;
                     const costoManoObra = (presupuesto.horasTrabajo || 0) * (presupuesto.costoHora || 0);
                     const costoFijos = costoMateriales * ((presupuesto.porcentajeCostosFijos || 0) / 100);
@@ -186,16 +185,17 @@ export function setupHistorial(app) {
                     if (materiaPrima) {
                         const stockTotal = (materiaPrima.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
                         if (stockTotal < ingrediente.cantidadTotal) {
-                            advertenciaStock += `- ${ingrediente.nombre}\n`;
+                            advertenciaStock += `- ${ingrediente.nombre || ingrediente.nombreMateriaPrima}\n`;
                         }
                     }
                 }
+
                 if (advertenciaStock) {
                     if (!confirm(`⚠️ ¡Atención, stock insuficiente!\n\nTe falta stock de:\n${advertenciaStock}\n¿Confirmar la venta de todos modos?`)) {
                         throw new Error("Venta cancelada por el usuario.");
                     }
                 }
-
+                
                 const fechaEntregaStr = await showConfirmVentaModal();
                 const fechaEntrega = new Date(`${fechaEntregaStr}T00:00:00`);
 
@@ -207,9 +207,11 @@ export function setupHistorial(app) {
                         const mpDoc = docs[i];
                         const ingrediente = presupuestoSeleccionado.data.ingredientes[i];
                         if (!mpDoc.exists()) throw new Error(`El ingrediente "${ingrediente.nombre}" ya no existe.`);
+                        
                         let data = mpDoc.data();
                         let cantidadADescontar = ingrediente.cantidadTotal;
-                        let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
+                        let lotesActualizados = data.lotes.sort((a, b) => (a.fechaCompra.seconds || 0) - (b.fechaCompra.seconds || 0));
+                        
                         for (const lote of lotesActualizados) {
                             if (cantidadADescontar <= 0) break;
                             const descontar = Math.min(lote.stockRestante, cantidadADescontar);
@@ -227,7 +229,14 @@ export function setupHistorial(app) {
                 
                 presupuestoSeleccionado.data.ingredientes.forEach(ing => {
                     const movRef = doc(collection(db, 'movimientosStock'));
-                    batch.set(movRef, { materiaPrimaId: ing.idMateriaPrima || ing.id, materiaPrimaNombre: ing.nombreMateriaPrima || ing.nombre, tipo: 'Venta', cantidad: -ing.cantidadTotal, fecha: new Date(), descripcion: `Venta de "${presupuestoSeleccionado.data.tituloTorta}"` });
+                    batch.set(movRef, {
+                        materiaPrimaId: ing.idMateriaPrima || ing.id,
+                        materiaPrimaNombre: ing.nombreMateriaPrima || ing.nombre,
+                        tipo: 'Venta',
+                        cantidad: -ing.cantidadTotal,
+                        fecha: new Date(),
+                        descripcion: `Venta de "${presupuestoSeleccionado.data.tituloTorta}"`
+                    });
                 });
                 await batch.commit();
 
@@ -236,8 +245,13 @@ export function setupHistorial(app) {
                 agradecimientoModal.classList.add('visible');
 
             } catch (error) {
-                if (error?.message) { alert(`No se pudo completar la venta: ${error.message}`); } 
-                else { console.log("Acción cancelada."); }
+                if (error && error.message) { 
+                    if (!error.message.includes("cancelada")) {
+                        alert(`No se pudo completar la venta: ${error.message}`);
+                    } else {
+                        console.log(error.message);
+                    }
+                }
             }
         } else if (target.classList.contains('btn-borrar-presupuesto')) {
             const id = target.dataset.id;
@@ -245,7 +259,7 @@ export function setupHistorial(app) {
                 await showConfirmDeleteModal();
                 await deleteDoc(doc(db, 'presupuestosGuardados', id));
             } catch (error) {
-                if(error?.message) console.error("Error al eliminar:", error);
+                if(error && error.message && !error.message.includes("cancelado")) console.error("Error al eliminar:", error);
                 else console.log("Borrado cancelado.");
             }
         } else if (target.classList.contains('btn-ver-detalle')) {
@@ -259,7 +273,9 @@ export function setupHistorial(app) {
         }
     });
 
-    if (btnCerrarAgradecimiento) btnCerrarAgradecimiento.addEventListener('click', () => agradecimientoModal.classList.remove('visible'));
+    if (btnCerrarAgradecimiento) {
+        btnCerrarAgradecimiento.addEventListener('click', () => agradecimientoModal.classList.remove('visible'));
+    }
     if (btnCopiarAgradecimiento) {
         btnCopiarAgradecimiento.addEventListener('click', () => {
             navigator.clipboard.writeText(agradecimientoTexto.innerText).then(() => {
@@ -269,5 +285,6 @@ export function setupHistorial(app) {
         });
     }
     
+    // Carga inicial
     cargarMateriasPrimas();
 }
