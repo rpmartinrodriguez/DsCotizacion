@@ -80,11 +80,11 @@
 
     <div id="confirm-delete-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title">Confirmar Eliminación</h2>
-            <p>Esta acción es permanente. ¿Estás seguro de que quieres eliminar este registro?</p>
+            <h2 class="card__title" id="confirm-delete-modal-title">Confirmar Acción</h2>
+            <p id="confirm-delete-modal-text">¿Estás seguro?</p>
             <div class="modal-actions">
                 <button id="confirm-delete-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="confirm-delete-modal-btn-confirmar" class="btn-primary danger">Eliminar</button>
+                <button id="confirm-delete-modal-btn-confirmar" class="btn-primary">Confirmar</button>
             </div>
         </div>
     </div>
@@ -93,10 +93,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupHistorial } from './js/historial.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupHistorial(app);
-        } catch (error) { console.error(error); }
+        try { const app = initializeApp(firebaseConfig); setupHistorial(app); } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
     <script>
