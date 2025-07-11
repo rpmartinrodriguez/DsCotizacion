@@ -11,6 +11,12 @@ export function setupAgenda(app) {
     const prevMonthBtn = document.getElementById('prev-month-btn');
     const nextMonthBtn = document.getElementById('next-month-btn');
 
+    // Referencias a la nueva modal
+    const diaModal = document.getElementById('agenda-dia-modal');
+    const modalTitle = document.getElementById('agenda-modal-title');
+    const modalLista = document.getElementById('agenda-modal-lista');
+    const modalBtnCerrar = document.getElementById('agenda-modal-btn-cerrar');
+
     let currentDate = new Date();
     let entregas = [];
 
@@ -19,24 +25,20 @@ export function setupAgenda(app) {
     const renderCalendar = () => {
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-
         monthYearDisplay.textContent = `${meses[month]} ${year}`;
         
-        // Limpiamos solo las celdas de los días, no los encabezados de la semana
         const celdasViejas = calendarioGrid.querySelectorAll('.calendario-dia');
         celdasViejas.forEach(celda => celda.remove());
 
-        const primerDiaDelMes = new Date(year, month, 1).getDay(); // 0=Domingo, 1=Lunes...
+        const primerDiaDelMes = new Date(year, month, 1).getDay();
         const diasEnElMes = new Date(year, month + 1, 0).getDate();
 
-        // Creamos las celdas vacías para alinear el primer día del mes
         for (let i = 0; i < primerDiaDelMes; i++) {
             const celdaVacia = document.createElement('div');
             celdaVacia.className = 'calendario-dia vacia';
             calendarioGrid.appendChild(celdaVacia);
         }
 
-        // Creamos las celdas para cada día del mes
         for (let i = 1; i <= diasEnElMes; i++) {
             const celdaDia = document.createElement('div');
             celdaDia.className = 'calendario-dia';
@@ -45,13 +47,11 @@ export function setupAgenda(app) {
             numeroDia.textContent = i;
             celdaDia.appendChild(numeroDia);
 
-            // Resaltar el día de hoy
             const hoy = new Date();
             if (i === hoy.getDate() && month === hoy.getMonth() && year === hoy.getFullYear()) {
                 celdaDia.classList.add('hoy');
             }
 
-            // Buscamos si hay entregas para este día
             const fechaCelda = new Date(year, month, i);
             const entregasDelDia = entregas.filter(entrega => {
                 const fechaEntrega = entrega.data.fechaEntrega.toDate();
@@ -60,23 +60,62 @@ export function setupAgenda(app) {
                        fechaEntrega.getDate() === fechaCelda.getDate();
             });
 
-            // Si hay entregas, las mostramos
             if (entregasDelDia.length > 0) {
+                celdaDia.classList.add('con-eventos'); // Clase para hacerla clicable
+                celdaDia.dataset.date = `${year}-${month + 1}-${i}`; // Guardamos la fecha
+
                 const listaEntregas = document.createElement('ul');
                 listaEntregas.className = 'lista-entregas';
-                entregasDelDia.forEach(entrega => {
+                entregasDelDia.forEach(() => {
                     const itemEntrega = document.createElement('li');
                     itemEntrega.className = 'item-entrega';
-                    itemEntrega.textContent = `${entrega.data.tituloTorta}`;
-                    itemEntrega.title = `Cliente: ${entrega.data.nombreCliente}`;
                     listaEntregas.appendChild(itemEntrega);
                 });
                 celdaDia.appendChild(listaEntregas);
             }
-            
             calendarioGrid.appendChild(celdaDia);
         }
     };
+
+    const mostrarModalConEntregas = (fechaString) => {
+        const [year, month, day] = fechaString.split('-').map(Number);
+        const fechaSeleccionada = new Date(year, month - 1, day);
+        
+        modalTitle.textContent = `Entregas del ${fechaSeleccionada.toLocaleDateString('es-AR', {day: 'numeric', month: 'long'})}`;
+
+        const entregasDelDia = entregas.filter(entrega => {
+            const fechaEntrega = entrega.data.fechaEntrega.toDate();
+            return fechaEntrega.getFullYear() === fechaSeleccionada.getFullYear() &&
+                   fechaEntrega.getMonth() === fechaSeleccionada.getMonth() &&
+                   fechaEntrega.getDate() === fechaSeleccionada.getDate();
+        });
+
+        modalLista.innerHTML = '';
+        if (entregasDelDia.length > 0) {
+            const ul = document.createElement('ul');
+            ul.className = 'lista-sencilla';
+            entregasDelDia.forEach(entrega => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${entrega.data.tituloTorta}</span> <span>${entrega.data.nombreCliente}</span>`;
+                ul.appendChild(li);
+            });
+            modalLista.appendChild(ul);
+        }
+
+        diaModal.classList.add('visible');
+    };
+
+    calendarioGrid.addEventListener('click', (e) => {
+        const celda = e.target.closest('.calendario-dia.con-eventos');
+        if (celda) {
+            mostrarModalConEntregas(celda.dataset.date);
+        }
+    });
+
+    modalBtnCerrar.addEventListener('click', () => diaModal.classList.remove('visible'));
+    diaModal.addEventListener('click', e => {
+        if(e.target === diaModal) diaModal.classList.remove('visible');
+    });
 
     prevMonthBtn.addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() - 1);
@@ -88,15 +127,9 @@ export function setupAgenda(app) {
         renderCalendar();
     });
 
-    // Buscamos todos los presupuestos que son ventas confirmadas
     const q = query(presupuestosCollection, where("esVenta", "==", true));
-    
     onSnapshot(q, (snapshot) => {
         entregas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-        renderCalendar(); // Volvemos a dibujar el calendario con los datos actualizados
-    }, (error) => {
-        console.error("Error al obtener datos de la agenda: ", error);
-        monthYearDisplay.textContent = "Error";
-        calendarioGrid.innerHTML += '<p style="color:red; grid-column: 1 / -1;">No se pudo cargar la agenda.</p>';
+        renderCalendar();
     });
 }
