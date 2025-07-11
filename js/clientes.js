@@ -11,6 +11,7 @@ export function setupClientes(app) {
     const container = document.getElementById('resumen-clientes-container');
     const buscadorInput = document.getElementById('buscador-clientes');
 
+    // Referencias de la Modal de Edición
     const modal = document.getElementById('cliente-modal-overlay');
     const modalTitle = document.getElementById('cliente-modal-title');
     const nombreDisplay = document.getElementById('cliente-nombre-display');
@@ -20,12 +21,12 @@ export function setupClientes(app) {
     const btnGuardar = document.getElementById('cliente-modal-btn-guardar');
     const btnCancelar = document.getElementById('cliente-modal-btn-cancelar');
 
-    let todosLosClientes = {};
+    let todosLosClientesAgrupados = {};
     let editandoId = null;
 
-    // Función para crear un ID de cliente seguro
+    // Función para crear un ID de cliente seguro y válido para Firestore
     const sanitizarId = (nombre) => {
-        return nombre.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        return nombre.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/\s+/g, '-');
     };
 
     const renderizarResumen = (clientes) => {
@@ -41,6 +42,7 @@ export function setupClientes(app) {
             card.className = 'cliente-resumen-card';
             const telefonoHtml = cliente.telefono ? `<p class="cliente-card__contact">📞 ${cliente.telefono}</p>` : '';
             const emailHtml = cliente.email ? `<p class="cliente-card__contact">✉️ ${cliente.email}</p>` : '';
+            const clienteIdSanitizado = cliente.id;
             
             card.innerHTML = `
                 <div class="cliente-card__info">
@@ -54,57 +56,84 @@ export function setupClientes(app) {
                     <div class="stat"><span>Cotizaciones</span><p>${cliente.presupuestos.length || 0}</p></div>
                 </div>
                 <div class="historial-card__actions" style="justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
-                     <button class="btn-secondary btn-editar-cliente" data-id="${cliente.id}">Editar Datos</button>
+                     <button class="btn-secondary btn-ver-historial-cliente" data-id="${clienteIdSanitizado}">Ver Historial</button>
+                     <button class="btn-primary btn-editar-cliente" data-id="${clienteIdSanitizado}">✏️ Editar</button>
+                </div>
+                <div class="cliente-historial-detalle" id="detalle-${clienteIdSanitizado}" style="display:none;">
+                    <p>Cargando historial...</p>
                 </div>`;
             container.appendChild(card);
         });
     };
-    
-    // --- LÓGICA DE CARGA Y SINCRONIZACIÓN MEJORADA ---
-    onSnapshot(query(presupuestosCollection), async (presupuestosSnap) => {
-        const clientesFromPresupuestos = {};
-        
-        presupuestosSnap.forEach(doc => {
-            const p = doc.data();
+
+    const renderizarDetalleCliente = (clienteId) => {
+        const cliente = Object.values(todosLosClientesAgrupados).find(c => c.id === clienteId);
+        const detalleDiv = document.getElementById(`detalle-${clienteId}`);
+        if (!cliente || !detalleDiv) return;
+
+        const detalleHtml = cliente.presupuestos
+            .sort((a, b) => b.fecha.toDate() - a.fecha.toDate())
+            .map(p => {
+                const fecha = p.fecha.toDate().toLocaleDateString('es-AR');
+                const precio = p.precioVenta || p.costoTotal || 0;
+                const ventaBadge = p.esVenta ? `<span class="venta-confirmada-badge mini">VENTA</span>` : '';
+                return `<li class="presupuesto-item"><span>${p.tituloTorta} - $${precio.toFixed(2)}</span> <span>(${fecha})</span> ${ventaBadge}</li>`;
+            }).join('');
+
+        detalleDiv.innerHTML = `<h4>Historial de Presupuestos</h4><ul>${detalleHtml}</ul>`;
+    };
+
+    const sincronizarYRenderizar = async (presupuestosDocs, clientesDocs) => {
+        const presupuestos = presupuestosDocs.map(doc => doc.data());
+        const clientesData = {};
+        clientesDocs.forEach(doc => {
+            clientesData[doc.id] = doc.data();
+        });
+
+        const clientesTemp = {};
+        presupuestos.forEach(p => {
             const nombre = p.nombreCliente;
             if (!nombre) return;
             
-            if (!clientesFromPresupuestos[nombre]) {
-                clientesFromPresupuestos[nombre] = { nombre: nombre, id: sanitizarId(nombre), presupuestos: [], totalVendido: 0, cantidadVentas: 0 };
+            const clienteId = sanitizarId(nombre);
+            if (!clientesTemp[nombre]) {
+                clientesTemp[nombre] = { 
+                    nombre: nombre, 
+                    id: clienteId, 
+                    presupuestos: [], 
+                    totalVendido: 0, 
+                    cantidadVentas: 0,
+                    ...(clientesData[clienteId] || {})
+                };
             }
-            clientesFromPresupuestos[nombre].presupuestos.push(p);
+            clientesTemp[nombre].presupuestos.push(p);
             if (p.esVenta) {
-                clientesFromPresupuestos[nombre].totalVendido += p.precioVenta || 0;
-                clientesFromPresupuestos[nombre].cantidadVentas += 1;
+                clientesTemp[nombre].totalVendido += p.precioVenta || 0;
+                clientesTemp[nombre].cantidadVentas += 1;
             }
         });
 
-        // Sincroniza con la colección de clientes
-        onSnapshot(query(clientesCollection), (clientesSnap) => {
-            const clientesData = {};
-            clientesSnap.forEach(doc => {
-                clientesData[doc.data().nombre] = { id: doc.id, ...doc.data() };
-            });
-
-            // Combinamos los datos
-            todosLosClientes = { ...clientesFromPresupuestos };
-            for(const nombre in todosLosClientes){
-                if(clientesData[nombre]){
-                    todosLosClientes[nombre] = { ...todosLosClientes[nombre], ...clientesData[nombre]};
-                } else {
-                    // Si un cliente de los presupuestos no existe en la colección de clientes, lo creamos
-                    const clienteId = sanitizarId(nombre);
-                    setDoc(doc(db, "clientes", clienteId), { nombre: nombre });
-                }
+        for (const nombreCliente in clientesTemp) {
+            const clienteId = clientesTemp[nombreCliente].id;
+            if (!clientesData[clienteId]) {
+                try {
+                    await setDoc(doc(db, "clientes", clienteId), { nombre: nombreCliente });
+                } catch(e) { console.error("Error creando ficha de cliente:", e)}
             }
-            
-            buscadorInput.dispatchEvent(new Event('input'));
+        }
+        todosLosClientesAgrupados = clientesTemp;
+        buscadorInput.dispatchEvent(new Event('input'));
+    };
+
+    onSnapshot(query(presupuestosCollection), (presupuestosSnap) => {
+        onSnapshot(query(clientesCollection), (clientesSnap) => {
+            sincronizarYRenderizar(presupuestosSnap.docs, clientesSnap.docs);
         });
     });
 
     buscadorInput.addEventListener('input', (e) => {
         const termino = e.target.value.toLowerCase();
-        const filtrados = Object.values(todosLosClientes).filter(c => c.nombre.toLowerCase().includes(termino));
+        const filtrados = Object.values(todosLosClientesAgrupados).filter(c => c.nombre.toLowerCase().includes(termino));
         renderizarResumen(filtrados);
     });
 
@@ -121,11 +150,26 @@ export function setupClientes(app) {
     const closeModal = () => modal.classList.remove('visible');
 
     container.addEventListener('click', e => {
-        const target = e.target.closest('.btn-editar-cliente');
-        if (target) {
-            const id = target.dataset.id;
-            const cliente = Object.values(todosLosClientes).find(c => c.id === id);
+        const targetEditar = e.target.closest('.btn-editar-cliente');
+        if (targetEditar) {
+            const id = targetEditar.dataset.id;
+            const cliente = Object.values(todosLosClientesAgrupados).find(c => c.id === id);
             if (cliente) openModal(cliente);
+            return;
+        }
+
+        const targetHistorial = e.target.closest('.btn-ver-historial-cliente');
+        if (targetHistorial) {
+            const id = targetHistorial.dataset.id;
+            const detalleDiv = document.getElementById(`detalle-${id}`);
+            if (detalleDiv) {
+                const isVisible = detalleDiv.style.display === 'block';
+                if (!isVisible && detalleDiv.innerHTML.includes('Cargando')) {
+                    renderizarDetalleCliente(id);
+                }
+                detalleDiv.style.display = isVisible ? 'none' : 'block';
+                targetHistorial.textContent = isVisible ? 'Ver Historial' : 'Ocultar Historial';
+            }
         }
     });
 
