@@ -1402,3 +1402,88 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .cliente-card__info p {
     line-height: 1.5;
 }
+/* --- Estilos para la Agenda Visual (Calendario) --- */
+.calendario-container {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 1rem;
+}
+
+.calendario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.calendario-header h3 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    text-align: center;
+    flex-grow: 1;
+}
+
+.calendario-header button {
+    padding: 0.5rem 1rem;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.calendario-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.calendario-dia-semana {
+    font-weight: bold;
+    text-align: center;
+    padding: 0.5rem 0;
+    color: var(--text-color-light);
+}
+
+.calendario-dia {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    min-height: 100px;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    transition: background-color 0.2s;
+}
+
+.calendario-dia.vacia {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+.calendario-dia.hoy {
+    border-color: var(--primary-color);
+    background-color: #fff8fb;
+}
+
+.calendario-dia span:first-child {
+    font-weight: bold;
+}
+
+.lista-entregas {
+    list-style: none;
+    padding: 0;
+    margin-top: 0.5rem;
+    flex-grow: 1;
+}
+
+.item-entrega {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
+}
