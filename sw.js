@@ -1,32 +1,16 @@
-// sw.js (Versión final con estrategia "Stale-While-Revalidate" y caché completo)
+// sw.js (Versión final con estrategia "Stale-While-Revalidate" y caché de la App Shell)
 
-const CACHE_NAME = 'dulce-app-cache-v3.0'; // Nueva versión final
+const CACHE_NAME = 'dulce-app-cache-v4.0'; // Nueva versión final
 
-// Lista COMPLETA de archivos esenciales para que toda la aplicación funcione sin conexión.
+// Lista de archivos esenciales para que la aplicación se inicie.
 const APP_SHELL_URLS = [
   '/',
   'index.html',
-  'compras.html',
-  'recetas.html',
-  'clientes.html',
-  'agenda.html',
-  'compras-lista.html',
-  'presupuesto.html',
-  'stock.html',
-  'historial.html',
   'css/style.css',
   'js/menu.js',
-  'js/agenda.js',
-  'js/clientes.js',
-  'js/compras.js',
-  'js/compras-lista.js',
-  'js/dashboard.js',
-  'js/historial.js',
-  'js/presupuesto.js',
-  'js/recetas.js',
-  'js/stock.js',
   'assets/logo.png',
-  'assets/apple-touch-icon.png'
+  'assets/apple-touch-icon.png',
+  'https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap'
 ];
 
 // Evento 'install': Guarda la carcasa básica de la app en el caché.
@@ -34,7 +18,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache abierto y guardando carcasa completa de la app.');
+        console.log('Cache abierto y guardando carcasa de la app.');
         return cache.addAll(APP_SHELL_URLS);
       })
   );
@@ -56,9 +40,9 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Evento 'fetch': Estrategia "Stale-While-Revalidate".
+// Evento 'fetch': Aplica la estrategia "Stale-While-Revalidate".
 self.addEventListener('fetch', event => {
-  // Ignoramos las peticiones a Firebase para que siempre vayan a la red.
+  // No aplicamos la estrategia a las peticiones de Firebase para que siempre vayan a la red.
   if (event.request.url.includes('firestore.googleapis.com')) {
     return;
   }
