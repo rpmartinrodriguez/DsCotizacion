@@ -1,54 +1,102 @@
 import { 
-    getFirestore, collection, onSnapshot, query, where, orderBy 
+    getFirestore, collection, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupAgenda(app) {
     const db = getFirestore(app);
-    const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
-    const agendaContainer = document.getElementById('agenda-container');
+    const presupuestosCollection = collection(db, 'presupuestosGuardados');
 
-    const q = query(
-        presupuestosGuardadosCollection, 
-        where("esVenta", "==", true),
-        where("fechaEntrega", ">=", new Date()),
-        orderBy("fechaEntrega", "asc")
-    );
+    const monthYearDisplay = document.getElementById('month-year-display');
+    const calendarioGrid = document.getElementById('calendario-grid');
+    const prevMonthBtn = document.getElementById('prev-month-btn');
+    const nextMonthBtn = document.getElementById('next-month-btn');
 
-    onSnapshot(q, 
-        (snapshot) => {
-            if (snapshot.empty) {
-                agendaContainer.innerHTML = '<p>No tienes entregas pendientes en la agenda.</p>';
-                return;
+    let currentDate = new Date();
+    let entregas = [];
+
+    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+    const renderCalendar = () => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        monthYearDisplay.textContent = `${meses[month]} ${year}`;
+        
+        // Limpiamos solo las celdas de los días, no los encabezados de la semana
+        const celdasViejas = calendarioGrid.querySelectorAll('.calendario-dia');
+        celdasViejas.forEach(celda => celda.remove());
+
+        const primerDiaDelMes = new Date(year, month, 1).getDay(); // 0=Domingo, 1=Lunes...
+        const diasEnElMes = new Date(year, month + 1, 0).getDate();
+
+        // Creamos las celdas vacías para alinear el primer día del mes
+        for (let i = 0; i < primerDiaDelMes; i++) {
+            const celdaVacia = document.createElement('div');
+            celdaVacia.className = 'calendario-dia vacia';
+            calendarioGrid.appendChild(celdaVacia);
+        }
+
+        // Creamos las celdas para cada día del mes
+        for (let i = 1; i <= diasEnElMes; i++) {
+            const celdaDia = document.createElement('div');
+            celdaDia.className = 'calendario-dia';
+            
+            const numeroDia = document.createElement('span');
+            numeroDia.textContent = i;
+            celdaDia.appendChild(numeroDia);
+
+            // Resaltar el día de hoy
+            const hoy = new Date();
+            if (i === hoy.getDate() && month === hoy.getMonth() && year === hoy.getFullYear()) {
+                celdaDia.classList.add('hoy');
             }
 
-            agendaContainer.innerHTML = '';
-            snapshot.forEach(doc => {
-                const venta = doc.data();
-                const fecha = venta.fechaEntrega.toDate();
-                const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long' };
-                const fechaFormateada = fecha.toLocaleDateString('es-AR', opcionesFecha);
-
-                const card = document.createElement('div');
-                card.className = 'agenda-card';
-                card.innerHTML = `
-                    <div class="agenda-fecha">
-                        <span>${fecha.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '').toUpperCase()}</span>
-                        <strong>${fecha.getDate()}</strong>
-                    </div>
-                    <div class="agenda-info">
-                        <h3>${venta.tituloTorta}</h3>
-                        <p>Cliente: ${venta.nombreCliente}</p>
-                    </div>
-                    <div class="agenda-fecha-completa">
-                        ${fechaFormateada}
-                    </div>
-                `;
-                agendaContainer.appendChild(card);
+            // Buscamos si hay entregas para este día
+            const fechaCelda = new Date(year, month, i);
+            const entregasDelDia = entregas.filter(entrega => {
+                const fechaEntrega = entrega.data.fechaEntrega.toDate();
+                return fechaEntrega.getFullYear() === fechaCelda.getFullYear() &&
+                       fechaEntrega.getMonth() === fechaCelda.getMonth() &&
+                       fechaEntrega.getDate() === fechaCelda.getDate();
             });
-        },
-        (error) => {
-            console.error("Error al obtener datos de la agenda: ", error);
-            agendaContainer.innerHTML = `<p style="color: var(--danger-color);">Error al cargar la agenda. Revisa la consola para más detalles (probablemente necesites crear un índice en Firebase).</p>`;
+
+            // Si hay entregas, las mostramos
+            if (entregasDelDia.length > 0) {
+                const listaEntregas = document.createElement('ul');
+                listaEntregas.className = 'lista-entregas';
+                entregasDelDia.forEach(entrega => {
+                    const itemEntrega = document.createElement('li');
+                    itemEntrega.className = 'item-entrega';
+                    itemEntrega.textContent = `${entrega.data.tituloTorta}`;
+                    itemEntrega.title = `Cliente: ${entrega.data.nombreCliente}`;
+                    listaEntregas.appendChild(itemEntrega);
+                });
+                celdaDia.appendChild(listaEntregas);
+            }
+            
+            calendarioGrid.appendChild(celdaDia);
         }
-    );
+    };
+
+    prevMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+
+    // Buscamos todos los presupuestos que son ventas confirmadas
+    const q = query(presupuestosCollection, where("esVenta", "==", true));
+    
+    onSnapshot(q, (snapshot) => {
+        entregas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        renderCalendar(); // Volvemos a dibujar el calendario con los datos actualizados
+    }, (error) => {
+        console.error("Error al obtener datos de la agenda: ", error);
+        monthYearDisplay.textContent = "Error";
+        calendarioGrid.innerHTML += '<p style="color:red; grid-column: 1 / -1;">No se pudo cargar la agenda.</p>';
+    });
 }
