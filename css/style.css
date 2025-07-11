@@ -1576,3 +1576,21 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     }
 }
 
+/* --- Estilos para Calendario Interactivo --- */
+
+/* Hace que los días con eventos sean visiblemente clicables */
+.calendario-dia.con-eventos {
+    cursor: pointer;
+    background-color: #fff8fb;
+}
+
+.calendario-dia.con-eventos:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px rgba(255, 150, 197, 0.5);
+}
+
+/* Estilo para la lista de entregas dentro de la modal */
+#agenda-modal-lista .lista-sencilla span:last-child {
+    color: var(--text-light);
+    font-weight: normal;
+}
