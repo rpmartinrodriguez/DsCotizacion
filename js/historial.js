@@ -94,31 +94,14 @@ export function setupHistorial(app) {
             try {
                 const presupuesto = pConId.data;
                 const id = pConId.id;
-                if (!presupuesto || !presupuesto.fecha || typeof presupuesto.fecha.toDate !== 'function') return;
+
+                if (!presupuesto || !presupuesto.fecha || typeof presupuesto.fecha.toDate !== 'function') {
+                    console.warn("Presupuesto con formato de fecha inválido omitido:", id);
+                    return;
+                }
+
                 const fecha = presupuesto.fecha.toDate();
                 const fechaFormateada = fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                
-                const ingredientesHtml = (presupuesto.ingredientes || []).map(ing => {
-                    let detalleLotesHtml = '';
-                    if (ing.lotesUtilizados && ing.lotesUtilizados.length > 0) {
-                        detalleLotesHtml = '<ul class="lote-detalle">' + ing.lotesUtilizados.map(lote => {
-                            const esFechaValida = lote.fechaLote && typeof lote.fechaLote.toDate === 'function';
-                            const fechaLoteStr = esFechaValida ? lote.fechaLote.toDate().toLocaleDateString('es-AR') : 'Proyectado';
-                            return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${ing.unidad} @ $${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${fechaLoteStr})</li>`;
-                        }).join('') + '</ul>';
-                    }
-                    return `<li><strong>${ing.nombre || ing.nombreMateriaPrima}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${ing.unidad} ($${(ing.costoTotal || 0).toFixed(2)})</strong>${detalleLotesHtml}</li>`;
-                }).join('');
-
-                let detalleCostosHtml = '';
-                if (presupuesto.precioVenta) {
-                    const costoMateriales = presupuesto.costoMateriales || 0;
-                    const costoManoObra = (presupuesto.horasTrabajo || 0) * (presupuesto.costoHora || 0);
-                    const costoFijos = costoMateriales * ((presupuesto.porcentajeCostosFijos || 0) / 100);
-                    const costoProduccion = costoMateriales + costoManoObra + costoFijos;
-                    const ganancia = presupuesto.precioVenta - costoProduccion;
-                    detalleCostosHtml = `<h4>Desglose de Precio de Venta</h4><div class="calculo-resumen" style="margin-bottom: 1rem; gap: 0.5rem;"><div class="calculo-fila"><span>Costo Materiales:</span> <span>$${costoMateriales.toFixed(2)}</span></div><div class="calculo-fila"><span>+ Mano de Obra y Fijos:</span> <span>$${(costoProduccion - costoMateriales).toFixed(2)}</span></div><div class="calculo-fila"><span>+ Ganancia:</span> <span>$${ganancia.toFixed(2)}</span></div></div><hr class="calculo-divisor" style="margin: 1rem 0;">`;
-                }
                 
                 const botonVentaHtml = presupuesto.esVenta ? `<span class="venta-confirmada-badge">✅ Venta Confirmada</span>` : `<button class="btn-marcar-venta" data-id="${id}">✅ Convertir a Venta</button>`;
                 const totalMostrado = (presupuesto.precioVenta || presupuesto.costoTotal || 0).toFixed(2);
@@ -129,18 +112,61 @@ export function setupHistorial(app) {
                 
                 card.innerHTML = `
                     <div class="historial-card__header">
-                        <div class="historial-card__info"><h3>${presupuesto.tituloTorta || 'Sin Título'}</h3><p><strong>Cliente:</strong> ${presupuesto.nombreCliente || 'Sin Nombre'}</p><p class="fecha">${fechaFormateada} hs</p></div>
+                        <div class="historial-card__info">
+                            <h3>${presupuesto.tituloTorta || 'Sin Título'}</h3>
+                            <p><strong>Cliente:</strong> ${presupuesto.nombreCliente || 'Sin Nombre'}</p>
+                            <p class="fecha">${fechaFormateada} hs</p>
+                        </div>
                         <div class="historial-card__total">$${totalMostrado}</div>
                     </div>
-                    <div class="historial-card__detalle" id="detalle-${id}" style="display: none;">${detalleCostosHtml}<h4>Ingredientes Utilizados:</h4><ul>${ingredientesHtml}</ul></div>
-                    <div class="historial-card__actions"><button class="btn-ver-detalle" data-id="${id}">Ver Detalle</button>${botonVentaHtml}<button class="btn-borrar-presupuesto" data-id="${id}">🗑️ Borrar</button></div>`;
+                    <div class="historial-card__detalle" id="detalle-${id}" style="display: none;">
+                        <p>Cargando detalle...</p>
+                    </div>
+                    <div class="historial-card__actions">
+                        <button class="btn-ver-detalle" data-id="${id}">Ver Detalle</button>
+                        ${botonVentaHtml}
+                        <button class="btn-borrar-presupuesto" data-id="${id}">🗑️ Borrar</button>
+                    </div>
+                `;
                 historialContainer.appendChild(card);
             } catch (error) {
-                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}.`, error);
+                console.error(`Error al renderizar el presupuesto ID: ${pConId.id}. Este presupuesto puede tener datos corruptos.`, error);
             }
         });
     };
     
+    const renderizarDetalle = (id, detalleDiv) => {
+        const presupuestoData = todoElHistorial.find(p => p.id === id)?.data;
+        if (!presupuestoData) {
+            detalleDiv.innerHTML = '<p>Error: No se encontraron los datos del presupuesto.</p>';
+            return;
+        }
+
+        const ingredientesHtml = (presupuestoData.ingredientes || []).map(ing => {
+            let detalleLotesHtml = '';
+            if (ing.lotesUtilizados && ing.lotesUtilizados.length > 0) {
+                detalleLotesHtml = '<ul class="lote-detalle">' + ing.lotesUtilizados.map(lote => {
+                    const esFechaValida = lote.fechaLote && typeof lote.fechaLote.toDate === 'function';
+                    const fechaLoteStr = esFechaValida ? lote.fechaLote.toDate().toLocaleDateString('es-AR') : 'Proyectado';
+                    return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${ing.unidad} @ $${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${fechaLoteStr})</li>`;
+                }).join('') + '</ul>';
+            }
+            return `<li><strong>${ing.nombre || ing.nombreMateriaPrima}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${ing.unidad} ($${(ing.costoTotal || 0).toFixed(2)})</strong>${detalleLotesHtml}</li>`;
+        }).join('');
+
+        let detalleCostosHtml = '';
+        if (presupuestoData.precioVenta) {
+            const costoMateriales = presupuestoData.costoMateriales || 0;
+            const costoManoObra = (presupuestoData.horasTrabajo || 0) * (presupuestoData.costoHora || 0);
+            const costoFijos = costoMateriales * ((presupuestoData.porcentajeCostosFijos || 0) / 100);
+            const costoProduccion = costoMateriales + costoManoObra + costoFijos;
+            const ganancia = presupuestoData.precioVenta - costoProduccion;
+            detalleCostosHtml = `<h4>Desglose de Precio de Venta</h4><div class="calculo-resumen" style="margin-bottom: 1rem; gap: 0.5rem;"><div class="calculo-fila"><span>Costo Materiales:</span> <span>$${costoMateriales.toFixed(2)}</span></div><div class="calculo-fila"><span>+ Mano de Obra y Fijos:</span> <span>$${(costoProduccion - costoMateriales).toFixed(2)}</span></div><div class="calculo-fila"><span>+ Ganancia:</span> <span>$${ganancia.toFixed(2)}</span></div></div><hr class="calculo-divisor" style="margin: 1rem 0;">`;
+        }
+
+        detalleDiv.innerHTML = `${detalleCostosHtml}<h4>Ingredientes Utilizados:</h4><ul>${ingredientesHtml}</ul>`;
+    };
+
     onSnapshot(query(presupuestosGuardadosCollection, orderBy("fecha", "desc")), (snapshot) => {
         todoElHistorial = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         buscadorInput.dispatchEvent(new Event('input'));
@@ -157,19 +183,10 @@ export function setupHistorial(app) {
         if (!target) return;
         const id = target.dataset.id;
         
-        if (target.classList.contains('btn-ver-detalle')) {
-            const detalleDiv = document.getElementById(`detalle-${id}`);
-            if (detalleDiv) {
-                const isVisible = detalleDiv.style.display === 'block';
-                if (!isVisible && detalleDiv.innerHTML.includes('Cargando')) {
-                    renderizarDetalle(id, detalleDiv);
-                }
-                detalleDiv.style.display = isVisible ? 'none' : 'block';
-                target.textContent = isVisible ? 'Ocultar Detalle' : 'Ver Detalle';
-            }
-        } else if (target.classList.contains('btn-marcar-venta')) {
+        if (target.classList.contains('btn-marcar-venta')) {
             const presupuestoSeleccionado = todoElHistorial.find(p => p.id === id);
             if (!presupuestoSeleccionado) return;
+
             try {
                 let advertenciaStock = "";
                 for (const ing of presupuestoSeleccionado.data.ingredientes) {
@@ -181,61 +198,55 @@ export function setupHistorial(app) {
                         }
                     }
                 }
+
                 if (advertenciaStock) {
-                    await showConfirmationModal('⚠️ ¡Atención, stock insuficiente!', `Te falta stock de:\n${advertenciaStock}\nEl stock quedará en negativo. ¿Confirmar venta?`, 'danger');
+                    await showConfirmationModal('⚠️ ¡Atención, stock insuficiente!', `Te falta stock de:\n${advertenciaStock}\nEl stock quedará en negativo. ¿Confirmar venta de todos modos?`, 'danger');
                 }
                 
                 const fechaEntregaStr = await showConfirmVentaModal();
                 const fechaEntrega = new Date(`${fechaEntregaStr}T00:00:00`);
 
                 await runTransaction(db, async (transaction) => {
-                    for (const ingrediente of presupuestoSeleccionado.data.ingredientes) {
-                        const ingredienteRef = doc(db, 'materiasPrimas', ingrediente.idMateriaPrima || ingrediente.id);
-                        const ingredienteDoc = await transaction.get(ingredienteRef);
-                        if (!ingredienteDoc.exists()) throw new Error(`El ingrediente "${ingrediente.nombre}" ya no existe.`);
+                    const refs = presupuestoSeleccionado.data.ingredientes.map(ing => doc(db, 'materiasPrimas', ing.idMateriaPrima || ing.id));
+                    
+                    const docs = await Promise.all(refs.map(ref => transaction.get(ref)));
+                    
+                    for (let i = 0; i < docs.length; i++) {
+                        const mpDoc = docs[i];
+                        const ingrediente = presupuestoSeleccionado.data.ingredientes[i];
+                        if (!mpDoc.exists()) throw new Error(`El ingrediente "${ingrediente.nombre}" ya no existe.`);
                         
-                        let data = ingredienteDoc.data();
+                        let data = mpDoc.data();
                         let cantidadADescontar = ingrediente.cantidadTotal;
                         let lotesActualizados = data.lotes.sort((a, b) => (a.fechaCompra.seconds || 0) - (b.fechaCompra.seconds || 0));
                         
-                        // Descontamos de todos los lotes disponibles primero
                         for (const lote of lotesActualizados) {
                             if (cantidadADescontar <= 0) break;
-                            const descontarDeEsteLote = Math.min(lote.stockRestante, cantidadADescontar);
-                            lote.stockRestante -= descontarDeEsteLote;
-                            cantidadADescontar -= descontarDeEsteLote;
+                            const descontar = Math.min(lote.stockRestante, cantidadADescontar);
+                            lote.stockRestante -= descontar;
+                            cantidadADescontar -= descontar;
                         }
 
-                        // Si aún falta, lo restamos del último lote para que quede en negativo
                         if (cantidadADescontar > 0) {
-                            if (lotesActualizados.length > 0) {
-                                lotesActualizados[lotesActualizados.length - 1].stockRestante -= cantidadADescontar;
-                            } else {
-                                // Este caso es muy raro, significaría que no hay lotes pero el stock check pasó.
-                                // Podríamos crear un lote negativo si fuera necesario. Por ahora, lo ignoramos.
-                                console.warn(`No hay lotes para el producto ${data.nombre} para registrar un déficit.`);
-                            }
+                           const ultimoLote = lotesActualizados[lotesActualizados.length - 1];
+                           if(ultimoLote) ultimoLote.stockRestante -= cantidadADescontar;
                         }
                         
-                        // NO eliminamos los lotes con stock 0
-                        transaction.update(ingredienteRef, { lotes: lotesActualizados });
+                        transaction.update(mpDoc.ref, { lotes: lotesActualizados });
                     }
                 });
                 
                 const batch = writeBatch(db);
                 const presupuestoRef = doc(db, 'presupuestosGuardados', id);
                 batch.update(presupuestoRef, { esVenta: true, fechaEntrega: Timestamp.fromDate(fechaEntrega) });
+                
                 presupuestoSeleccionado.data.ingredientes.forEach(ing => {
                     const movRef = doc(collection(db, 'movimientosStock'));
                     batch.set(movRef, { materiaPrimaId: ing.idMateriaPrima || ing.id, materiaPrimaNombre: ing.nombreMateriaPrima || ing.nombre, tipo: 'Venta', cantidad: -ing.cantidadTotal, fecha: new Date(), descripcion: `Venta de "${presupuestoSeleccionado.data.tituloTorta}"` });
                 });
                 await batch.commit();
 
-                const mensaje = `¡Gracias de corazón por elegirme! 🩷Me llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨
-
-Cualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄
-Gracias por confiar,
-Dulce Sal — Horneando tus mejores momentos`; // Mensaje completo
+                const mensaje = `¡Gracias de corazón por elegirme! 🩷\nMe llena de alegría saber que voy a ser parte de un momento tan especial. Ya estoy con muchas ganas de empezar a hornear algo hermoso y delicioso para ustedes 🍰✨\n\nCualquier detalle que quieras ajustar o sumar, sabés que estoy a disposición. Lo importante para mí es que todo salga como lo imaginás (¡o incluso mejor!) 😄\n\nGracias por confiar,\nDulce Sal — Horneando tus mejores momentos`;
                 agradecimientoTexto.innerText = mensaje;
                 agradecimientoModal.classList.add('visible');
 
@@ -251,6 +262,17 @@ Dulce Sal — Horneando tus mejores momentos`; // Mensaje completo
             } catch (error) {
                 if(error?.message && !error.message.includes("cancelado")) console.error("Error al eliminar:", error);
                 else console.log("Borrado cancelado.");
+            }
+        } else if (target.classList.contains('btn-ver-detalle')) {
+            const targetId = `detalle-${id}`;
+            const detalleDiv = document.getElementById(targetId);
+            if (detalleDiv) {
+                const isVisible = detalleDiv.style.display === 'block';
+                if (!isVisible && detalleDiv.innerHTML.includes('Cargando')) {
+                    renderizarDetalle(id, detalleDiv);
+                }
+                detalleDiv.style.display = isVisible ? 'none' : 'block';
+                target.textContent = isVisible ? 'Ver Detalle' : 'Ocultar Detalle';
             }
         }
     });
