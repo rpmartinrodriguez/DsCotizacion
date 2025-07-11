@@ -5,38 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resumen por Cliente</title>
     <link rel="stylesheet" href="css/style.css">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ff96c5">    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <meta name="theme-color" content="#ff96c5">
 </head>
 <body>
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
 
-<nav class="nav-menu" id="nav-menu">
-    <div class="nav-menu__header">
-        <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-        <span class="nav-menu__title">Dulce app</span>
-    </div>
-    <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-    <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-    <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-    <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-    <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-    <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-    <a href="stock.html" class="nav-menu__link">📦 Stock</a>
-    <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-    <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-</nav>
+        <nav class="nav-menu" id="nav-menu">
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Dulce App</span>
+            </div>
+            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="reportes.html" class="nav-menu__link">📈 Reportes</a>
+            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="clientes.html" class="nav-menu__link active">👥 Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
+            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
+            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -51,6 +51,35 @@
             </section>
         </main>
     </div>
+
+    <div id="cliente-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title" id="cliente-modal-title">Editar Cliente</h2>
+            <div class="form-modern" style="grid-template-columns: 1fr;">
+                <div class="form-group">
+                    <label>Nombre (no se puede editar)</label>
+                    <input type="text" id="cliente-nombre-display" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="cliente-telefono-input">Teléfono</label>
+                    <input type="tel" id="cliente-telefono-input" placeholder="Ej: 11 2233-4455">
+                </div>
+                <div class="form-group">
+                    <label for="cliente-email-input">Email</label>
+                    <input type="email" id="cliente-email-input" placeholder="Ej: correo@dominio.com">
+                </div>
+                <div class="form-group">
+                    <label for="cliente-notas-input">Notas (Alergias, preferencias, etc.)</label>
+                    <textarea id="cliente-notas-input" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="cliente-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="cliente-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
@@ -61,12 +90,12 @@
         } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js');
-        });
-    }
-</script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+    </script>
 </body>
 </html>
