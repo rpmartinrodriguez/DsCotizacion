@@ -27,6 +27,7 @@
                 <span class="nav-menu__title">Dulce App</span>
             </div>
             <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="reportes.html" class="nav-menu__link">📈 Reportes</a>
             <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
             <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
             <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
@@ -56,6 +57,7 @@
             <h2 class="card__title">¡Venta Confirmada!</h2>
             <pre id="agradecimiento-texto" class="mensaje-agradecimiento"></pre>
             <div class="modal-actions">
+                <button id="agradecimiento-modal-btn-calendario" class="btn-secondary">🗓️ Añadir al Calendario</button>
                 <button id="agradecimiento-modal-btn-copiar" class="btn-secondary">Copiar Mensaje</button>
                 <button id="agradecimiento-modal-btn-cerrar" class="btn-primary">Cerrar</button>
             </div>
@@ -93,7 +95,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupHistorial } from './js/historial.js';
-        try { const app = initializeApp(firebaseConfig); setupHistorial(app); } catch (error) { console.error(error); }
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupHistorial(app);
+        } catch (error) { console.error(error); }
     </script>
     <script src="js/menu.js" defer></script>
     <script>
