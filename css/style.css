@@ -1516,3 +1516,63 @@ body.menu-open .header__menu-icon span:nth-child(3) {
         padding: 0.4rem 0.8rem;
     }
 }
+/* --- Estilos Responsive --- */
+@media (max-width: 768px) {
+    body { padding: 1em; padding-top: 70px; }
+    .main-container { padding: 0 1em; }
+    .card { padding: 1.5rem; border-radius: 10px; }
+    .header__slogan { font-size: 1.5rem; }
+    .card__title { font-size: 1.1rem; }
+    .form-modern { grid-template-columns: 1fr; gap: 1rem; }
+    .card-header-actions { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .table-clean { border: none; }
+    .table-clean thead { display: none; }
+    .table-clean tr { display: block; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 1rem; padding: 1rem; }
+    .table-clean td { display: block; text-align: right; padding: 0.5rem 0; border-bottom: none; position: relative; }
+    .table-clean td:before { content: attr(data-label); position: absolute; left: 0; font-weight: 600; color: var(--text-color); text-align: left; }
+    .table-clean td.action-buttons { text-align: center; margin-top: 1rem; }
+    .table-clean td.action-buttons:before { content: ''; }
+    .calculo-grid, .presupuesto-layout { grid-template-columns: 1fr; }
+    .modal-content { width: 95%; }
+    .cliente-resumen-stats { flex-direction: column; gap: 1rem; }
+    .receta-editor-grid { grid-template-columns: 1fr; }
+    .receta-editor-grid button { grid-column: 1 / -1; }
+    .receta-card { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .receta-card__actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+    .dashboard-main-grid { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* --- CORRECCIÓN FINAL PARA EL CALENDARIO EN MÓVILES --- */
+    .calendario-grid {
+        gap: 2px;
+    }
+    .calendario-dia {
+        min-height: 40px; /* Celdas mucho más bajas */
+        padding: 0.25rem;
+        font-size: 0.8rem;
+        position: relative;
+    }
+    /* Ocultamos el texto del evento en móvil */
+    .item-entrega {
+        font-size: 0; /* Oculta el texto */
+        padding: 0;
+        width: 8px; /* Lo convierte en un punto */
+        height: 8px; /* Lo convierte en un punto */
+        border-radius: 50%; /* Lo hace redondo */
+        margin: 2px auto 0; /* Lo centra debajo del número */
+    }
+    /* Contenedor para los puntos de evento */
+    .lista-entregas {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 3px;
+        margin-top: 4px;
+    }
+    .calendario-header h3 {
+        font-size: 1.2rem;
+    }
+    .calendario-header button {
+        padding: 0.4rem 0.8rem;
+    }
+}
+
