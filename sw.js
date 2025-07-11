@@ -1,9 +1,8 @@
-// sw.js (Versión final con estrategia "Stale-While-Revalidate")
+// sw.js (Versión final con estrategia "Stale-While-Revalidate" y caché completo)
 
-// Cambiamos la versión una última vez para forzar la instalación de este nuevo Service Worker
-const CACHE_NAME = 'cotizador-dulce-app-v2.22'; 
+const CACHE_NAME = 'dulce-app-cache-v3.0'; // Nueva versión final
 
-// Archivos esenciales de la "carcasa" de la app que se guardarán al instalar
+// Lista COMPLETA de archivos esenciales para que toda la aplicación funcione sin conexión.
 const APP_SHELL_URLS = [
   '/',
   'index.html',
@@ -17,22 +16,31 @@ const APP_SHELL_URLS = [
   'historial.html',
   'css/style.css',
   'js/menu.js',
+  'js/agenda.js',
+  'js/clientes.js',
+  'js/compras.js',
+  'js/compras-lista.js',
+  'js/dashboard.js',
+  'js/historial.js',
+  'js/presupuesto.js',
+  'js/recetas.js',
+  'js/stock.js',
   'assets/logo.png',
   'assets/apple-touch-icon.png'
 ];
 
-// Evento 'install': Se guarda la carcasa básica de la app en el caché.
+// Evento 'install': Guarda la carcasa básica de la app en el caché.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache abierto y guardando carcasa de la app.');
+        console.log('Cache abierto y guardando carcasa completa de la app.');
         return cache.addAll(APP_SHELL_URLS);
       })
   );
 });
 
-// Evento 'activate': Se limpian los cachés de versiones antiguas.
+// Evento 'activate': Limpia los cachés de versiones antiguas.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -48,25 +56,25 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Evento 'fetch': Aquí está la nueva estrategia automática.
+// Evento 'fetch': Estrategia "Stale-While-Revalidate".
 self.addEventListener('fetch', event => {
   // Ignoramos las peticiones a Firebase para que siempre vayan a la red.
   if (event.request.url.includes('firestore.googleapis.com')) {
     return;
   }
-
+    
   event.respondWith(
     caches.open(CACHE_NAME).then(cache => {
+      // 1. Responde inmediatamente con el caché si está disponible
       return cache.match(event.request).then(cachedResponse => {
-        // Hacemos la petición a la red en segundo plano.
+        // 2. Mientras tanto, busca una versión nueva en la red
         const fetchPromise = fetch(event.request).then(networkResponse => {
-          // Si la respuesta es exitosa, actualizamos el caché.
+          // Si la obtiene, la guarda en el caché para la próxima vez
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
         });
 
-        // Devolvemos la respuesta del caché inmediatamente (si existe),
-        // o esperamos a la red si es la primera vez que se pide este recurso.
+        // Devuelve la versión del caché al instante, o espera a la red si es la primera vez
         return cachedResponse || fetchPromise;
       });
     })
