@@ -1487,3 +1487,32 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     text-overflow: ellipsis;
     cursor: help;
 }
+/* --- Estilos Responsive para el Calendario en Móviles --- */
+@media (max-width: 768px) {
+    .calendario-grid {
+        gap: 2px; /* Reducimos el espacio entre celdas */
+    }
+
+    .calendario-dia {
+        min-height: 80px; /* Hacemos las celdas un poco más bajas */
+        padding: 0.25rem;
+        font-size: 0.8rem;
+    }
+
+    .item-entrega {
+        font-size: 0.7rem;
+        padding: 2px 4px;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .calendario-header h3 {
+        font-size: 1.2rem;
+    }
+    
+    .calendario-header button {
+        padding: 0.4rem 0.8rem;
+    }
+}
