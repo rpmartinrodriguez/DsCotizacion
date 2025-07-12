@@ -1,39 +1,45 @@
-// sw.js (Final, Simplified, and Robust Version)
+// sw.js (Versión final con estrategia "Stale-While-Revalidate")
 
-const CACHE_NAME = 'dulce-app-cache-v4.2'; // A new version to force the update
+// Cambiamos la versión una última vez para forzar la instalación de este nuevo Service Worker
+const CACHE_NAME = 'cotizador-dulce-app-v2.22'; 
 
-// Only the essential "shell" of the app is cached on install.
+// Archivos esenciales de la "carcasa" de la app que se guardarán al instalar
 const APP_SHELL_URLS = [
   '/',
   'index.html',
+  'compras.html',
+  'recetas.html',
+  'clientes.html',
+  'agenda.html',
+  'compras-lista.html',
+  'presupuesto.html',
+  'stock.html',
+  'historial.html',
   'css/style.css',
   'js/menu.js',
   'assets/logo.png',
   'assets/apple-touch-icon.png'
 ];
 
-// This event runs when the service worker is first installed.
+// Evento 'install': Se guarda la carcasa básica de la app en el caché.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache opened, caching app shell.');
+        console.log('Cache abierto y guardando carcasa de la app.');
         return cache.addAll(APP_SHELL_URLS);
-      })
-      .catch(error => {
-        console.error('Failed to cache app shell:', error);
       })
   );
 });
 
-// This event cleans up old caches from previous versions.
+// Evento 'activate': Se limpian los cachés de versiones antiguas.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
+            console.log('Borrando caché antiguo:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -42,25 +48,25 @@ self.addEventListener('activate', event => {
   );
 });
 
-// This event handles all network requests.
+// Evento 'fetch': Aquí está la nueva estrategia automática.
 self.addEventListener('fetch', event => {
-  // We don't cache requests to Firebase.
+  // Ignoramos las peticiones a Firebase para que siempre vayan a la red.
   if (event.request.url.includes('firestore.googleapis.com')) {
     return;
   }
 
-  // Use the "Stale-While-Revalidate" strategy for all other assets.
   event.respondWith(
     caches.open(CACHE_NAME).then(cache => {
       return cache.match(event.request).then(cachedResponse => {
-        // Make the network request in the background.
+        // Hacemos la petición a la red en segundo plano.
         const fetchPromise = fetch(event.request).then(networkResponse => {
-          // If successful, update the cache.
+          // Si la respuesta es exitosa, actualizamos el caché.
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
         });
 
-        // Return the cached response immediately if it exists, otherwise wait for the network.
+        // Devolvemos la respuesta del caché inmediatamente (si existe),
+        // o esperamos a la red si es la primera vez que se pide este recurso.
         return cachedResponse || fetchPromise;
       });
     })
