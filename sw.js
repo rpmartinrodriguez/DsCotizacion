@@ -1,56 +1,39 @@
-// sw.js (Versión final con lista de caché corregida)
+// sw.js (Final, Simplified, and Robust Version)
 
-const CACHE_NAME = 'dulce-app-cache-v4.1'; // Nueva versión para forzar la actualización
+const CACHE_NAME = 'dulce-app-cache-v4.2'; // A new version to force the update
 
-// Lista de archivos esenciales que SÍ existen en nuestro proyecto.
+// Only the essential "shell" of the app is cached on install.
 const APP_SHELL_URLS = [
   '/',
   'index.html',
-  'compras.html',
-  'recetas.html',
-  'clientes.html',
-  'agenda.html',
-  'compras-lista.html',
-  'presupuesto.html',
-  'stock.html',
-  'historial.html',
   'css/style.css',
   'js/menu.js',
-  'js/agenda.js',
-  'js/clientes.js',
-  'js/compras.js',
-  'js/compras-lista.js',
-  'js/dashboard.js',
-  'js/historial.js',
-  'js/presupuesto.js',
-  'js/recetas.js',
-  'js/stock.js',
   'assets/logo.png',
   'assets/apple-touch-icon.png'
 ];
 
-// Evento 'install': Se guarda la carcasa básica de la app en el caché.
+// This event runs when the service worker is first installed.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Cache abierto y guardando carcasa completa de la app.');
+        console.log('Cache opened, caching app shell.');
         return cache.addAll(APP_SHELL_URLS);
       })
       .catch(error => {
-        console.error('Falló el precaching de la App Shell:', error);
+        console.error('Failed to cache app shell:', error);
       })
   );
 });
 
-// Evento 'activate': Se limpian los cachés de versiones antiguas.
+// This event cleans up old caches from previous versions.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Borrando caché antiguo:', cacheName);
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -59,19 +42,25 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Evento 'fetch': Aplica la estrategia "Stale-While-Revalidate".
+// This event handles all network requests.
 self.addEventListener('fetch', event => {
+  // We don't cache requests to Firebase.
   if (event.request.url.includes('firestore.googleapis.com')) {
     return;
   }
-    
+
+  // Use the "Stale-While-Revalidate" strategy for all other assets.
   event.respondWith(
     caches.open(CACHE_NAME).then(cache => {
       return cache.match(event.request).then(cachedResponse => {
+        // Make the network request in the background.
         const fetchPromise = fetch(event.request).then(networkResponse => {
+          // If successful, update the cache.
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
         });
+
+        // Return the cached response immediately if it exists, otherwise wait for the network.
         return cachedResponse || fetchPromise;
       });
     })
