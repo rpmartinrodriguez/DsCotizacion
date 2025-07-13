@@ -1,5 +1,5 @@
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy
+    getFirestore, collection, onSnapshot, query
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupFinanzas(app) {
@@ -16,23 +16,29 @@ export function setupFinanzas(app) {
     const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
 
     const calcularYRenderizarReporte = () => {
+        // Si aún no se han cargado ambos conjuntos de datos, no hacemos nada.
+        if (todosLosPresupuestos.length === 0 || todasLasMateriasPrimas.length === 0) {
+            reporteContainer.innerHTML = '<p>Cargando datos para el reporte...</p>';
+            return;
+        }
+
         const mesFiltro = filtroMesSelect.value;
         let presupuestosFiltrados = todosLosPresupuestos;
         let comprasFiltradas = [];
 
-        // Filtrar datos por mes si no es "Todos los Tiempos"
         if (mesFiltro !== "todos") {
             const [mes, anio] = mesFiltro.split('-').map(Number);
             
             presupuestosFiltrados = todosLosPresupuestos.filter(p => {
-                const fecha = p.fecha.toDate();
-                return fecha.getFullYear() === anio && fecha.getMonth() === (mes - 1);
+                // Verificación de seguridad para fechas inválidas
+                const fecha = p.fecha?.toDate ? p.fecha.toDate() : null;
+                return fecha && fecha.getFullYear() === anio && fecha.getMonth() === (mes - 1);
             });
 
             todasLasMateriasPrimas.forEach(mp => {
                 (mp.lotes || []).forEach(lote => {
-                    const fechaLote = lote.fechaCompra.toDate();
-                    if (fechaLote.getFullYear() === anio && fechaLote.getMonth() === (mes - 1)) {
+                    const fechaLote = lote.fechaCompra?.toDate ? lote.fechaCompra.toDate() : null;
+                    if (fechaLote && fechaLote.getFullYear() === anio && fechaLote.getMonth() === (mes - 1)) {
                         comprasFiltradas.push(lote);
                     }
                 });
@@ -44,30 +50,23 @@ export function setupFinanzas(app) {
         }
 
         const ventasFiltradas = presupuestosFiltrados.filter(p => p.esVenta);
-
-        // 1. Calcular Ingresos Totales
+        
         const ingresosTotales = ventasFiltradas.reduce((sum, venta) => sum + (venta.precioVenta || 0), 0);
-
-        // 2. Calcular Costo de Mercadería Vendida (CMV)
-        const costoMercaderiaVendida = ventasFiltradas.reduce((sum, venta) => sum + (venta.costoMateriales || 0), 0);
-
-        // 3. Calcular Ganancia Bruta
+        const costoMercaderiaVendida = ventasFiltradas.reduce((sum, venta) => {
+             const costoProduccion = (venta.costoMateriales || 0) + ((venta.horasTrabajo || 0) * (venta.costoHora || 0)) + ((venta.costoMateriales || 0) * ((venta.porcentajeCostosFijos || 0) / 100));
+             return sum + costoProduccion;
+        }, 0);
         const gananciaBruta = ingresosTotales - costoMercaderiaVendida;
-
-        // 4. Calcular Gastos en Compras de Stock
         const gastosEnCompras = comprasFiltradas.reduce((sum, lote) => sum + (lote.precioCompra || 0), 0);
-
-        // 5. Calcular Ganancia Neta Final
         const gananciaNeta = gananciaBruta - gastosEnCompras;
 
-        // Renderizar el reporte
         reporteContainer.innerHTML = `
             <div class="linea-reporte">
                 <span>(+) Ingresos por Ventas</span>
                 <span class="valor-positivo">${formatCurrency(ingresosTotales)}</span>
             </div>
             <div class="linea-reporte">
-                <span>(-) Costo de Mercadería Vendida</span>
+                <span>(-) Costo de Ventas (Producción)</span>
                 <span class="valor-negativo">${formatCurrency(costoMercaderiaVendida)}</span>
             </div>
             <hr class="calculo-divisor">
@@ -76,27 +75,27 @@ export function setupFinanzas(app) {
                 <span>${formatCurrency(gananciaBruta)}</span>
             </div>
             <div class="linea-reporte" style="margin-top: 1.5rem;">
-                <span>(-) Gastos en Compras de Stock</span>
+                <span>(-) Inversión en Compras de Stock</span>
                 <span class="valor-negativo">${formatCurrency(gastosEnCompras)}</span>
             </div>
             <hr class="calculo-divisor">
             <div class="linea-reporte total-neto">
-                <span>(=) GANANCIA NETA</span>
+                <span>(=) GANANCIA/PÉRDIDA NETA</span>
                 <span class="${gananciaNeta >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatCurrency(gananciaNeta)}</span>
             </div>
         `;
     };
     
-    // Carga inicial y listeners
-    onSnapshot(query(presupuestosGuardadosCollection), (snapshot) => {
+    onSnapshot(query(presupuestosCollection), (snapshot) => {
         todosLosPresupuestos = snapshot.docs.map(doc => doc.data());
         
         const mesesDisponibles = new Set();
         todosLosPresupuestos.forEach(p => {
-            const fecha = p.fecha.toDate();
-            mesesDisponibles.add(`${fecha.getFullYear()}-${fecha.getMonth() + 1}`);
+            const fecha = p.fecha?.toDate ? p.fecha.toDate() : null;
+            if (fecha) {
+                mesesDisponibles.add(`${fecha.getFullYear()}-${fecha.getMonth() + 1}`);
+            }
         });
-        
         const mesesOrdenados = Array.from(mesesDisponibles).sort((a,b) => (new Date(b.split('-')[0],b.split('-')[1]-1)) - (new Date(a.split('-')[0],a.split('-')[1]-1)));
         
         filtroMesSelect.innerHTML = '<option value="todos">Todos los Tiempos</option>';
