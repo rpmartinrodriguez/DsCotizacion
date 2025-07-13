@@ -1,7 +1,7 @@
 // sw.js (Versión final con estrategia "Stale-While-Revalidate")
 
 // Cambiamos la versión una última vez para forzar la instalación de este nuevo Service Worker
-const CACHE_NAME = 'cotizador-dulce-app-v2.26'; 
+const CACHE_NAME = 'cotizador-dulce-app-v2.27'; 
 
 // Archivos esenciales de la "carcasa" de la app que se guardarán al instalar
 const APP_SHELL_URLS = [
