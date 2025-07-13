@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, addDoc, doc, updateDoc, 
-    query, where, getDocs, arrayUnion, writeBatch
+    query, where, getDocs, arrayUnion
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupCompras(app) {
@@ -14,17 +14,22 @@ export function setupCompras(app) {
     const nombreInput = document.getElementById('nombre-producto');
 
     let productosExistentes = [];
+    
     const cargarProductosExistentes = async () => {
-        const snapshot = await getDocs(materiasPrimasCollection);
-        productosExistentes = [];
-        datalist.innerHTML = '';
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            productosExistentes.push(data);
-            const option = document.createElement('option');
-            option.value = data.nombre;
-            datalist.appendChild(option);
-        });
+        try {
+            const snapshot = await getDocs(query(materiasPrimasCollection));
+            productosExistentes = [];
+            datalist.innerHTML = '';
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                productosExistentes.push(data);
+                const option = document.createElement('option');
+                option.value = data.nombre;
+                datalist.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Error al cargar productos existentes:", error);
+        }
     };
     
     nombreInput.addEventListener('input', () => {
@@ -39,55 +44,82 @@ export function setupCompras(app) {
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // Leemos los 4 valores del formulario
         const nombre = nombreInput.value.trim();
-        const precio = parseFloat(form['precio-compra'].value);
-        const cantidad = parseFloat(form['cantidad-compra'].value);
+        const precioPorUnidad = parseFloat(form['precio-compra'].value);
+        const unidadesCompradas = parseInt(form['unidades-compradas'].value, 10);
+        const cantidadPorUnidad = parseFloat(form['cantidad-por-unidad'].value);
         const unidad = unidadSelect.value;
-        if (!nombre || isNaN(precio) || isNaN(cantidad) || cantidad <= 0) {
-            alert("Por favor, completa todos los campos con valores válidos.");
+
+        if (!nombre || isNaN(precioPorUnidad) || isNaN(unidadesCompradas) || isNaN(cantidadPorUnidad) || unidadesCompradas <= 0 || cantidadPorUnidad <= 0) {
+            alert("Por favor, completa todos los campos con valores numéricos válidos y positivos.");
             return;
         }
+        
+        // --- NUEVA LÓGICA DE CÁLCULO ---
+        const precioTotalCompra = precioPorUnidad * unidadesCompradas;
+        const cantidadTotalComprada = cantidadPorUnidad * unidadesCompradas;
+        const costoUnitarioFinal = precioTotalCompra / cantidadTotalComprada;
 
-        const nuevoLote = { fechaCompra: new Date(), precioCompra: precio, cantidadComprada: cantidad, stockRestante: cantidad, costoUnitario: precio / cantidad };
+        const nuevoLote = {
+            fechaCompra: new Date(),
+            precioCompra: precioTotalCompra, // Guardamos el precio total calculado
+            cantidadComprada: cantidadTotalComprada, // Guardamos la cantidad total calculada
+            stockRestante: cantidadTotalComprada, // El stock inicial es la cantidad total
+            costoUnitario: costoUnitarioFinal, // Guardamos el costo unitario real
+            // Guardamos los detalles de la compra para futura referencia si es necesario
+            detalleDeCompra: {
+                unidades: unidadesCompradas,
+                contenido: cantidadPorUnidad,
+                precioPorUnidad: precioPorUnidad
+            }
+        };
 
         try {
             const q = query(materiasPrimasCollection, where("nombre", "==", nombre));
             const querySnapshot = await getDocs(q);
 
-            const batch = writeBatch(db);
             let productoId;
             
             if (querySnapshot.empty) {
-                const nuevoProductoRef = doc(collection(db, 'materiasPrimas'));
+                // El producto es NUEVO
+                const nuevoProductoRef = await addDoc(materiasPrimasCollection, {
+                    nombre: nombre,
+                    unidad: unidad,
+                    lotes: [nuevoLote]
+                });
                 productoId = nuevoProductoRef.id;
-                batch.set(nuevoProductoRef, { nombre, unidad, lotes: [nuevoLote] });
             } else {
-                const productoDocRef = querySnapshot.docs[0].ref;
-                productoId = productoDocRef.id;
-                batch.update(productoDocRef, { lotes: arrayUnion(nuevoLote) });
+                // El producto YA EXISTE, añadimos un nuevo lote
+                const productoDoc = querySnapshot.docs[0];
+                productoId = productoDoc.id;
+                await updateDoc(doc(db, 'materiasPrimas', productoId), {
+                    lotes: arrayUnion(nuevoLote)
+                });
             }
 
-            const nuevoMovimientoRef = doc(collection(db, 'movimientosStock'));
-            batch.set(nuevoMovimientoRef, {
+            // Registramos el movimiento de stock
+            await addDoc(movimientosStockCollection, {
                 materiaPrimaId: productoId,
                 materiaPrimaNombre: nombre,
                 tipo: 'Compra',
-                cantidad: cantidad,
+                cantidad: cantidadTotalComprada, // Registramos la cantidad total
                 fecha: new Date(),
-                descripcion: `Compra de ${cantidad} ${unidad}`
+                descripcion: `Compra de ${unidadesCompradas} x ${cantidadPorUnidad} ${unidad}`
             });
-
-            await batch.commit();
             
             alert(`¡Compra de "${nombre}" registrada con éxito!`);
             form.reset();
             unidadSelect.disabled = false;
             await cargarProductosExistentes();
+
         } catch (error) {
-            console.error("Error al guardar la compra: ", error);
-            alert("Hubo un error al guardar la compra.");
+            console.error("Error detallado al guardar la compra: ", error);
+            alert("Hubo un error al guardar la compra. Revisa la consola.");
         }
     });
     
+    // Carga inicial
     cargarProductosExistentes();
 }
