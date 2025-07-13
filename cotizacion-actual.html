@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotización Actual - Dulce App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <meta name="theme-color" content="#ff96c5">
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            </header>
+
+        <nav class="nav-menu" id="nav-menu">
+            </nav>
+        <div class="nav-menu__overlay" id="nav-overlay"></div>
+
+        <main>
+            <section class="card">
+                <h2 class="card__title">🛒 Cotización Actual</h2>
+                <div id="cart-items-container">
+                    </div>
+            </section>
+
+            <section class="card">
+                <h2 class="card__title">Resumen y Finalización</h2>
+                <div id="cart-summary-container">
+                    </div>
+                <hr class="calculo-divisor">
+                <div class="form-modern" style="grid-template-columns: 1fr 1fr;">
+                    <div class="form-group">
+                        <label for="cotizacion-nombre-cliente">Nombre del Cliente</label>
+                        <input type="text" id="cotizacion-nombre-cliente" list="lista-clientes-existentes" placeholder="Busca o escribe un cliente...">
+                        <datalist id="lista-clientes-existentes"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="cotizacion-titulo">Título de la Cotización</label>
+                        <input type="text" id="cotizacion-titulo" placeholder="Ej: Pedido evento, Torta y alfajores...">
+                    </div>
+                </div>
+                <button id="btn-finalizar-cotizacion" class="btn-primary" disabled>Guardar Cotización</button>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupCotizacion } from './js/cotizacion-actual.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupCotizacion(app);
+        } catch (error) { console.error(error); }
+    </script>
+    <script src="js/menu.js" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+        }
+    </script>
+</body>
+</html>
