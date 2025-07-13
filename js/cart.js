@@ -1,37 +1,51 @@
 // js/cart.js
 
-// Obtiene los items del carrito desde el almacenamiento local
 function getCartItems() {
     const items = localStorage.getItem('cotizacionActual');
     return items ? JSON.parse(items) : [];
 }
 
-// Guarda los items en el almacenamiento local
 function saveCartItems(items) {
     localStorage.setItem('cotizacionActual', JSON.stringify(items));
+    updateCartIcon(); // Actualiza el ícono cada vez que se guarda
 }
 
-// Añade una receta al carrito
 export function addToCart(receta) {
     const items = getCartItems();
-    // Revisa si la receta ya está en el carrito para no duplicarla
     const existe = items.find(item => item.id === receta.id);
     if (!existe) {
         items.push({
             id: receta.id,
             nombreTorta: receta.data.nombreTorta,
             ingredientes: receta.data.ingredientes,
-            cantidad: 1 // Por defecto añadimos 1 unidad
+            cantidad: 1
         });
         saveCartItems(items);
-        updateCartIcon();
         alert(`"${receta.data.nombreTorta}" se añadió a la cotización.`);
     } else {
         alert(`"${receta.data.nombreTorta}" ya está en la cotización.`);
     }
 }
 
-// Actualiza el número en el ícono del carrito
+// --- NUEVAS FUNCIONES ---
+export function updateCartItemQuantity(itemId, quantity) {
+    let items = getCartItems();
+    items = items.map(item => item.id === itemId ? { ...item, cantidad: quantity } : item);
+    saveCartItems(items);
+}
+
+export function removeFromCart(itemId) {
+    let items = getCartItems();
+    items = items.filter(item => item.id !== itemId);
+    saveCartItems(items);
+}
+
+export function clearCart() {
+    localStorage.removeItem('cotizacionActual');
+    updateCartIcon();
+}
+// --- FIN NUEVAS FUNCIONES ---
+
 export function updateCartIcon() {
     const items = getCartItems();
     const cartIcon = document.getElementById('cart-icon');
