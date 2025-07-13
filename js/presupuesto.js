@@ -246,7 +246,7 @@ export function setupPresupuesto(app) {
             alert('¡Presupuesto guardado con éxito en el historial! Ahora puedes confirmarlo como venta desde allí.');
             
             const precioFinalParaMensaje = precioVentaSugeridoSpan.textContent;
-            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💛.\n\nSi te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.\n\nGracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨\n\nDesde ya,\nDulce Sal — Horneando tus mejores momentos 🍰`;
+            const mensajeGenerado = `Hola! 😊 Te comparto el presupuesto de la torta que me consultaste: *${tituloTorta} - ${precioFinalParaMensaje}*. Está pensado con todo el cuidado y la calidad que me gusta ofrecer en cada trabajo 💕.\n\nSi te gusta la propuesta, quedo atenta para confirmarlo y reservar la fecha 🎂. Y si tenés alguna duda o querés ajustar algo, también estoy para ayudarte.\n\nGracias por considerarme, me haría mucha ilusión ser parte de un evento tan especial como el tuyo. Ojalá podamos hacerlo realidad ✨\n\nDesde ya,\nDulce Sal — Horneando tus mejores momentos 🍰`;
             
             mensajeFinalTextarea.value = mensajeGenerado;
             resultadoFinalContainer.style.display = 'block';
