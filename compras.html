@@ -6,6 +6,7 @@
     <title>Registro de Compras</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
 </head>
 <body>
@@ -15,7 +16,7 @@
                 <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
@@ -23,7 +24,7 @@
         <nav class="nav-menu" id="nav-menu">
             <div class="nav-menu__header">
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce app</span>
+                <span class="nav-menu__title">Dulce App</span>
             </div>
             <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
             <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
@@ -33,7 +34,7 @@
             <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
             <a href="stock.html" class="nav-menu__link">📦 Stock</a>
             <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+            <a href="compras.html" class="nav-menu__link active">🛍️ Registrar Compra</a>
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
         
@@ -41,19 +42,23 @@
             <section class="card">
                 <h2 class="card__title">Registrar Nueva Compra de Materia Prima</h2>
                 <form id="form-nueva-compra">
-                    <div class="form-modern">
-                        <div class="form-group">
+                    <div class="form-modern" style="grid-template-columns: 1fr 1fr;">
+                        <div class="form-group" style="grid-column: 1 / -1;">
                             <label for="nombre-producto">Nombre del Producto</label>
                             <input type="text" id="nombre-producto" required list="lista-productos-existentes" placeholder="Escribe o selecciona un producto">
                             <datalist id="lista-productos-existentes"></datalist>
                         </div>
                         <div class="form-group">
-                            <label for="precio-compra">Precio de Compra ($)</label>
-                            <input type="number" id="precio-compra" step="0.01" required>
+                            <label for="precio-compra">Precio por Unidad ($)</label>
+                            <input type="number" id="precio-compra" step="0.01" required placeholder="Ej: 2000">
                         </div>
                         <div class="form-group">
-                            <label for="cantidad-compra">Cantidad Comprada</label>
-                            <input type="number" id="cantidad-compra" step="any" required>
+                            <label for="unidades-compradas">Unidades Compradas</label>
+                            <input type="number" id="unidades-compradas" step="1" required placeholder="Ej: 4">
+                        </div>
+                        <div class="form-group">
+                            <label for="cantidad-por-unidad">Contenido por Unidad</label>
+                            <input type="number" id="cantidad-por-unidad" step="any" required placeholder="Ej: 500">
                         </div>
                         <div class="form-group">
                             <label for="unidad-medida">Unidad de Medida</label>
