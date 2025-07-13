@@ -1,14 +1,15 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    setDoc, getDocs, deleteDoc
+    setDoc, getDocs, deleteDoc, addDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { addToCart, updateCartIcon } from './cart.js'; // Importamos las funciones del carrito
 
 export function setupRecetas(app) {
     const db = getFirestore(app);
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
 
-    // --- Referencias al DOM ---
+    // Referencias al DOM
     const listaRecetasContainer = document.getElementById('lista-recetas-container');
     const btnCrearReceta = document.getElementById('btn-crear-receta');
     
@@ -25,7 +26,7 @@ export function setupRecetas(app) {
     const btnGuardarReceta = document.getElementById('receta-modal-btn-guardar');
     const btnCancelarReceta = document.getElementById('receta-modal-btn-cancelar');
 
-    // --- Variables de Estado ---
+    // Variables de Estado
     let materiasPrimasDisponibles = [];
     let todasLasRecetas = [];
     let ingredientesRecetaActual = [];
@@ -172,7 +173,7 @@ export function setupRecetas(app) {
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
-                            <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary">Presupuestar</a>
+                            <button class="btn-primary btn-anadir-cotizacion" data-id="${receta.id}">Añadir 🛒</button>
                         </div>
                     </div>
                 `).join('');
@@ -189,7 +190,6 @@ export function setupRecetas(app) {
         });
     };
     
-    // --- Listeners Principales ---
     onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
         todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         mostrarRecetas(todasLasRecetas);
@@ -199,6 +199,7 @@ export function setupRecetas(app) {
         const header = e.target.closest('.categoria-acordeon__header');
         if (header) {
             header.parentElement.classList.toggle('active');
+            return;
         }
         
         const targetEditar = e.target.closest('.btn-editar-receta');
@@ -206,8 +207,19 @@ export function setupRecetas(app) {
             const id = targetEditar.dataset.id;
             const recetaParaEditar = todasLasRecetas.find(r => r.id === id);
             if (recetaParaEditar) openModal(recetaParaEditar);
+            return;
         }
         
+        const targetAnadir = e.target.closest('.btn-anadir-cotizacion');
+        if(targetAnadir) {
+            const id = targetAnadir.dataset.id;
+            const recetaParaAnadir = todasLasRecetas.find(r => r.id === id);
+            if (recetaParaAnadir) {
+                addToCart(recetaParaAnadir);
+            }
+            return;
+        }
+
         const targetBorrar = e.target.closest('.btn-borrar-receta');
         if (targetBorrar) {
             const id = targetBorrar.dataset.id;
@@ -232,4 +244,5 @@ export function setupRecetas(app) {
     
     // Carga inicial
     cargarMateriasPrimas();
+    updateCartIcon(); // Para que el ícono muestre el conteo correcto al cargar la página
 }
