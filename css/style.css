@@ -1616,3 +1616,23 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-top: 1rem;
     background-color: var(--background-color);
 }
+
+/* --- Estilos para la Modal de Recetas con Scroll Interno --- */
+#receta-modal-overlay .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+}
+
+#receta-modal-overlay .modal-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1rem 0;
+}
+
+#receta-modal-overlay .modal-actions {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+    margin-top: 0;
+}
+
