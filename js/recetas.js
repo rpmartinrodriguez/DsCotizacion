@@ -2,7 +2,7 @@ import {
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
     setDoc, getDocs, deleteDoc, addDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { addToCart, updateCartIcon } from './cart.js'; // Importamos las funciones del carrito
+import { addToCart, updateCartIcon } from './cart.js';
 
 export function setupRecetas(app) {
     const db = getFirestore(app);
@@ -130,7 +130,7 @@ export function setupRecetas(app) {
             alert('Por favor, completa el nombre, selecciona una categoría y añade al menos un ingrediente.');
             return;
         }
-        const id = editandoId || doc(recetasCollection).id;
+        const id = editandoId || doc(collection(db, 'recetas')).id;
         const recetaData = { nombreTorta, categoria, ingredientes: ingredientesRecetaActual };
         try {
             await setDoc(doc(db, 'recetas', id), recetaData);
@@ -173,7 +173,8 @@ export function setupRecetas(app) {
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
-                            <button class="btn-primary btn-anadir-cotizacion" data-id="${receta.id}">Añadir 🛒</button>
+                            <button class="btn-secondary btn-anadir-cotizacion" data-id="${receta.id}">Añadir 🛒</button>
+                            <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary">Presupuestar</a>
                         </div>
                     </div>
                 `).join('');
@@ -244,5 +245,5 @@ export function setupRecetas(app) {
     
     // Carga inicial
     cargarMateriasPrimas();
-    updateCartIcon(); // Para que el ícono muestre el conteo correcto al cargar la página
+    updateCartIcon();
 }
