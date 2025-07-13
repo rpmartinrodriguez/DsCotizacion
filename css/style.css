@@ -1594,3 +1594,25 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     color: var(--text-light);
     font-weight: normal;
 }
+
+/* Hacemos que el contenido de la modal se organice como una columna flexible */
+#receta-modal-overlay .modal-content {
+    display: flex;
+    flex-direction: column;
+    /* Limitamos la altura máxima de la modal al 85% de la pantalla */
+    max-height: 85vh; 
+}
+
+/* Le decimos al contenedor de la lista de ingredientes que crezca y sea desplazable */
+#receta-modal-overlay #ingredientes-en-receta-container {
+    flex-grow: 1; /* Permite que este elemento ocupe el espacio disponible */
+    overflow-y: auto; /* Añade una barra de scroll vertical si el contenido es muy largo */
+    min-height: 100px; /* Le damos una altura mínima para que no desaparezca si está vacío */
+    
+    /* Pequeños ajustes de estilo para que se vea mejor */
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+    margin-top: 1rem;
+    background-color: var(--background-color);
+}
