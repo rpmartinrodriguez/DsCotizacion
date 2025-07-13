@@ -6,6 +6,7 @@
     <title>Mis Postres - Recetas</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
 </head>
 <body>
@@ -15,17 +16,18 @@
                 <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Cotizador de Tortas" class="header__logo">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
+
         <nav class="nav-menu" id="nav-menu">
             <div class="nav-menu__header">
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
                 <span class="nav-menu__title">Dulce App</span>
             </div>
             <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="recetas.html" class="nav-menu__link active">🍰 Postres</a>
             <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
             <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
             <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
@@ -35,6 +37,7 @@
             <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
+        
         <main>
             <section class="card">
                 <div class="card-header-actions">
@@ -47,43 +50,50 @@
             </section>
         </main>
     </div>
+    
     <div id="receta-modal-overlay" class="modal-overlay">
-        <div class="modal-content card" style="max-width: 700px;">
+        <div class="modal-content card">
             <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
-            <div class="form-modern">
-                <div class="form-group">
-                    <label for="receta-nombre-input">Nombre del Postre</label>
-                    <input type="text" id="receta-nombre-input" placeholder="Ej: Torta Oreo">
+            
+            <div class="modal-body">
+                <div class="form-modern">
+                    <div class="form-group">
+                        <label for="receta-nombre-input">Nombre del Postre</label>
+                        <input type="text" id="receta-nombre-input" placeholder="Ej: Torta Oreo">
+                    </div>
+                    <div class="form-group">
+                        <label for="receta-categoria-select">Categoría</label>
+                        <select id="receta-categoria-select">
+                            <option value="" disabled selected>Selecciona una categoría</option>
+                            <option value="Tortas">Tortas</option>
+                            <option value="Tartas">Tartas</option>
+                            <option value="Alfajores">Alfajores</option>
+                            <option value="Budines">Budines</option>
+                            <option value="Mix D's">Mix D's</option>
+                            <option value="Sin TACC">Sin TACC</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="receta-categoria-select">Categoría</label>
-                    <select id="receta-categoria-select">
-                        <option value="" disabled selected>Selecciona una categoría</option>
-                        <option value="Tortas">Tortas</option>
-                        <option value="Tartas">Tartas</option>
-                        <option value="Alfajores">Alfajores</option>
-                        <option value="Budines">Budines</option>
-                        <option value="Mix D's">Mix D's</option>
-                        <option value="Sin TACC">Sin TACC</option>
-                    </select>
+
+                <h4 class="card__subtitle">Ingredientes de la Receta</h4>
+                <div class="receta-editor-grid">
+                    <div class="form-group">
+                        <label for="selector-ingrediente-receta">Añadir Ingrediente</label>
+                        <input type="text" id="selector-ingrediente-receta" list="lista-materias-primas-receta" placeholder="Busca un ingrediente...">
+                        <datalist id="lista-materias-primas-receta"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="cantidad-ingrediente-receta">Cantidad</label>
+                        <input type="number" id="cantidad-ingrediente-receta" min="0" step="any">
+                    </div>
+                    <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
                 </div>
-            </div>
-            <h4 class="card__subtitle">Ingredientes de la Receta</h4>
-            <div class="receta-editor-grid">
-                <div class="form-group">
-                    <label for="selector-ingrediente-receta">Añadir Ingrediente</label>
-                    <input type="text" id="selector-ingrediente-receta" list="lista-materias-primas-receta" placeholder="Busca un ingrediente...">
-                    <datalist id="lista-materias-primas-receta"></datalist>
+                
+                <hr class="calculo-divisor">
+
+                <div id="ingredientes-en-receta-container">
+                    <p>Aún no has añadido ingredientes.</p>
                 </div>
-                <div class="form-group">
-                    <label for="cantidad-ingrediente-receta">Cantidad</label>
-                    <input type="number" id="cantidad-ingrediente-receta" min="0" step="any">
-                </div>
-                <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
-            </div>
-            <hr class="calculo-divisor">
-            <div id="ingredientes-en-receta-container">
-                <p>Aún no has añadido ingredientes.</p>
             </div>
             <div class="modal-actions">
                 <button id="receta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
@@ -91,6 +101,7 @@
             </div>
         </div>
     </div>
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
@@ -100,9 +111,7 @@
     <script src="js/menu.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
         }
     </script>
 </body>
