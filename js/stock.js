@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    updateDoc, getDoc, runTransaction, where, addDoc
+    updateDoc, getDoc, runTransaction, where, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupStock(app) {
@@ -39,7 +39,7 @@ export function setupStock(app) {
             return;
         }
         datos.forEach(itemConId => {
-            try { // --- INICIO DEL BLOQUE DE SEGURIDAD ---
+            try {
                 const item = itemConId.data;
                 const id = itemConId.id;
 
@@ -69,28 +69,32 @@ export function setupStock(app) {
                 `;
                 tablaStockBody.appendChild(fila);
             } catch (error) {
-                console.error(`Error al renderizar el producto: ${itemConId.data.nombre}. Este producto puede tener datos corruptos.`, error);
-            } // --- FIN DEL BLOQUE DE SEGURIDAD ---
+                console.error(`Error al renderizar el producto: ${itemConId.data.nombre || 'Desconocido'}. Este producto puede tener datos corruptos.`, error);
+            }
         });
     };
     
     const openModalParaEditar = async (id) => {
         editandoId = id;
-        const docRef = doc(db, 'materiasPrimas', id);
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists() || !docSnap.data().lotes || docSnap.data().lotes.length === 0) {
-            alert("El producto no tiene compras registradas para editar.");
-            return;
+        try {
+            const docRef = doc(db, 'materiasPrimas', id);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists() || !docSnap.data().lotes || docSnap.data().lotes.length === 0) {
+                alert("El producto no tiene compras registradas para editar.");
+                return;
+            }
+            const producto = docSnap.data();
+            const ultimoLote = [...producto.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds)[0];
+            
+            modalTitle.textContent = `Editar: ${producto.nombre}`;
+            nombreInput.value = producto.nombre;
+            unidadSelect.value = producto.unidad;
+            precioLoteInput.value = ultimoLote.precioCompra;
+            cantidadLoteInput.value = ultimoLote.cantidadComprada;
+            modal.classList.add('visible');
+        } catch (error) {
+            console.error("Error al abrir modal de edición:", error);
         }
-        const producto = docSnap.data();
-        const ultimoLote = [...producto.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds)[0];
-        
-        modalTitle.textContent = `Editar: ${producto.nombre}`;
-        nombreInput.value = producto.nombre;
-        unidadSelect.value = producto.unidad;
-        precioLoteInput.value = ultimoLote.precioCompra;
-        cantidadLoteInput.value = ultimoLote.cantidadComprada;
-        modal.classList.add('visible');
     };
 
     const closeModal = () => {
@@ -162,7 +166,7 @@ export function setupStock(app) {
             });
         }, (error) => {
             console.error("Error al cargar historial:", error);
-            historialListaContainer.innerHTML = `<p style="color:var(--danger-color);">Error al cargar. Revisa la consola para crear el índice en Firebase.</p>`;
+            historialListaContainer.innerHTML = `<p style="color:var(--danger-color);">Error al cargar. Revisa la consola (probablemente falte un índice).</p>`;
         });
     };
 
@@ -202,10 +206,11 @@ export function setupStock(app) {
                     runTransaction(db, async (transaction) => {
                         const ingredienteDoc = await transaction.get(docRef);
                         if (!ingredienteDoc.exists()) throw "Este producto ya no existe.";
+                        
                         let data = ingredienteDoc.data();
                         let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
-                        const stockTotal = lotesActualizados.reduce((sum, lote) => sum + lote.stockRestante, 0);
-                        if (stockTotal < cantidadADescontar) throw `Stock insuficiente. Stock actual: ${stockTotal}.`;
+                        
+                        // --- LÓGICA ACTUALIZADA PARA PERMITIR STOCK NEGATIVO ---
                         let restanteADescontar = cantidadADescontar;
                         for (const lote of lotesActualizados) {
                             if (restanteADescontar <= 0) break;
@@ -213,7 +218,13 @@ export function setupStock(app) {
                             lote.stockRestante -= descontar;
                             restanteADescontar -= descontar;
                         }
-                        lotesActualizados = lotesActualizados.filter(lote => lote.stockRestante > 0);
+
+                        // Si todavía falta por descontar, lo restamos del último lote.
+                        if (restanteADescontar > 0 && lotesActualizados.length > 0) {
+                            lotesActualizados[lotesActualizados.length - 1].stockRestante -= restanteADescontar;
+                        }
+                        
+                        // Ya no filtramos los lotes que llegan a cero.
                         transaction.update(docRef, { lotes: lotesActualizados });
                     }).then(() => {
                         const producto = todoElStock.find(p => p.id === id).data;
@@ -236,4 +247,6 @@ export function setupStock(app) {
             }
         }
     });
+
+    cargarMateriasPrimas();
 }
