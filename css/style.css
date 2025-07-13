@@ -1636,3 +1636,37 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-top: 0;
 }
 
+/* --- Estilos para la Página de Finanzas --- */
+.reporte-financiero {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    font-size: 1.1rem;
+}
+.linea-reporte {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+}
+.linea-reporte span:first-child {
+    color: var(--text-light);
+}
+.linea-reporte span:last-child {
+    font-weight: 500;
+}
+.valor-positivo {
+    color: var(--success-color);
+}
+.valor-negativo {
+    color: var(--danger-color);
+}
+.total-bruto, .total-neto {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+.total-neto {
+    background-color: var(--background-color);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
