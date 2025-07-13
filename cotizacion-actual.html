@@ -12,10 +12,36 @@
 <body>
     <div class="main-container">
         <header class="header">
-            </header>
+            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="header__logo-link">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+            </a>
+            <a href="cotizacion-actual.html" class="header__cart-link">
+                <div id="cart-icon" class="header__cart-icon">
+                    🛒
+                    <span id="cart-count" class="cart-count">0</span>
+                </div>
+            </a>
+        </header>
 
         <nav class="nav-menu" id="nav-menu">
-            </nav>
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Dulce App</span>
+            </div>
+            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="reportes.html" class="nav-menu__link">📈 Finanzas</a>
+            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
+            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
+            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -41,7 +67,7 @@
                         <input type="text" id="cotizacion-titulo" placeholder="Ej: Pedido evento, Torta y alfajores...">
                     </div>
                 </div>
-                <button id="btn-finalizar-cotizacion" class="btn-primary" disabled>Guardar Cotización</button>
+                <button id="btn-finalizar-cotizacion" class="btn-primary" disabled>Guardar Cotización (Próximamente)</button>
             </section>
         </main>
     </div>
