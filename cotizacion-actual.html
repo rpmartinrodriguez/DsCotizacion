@@ -57,11 +57,11 @@
                 <div class="calculo-grid">
                     <div class="form-group">
                         <label for="horas-trabajo">Horas de Trabajo</label>
-                        <input type="number" id="horas-trabajo" value="0" min="0" step="0.5">
+                        <input type="number" id="horas-trabajo" value="1" min="0" step="0.5">
                     </div>
                     <div class="form-group">
                         <label for="costo-hora">Costo por Hora ($)</label>
-                        <input type="number" id="costo-hora" value="0" min="0" step="100">
+                        <input type="number" id="costo-hora" value="1500" min="0" step="100">
                     </div>
                     <div class="form-group">
                         <label for="costos-fijos-porcentaje">Costos Fijos (%)</label>
@@ -69,7 +69,7 @@
                     </div>
                     <div class="form-group">
                         <label for="ganancia-porcentaje">Margen de Ganancia (%)</label>
-                        <input type="number" id="ganancia-porcentaje" value="300" min="0" step="5">
+                        <input type="number" id="ganancia-porcentaje" value="50" min="0" step="5">
                     </div>
                 </div>
                 <hr class="calculo-divisor">
@@ -102,6 +102,19 @@
                 <button id="btn-finalizar-cotizacion" class="btn-primary">Guardar Cotización en Historial</button>
             </section>
         </main>
+    </div>
+
+    <div id="resumen-cotizacion-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title">¡Cotización Guardada!</h2>
+            <p class="text-light">Puedes copiar el siguiente resumen para enviarlo a tu cliente.</p>
+            <pre id="resumen-cotizacion-texto" class="mensaje-agradecimiento"></pre>
+            <div class="modal-actions">
+                <button id="resumen-cotizacion-btn-copiar" class="btn-secondary">Copiar Mensaje</button>
+                <button id="resumen-cotizacion-btn-cerrar" class="btn-primary">Cerrar e Ir al Historial</button>
+            </div>
+            <span id="copiado-feedback-cotizacion" class="copiado-feedback-modal"></span>
+        </div>
     </div>
 
     <script type="module">
