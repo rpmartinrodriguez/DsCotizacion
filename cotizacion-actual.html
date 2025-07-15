@@ -5,43 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cotización Actual - Dulce App</title>
     <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <meta name="theme-color" content="#ff96c5">
 </head>
 <body>
     <div class="main-container">
-        <header class="header">
-            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span><span></span><span></span>
-            </button>
-            <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
-            </a>
-            <a href="cotizacion-actual.html" class="header__cart-link">
-                <div id="cart-icon" class="header__cart-icon">
-                    🛒
-                    <span id="cart-count" class="cart-count">0</span>
-                </div>
-            </a>
-        </header>
-
-        <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-            <a href="finanzas.html" class="nav-menu__link">💰 Finanzas</a> 
-            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-            <a href="stock.html" class="nav-menu__link">📦 Stock</a>
-            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-        </nav>
+        <header class="header">...</header>
+        <nav class="nav-menu" id="nav-menu">...</nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -51,12 +19,43 @@
                     </div>
             </section>
 
-            <section class="card">
-                <h2 class="card__title">Resumen y Finalización</h2>
-                <div id="cart-summary-container">
+            <section class="card" id="calculo-precio-venta">
+                <h2 class="card__title">Cálculo de Precio de Venta</h2>
+                <div class="calculo-grid">
+                    <div class="form-group">
+                        <label for="horas-trabajo">Horas de Trabajo</label>
+                        <input type="number" id="horas-trabajo" value="1" min="0" step="0.5">
                     </div>
+                    <div class="form-group">
+                        <label for="costo-hora">Costo por Hora ($)</label>
+                        <input type="number" id="costo-hora" value="1500" min="0" step="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="costos-fijos-porcentaje">Costos Fijos (%)</label>
+                        <input type="number" id="costos-fijos-porcentaje" value="10" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="ganancia-porcentaje">Margen de Ganancia (%)</label>
+                        <input type="number" id="ganancia-porcentaje" value="50" min="0" step="5">
+                    </div>
+                </div>
                 <hr class="calculo-divisor">
-                <div class="form-modern" style="grid-template-columns: 1fr 1fr;">
+                <div class="calculo-resumen">
+                    <div class="calculo-fila"><span>Costo Materiales:</span><span id="resumen-costo-materiales">$0.00</span></div>
+                    <div class="calculo-fila"><span>+ Subtotal Mano de Obra:</span><span id="subtotal-mano-obra">$0.00</span></div>
+                    <div class="calculo-fila"><span>+ Subtotal Costos Fijos:</span><span id="subtotal-costos-fijos">$0.00</span></div>
+                    <div class="calculo-fila costo-produccion"><span>Costo de Producción:</span><span id="costo-produccion">$0.00</span></div>
+                    <div class="calculo-fila"><span>+ Ganancia Estimada:</span><span id="total-ganancia">$0.00</span></div>
+                </div>
+                <div class="precio-venta-final">
+                    <span>Precio de Venta Sugerido</span>
+                    <span id="precio-venta-sugerido">$0.00</span>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2 class="card__title">Datos para Guardar</h2>
+                <div class="form-modern">
                     <div class="form-group">
                         <label for="cotizacion-nombre-cliente">Nombre del Cliente</label>
                         <input type="text" id="cotizacion-nombre-cliente" list="lista-clientes-existentes" placeholder="Busca o escribe un cliente...">
@@ -67,25 +66,10 @@
                         <input type="text" id="cotizacion-titulo" placeholder="Ej: Pedido evento, Torta y alfajores...">
                     </div>
                 </div>
-                <button id="btn-finalizar-cotizacion" class="btn-primary" disabled>Guardar Cotización (Próximamente)</button>
+                <button id="btn-finalizar-cotizacion" class="btn-primary">Guardar Cotización en Historial</button>
             </section>
         </main>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCotizacion } from './js/cotizacion-actual.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupCotizacion(app);
-        } catch (error) { console.error(error); }
-    </script>
-    <script src="js/menu.js" defer></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
-        }
-    </script>
-</body>
+    </body>
 </html>
