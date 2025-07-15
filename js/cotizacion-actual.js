@@ -8,7 +8,7 @@ export function setupCotizacion(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
-    // --- Referencias al DOM ---
+    // Referencias al DOM
     const itemsContainer = document.getElementById('cart-items-container');
     const btnFinalizar = document.getElementById('btn-finalizar-cotizacion');
     const clienteInput = document.getElementById('cotizacion-nombre-cliente');
@@ -33,7 +33,7 @@ export function setupCotizacion(app) {
     let materiasPrimas = [];
     let costoTotalMateriales = 0;
 
-    const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
     const formatCurrencyForParse = (value) => (value || '0').replace(/\$|\s/g, '').replace(/\./g, '').replace(',', '.');
 
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
@@ -62,19 +62,18 @@ export function setupCotizacion(app) {
         const costoHora = parseFloat(costoHoraInput.value) || 0;
         const costosFijosPorc = parseFloat(costosFijosPorcInput.value) || 0;
         const gananciaPorc = parseFloat(gananciaPorcInput.value) || 0;
-
         const subtotalManoObra = horasTrabajo * costoHora;
         const subtotalCostosFijos = costoTotalMateriales * (costosFijosPorc / 100);
         const costoProduccion = costoTotalMateriales + subtotalManoObra + subtotalCostosFijos;
         const totalGanancia = costoProduccion * (gananciaPorc / 100);
         const precioVenta = costoProduccion + totalGanancia;
 
-        resumenCostoMaterialesSpan.textContent = `$${formatCurrency(costoTotalMateriales)}`;
-        subtotalManoObraSpan.textContent = `$${formatCurrency(subtotalManoObra)}`;
-        subtotalCostosFijosSpan.textContent = `$${formatCurrency(subtotalCostosFijos)}`;
-        costoProduccionSpan.textContent = `$${formatCurrency(costoProduccion)}`;
-        totalGananciaSpan.textContent = `$${formatCurrency(totalGanancia)}`;
-        precioVentaSugeridoSpan.textContent = `$${formatCurrency(precioVenta)}`;
+        resumenCostoMaterialesSpan.textContent = formatCurrency(costoTotalMateriales);
+        subtotalManoObraSpan.textContent = formatCurrency(subtotalManoObra);
+        subtotalCostosFijosSpan.textContent = formatCurrency(subtotalCostosFijos);
+        costoProduccionSpan.textContent = formatCurrency(costoProduccion);
+        totalGananciaSpan.textContent = formatCurrency(totalGanancia);
+        precioVentaSugeridoSpan.textContent = formatCurrency(precioVenta);
     };
 
     const renderCart = () => {
@@ -104,7 +103,7 @@ export function setupCotizacion(app) {
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'cart-item';
-            itemDiv.innerHTML = `<div class="cart-item__info"><h4>${item.nombreTorta}</h4><p>$${formatCurrency(costoTotalItem)}</p></div><div class="cart-item__actions"><label>Cant:</label><input type="number" class="item-quantity-input" data-id="${item.id}" value="${item.cantidad}" min="1"><button class="btn-remove-item" data-id="${item.id}">🗑️</button></div>`;
+            itemDiv.innerHTML = `<div class="cart-item__info"><h4>${item.nombreTorta}</h4><p>${formatCurrency(costoTotalItem)}</p></div><div class="cart-item__actions"><label>Cant:</label><input type="number" class="item-quantity-input" data-id="${item.id}" value="${item.cantidad}" min="1"><button class="btn-remove-item" data-id="${item.id}">🗑️</button></div>`;
             itemsContainer.appendChild(itemDiv);
         });
         costoTotalMateriales = subtotal;
@@ -120,28 +119,35 @@ export function setupCotizacion(app) {
                 if(mp) costoItem += calcularCostoFIFO(mp, ing.cantidad).costo;
             });
             const costoTotalItem = costoItem * item.cantidad;
-            return `* ${item.cantidad} x ${item.nombreTorta}: $${formatCurrency(costoTotalItem)}`;
+            return `* ${item.cantidad} x ${item.nombreTorta}: ${formatCurrency(costoTotalItem)}`;
         }).join('\n');
 
-        return `¡Hola ${cliente}! 👋\n\nUn placer prepararte la cotización para "${titulo}". Aquí te dejo el detalle:\n\n${detalleItems}\n\n**TOTAL FINAL: $${formatCurrency(total)}**\n\nCualquier duda, estoy a tu disposición.\n\n¡Gracias por tu confianza!\nDulce Sal — Horneando tus mejores momentos`;
+        return `¡Hola ${cliente}! 👋\n\nUn placer prepararte la cotización para "${titulo}". Aquí te dejo el detalle:\n\n${detalleItems}\n\n**TOTAL FINAL: ${formatCurrency(total)}**\n\nCualquier duda, estoy a tu disposición.\n\n¡Gracias por tu confianza!\nDulce App — Horneando tus mejores momentos`;
     };
 
     btnFinalizar.addEventListener('click', async () => {
+        btnFinalizar.disabled = true;
+        btnFinalizar.textContent = 'Guardando...';
+        
         const cliente = clienteInput.value.trim();
         const titulo = tituloInput.value.trim();
         if (!cliente || !titulo) {
             alert('Por favor, ingresa un nombre de cliente y un título para la cotización.');
+            btnFinalizar.disabled = false;
+            btnFinalizar.textContent = 'Guardar Cotización en Historial';
             return;
         }
         const items = getCartItems();
         if (items.length === 0) {
             alert('El carrito está vacío.');
+            btnFinalizar.disabled = false;
+            btnFinalizar.textContent = 'Guardar Cotización en Historial';
             return;
         }
         
         const ingredientesConsolidados = {};
         items.forEach(item => {
-            item.ingredientes.forEach(ing => {
+            (item.ingredientes || []).forEach(ing => {
                 const id = ing.idMateriaPrima;
                 if (!ingredientesConsolidados[id]) {
                     ingredientesConsolidados[id] = { ...ing, cantidadTotal: 0 };
@@ -185,6 +191,8 @@ export function setupCotizacion(app) {
         } catch(error) {
             console.error("Error al guardar la cotización: ", error);
             alert("Hubo un error al guardar la cotización.");
+            btnFinalizar.disabled = false;
+            btnFinalizar.textContent = 'Guardar Cotización en Historial';
         }
     });
 
@@ -229,10 +237,13 @@ export function setupCotizacion(app) {
 
     const loadInitialData = async () => {
         try {
-            const snapshot = await getDocs(query(materiasPrimasCollection));
-            materiasPrimas = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            const [materiasPrimasSnap, presSnap] = await Promise.all([
+                getDocs(query(materiasPrimasCollection)),
+                getDocs(query(presupuestosGuardadosCollection))
+            ]);
             
-            const presSnap = await getDocs(query(presupuestosGuardadosCollection));
+            materiasPrimas = materiasPrimasSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
+            
             const nombres = new Set();
             presSnap.forEach(doc => {
                 if(doc.data().nombreCliente) nombres.add(doc.data().nombreCliente);
@@ -243,6 +254,7 @@ export function setupCotizacion(app) {
             renderCart();
         } catch(error) {
             console.error("Error al cargar datos iniciales:", error);
+            itemsContainer.innerHTML = '<p style="color:red;">Error al cargar los datos necesarios para cotizar.</p>';
         }
     };
     
