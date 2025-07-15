@@ -8,7 +8,6 @@ export function setupCotizacion(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
-    // --- Referencias al DOM ---
     const itemsContainer = document.getElementById('cart-items-container');
     const btnFinalizar = document.getElementById('btn-finalizar-cotizacion');
     const clienteInput = document.getElementById('cotizacion-nombre-cliente');
@@ -37,7 +36,9 @@ export function setupCotizacion(app) {
     const formatCurrencyForParse = (value) => (value || '0').replace(/\$|\./g, '').replace(',', '.');
 
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
-        if (!materiaPrima || !materiaPrima.lotes) return { costo: 0, desglose: [] };
+        if (!materiaPrima || !materiaPrima.lotes) {
+            return { costo: 0, desglose: [] };
+        }
         let costo = 0;
         let desglose = [];
         let restante = cantidadRequerida;
@@ -110,7 +111,16 @@ export function setupCotizacion(app) {
 
     const generarMensajeResumen = (cliente, titulo, items, total) => {
         const precioVentaTotal = parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent));
-        const costoMaterialesTotal = costoTotalMateriales;
+        
+        let costoMaterialesTotal = 0;
+        items.forEach(item => {
+            let costoItem = 0;
+             (item.ingredientes || []).forEach(ing => {
+                const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
+                if (mp) costoItem += calcularCostoFIFO(mp, ing.cantidad).costo;
+            });
+            costoMaterialesTotal += costoItem * item.cantidad;
+        });
 
         let detalleItems = items.map(item => {
             let costoItem = 0;
@@ -157,7 +167,6 @@ export function setupCotizacion(app) {
                     ingredientesConsolidados[id].cantidadTotal += ing.cantidad * item.cantidad;
                 });
             });
-
             let costoFinalReal = 0;
             const ingredientesParaGuardar = Object.values(ingredientesConsolidados).map(ing => {
                 const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
@@ -165,7 +174,6 @@ export function setupCotizacion(app) {
                 costoFinalReal += costo;
                 return { ...ing, costoTotal: costo, lotesUtilizados: desglose };
             });
-
             const presupuestoGuardado = {
                 tituloTorta: titulo,
                 nombreCliente: cliente,
@@ -182,16 +190,12 @@ export function setupCotizacion(app) {
                 esMultiProducto: true,
                 productos: items.map(i => ({id: i.id, nombre: i.nombreTorta, cantidad: i.cantidad}))
             };
-
             try {
                 await addDoc(presupuestosGuardadosCollection, presupuestoGuardado);
-                
                 const totalFinal = presupuestoGuardado.precioVenta;
                 const mensaje = generarMensajeResumen(cliente, titulo, items, totalFinal);
-                
                 resumenTexto.innerText = mensaje;
                 resumenModal.classList.add('visible');
-
             } catch (error) {
                 console.error("Error al guardar la cotización: ", error);
                 alert("Hubo un error al guardar la cotización.");
@@ -241,12 +245,10 @@ export function setupCotizacion(app) {
             presSnap.forEach(doc => {
                 if (doc.data().nombreCliente) nombres.add(doc.data().nombreCliente);
             });
-
             if(datalistClientes) {
                 datalistClientes.innerHTML = '';
                 nombres.forEach(nombre => datalistClientes.innerHTML += `<option value="${nombre}">`);
             }
-            
             renderCart();
         } catch (error) {
             console.error("Error al cargar datos iniciales:", error);
