@@ -1,10 +1,12 @@
 // js/cart.js
 
-function getCartItems() {
+// CORRECCIÓN: Añadimos 'export' para que esta función sea pública y otros archivos puedan usarla.
+export function getCartItems() {
     const items = localStorage.getItem('cotizacionActual');
     return items ? JSON.parse(items) : [];
 }
 
+// Hacemos esta función interna, ya que solo la usamos dentro de este mismo archivo.
 function saveCartItems(items) {
     localStorage.setItem('cotizacionActual', JSON.stringify(items));
     updateCartIcon(); // Actualiza el ícono cada vez que se guarda
@@ -27,7 +29,6 @@ export function addToCart(receta) {
     }
 }
 
-// --- NUEVAS FUNCIONES ---
 export function updateCartItemQuantity(itemId, quantity) {
     let items = getCartItems();
     items = items.map(item => item.id === itemId ? { ...item, cantidad: quantity } : item);
@@ -44,7 +45,6 @@ export function clearCart() {
     localStorage.removeItem('cotizacionActual');
     updateCartIcon();
 }
-// --- FIN NUEVAS FUNCIONES ---
 
 export function updateCartIcon() {
     const items = getCartItems();
