@@ -8,7 +8,6 @@ export function setupCotizacion(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
-    // Referencias al DOM
     const itemsContainer = document.getElementById('cart-items-container');
     const btnFinalizar = document.getElementById('btn-finalizar-cotizacion');
     const clienteInput = document.getElementById('cotizacion-nombre-cliente');
@@ -33,7 +32,7 @@ export function setupCotizacion(app) {
     let materiasPrimas = [];
     let costoTotalMateriales = 0;
 
-    const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { style: 'currency', currency: 'ARS' });
+    const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const formatCurrencyForParse = (value) => (value || '0').replace(/\$|\s/g, '').replace(/\./g, '').replace(',', '.');
 
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
@@ -62,18 +61,19 @@ export function setupCotizacion(app) {
         const costoHora = parseFloat(costoHoraInput.value) || 0;
         const costosFijosPorc = parseFloat(costosFijosPorcInput.value) || 0;
         const gananciaPorc = parseFloat(gananciaPorcInput.value) || 0;
+
         const subtotalManoObra = horasTrabajo * costoHora;
         const subtotalCostosFijos = costoTotalMateriales * (costosFijosPorc / 100);
         const costoProduccion = costoTotalMateriales + subtotalManoObra + subtotalCostosFijos;
         const totalGanancia = costoProduccion * (gananciaPorc / 100);
         const precioVenta = costoProduccion + totalGanancia;
 
-        resumenCostoMaterialesSpan.textContent = formatCurrency(costoTotalMateriales);
-        subtotalManoObraSpan.textContent = formatCurrency(subtotalManoObra);
-        subtotalCostosFijosSpan.textContent = formatCurrency(subtotalCostosFijos);
-        costoProduccionSpan.textContent = formatCurrency(costoProduccion);
-        totalGananciaSpan.textContent = formatCurrency(totalGanancia);
-        precioVentaSugeridoSpan.textContent = formatCurrency(precioVenta);
+        resumenCostoMaterialesSpan.textContent = `$${formatCurrency(costoTotalMateriales)}`;
+        subtotalManoObraSpan.textContent = `$${formatCurrency(subtotalManoObra)}`;
+        subtotalCostosFijosSpan.textContent = `$${formatCurrency(subtotalCostosFijos)}`;
+        costoProduccionSpan.textContent = `$${formatCurrency(costoProduccion)}`;
+        totalGananciaSpan.textContent = `$${formatCurrency(totalGanancia)}`;
+        precioVentaSugeridoSpan.textContent = `$${formatCurrency(precioVenta)}`;
     };
 
     const renderCart = () => {
@@ -103,7 +103,7 @@ export function setupCotizacion(app) {
             
             const itemDiv = document.createElement('div');
             itemDiv.className = 'cart-item';
-            itemDiv.innerHTML = `<div class="cart-item__info"><h4>${item.nombreTorta}</h4><p>${formatCurrency(costoTotalItem)}</p></div><div class="cart-item__actions"><label>Cant:</label><input type="number" class="item-quantity-input" data-id="${item.id}" value="${item.cantidad}" min="1"><button class="btn-remove-item" data-id="${item.id}">🗑️</button></div>`;
+            itemDiv.innerHTML = `<div class="cart-item__info"><h4>${item.nombreTorta}</h4><p>$${formatCurrency(costoTotalItem)}</p></div><div class="cart-item__actions"><label>Cant:</label><input type="number" class="item-quantity-input" data-id="${item.id}" value="${item.cantidad}" min="1"><button class="btn-remove-item" data-id="${item.id}">🗑️</button></div>`;
             itemsContainer.appendChild(itemDiv);
         });
         costoTotalMateriales = subtotal;
@@ -119,10 +119,11 @@ export function setupCotizacion(app) {
                 if(mp) costoItem += calcularCostoFIFO(mp, ing.cantidad).costo;
             });
             const costoTotalItem = costoItem * item.cantidad;
-            return `* ${item.cantidad} x ${item.nombreTorta}: ${formatCurrency(costoTotalItem)}`;
+            const precioVentaItem = parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent)) / items.reduce((acc, i) => acc + i.cantidad, 0) * item.cantidad;
+            return `* ${item.cantidad} x ${item.nombreTorta}: $${formatCurrency(precioVentaItem)}`;
         }).join('\n');
 
-        return `¡Hola ${cliente}! 👋\n\nUn placer prepararte la cotización para "${titulo}". Aquí te dejo el detalle:\n\n${detalleItems}\n\n**TOTAL FINAL: ${formatCurrency(total)}**\n\nCualquier duda, estoy a tu disposición.\n\n¡Gracias por tu confianza!\nDulce App — Horneando tus mejores momentos`;
+        return `¡Hola ${cliente}! 👋\n\nUn placer prepararte la cotización para "${titulo}". Aquí te dejo el detalle:\n\n${detalleItems}\n\n**TOTAL FINAL: $${formatCurrency(total)}**\n\nCualquier duda, estoy a tu disposición.\n\n¡Gracias por tu confianza!\nDulce App — Horneando tus mejores momentos`;
     };
 
     btnFinalizar.addEventListener('click', async () => {
