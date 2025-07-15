@@ -8,6 +8,7 @@ export function setupCotizacion(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
+    // --- Referencias al DOM ---
     const itemsContainer = document.getElementById('cart-items-container');
     const btnFinalizar = document.getElementById('btn-finalizar-cotizacion');
     const clienteInput = document.getElementById('cotizacion-nombre-cliente');
@@ -36,10 +37,7 @@ export function setupCotizacion(app) {
     const formatCurrencyForParse = (value) => (value || '0').replace(/\$|\./g, '').replace(',', '.');
 
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
-        if (!materiaPrima || !materiaPrima.lotes) {
-            console.warn(`Materia prima sin lotes o indefinida:`, materiaPrima);
-            return { costo: 0, desglose: [] };
-        }
+        if (!materiaPrima || !materiaPrima.lotes) return { costo: 0, desglose: [] };
         let costo = 0;
         let desglose = [];
         let restante = cantidadRequerida;
@@ -112,15 +110,7 @@ export function setupCotizacion(app) {
 
     const generarMensajeResumen = (cliente, titulo, items, total) => {
         const precioVentaTotal = parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent));
-        let costoTotalAgregado = 0;
-        items.forEach(item => {
-            let costoItem = 0;
-             (item.ingredientes || []).forEach(ing => {
-                const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
-                if (mp) costoItem += calcularCostoFIFO(mp, ing.cantidad).costo;
-            });
-            costoTotalAgregado += costoItem * item.cantidad;
-        });
+        const costoMaterialesTotal = costoTotalMateriales;
 
         let detalleItems = items.map(item => {
             let costoItem = 0;
@@ -129,8 +119,8 @@ export function setupCotizacion(app) {
                 if(mp) costoItem += calcularCostoFIFO(mp, ing.cantidad).costo;
             });
             const costoTotalItem = costoItem * item.cantidad;
-            const proporcion = costoTotalAgregado > 0 ? costoTotalItem / costoTotalAgregado : 0;
-            const precioVentaItem = precioVentaTotal * proporcion;
+            const proporcionCosto = costoMaterialesTotal > 0 ? costoTotalItem / costoMaterialesTotal : 0;
+            const precioVentaItem = precioVentaTotal * proporcionCosto;
             return `* ${item.cantidad} x ${item.nombreTorta}: $${formatCurrency(precioVentaItem)}`;
         }).join('\n');
         
@@ -141,7 +131,6 @@ export function setupCotizacion(app) {
         btnFinalizar.addEventListener('click', async () => {
             btnFinalizar.disabled = true;
             btnFinalizar.textContent = 'Guardando...';
-            
             const cliente = clienteInput.value.trim();
             const titulo = tituloInput.value.trim();
             if (!cliente || !titulo) {
@@ -252,10 +241,12 @@ export function setupCotizacion(app) {
             presSnap.forEach(doc => {
                 if (doc.data().nombreCliente) nombres.add(doc.data().nombreCliente);
             });
+
             if(datalistClientes) {
                 datalistClientes.innerHTML = '';
                 nombres.forEach(nombre => datalistClientes.innerHTML += `<option value="${nombre}">`);
             }
+            
             renderCart();
         } catch (error) {
             console.error("Error al cargar datos iniciales:", error);
@@ -273,10 +264,14 @@ export function setupCotizacion(app) {
 
     if (btnCopiarResumen) {
         btnCopiarResumen.addEventListener('click', () => {
-            navigator.clipboard.writeText(resumenTexto.innerText).then(() => {
-                feedbackCopiado.textContent = '¡Copiado!';
-                setTimeout(() => { feedbackCopiado.textContent = ''; }, 2000);
-            }).catch(err => console.error('Error al copiar: ', err));
+            if (resumenTexto) {
+                navigator.clipboard.writeText(resumenTexto.innerText).then(() => {
+                    if(feedbackCopiado) {
+                        feedbackCopiado.textContent = '¡Copiado!';
+                        setTimeout(() => { feedbackCopiado.textContent = ''; }, 2000);
+                    }
+                }).catch(err => console.error('Error al copiar: ', err));
+            }
         });
     }
 
