@@ -36,25 +36,32 @@ export function setupCotizacion(app) {
     const formatCurrencyForParse = (value) => (value || '0').replace(/\$|\./g, '').replace(',', '.');
 
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
+        // CORRECCIÓN: Verificación de que la materia prima exista y tenga lotes.
+        if (!materiaPrima || !materiaPrima.lotes) {
+            console.warn(`Materia prima sin lotes o indefinida:`, materiaPrima);
+            return { costo: 0, desglose: [] };
+        }
+
         let costo = 0;
         let desglose = [];
         let restante = cantidadRequerida;
-        const lotes = [...(materiaPrima.lotes || [])].sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
-        for (const lote of lotes) {
-            if (restante <= 0) break;
+        const lotes = [...materiaPrima.lotes].sort((a,b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
+        
+        for(const lote of lotes) {
+            if(restante <= 0) break;
             const usar = Math.min(lote.stockRestante, restante);
             costo += usar * lote.costoUnitario;
             desglose.push({ cantidadUsada: usar, costoUnitario: lote.costoUnitario, fechaLote: lote.fechaCompra });
             restante -= usar;
         }
-        if (restante > 0 && lotes.length > 0) {
+        if(restante > 0 && lotes.length > 0) {
             const ultimoLote = lotes[lotes.length - 1];
             costo += restante * ultimoLote.costoUnitario;
             desglose.push({ cantidadUsada: restante, costoUnitario: ultimoLote.costoUnitario, fechaLote: null, esProyectado: true });
         }
         return { costo, desglose };
     };
-
+    
     const calcularPrecioVenta = () => {
         const horasTrabajo = parseFloat(horasTrabajoInput.value) || 0;
         const costoHora = parseFloat(costoHoraInput.value) || 0;
@@ -88,7 +95,7 @@ export function setupCotizacion(app) {
             let costoItem = 0;
             (item.ingredientes || []).forEach(ing => {
                 const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
-                if (mp) {
+                if(mp) {
                     const { costo } = calcularCostoFIFO(mp, ing.cantidad);
                     costoItem += costo;
                 }
@@ -106,16 +113,11 @@ export function setupCotizacion(app) {
     };
 
     const generarMensajeResumen = (cliente, titulo, items, total) => {
+        const totalItemsEnCarrito = items.reduce((acc, i) => acc + i.cantidad, 0);
+        if (totalItemsEnCarrito === 0) return ''; // Evitar división por cero
+
         let detalleItems = items.map(item => {
-            let costoItem = 0;
-            (item.ingredientes || []).forEach(ing => {
-                const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
-                if(mp) costoItem += calcularCostoFIFO(mp, ing.cantidad).costo;
-            });
-            const costoTotalItem = costoItem * item.cantidad;
-            const precioVentaTotal = parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent));
-            const totalItemsEnCarrito = items.reduce((acc, i) => acc + i.cantidad, 0);
-            const precioVentaItem = (precioVentaTotal / totalItemsEnCarrito) * item.cantidad;
+            const precioVentaItem = (total / totalItemsEnCarrito) * item.cantidad;
             return `* ${item.cantidad} x ${item.nombreTorta}: $${formatCurrency(precioVentaItem)}`;
         }).join('\n');
         return `¡Hola ${cliente}! 👋\n\nUn placer prepararte la cotización para "${titulo}". Aquí te dejo el detalle:\n\n${detalleItems}\n\n**TOTAL FINAL: $${formatCurrency(total)}**\n\nCualquier duda, estoy a tu disposición.\n\n¡Gracias por tu confianza!\nDulce App — Horneando tus mejores momentos`;
@@ -224,8 +226,10 @@ export function setupCotizacion(app) {
             presSnap.forEach(doc => {
                 if (doc.data().nombreCliente) nombres.add(doc.data().nombreCliente);
             });
-            datalistClientes.innerHTML = '';
-            nombres.forEach(nombre => datalistClientes.innerHTML += `<option value="${nombre}">`);
+            if(datalistClientes) {
+                datalistClientes.innerHTML = '';
+                nombres.forEach(nombre => datalistClientes.innerHTML += `<option value="${nombre}">`);
+            }
             renderCart();
         } catch (error) {
             console.error("Error al cargar datos iniciales:", error);
