@@ -1,16 +1,19 @@
-import { getFirestore, collection, getDocs, query, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { getCartItems, updateCartItemQuantity, removeFromCart, clearCart, updateCartIcon } from './cart.js';
+import { 
+    getFirestore, collection, getDocs, query, addDoc, Timestamp 
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getCartItems, updateCartItemQuantity, removeFromCart, clearCart } from './cart.js';
 
 export function setupCotizacion(app) {
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
 
+    // --- Referencias al DOM (con la línea que faltaba) ---
     const itemsContainer = document.getElementById('cart-items-container');
-    const btnFinalizar = document.getElementById('btn-finalizar-cotizacion');
     const clienteInput = document.getElementById('cotizacion-nombre-cliente');
     const tituloInput = document.getElementById('cotizacion-titulo');
     const datalistClientes = document.getElementById('lista-clientes-existentes');
+    const btnFinalizar = document.getElementById('btn-finalizar-cotizacion'); // Esta línea faltaba
     
     // Referencias a la calculadora de precios
     const horasTrabajoInput = document.getElementById('horas-trabajo');
@@ -37,7 +40,7 @@ export function setupCotizacion(app) {
         
         for(const lote of lotes) {
             if(restante <= 0) break;
-            const usar = Math.min(restante, lote.stockRestante);
+            const usar = Math.min(lote.stockRestante, restante);
             costo += usar * lote.costoUnitario;
             desglose.push({ cantidadUsada: usar, costoUnitario: lote.costoUnitario, fechaLote: lote.fechaCompra });
             restante -= usar;
@@ -173,9 +176,11 @@ export function setupCotizacion(app) {
             }
         }
     });
+    
     itemsContainer.addEventListener('click', e => {
-        if (e.target.closest('.btn-remove-item')) {
-            const itemId = e.target.closest('.btn-remove-item').dataset.id;
+        const target = e.target.closest('.btn-remove-item');
+        if (target) {
+            const itemId = target.dataset.id;
             if (confirm('¿Quitar este producto de la cotización?')) {
                 removeFromCart(itemId);
                 renderCart();
