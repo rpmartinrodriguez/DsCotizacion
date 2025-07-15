@@ -33,41 +33,38 @@ export function setupCotizacion(app) {
     let costoTotalMateriales = 0;
 
     const formatCurrency = (value) => (value || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const formatCurrencyForParse = (value) => (value || '0').replace(/\$|\s/g, '').replace(/\./g, '').replace(',', '.');
+    const formatCurrencyForParse = (value) => (value || '0').replace(/\$|\./g, '').replace(',', '.');
 
     const calcularCostoFIFO = (materiaPrima, cantidadRequerida) => {
         let costo = 0;
         let desglose = [];
         let restante = cantidadRequerida;
-        const lotes = [...(materiaPrima.lotes || [])].sort((a,b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
-        
-        for(const lote of lotes) {
-            if(restante <= 0) break;
+        const lotes = [...(materiaPrima.lotes || [])].sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
+        for (const lote of lotes) {
+            if (restante <= 0) break;
             const usar = Math.min(lote.stockRestante, restante);
             costo += usar * lote.costoUnitario;
             desglose.push({ cantidadUsada: usar, costoUnitario: lote.costoUnitario, fechaLote: lote.fechaCompra });
             restante -= usar;
         }
-        if(restante > 0 && lotes.length > 0) {
+        if (restante > 0 && lotes.length > 0) {
             const ultimoLote = lotes[lotes.length - 1];
             costo += restante * ultimoLote.costoUnitario;
             desglose.push({ cantidadUsada: restante, costoUnitario: ultimoLote.costoUnitario, fechaLote: null, esProyectado: true });
         }
         return { costo, desglose };
     };
-    
+
     const calcularPrecioVenta = () => {
         const horasTrabajo = parseFloat(horasTrabajoInput.value) || 0;
         const costoHora = parseFloat(costoHoraInput.value) || 0;
         const costosFijosPorc = parseFloat(costosFijosPorcInput.value) || 0;
         const gananciaPorc = parseFloat(gananciaPorcInput.value) || 0;
-
         const subtotalManoObra = horasTrabajo * costoHora;
         const subtotalCostosFijos = costoTotalMateriales * (costosFijosPorc / 100);
         const costoProduccion = costoTotalMateriales + subtotalManoObra + subtotalCostosFijos;
         const totalGanancia = costoProduccion * (gananciaPorc / 100);
         const precioVenta = costoProduccion + totalGanancia;
-
         resumenCostoMaterialesSpan.textContent = `$${formatCurrency(costoTotalMateriales)}`;
         subtotalManoObraSpan.textContent = `$${formatCurrency(subtotalManoObra)}`;
         subtotalCostosFijosSpan.textContent = `$${formatCurrency(subtotalCostosFijos)}`;
@@ -79,28 +76,25 @@ export function setupCotizacion(app) {
     const renderCart = () => {
         const items = getCartItems();
         itemsContainer.innerHTML = '';
-        
         if (items.length === 0) {
             itemsContainer.innerHTML = '<p>Tu cotización está vacía. Ve a la sección de "Postres" para añadir productos.</p>';
             costoTotalMateriales = 0;
             calcularPrecioVenta();
-            btnFinalizar.disabled = true;
+            if(btnFinalizar) btnFinalizar.disabled = true;
             return;
         }
-        
         let subtotal = 0;
         items.forEach(item => {
             let costoItem = 0;
             (item.ingredientes || []).forEach(ing => {
                 const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
-                if(mp) {
+                if (mp) {
                     const { costo } = calcularCostoFIFO(mp, ing.cantidad);
                     costoItem += costo;
                 }
             });
             const costoTotalItem = costoItem * item.cantidad;
             subtotal += costoTotalItem;
-            
             const itemDiv = document.createElement('div');
             itemDiv.className = 'cart-item';
             itemDiv.innerHTML = `<div class="cart-item__info"><h4>${item.nombreTorta}</h4><p>$${formatCurrency(costoTotalItem)}</p></div><div class="cart-item__actions"><label>Cant:</label><input type="number" class="item-quantity-input" data-id="${item.id}" value="${item.cantidad}" min="1"><button class="btn-remove-item" data-id="${item.id}">🗑️</button></div>`;
@@ -108,7 +102,7 @@ export function setupCotizacion(app) {
         });
         costoTotalMateriales = subtotal;
         calcularPrecioVenta();
-        btnFinalizar.disabled = false;
+        if(btnFinalizar) btnFinalizar.disabled = false;
     };
 
     const generarMensajeResumen = (cliente, titulo, items, total) => {
@@ -119,121 +113,104 @@ export function setupCotizacion(app) {
                 if(mp) costoItem += calcularCostoFIFO(mp, ing.cantidad).costo;
             });
             const costoTotalItem = costoItem * item.cantidad;
-            const precioVentaItem = parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent)) / items.reduce((acc, i) => acc + i.cantidad, 0) * item.cantidad;
+            const precioVentaTotal = parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent));
+            const totalItemsEnCarrito = items.reduce((acc, i) => acc + i.cantidad, 0);
+            const precioVentaItem = (precioVentaTotal / totalItemsEnCarrito) * item.cantidad;
             return `* ${item.cantidad} x ${item.nombreTorta}: $${formatCurrency(precioVentaItem)}`;
         }).join('\n');
-
         return `¡Hola ${cliente}! 👋\n\nUn placer prepararte la cotización para "${titulo}". Aquí te dejo el detalle:\n\n${detalleItems}\n\n**TOTAL FINAL: $${formatCurrency(total)}**\n\nCualquier duda, estoy a tu disposición.\n\n¡Gracias por tu confianza!\nDulce App — Horneando tus mejores momentos`;
     };
 
-    btnFinalizar.addEventListener('click', async () => {
-        btnFinalizar.disabled = true;
-        btnFinalizar.textContent = 'Guardando...';
-        
-        const cliente = clienteInput.value.trim();
-        const titulo = tituloInput.value.trim();
-        if (!cliente || !titulo) {
-            alert('Por favor, ingresa un nombre de cliente y un título para la cotización.');
-            btnFinalizar.disabled = false;
-            btnFinalizar.textContent = 'Guardar Cotización en Historial';
-            return;
-        }
-        const items = getCartItems();
-        if (items.length === 0) {
-            alert('El carrito está vacío.');
-            btnFinalizar.disabled = false;
-            btnFinalizar.textContent = 'Guardar Cotización en Historial';
-            return;
-        }
-        
-        const ingredientesConsolidados = {};
-        items.forEach(item => {
-            (item.ingredientes || []).forEach(ing => {
-                const id = ing.idMateriaPrima;
-                if (!ingredientesConsolidados[id]) {
-                    ingredientesConsolidados[id] = { ...ing, cantidadTotal: 0 };
-                }
-                ingredientesConsolidados[id].cantidadTotal += ing.cantidad * item.cantidad;
+    if (btnFinalizar) {
+        btnFinalizar.addEventListener('click', async () => {
+            btnFinalizar.disabled = true;
+            btnFinalizar.textContent = 'Guardando...';
+            const cliente = clienteInput.value.trim();
+            const titulo = tituloInput.value.trim();
+            if (!cliente || !titulo) {
+                alert('Por favor, ingresa un nombre de cliente y un título para la cotización.');
+                btnFinalizar.disabled = false;
+                btnFinalizar.textContent = 'Guardar Cotización en Historial';
+                return;
+            }
+            const items = getCartItems();
+            if (items.length === 0) {
+                alert('El carrito está vacío.');
+                btnFinalizar.disabled = false;
+                btnFinalizar.textContent = 'Guardar Cotización en Historial';
+                return;
+            }
+            const ingredientesConsolidados = {};
+            items.forEach(item => {
+                (item.ingredientes || []).forEach(ing => {
+                    const id = ing.idMateriaPrima;
+                    if (!ingredientesConsolidados[id]) {
+                        ingredientesConsolidados[id] = { ...ing, cantidadTotal: 0 };
+                    }
+                    ingredientesConsolidados[id].cantidadTotal += ing.cantidad * item.cantidad;
+                });
             });
-        });
-
-        let costoFinalReal = 0;
-        const ingredientesParaGuardar = Object.values(ingredientesConsolidados).map(ing => {
-            const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
-            const { costo, desglose } = calcularCostoFIFO(mp, ing.cantidadTotal);
-            costoFinalReal += costo;
-            return { ...ing, costoTotal: costo, lotesUtilizados: desglose };
-        });
-
-        const presupuestoGuardado = {
-            tituloTorta: titulo,
-            nombreCliente: cliente,
-            fecha: Timestamp.now(),
-            costoMateriales: costoFinalReal,
-            horasTrabajo: parseFloat(horasTrabajoInput.value) || 0,
-            costoHora: parseFloat(costoHoraInput.value) || 0,
-            porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0,
-            porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0,
-            precioVenta: parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent)),
-            ingredientes: ingredientesParaGuardar,
-            esVenta: false,
-            fechaEntrega: null
-        };
-
-        try {
-            await addDoc(presupuestosGuardadosCollection, presupuestoGuardado);
-            
-            const totalFinal = presupuestoGuardado.precioVenta;
-            const mensaje = generarMensajeResumen(cliente, titulo, items, totalFinal);
-            
-            resumenTexto.innerText = mensaje;
-            resumenModal.classList.add('visible');
-
-        } catch(error) {
-            console.error("Error al guardar la cotización: ", error);
-            alert("Hubo un error al guardar la cotización.");
-            btnFinalizar.disabled = false;
-            btnFinalizar.textContent = 'Guardar Cotización en Historial';
-        }
-    });
-
-    btnCerrarResumen.addEventListener('click', () => {
-        resumenModal.classList.remove('visible');
-        clearCart();
-        window.location.href = 'historial.html';
-    });
-
-    btnCopiarResumen.addEventListener('click', () => {
-        navigator.clipboard.writeText(resumenTexto.innerText).then(() => {
-            feedbackCopiado.textContent = '¡Copiado!';
-            setTimeout(() => { feedbackCopiado.textContent = ''; }, 2000);
-        }).catch(err => console.error('Error al copiar: ', err));
-    });
-
-    itemsContainer.addEventListener('change', e => {
-        if (e.target.classList.contains('item-quantity-input')) {
-            const itemId = e.target.dataset.id;
-            const newQuantity = parseInt(e.target.value, 10);
-            if (newQuantity > 0) {
-                updateCartItemQuantity(itemId, newQuantity);
-                renderCart();
+            let costoFinalReal = 0;
+            const ingredientesParaGuardar = Object.values(ingredientesConsolidados).map(ing => {
+                const mp = materiasPrimas.find(m => m.id === ing.idMateriaPrima);
+                const { costo, desglose } = calcularCostoFIFO(mp, ing.cantidadTotal);
+                costoFinalReal += costo;
+                return { ...ing, costoTotal: costo, lotesUtilizados: desglose };
+            });
+            const presupuestoGuardado = {
+                tituloTorta: titulo,
+                nombreCliente: cliente,
+                fecha: Timestamp.now(),
+                costoMateriales: costoFinalReal,
+                horasTrabajo: parseFloat(horasTrabajoInput.value) || 0,
+                costoHora: parseFloat(costoHoraInput.value) || 0,
+                porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0,
+                porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0,
+                precioVenta: parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent)),
+                ingredientes: ingredientesParaGuardar,
+                esVenta: false,
+                fechaEntrega: null
+            };
+            try {
+                await addDoc(presupuestosGuardadosCollection, presupuestoGuardado);
+                const totalFinal = presupuestoGuardado.precioVenta;
+                const mensaje = generarMensajeResumen(cliente, titulo, items, totalFinal);
+                resumenTexto.innerText = mensaje;
+                resumenModal.classList.add('visible');
+            } catch (error) {
+                console.error("Error al guardar la cotización: ", error);
+                alert("Hubo un error al guardar la cotización.");
+                btnFinalizar.disabled = false;
+                btnFinalizar.textContent = 'Guardar Cotización en Historial';
             }
-        }
-    });
-    
-    itemsContainer.addEventListener('click', e => {
-        const target = e.target.closest('.btn-remove-item');
-        if (target) {
-            const itemId = target.dataset.id;
-            if (confirm('¿Quitar este producto de la cotización?')) {
-                removeFromCart(itemId);
-                renderCart();
+        });
+    }
+
+    if (itemsContainer) {
+        itemsContainer.addEventListener('change', e => {
+            if (e.target.classList.contains('item-quantity-input')) {
+                const itemId = e.target.dataset.id;
+                const newQuantity = parseInt(e.target.value, 10);
+                if (newQuantity > 0) {
+                    updateCartItemQuantity(itemId, newQuantity);
+                    renderCart();
+                }
             }
-        }
-    });
-    
+        });
+        itemsContainer.addEventListener('click', e => {
+            const target = e.target.closest('.btn-remove-item');
+            if (target) {
+                const itemId = target.dataset.id;
+                if (confirm('¿Quitar este producto de la cotización?')) {
+                    removeFromCart(itemId);
+                    renderCart();
+                }
+            }
+        });
+    }
+
     [horasTrabajoInput, costoHoraInput, costosFijosPorcInput, gananciaPorcInput].forEach(input => {
-        input.addEventListener('input', calcularPrecioVenta);
+        if(input) input.addEventListener('input', calcularPrecioVenta);
     });
 
     const loadInitialData = async () => {
@@ -242,22 +219,36 @@ export function setupCotizacion(app) {
                 getDocs(query(materiasPrimasCollection)),
                 getDocs(query(presupuestosGuardadosCollection))
             ]);
-            
-            materiasPrimas = materiasPrimasSnap.docs.map(doc => ({id: doc.id, ...doc.data()}));
-            
+            materiasPrimas = materiasPrimasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             const nombres = new Set();
             presSnap.forEach(doc => {
-                if(doc.data().nombreCliente) nombres.add(doc.data().nombreCliente);
+                if (doc.data().nombreCliente) nombres.add(doc.data().nombreCliente);
             });
             datalistClientes.innerHTML = '';
             nombres.forEach(nombre => datalistClientes.innerHTML += `<option value="${nombre}">`);
-            
             renderCart();
-        } catch(error) {
+        } catch (error) {
             console.error("Error al cargar datos iniciales:", error);
-            itemsContainer.innerHTML = '<p style="color:red;">Error al cargar los datos necesarios para cotizar.</p>';
+            if(itemsContainer) itemsContainer.innerHTML = '<p style="color:red;">Error al cargar los datos necesarios para cotizar.</p>';
         }
     };
     
+    if (btnCerrarResumen) {
+        btnCerrarResumen.addEventListener('click', () => {
+            resumenModal.classList.remove('visible');
+            clearCart();
+            window.location.href = 'historial.html';
+        });
+    }
+
+    if (btnCopiarResumen) {
+        btnCopiarResumen.addEventListener('click', () => {
+            navigator.clipboard.writeText(resumenTexto.innerText).then(() => {
+                feedbackCopiado.textContent = '¡Copiado!';
+                setTimeout(() => { feedbackCopiado.textContent = ''; }, 2000);
+            }).catch(err => console.error('Error al copiar: ', err));
+        });
+    }
+
     loadInitialData();
 }
