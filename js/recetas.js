@@ -18,6 +18,7 @@ export function setupRecetas(app) {
     const modalTitle = document.getElementById('receta-modal-title');
     const recetaNombreInput = document.getElementById('receta-nombre-input');
     const categoriaSelect = document.getElementById('receta-categoria-select');
+    const rendimientoInput = document.getElementById('receta-rendimiento-input'); // Nuevo
     const ingredienteInput = document.getElementById('selector-ingrediente-receta');
     const ingredientesDatalist = document.getElementById('lista-materias-primas-receta');
     const cantidadIngredienteInput = document.getElementById('cantidad-ingrediente-receta');
@@ -62,12 +63,14 @@ export function setupRecetas(app) {
             modalTitle.textContent = `Editar Receta: ${receta.data.nombreTorta}`;
             recetaNombreInput.value = receta.data.nombreTorta;
             categoriaSelect.value = receta.data.categoria || '';
+            rendimientoInput.value = receta.data.rendimiento || '';
             ingredientesRecetaActual = JSON.parse(JSON.stringify(receta.data.ingredientes));
         } else {
             editandoId = null;
             modalTitle.textContent = 'Crear Nueva Receta';
             recetaNombreInput.value = '';
             categoriaSelect.value = '';
+            rendimientoInput.value = '';
             ingredientesRecetaActual = [];
         }
         renderizarIngredientesEnReceta();
@@ -126,12 +129,20 @@ export function setupRecetas(app) {
     const guardarReceta = async () => {
         const nombreTorta = recetaNombreInput.value.trim();
         const categoria = categoriaSelect.value;
-        if (!nombreTorta || !categoria || ingredientesRecetaActual.length === 0) {
-            alert('Por favor, completa el nombre, selecciona una categoría y añade al menos un ingrediente.');
+        const rendimiento = parseInt(rendimientoInput.value, 10);
+
+        if (!nombreTorta || !categoria || !rendimiento || isNaN(rendimiento) || rendimiento <= 0 || ingredientesRecetaActual.length === 0) {
+            alert('Por favor, completa el nombre, categoría, un rendimiento válido y añade al menos un ingrediente.');
             return;
         }
+        
         const id = editandoId || doc(collection(db, 'recetas')).id;
-        const recetaData = { nombreTorta, categoria, ingredientes: ingredientesRecetaActual };
+        const recetaData = { 
+            nombreTorta, 
+            categoria, 
+            rendimiento, 
+            ingredientes: ingredientesRecetaActual 
+        };
         try {
             await setDoc(doc(db, 'recetas', id), recetaData);
             alert(editandoId ? '¡Receta actualizada con éxito!' : '¡Receta creada con éxito!');
@@ -169,7 +180,7 @@ export function setupRecetas(app) {
                     <div class="receta-card">
                         <div class="receta-card__info">
                             <h3>${receta.data.nombreTorta}</h3>
-                            <p>${receta.data.ingredientes.length} ingrediente(s)</p>
+                            <p>${receta.data.ingredientes.length} ingrediente(s) - Rinde: ${receta.data.rendimiento || 'N/A'}</p>
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
@@ -243,7 +254,6 @@ export function setupRecetas(app) {
     btnGuardarReceta.addEventListener('click', guardarReceta);
     btnAnadirIngrediente.addEventListener('click', anadirIngrediente);
     
-    // Carga inicial
     cargarMateriasPrimas();
     updateCartIcon();
 }
