@@ -35,7 +35,8 @@ export function setupStock(app) {
     const renderizarTabla = (datos) => {
         tablaStockBody.innerHTML = '';
         if (datos.length === 0) {
-            tablaStockBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">No se encontraron productos.</td></tr>';
+            // Se ajusta el colspan a 5 para incluir la nueva columna
+            tablaStockBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No se encontraron productos.</td></tr>';
             return;
         }
         datos.forEach(itemConId => {
@@ -55,12 +56,20 @@ export function setupStock(app) {
                     return fechaB - fechaA;
                 });
                 const ultimoLote = lotesOrdenados[0];
+
+                // Lógica para obtener y formatear la fecha de la última carga
+                let fechaUltimaCarga = 'N/A';
+                if (ultimoLote && ultimoLote.fechaCompra && typeof ultimoLote.fechaCompra.toDate === 'function') {
+                    fechaUltimaCarga = ultimoLote.fechaCompra.toDate().toLocaleDateString('es-AR');
+                }
                 
                 const fila = document.createElement('tr');
+                // Se añade la nueva columna "Última Carga" a la tabla
                 fila.innerHTML = `
                     <td data-label="Nombre">${item.nombre}</td>
                     <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
                     <td data-label="Precio Base">$${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${item.unidad}</td>
+                    <td data-label="Última Carga">${fechaUltimaCarga}</td>
                     <td class="action-buttons stock-actions">
                         <button class="btn-stock subtract" data-id="${id}" title="Dar de baja stock">-</button>
                         <button class="btn-stock-link edit" data-id="${id}" title="Editar Producto">✏️</button>
@@ -210,7 +219,6 @@ export function setupStock(app) {
                         let data = ingredienteDoc.data();
                         let lotesActualizados = data.lotes.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
                         
-                        // --- LÓGICA ACTUALIZADA PARA PERMITIR STOCK NEGATIVO ---
                         let restanteADescontar = cantidadADescontar;
                         for (const lote of lotesActualizados) {
                             if (restanteADescontar <= 0) break;
@@ -219,12 +227,10 @@ export function setupStock(app) {
                             restanteADescontar -= descontar;
                         }
 
-                        // Si todavía falta por descontar, lo restamos del último lote.
                         if (restanteADescontar > 0 && lotesActualizados.length > 0) {
                             lotesActualizados[lotesActualizados.length - 1].stockRestante -= restanteADescontar;
                         }
                         
-                        // Ya no filtramos los lotes que llegan a cero.
                         transaction.update(docRef, { lotes: lotesActualizados });
                     }).then(() => {
                         const producto = todoElStock.find(p => p.id === id).data;
@@ -247,6 +253,4 @@ export function setupStock(app) {
             }
         }
     });
-
-    cargarMateriasPrimas();
 }
