@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista 3D de la Torta</title>
+    <!-- Carga el componente de Google para la Realidad Aumentada -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: sans-serif; }
+        model-viewer { width: 100%; height: 100%; --ar-button-display: none; }
+        #ar-button {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #ff96c5; /* Usamos tu color primario */
+            color: white;
+            font-weight: bold;
+            padding: 15px 25px;
+            border-radius: 30px;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            color: #333;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading-overlay">Cargando modelo 3D...</div>
+
+    <model-viewer
+        id="viewer"
+        alt="Modelo 3D de una torta"
+        ar
+        ar-modes="webxr scene-viewer quick-look"
+        camera-controls
+        auto-rotate
+        shadow-intensity="1">
+
+        <button id="ar-button" slot="ar-button">
+            🍰 Ver en mi espacio
+        </button>
+    </model-viewer>
+
+    <script>
+        const viewer = document.getElementById('viewer');
+        const loadingOverlay = document.getElementById('loading');
+
+        // Función para obtener el modelo de la URL
+        function getModelFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('modelo'); // Ej: ?modelo=torta_chocolate
+        }
+
+        const modelName = getModelFromURL();
+
+        if (modelName) {
+            // Asumimos que los modelos están en una carpeta "modelos"
+            viewer.src = `modelos/${modelName}.glb`;
+            viewer.iosSrc = `modelos/${modelName}.usdz`;
+        } else {
+            loadingOverlay.textContent = "Error: No se especificó un modelo de torta.";
+        }
+
+        // Ocultar el mensaje de carga cuando el modelo esté listo
+        viewer.addEventListener('load', () => {
+            loadingOverlay.style.opacity = '0';
+            setTimeout(() => { loadingOverlay.style.display = 'none'; }, 500);
+        });
+    </script>
+</body>
+</html>
