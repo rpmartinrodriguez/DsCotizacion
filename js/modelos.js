@@ -1,8 +1,8 @@
 import { 
-    getFirestore, collection, onSnapshot, query, addDoc, doc, deleteDoc, orderBy
+    getFirestore, collection, onSnapshot, query, addDoc, doc, 
+    deleteDoc, orderBy, getDocs
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-// --- MODIFICACIÓN: Importamos las funciones de autenticación ---
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
 // --- Configuración de Firebase ---
@@ -18,17 +18,35 @@ const firebaseConfig = {
 // --- Inicialización de Firebase ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-// --- MODIFICACIÓN: Creamos la instancia de autenticación ---
 const auth = getAuth(app);
 const modelosCollection = collection(db, 'modelos3D');
+const recetasCollection = collection(db, 'recetas'); // <-- NUEVO: Referencia a la colección de recetas
 
 // --- Referencias al DOM ---
 const form = document.getElementById('form-modelo');
 const listaContainer = document.getElementById('lista-modelos-container');
 const recetaNombreInput = document.getElementById('receta-nombre');
 const modeloUrlInput = document.getElementById('modelo-url');
+const datalistRecetas = document.getElementById('lista-recetas-existentes'); // <-- NUEVO: Referencia al datalist
 
-// --- Función para renderizar la lista de modelos ---
+// --- NUEVA FUNCIÓN: Cargar Recetas para Autocompletado ---
+const cargarRecetasExistentes = async () => {
+    try {
+        const q = query(recetasCollection, orderBy("nombreTorta"));
+        const snapshot = await getDocs(q);
+        datalistRecetas.innerHTML = ''; // Limpiamos la lista
+        snapshot.forEach(doc => {
+            const receta = doc.data();
+            const option = document.createElement('option');
+            option.value = receta.nombreTorta;
+            datalistRecetas.appendChild(option);
+        });
+    } catch (error) {
+        console.error("Error al cargar las recetas para el autocompletado:", error);
+    }
+};
+
+// --- Función para renderizar la lista de modelos (sin cambios) ---
 const renderModelos = (modelos) => {
     listaContainer.innerHTML = '';
     if (modelos.length === 0) {
@@ -82,7 +100,7 @@ const startListeners = () => {
         renderModelos(modelos);
     }, (error) => {
         console.error("Error al escuchar la colección 'modelos3D': ", error);
-        listaContainer.innerHTML = '<p style="color: red;">Error al cargar los links. Revisa las reglas de seguridad de Firebase.</p>';
+        listaContainer.innerHTML = '<p style="color: red;">Error al cargar los links.</p>';
     });
 };
 
@@ -114,12 +132,13 @@ form.addEventListener('submit', async (e) => {
     }
 });
 
-// --- MODIFICACIÓN: Lógica de Autenticación y Punto de Entrada ---
+// --- Lógica de Autenticación y Punto de Entrada ---
 const main = () => {
     onAuthStateChanged(auth, user => {
         if (user) {
             console.log("Usuario anónimo autenticado:", user.uid);
-            startListeners(); // Empezamos a escuchar los datos solo después de tener un usuario
+            startListeners();
+            cargarRecetasExistentes(); // <-- NUEVO: Llamamos a la función para cargar las recetas
         } else {
             signInAnonymously(auth).catch(error => {
                 console.error("Error al iniciar sesión anónimamente:", error);
@@ -128,5 +147,5 @@ const main = () => {
     });
 };
 
-// Iniciamos la aplicación cuando el contenido de la página esté cargado
+// Iniciamos la aplicación
 document.addEventListener('DOMContentLoaded', main);
