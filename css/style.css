@@ -1,11 +1,3 @@
-@font-face {
-    font-family: 'Dancing Script';
-    src: url('../assets/fonts/Sttuing.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-
 :root {
     --primary-color: #ff96c5;
     --primary-color-hover: #e686b2;
