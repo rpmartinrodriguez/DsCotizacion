@@ -29,6 +29,7 @@
             top: 0; left: 0; width: 100%; height: 100%;
             background: white;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-size: 1.2rem;
@@ -38,7 +39,10 @@
     </style>
 </head>
 <body>
-    <div id="loading" class="loading-overlay">Cargando modelo 3D...</div>
+    <div id="loading" class="loading-overlay">
+        <p>Cargando modelo 3D...</p>
+        <p style="font-size: 0.9rem; color: #666;">Por favor, esperá un momento.</p>
+    </div>
 
     <model-viewer
         id="viewer"
@@ -58,20 +62,20 @@
         const viewer = document.getElementById('viewer');
         const loadingOverlay = document.getElementById('loading');
 
-        // Función para obtener el modelo de la URL
+        // Esta función lee el parámetro 'torta' de la URL
         function getModelFromURL() {
             const params = new URLSearchParams(window.location.search);
-            return params.get('modelo'); // Ej: ?modelo=torta_chocolate
+            return params.get('torta'); // Ej: ?torta=chocolate
         }
 
         const modelName = getModelFromURL();
 
         if (modelName) {
-            // Asumimos que los modelos están en una carpeta "modelos"
+            // Asumimos que los modelos 3D están en la carpeta "modelos"
             viewer.src = `modelos/${modelName}.glb`;
             viewer.iosSrc = `modelos/${modelName}.usdz`;
         } else {
-            loadingOverlay.textContent = "Error: No se especificó un modelo de torta.";
+            loadingOverlay.innerHTML = "<p>Error: No se especificó ninguna torta para mostrar.</p>";
         }
 
         // Ocultar el mensaje de carga cuando el modelo esté listo
