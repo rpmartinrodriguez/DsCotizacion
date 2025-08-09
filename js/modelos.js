@@ -1,9 +1,21 @@
 import { 
     getFirestore, collection, onSnapshot, query, addDoc, doc, deleteDoc, orderBy
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { app } from './firebase-init.js'; // Importante: Asegúrate de tener este archivo con la inicialización de Firebase
+// --- MODIFICACIÓN IMPORTANTE: Añadimos la inicialización de Firebase aquí mismo ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 
-// --- Inicialización de Firestore ---
+// --- Configuración de Firebase (la misma que usas en stock.js) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyA33nr4_j2kMIeDJ-fyRqKLkUw9AToRnnM",
+  authDomain: "dscotizacion.firebaseapp.com",
+  projectId: "dscotizacion",
+  storageBucket: "dscotizacion.firebasestorage.app",
+  messagingSenderId: "103917274080",
+  appId: "1:103917274080:web:478f18b226473a70202185"
+};
+
+// --- Inicialización de Firebase ---
+const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const modelosCollection = collection(db, 'modelos3D');
 
@@ -15,13 +27,12 @@ const modeloUrlInput = document.getElementById('modelo-url');
 
 // --- Función para renderizar la lista de modelos ---
 const renderModelos = (modelos) => {
-    listaContainer.innerHTML = ''; // Limpiamos el contenedor
+    listaContainer.innerHTML = '';
     if (modelos.length === 0) {
         listaContainer.innerHTML = '<p>No hay links asociados todavía.</p>';
         return;
     }
     
-    // Creamos la estructura de la tabla
     const table = document.createElement('table');
     table.className = 'table-clean';
     table.innerHTML = `
@@ -36,7 +47,6 @@ const renderModelos = (modelos) => {
     `;
     const tbody = table.querySelector('tbody');
 
-    // Llenamos la tabla con los datos de Firebase
     modelos.forEach(modelo => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -58,7 +68,6 @@ const renderModelos = (modelos) => {
             if (confirm('¿Estás seguro de que quieres eliminar este link?')) {
                 try {
                     await deleteDoc(doc(db, 'modelos3D', id));
-                    // Opcional: mostrar una notificación de éxito
                 } catch (error) {
                     console.error("Error al eliminar el link:", error);
                     alert('No se pudo eliminar el link.');
@@ -74,10 +83,13 @@ const q = query(modelosCollection, orderBy("nombreReceta"));
 onSnapshot(q, (snapshot) => {
     const modelos = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
     renderModelos(modelos);
+}, (error) => {
+    // Esto nos ayudará a ver si el problema es de permisos
+    console.error("Error al escuchar la colección 'modelos3D': ", error);
+    listaContainer.innerHTML = '<p style="color: red;">Error al cargar los links. Revisa las reglas de seguridad de Firebase.</p>';
 });
 
 // --- Listener del Formulario ---
-// Manejamos el evento de envío del formulario para guardar nuevos links
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const nombreReceta = recetaNombreInput.value;
@@ -89,13 +101,11 @@ form.addEventListener('submit', async (e) => {
     }
 
     try {
-        // Añadimos un nuevo documento a la colección
         await addDoc(modelosCollection, {
             nombreReceta: nombreReceta.trim(),
             urlVisor: urlVisor.trim()
         });
         form.reset();
-        // Opcional: mostrar una notificación de éxito
     } catch (error) {
         console.error("Error al guardar el link:", error);
         alert('No se pudo guardar el link.');
