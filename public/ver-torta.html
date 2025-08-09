@@ -62,22 +62,23 @@
         const viewer = document.getElementById('viewer');
         const loadingOverlay = document.getElementById('loading');
 
+        // Esta función lee el parámetro 'torta' de la URL
         function getModelFromURL() {
             const params = new URLSearchParams(window.location.search);
-            return params.get('torta');
+            return params.get('torta'); // Ej: ?torta=torta_chocolate
         }
 
         const modelName = getModelFromURL();
 
         if (modelName) {
-            // Le decimos que busque los modelos en una carpeta "modelos"
-            // que estará DENTRO de la carpeta "public"
+            // Le decimos que busque los modelos en la carpeta "modelos"
             viewer.src = `modelos/${modelName}.glb`;
             viewer.iosSrc = `modelos/${modelName}.usdz`;
         } else {
             loadingOverlay.innerHTML = "<p>Error: No se especificó ninguna torta para mostrar.</p>";
         }
 
+        // Ocultar el mensaje de carga cuando el modelo esté listo
         viewer.addEventListener('load', () => {
             loadingOverlay.style.opacity = '0';
             setTimeout(() => { loadingOverlay.style.display = 'none'; }, 500);
