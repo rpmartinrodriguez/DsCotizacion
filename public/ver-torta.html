@@ -65,13 +65,14 @@
         // Esta función lee el parámetro 'torta' de la URL
         function getModelFromURL() {
             const params = new URLSearchParams(window.location.search);
-            return params.get('torta'); // Ej: ?torta=torta_chocolate
+            return params.get('torta'); // Ej: ?torta=prueba3d
         }
 
         const modelName = getModelFromURL();
 
         if (modelName) {
             // Le decimos que busque los modelos en la carpeta "modelos"
+            // que está al mismo nivel que este archivo HTML.
             viewer.src = `modelos/${modelName}.glb`;
             viewer.iosSrc = `modelos/${modelName}.usdz`;
         } else {
