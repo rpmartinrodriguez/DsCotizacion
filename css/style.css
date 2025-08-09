@@ -1766,3 +1766,33 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-top: 0.5rem;
     opacity: 0.9;
 }
+/* ================================================================== */
+/* --- Estilos para la Página de Gestión de Modelos 3D (modelos.html) --- */
+/* ================================================================== */
+
+/* Define el aspecto del mensaje "Cargando links..." o "No hay links..." */
+#lista-modelos-container p {
+    color: var(--text-light);
+    text-align: center;
+    padding: 2rem 0;
+    font-style: italic;
+}
+
+/* Asegura que el botón de eliminar (papelera) en la tabla de modelos
+   tenga el tamaño y estilo correctos, usando las clases que ya existen. */
+#lista-modelos-container .btn-delete {
+    font-size: 1.2rem; /* Aumenta ligeramente el tamaño del ícono 🗑️ */
+}
+
+/* Le da un estilo más claro al enlace "Ver Link" en la tabla para que se
+   note que es clickeable. */
+#lista-modelos-container td a {
+    color: var(--primary-color);
+    text-decoration: underline;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+#lista-modelos-container td a:hover {
+    color: var(--primary-color-hover);
+}
