@@ -1,9 +1,8 @@
-// sw.js (Versión final con estrategia "Stale-While-Revalidate")
+// sw.js (Versión final que ignora peticiones que no son GET)
 
-// Cambiamos la versión una última vez para forzar la instalación de este nuevo Service Worker
-const CACHE_NAME = 'cotizador-dulce-app-v2.44'; 
+const CACHE_NAME = 'dulce-app-cache-v4.4'; // Nueva versión para forzar la actualización
 
-// Archivos esenciales de la "carcasa" de la app que se guardarán al instalar
+// Lista de archivos esenciales de la "carcasa" de la app
 const APP_SHELL_URLS = [
   '/',
   'index.html',
@@ -21,7 +20,6 @@ const APP_SHELL_URLS = [
   'assets/apple-touch-icon.png'
 ];
 
-// Evento 'install': Se guarda la carcasa básica de la app en el caché.
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -32,7 +30,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Evento 'activate': Se limpian los cachés de versiones antiguas.
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -48,25 +45,19 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Evento 'fetch': Aquí está la nueva estrategia automática.
 self.addEventListener('fetch', event => {
-  // Ignoramos las peticiones a Firebase para que siempre vayan a la red.
-  if (event.request.url.includes('firestore.googleapis.com')) {
+  // Ignora las peticiones que no son GET (como las POST a Firebase) y las de extensiones.
+  if (event.request.method !== 'GET' || event.request.url.startsWith('chrome-extension://')) {
     return;
   }
-
+    
   event.respondWith(
     caches.open(CACHE_NAME).then(cache => {
       return cache.match(event.request).then(cachedResponse => {
-        // Hacemos la petición a la red en segundo plano.
         const fetchPromise = fetch(event.request).then(networkResponse => {
-          // Si la respuesta es exitosa, actualizamos el caché.
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
         });
-
-        // Devolvemos la respuesta del caché inmediatamente (si existe),
-        // o esperamos a la red si es la primera vez que se pide este recurso.
         return cachedResponse || fetchPromise;
       });
     })
