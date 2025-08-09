@@ -2,6 +2,8 @@ import {
     getFirestore, collection, onSnapshot, query, addDoc, doc, deleteDoc, orderBy
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+// --- MODIFICACIÓN: Importamos las funciones de autenticación ---
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
 // --- Configuración de Firebase ---
 const firebaseConfig = {
@@ -16,6 +18,8 @@ const firebaseConfig = {
 // --- Inicialización de Firebase ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+// --- MODIFICACIÓN: Creamos la instancia de autenticación ---
+const auth = getAuth(app);
 const modelosCollection = collection(db, 'modelos3D');
 
 // --- Referencias al DOM ---
@@ -71,20 +75,27 @@ const renderModelos = (modelos) => {
 };
 
 // --- Listener de Firebase ---
-const q = query(modelosCollection, orderBy("nombreReceta"));
-onSnapshot(q, (snapshot) => {
-    const modelos = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-    renderModelos(modelos);
-}, (error) => {
-    console.error("Error al escuchar la colección 'modelos3D': ", error);
-    listaContainer.innerHTML = '<p style="color: red;">Error al cargar los links. Revisa las reglas de seguridad de Firebase.</p>';
-});
+const startListeners = () => {
+    const q = query(modelosCollection, orderBy("nombreReceta"));
+    onSnapshot(q, (snapshot) => {
+        const modelos = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        renderModelos(modelos);
+    }, (error) => {
+        console.error("Error al escuchar la colección 'modelos3D': ", error);
+        listaContainer.innerHTML = '<p style="color: red;">Error al cargar los links. Revisa las reglas de seguridad de Firebase.</p>';
+    });
+};
 
 // --- Listener del Formulario ---
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const nombreReceta = recetaNombreInput.value;
     const urlVisor = modeloUrlInput.value;
+
+    if (!auth.currentUser) {
+        alert("Error de autenticación. Por favor, recarga la página.");
+        return;
+    }
 
     if (!nombreReceta.trim() || !urlVisor.trim()) {
         alert('Por favor, completa ambos campos.');
@@ -102,3 +113,20 @@ form.addEventListener('submit', async (e) => {
         alert('No se pudo guardar el link.');
     }
 });
+
+// --- MODIFICACIÓN: Lógica de Autenticación y Punto de Entrada ---
+const main = () => {
+    onAuthStateChanged(auth, user => {
+        if (user) {
+            console.log("Usuario anónimo autenticado:", user.uid);
+            startListeners(); // Empezamos a escuchar los datos solo después de tener un usuario
+        } else {
+            signInAnonymously(auth).catch(error => {
+                console.error("Error al iniciar sesión anónimamente:", error);
+            });
+        }
+    });
+};
+
+// Iniciamos la aplicación cuando el contenido de la página esté cargado
+document.addEventListener('DOMContentLoaded', main);
