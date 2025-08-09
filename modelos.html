@@ -4,18 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Links 3D - Cotizador</title>
-    <!-- Enlace a tu hoja de estilos principal -->
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="CSS/style.css">
 </head>
 <body>
-    <div class="main-container">
-        <!-- Es importante que incluyas aquí tu header o menú de navegación para que el diseño sea consistente -->
-        <header class="header">
-            <!-- Pega aquí el código de tu header/menú si no lo cargas con JS -->
-            <!-- Ejemplo simple: -->
-            <div class="header__title">Mi App de Gestión</div>
-        </header>
 
+    <!-- NAVEGACIÓN -->
+    <header class="header">
+        <button class="header__menu-icon" id="menu-toggle">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <a href="index.html" class="header__logo-link">
+            <img src="assets/img/logo.png" alt="Logo" class="header__logo">
+        </a>
+        <div class="header__spacer"></div>
+    </header>
+
+    <div class="nav-menu__overlay" id="menu-overlay"></div>
+    <nav class="nav-menu" id="nav-menu">
+        <div class="nav-menu__header">
+            <span class="nav-menu__title">Menú Principal</span>
+        </div>
+        <a href="index.html" class="nav-menu__link"><span>🏠</span> Dashboard</a>
+        <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
+        <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Recetas</a>
+        <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuestos</a>
+        <a href="modelos.html" class="nav-menu__link active"><span>🎨</span> Modelos 3D</a>
+    </nav>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="main-container">
         <h1 class="header__slogan">Gestión de Links 3D</h1>
 
         <div class="card">
@@ -37,14 +56,20 @@
             <h2 class="card__title">Links Guardados</h2>
             <div id="lista-modelos-container">
                 <p>Cargando links...</p>
-                <!-- La lista de links se insertará aquí dinámicamente -->
             </div>
         </div>
     </div>
 
-    <!-- Carga el script de Firebase y luego la lógica de esta página -->
-    <!-- Asegúrate de que la ruta a firebase-init.js sea correcta -->
-    <script type="module" src="firebase-init.js"></script>
+    <!-- SCRIPTS -->
     <script type="module" src="modelos.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const menuToggle = document.getElementById('menu-toggle');
+            const menuOverlay = document.getElementById('menu-overlay');
+            const toggleMenu = () => document.body.classList.toggle('menu-open');
+            menuToggle.addEventListener('click', toggleMenu);
+            menuOverlay.addEventListener('click', toggleMenu);
+        });
+    </script>
 </body>
 </html>
