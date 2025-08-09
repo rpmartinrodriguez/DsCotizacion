@@ -1,10 +1,9 @@
 import { 
     getFirestore, collection, onSnapshot, query, addDoc, doc, deleteDoc, orderBy
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-// --- MODIFICACIÓN IMPORTANTE: Añadimos la inicialización de Firebase aquí mismo ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 
-// --- Configuración de Firebase (la misma que usas en stock.js) ---
+// --- Configuración de Firebase ---
 const firebaseConfig = {
   apiKey: "AIzaSyA33nr4_j2kMIeDJ-fyRqKLkUw9AToRnnM",
   authDomain: "dscotizacion.firebaseapp.com",
@@ -61,30 +60,22 @@ const renderModelos = (modelos) => {
 
     listaContainer.appendChild(table);
 
-    // Añadimos los listeners a los botones de borrar
     document.querySelectorAll('.btn-delete').forEach(button => {
         button.addEventListener('click', async (e) => {
             const id = e.currentTarget.dataset.id;
             if (confirm('¿Estás seguro de que quieres eliminar este link?')) {
-                try {
-                    await deleteDoc(doc(db, 'modelos3D', id));
-                } catch (error) {
-                    console.error("Error al eliminar el link:", error);
-                    alert('No se pudo eliminar el link.');
-                }
+                await deleteDoc(doc(db, 'modelos3D', id));
             }
         });
     });
 };
 
 // --- Listener de Firebase ---
-// Escuchamos los cambios en la colección 'modelos3D' en tiempo real
 const q = query(modelosCollection, orderBy("nombreReceta"));
 onSnapshot(q, (snapshot) => {
     const modelos = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
     renderModelos(modelos);
 }, (error) => {
-    // Esto nos ayudará a ver si el problema es de permisos
     console.error("Error al escuchar la colección 'modelos3D': ", error);
     listaContainer.innerHTML = '<p style="color: red;">Error al cargar los links. Revisa las reglas de seguridad de Firebase.</p>';
 });
