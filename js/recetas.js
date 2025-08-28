@@ -8,17 +8,19 @@ export function setupRecetas(app) {
     const db = getFirestore(app);
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
+    // --- NUEVA COLECCIÓN PARA CATEGORÍAS ---
+    const categoriasCollection = collection(db, 'categorias');
 
     // Referencias al DOM
     const listaRecetasContainer = document.getElementById('lista-recetas-container');
     const btnCrearReceta = document.getElementById('btn-crear-receta');
     
-    // Referencias de la Modal
+    // Referencias de la Modal de Recetas
     const modal = document.getElementById('receta-modal-overlay');
     const modalTitle = document.getElementById('receta-modal-title');
     const recetaNombreInput = document.getElementById('receta-nombre-input');
     const categoriaSelect = document.getElementById('receta-categoria-select');
-    const rendimientoInput = document.getElementById('receta-rendimiento-input'); // Nuevo
+    const rendimientoInput = document.getElementById('receta-rendimiento-input');
     const ingredienteInput = document.getElementById('selector-ingrediente-receta');
     const ingredientesDatalist = document.getElementById('lista-materias-primas-receta');
     const cantidadIngredienteInput = document.getElementById('cantidad-ingrediente-receta');
@@ -27,12 +29,78 @@ export function setupRecetas(app) {
     const btnGuardarReceta = document.getElementById('receta-modal-btn-guardar');
     const btnCancelarReceta = document.getElementById('receta-modal-btn-cancelar');
 
+    // --- NUEVAS REFERENCIAS PARA GESTIÓN DE CATEGORÍAS ---
+    const formCategoria = document.getElementById('form-categoria');
+    const inputNuevaCategoria = document.getElementById('nueva-categoria-nombre');
+    const listaCategoriasContainer = document.getElementById('lista-categorias-container');
+
     // Variables de Estado
     let materiasPrimasDisponibles = [];
     let todasLasRecetas = [];
     let ingredientesRecetaActual = [];
     let editandoId = null;
-    const ordenDeCategorias = ['Tortas', 'Tartas', 'Alfajores', 'Budines', "Mix D's", 'Sin TACC', 'Sin Categoría'];
+
+    // --- LÓGICA PARA CARGAR Y GESTIONAR CATEGORÍAS ---
+
+    // Escucha los cambios en la colección de categorías en tiempo real
+    onSnapshot(query(categoriasCollection, orderBy("nombre")), (snapshot) => {
+        const categorias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // 1. Actualiza el menú desplegable en el modal de recetas
+        categoriaSelect.innerHTML = '<option value="" disabled selected>Selecciona una categoría...</option>';
+        categorias.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.nombre;
+            option.textContent = cat.nombre;
+            categoriaSelect.appendChild(option);
+        });
+
+        // 2. Actualiza la lista de gestión de categorías en la página principal
+        listaCategoriasContainer.innerHTML = '';
+        if (categorias.length === 0) {
+            listaCategoriasContainer.innerHTML = '<p>Aún no has creado categorías.</p>';
+        } else {
+            categorias.forEach(cat => {
+                const catTag = document.createElement('div');
+                catTag.className = 'categoria-tag';
+                catTag.innerHTML = `
+                    <span>${cat.nombre}</span>
+                    <button class="btn-delete-cat" data-id="${cat.id}" title="Eliminar categoría">×</button>
+                `;
+                listaCategoriasContainer.appendChild(catTag);
+            });
+        }
+
+        // Añade listeners a los botones de borrar categoría
+        document.querySelectorAll('.btn-delete-cat').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const id = e.currentTarget.dataset.id;
+                if (confirm('¿Estás seguro de que quieres eliminar esta categoría? Las recetas que la usen no se borrarán, pero quedarán sin categoría.')) {
+                    await deleteDoc(doc(db, 'categorias', id));
+                }
+            });
+        });
+    });
+
+    // Añade el listener para el formulario de crear nueva categoría
+    formCategoria.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nombreCategoria = inputNuevaCategoria.value.trim();
+        if (nombreCategoria) {
+            try {
+                await addDoc(categoriasCollection, {
+                    nombre: nombreCategoria
+                });
+                inputNuevaCategoria.value = '';
+            } catch (error) {
+                console.error("Error al añadir categoría:", error);
+                alert("No se pudo añadir la categoría.");
+            }
+        }
+    });
+
+
+    // --- LÓGICA PARA RECETAS (CÓDIGO EXISTENTE ADAPTADO) ---
 
     const cargarMateriasPrimas = async () => {
         btnCrearReceta.disabled = true;
@@ -132,7 +200,7 @@ export function setupRecetas(app) {
         const rendimiento = parseInt(rendimientoInput.value, 10);
 
         if (!nombreTorta || !categoria || !rendimiento || isNaN(rendimiento) || rendimiento <= 0 || ingredientesRecetaActual.length === 0) {
-            alert('Por favor, completa el nombre, categoría, un rendimiento válido y añade al menos un ingrediente.');
+            alert('Por favor, completa el nombre, selecciona una categoría, un rendimiento válido y añade al menos un ingrediente.');
             return;
         }
         
@@ -156,8 +224,8 @@ export function setupRecetas(app) {
     const mostrarRecetas = (recetas) => {
         listaRecetasContainer.innerHTML = '';
         const recetasPorCategoria = {};
-        ordenDeCategorias.forEach(cat => recetasPorCategoria[cat] = []);
 
+        // Agrupa las recetas por su categoría
         recetas.forEach(receta => {
             const categoria = receta.data.categoria || 'Sin Categoría';
             if (!recetasPorCategoria[categoria]) {
@@ -171,7 +239,8 @@ export function setupRecetas(app) {
             return;
         }
 
-        ordenDeCategorias.forEach(categoria => {
+        // Muestra las recetas agrupadas en acordeones por categoría
+        Object.keys(recetasPorCategoria).sort().forEach(categoria => {
             const listaDeRecetas = recetasPorCategoria[categoria];
             if (listaDeRecetas && listaDeRecetas.length > 0) {
                 const acordeonItem = document.createElement('div');
