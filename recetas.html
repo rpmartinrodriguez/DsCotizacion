@@ -44,6 +44,27 @@
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
         <main>
+            <!-- ====================================================== -->
+            <!-- SECCIÓN NUEVA: GESTIÓN DE CATEGORÍAS                   -->
+            <!-- ====================================================== -->
+            <section class="card">
+                <h2 class="card__title">Gestionar Categorías</h2>
+                <form id="form-categoria" class="form-modern" style="grid-template-columns: 2fr 1fr; align-items: flex-end;">
+                    <div class="form-group">
+                        <label for="nueva-categoria-nombre">Nombre de la Nueva Categoría</label>
+                        <input type="text" id="nueva-categoria-nombre" placeholder="Ej: Tortas Clásicas, Veganas, etc.">
+                    </div>
+                    <button type="submit" class="btn-secondary">Añadir Categoría</button>
+                </form>
+                <div id="lista-categorias-container" style="margin-top: 1.5rem;">
+                    <!-- La lista de categorías existentes se mostrará aquí -->
+                    <p>Cargando categorías...</p>
+                </div>
+            </section>
+
+            <!-- ====================================================== -->
+            <!-- SECCIÓN EXISTENTE: LISTA DE RECETAS                    -->
+            <!-- ====================================================== -->
             <section class="card">
                 <div class="card-header-actions">
                     <h2 class="card__title">Mis Recetas de Postres</h2>
@@ -56,6 +77,9 @@
         </main>
     </div>
     
+    <!-- ====================================================== -->
+    <!-- MODAL PARA CREAR/EDITAR RECETAS (CON MODIFICACIÓN)     -->
+    <!-- ====================================================== -->
     <div id="receta-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
@@ -68,14 +92,9 @@
                     </div>
                     <div class="form-group">
                         <label for="receta-categoria-select">Categoría</label>
+                        <!-- Este select ahora se llenará dinámicamente -->
                         <select id="receta-categoria-select">
-                            <option value="" disabled selected>Selecciona una categoría</option>
-                            <option value="Tortas">Tortas</option>
-                            <option value="Tartas">Tartas</option>
-                            <option value="Alfajores">Alfajores</option>
-                            <option value="Budines">Budines</option>
-                            <option value="Mix D's">Mix D's</option>
-                            <option value="Sin TACC">Sin TACC</option>
+                            <option value="" disabled selected>Cargando categorías...</option>
                         </select>
                     </div>
                     <div class="form-group">
