@@ -8,21 +8,20 @@ export function setupStock(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
     
-    // Referencias DOM principales
+    // --- Referencias DOM principales ---
     const tablaStockBody = document.querySelector("#tabla-stock tbody");
     const buscadorInput = document.getElementById('buscador-stock');
 
-    // Referencias Modal Edición
-    const modal = document.getElementById('edit-producto-modal-overlay');
-    const modalTitle = document.getElementById('producto-modal-title');
-    const nombreInput = document.getElementById('producto-nombre-input');
-    const unidadSelect = document.getElementById('producto-unidad-select');
-    const precioLoteInput = document.getElementById('lote-precio-input');
-    const cantidadLoteInput = document.getElementById('lote-cantidad-input');
-    const btnGuardar = document.getElementById('producto-modal-btn-guardar');
-    const btnCancelar = document.getElementById('producto-modal-btn-cancelar');
+    // --- MODIFICACIÓN: Referencias al Nuevo Modal de Edición Completa ---
+    const modalCompleto = document.getElementById('edit-producto-completo-modal-overlay');
+    const modalCompletoTitle = document.getElementById('producto-completo-modal-title');
+    const nombreCompletoInput = document.getElementById('producto-nombre-completo-input');
+    const unidadCompletoSelect = document.getElementById('producto-unidad-completo-select');
+    const lotesEditorContainer = document.getElementById('lotes-editor-container');
+    const btnGuardarCompleto = document.getElementById('producto-completo-modal-btn-guardar');
+    const btnCancelarCompleto = document.getElementById('producto-completo-modal-btn-cancelar');
     
-    // Referencias Modal Historial
+    // --- Referencias Modal Historial ---
     const historialModal = document.getElementById('historial-movimientos-modal-overlay');
     const historialModalTitle = document.getElementById('movimientos-modal-title');
     const historialListaContainer = document.getElementById('movimientos-lista-container');
@@ -35,7 +34,6 @@ export function setupStock(app) {
     const renderizarTabla = (datos) => {
         tablaStockBody.innerHTML = '';
         if (datos.length === 0) {
-            // Se ajusta el colspan a 5 para incluir la nueva columna
             tablaStockBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No se encontraron productos.</td></tr>';
             return;
         }
@@ -57,14 +55,12 @@ export function setupStock(app) {
                 });
                 const ultimoLote = lotesOrdenados[0];
 
-                // Lógica para obtener y formatear la fecha de la última carga
                 let fechaUltimaCarga = 'N/A';
                 if (ultimoLote && ultimoLote.fechaCompra && typeof ultimoLote.fechaCompra.toDate === 'function') {
                     fechaUltimaCarga = ultimoLote.fechaCompra.toDate().toLocaleDateString('es-AR');
                 }
                 
                 const fila = document.createElement('tr');
-                // Se añade la nueva columna "Última Carga" a la tabla
                 fila.innerHTML = `
                     <td data-label="Nombre">${item.nombre}</td>
                     <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
@@ -83,75 +79,137 @@ export function setupStock(app) {
         });
     };
     
-    const openModalParaEditar = async (id) => {
+    // --- FUNCIÓN NUEVA: Para abrir el modal de edición completa ---
+    const openModalParaEdicionCompleta = async (id) => {
         editandoId = id;
         try {
             const docRef = doc(db, 'materiasPrimas', id);
             const docSnap = await getDoc(docRef);
-            if (!docSnap.exists() || !docSnap.data().lotes || docSnap.data().lotes.length === 0) {
-                alert("El producto no tiene compras registradas para editar.");
+            if (!docSnap.exists()) {
+                alert("Este producto ya no existe.");
                 return;
             }
             const producto = docSnap.data();
-            const ultimoLote = [...producto.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds)[0];
             
-            modalTitle.textContent = `Editar: ${producto.nombre}`;
-            nombreInput.value = producto.nombre;
-            unidadSelect.value = producto.unidad;
-            precioLoteInput.value = ultimoLote.precioCompra;
-            cantidadLoteInput.value = ultimoLote.cantidadComprada;
-            modal.classList.add('visible');
+            modalCompletoTitle.textContent = `Editando: ${producto.nombre}`;
+            nombreCompletoInput.value = producto.nombre;
+            unidadCompletoSelect.value = producto.unidad;
+
+            lotesEditorContainer.innerHTML = '';
+            if (producto.lotes && producto.lotes.length > 0) {
+                // Ordenamos los lotes por fecha de compra, del más nuevo al más viejo
+                const lotesOrdenados = [...producto.lotes].sort((a,b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
+
+                lotesOrdenados.forEach((lote, index) => {
+                    const fechaCompra = lote.fechaCompra.toDate().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+                    const loteDiv = document.createElement('div');
+                    loteDiv.className = 'lote-editor-item';
+                    // Usamos el índice original para no perder la referencia al guardar
+                    const originalIndex = producto.lotes.indexOf(lote);
+                    loteDiv.innerHTML = `
+                        <p class="fecha-lote">Lote #${index + 1} (Compra del ${lote.fechaCompra.toDate().toLocaleDateString('es-AR')})</p>
+                        <div class="form-group">
+                            <label>Fecha Compra</label>
+                            <input type="date" value="${fechaCompra}" data-lote-index="${originalIndex}" data-field="fechaCompra" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Precio Compra ($)</label>
+                            <input type="number" value="${lote.precioCompra}" data-lote-index="${originalIndex}" data-field="precioCompra" step="any" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Cant. Comprada</label>
+                            <input type="number" value="${lote.cantidadComprada}" data-lote-index="${originalIndex}" data-field="cantidadComprada" step="any" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Stock Restante</label>
+                            <input type="number" value="${lote.stockRestante}" data-lote-index="${originalIndex}" data-field="stockRestante" step="any" class="form-control">
+                        </div>
+                    `;
+                    lotesEditorContainer.appendChild(loteDiv);
+                });
+            } else {
+                lotesEditorContainer.innerHTML = '<p>Este producto no tiene lotes de compra registrados.</p>';
+            }
+
+            modalCompleto.classList.add('visible');
         } catch (error) {
-            console.error("Error al abrir modal de edición:", error);
+            console.error("Error al abrir modal de edición completa:", error);
+            alert("No se pudo cargar la información para editar.");
         }
     };
 
-    const closeModal = () => {
-        modal.classList.remove('visible');
+    const closeModalCompleta = () => {
+        modalCompleto.classList.remove('visible');
         editandoId = null;
     };
     
-    btnGuardar.addEventListener('click', async () => {
+    // --- FUNCIÓN NUEVA: Para guardar todos los cambios del modal ---
+    const guardarCambiosCompletos = async () => {
         if (!editandoId) return;
-        
+
         const docRef = doc(db, 'materiasPrimas', editandoId);
+        btnGuardarCompleto.disabled = true;
+        btnGuardarCompleto.textContent = 'Guardando...';
+
         try {
+            // Obtenemos el documento original para saber cuántos lotes tenía
             const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) throw new Error("El documento fue eliminado.");
+            if (!docSnap.exists()) throw new Error("El producto fue eliminado mientras se editaba.");
+            const productoOriginal = docSnap.data();
+            const nuevosLotes = new Array(productoOriginal.lotes.length);
 
-            const producto = docSnap.data();
-            let lotesActualizados = producto.lotes.map(lote => ({ ...lote }));
-            
-            const ultimoLoteTimestamp = Math.max(...lotesActualizados.map(lote => lote.fechaCompra.seconds));
-            const indiceUltimoLote = lotesActualizados.findIndex(lote => lote.fechaCompra.seconds === ultimoLoteTimestamp);
+            const loteItems = lotesEditorContainer.querySelectorAll('.lote-editor-item');
 
-            if (indiceUltimoLote > -1) {
-                lotesActualizados[indiceUltimoLote].precioCompra = parseFloat(precioLoteInput.value);
-                lotesActualizados[indiceUltimoLote].cantidadComprada = parseFloat(cantidadLoteInput.value);
+            loteItems.forEach(loteItem => {
+                const index = parseInt(loteItem.querySelector('input').dataset.loteIndex, 10);
                 
-                if (lotesActualizados[indiceUltimoLote].cantidadComprada > 0) {
-                    lotesActualizados[indiceUltimoLote].costoUnitario = lotesActualizados[indiceUltimoLote].precioCompra / lotesActualizados[indiceUltimoLote].cantidadComprada;
-                } else {
-                    lotesActualizados[indiceUltimoLote].costoUnitario = 0;
+                // Formateamos la fecha correctamente para Firebase
+                const fechaInput = loteItem.querySelector(`[data-lote-index="${index}"][data-field="fechaCompra"]`).value;
+                const [year, month, day] = fechaInput.split('-');
+                const fecha = new Date(year, month - 1, day);
+
+                const precio = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="precioCompra"]`).value);
+                const cantidad = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="cantidadComprada"]`).value);
+                const restante = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="stockRestante"]`).value);
+                
+                if (isNaN(precio) || isNaN(cantidad) || isNaN(restante)) {
+                    throw new Error(`Hay valores numéricos inválidos en uno de los lotes.`);
                 }
-            }
+                if (!fechaInput) {
+                    throw new Error(`La fecha es inválida en uno de los lotes.`);
+                }
+
+                nuevosLotes[index] = {
+                    fechaCompra: Timestamp.fromDate(fecha),
+                    precioCompra: precio,
+                    cantidadComprada: cantidad,
+                    stockRestante: restante,
+                    costoUnitario: cantidad > 0 ? precio / cantidad : 0
+                };
+            });
 
             const datosParaActualizar = {
-                nombre: nombreInput.value.trim(),
-                unidad: unidadSelect.value,
-                lotes: lotesActualizados
+                nombre: nombreCompletoInput.value.trim(),
+                unidad: unidadCompletoSelect.value,
+                lotes: nuevosLotes
             };
 
             await updateDoc(docRef, datosParaActualizar);
             alert('¡Producto actualizado con éxito!');
-            closeModal();
-        } catch (error) {
-            console.error("Error al actualizar el producto:", error);
-            alert("No se pudieron guardar los cambios.");
-        }
-    });
+            closeModalCompleta();
 
-    btnCancelar.addEventListener('click', closeModal);
+        } catch (error) {
+            console.error("Error al guardar cambios completos:", error);
+            alert(`No se pudieron guardar los cambios: ${error.message}`);
+        } finally {
+            btnGuardarCompleto.disabled = false;
+            btnGuardarCompleto.textContent = 'Guardar Cambios';
+        }
+    };
+
+    // --- Se asignan los listeners para el nuevo modal ---
+    btnGuardarCompleto.addEventListener('click', guardarCambiosCompletos);
+    btnCancelarCompleto.addEventListener('click', closeModalCompleta);
 
     const openHistorialModal = (productoId, productoNombre) => {
         historialModalTitle.textContent = `Historial de: ${productoNombre}`;
@@ -203,7 +261,8 @@ export function setupStock(app) {
         const id = target.dataset.id;
         
         if (target.classList.contains('edit')) {
-            openModalParaEditar(id);
+            // --- MODIFICACIÓN: Se llama a la nueva función de edición completa ---
+            openModalParaEdicionCompleta(id);
         } else if (target.classList.contains('history')) {
             openHistorialModal(id, target.dataset.nombre);
         } else if (target.classList.contains('subtract')) {
