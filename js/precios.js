@@ -27,8 +27,8 @@ export function setupPrecios(app) {
 
             // 2. Calculamos el costo de cada receta
             const recetasConCosto = todasLasRecetas.map(receta => {
-                const costo = calcularCostoReceta(receta, materiasPrimasMap);
-                return { ...receta, costoCalculado: costo };
+                const costoUnitario = calcularCostoUnitarioReceta(receta, materiasPrimasMap);
+                return { ...receta, costoCalculado: costoUnitario };
             });
 
             // 3. Mostramos la lista en pantalla
@@ -40,9 +40,9 @@ export function setupPrecios(app) {
         }
     };
 
-    // Función que calcula el costo de una sola receta
-    const calcularCostoReceta = (receta, materiasPrimasMap) => {
-        let costoTotal = 0;
+    // Función que calcula el costo DE UNA SOLA UNIDAD de la receta
+    const calcularCostoUnitarioReceta = (receta, materiasPrimasMap) => {
+        let costoTotalDeIngredientes = 0;
         if (!receta.ingredientes || receta.ingredientes.length === 0) {
             return 0; // Si no tiene ingredientes, el costo es 0
         }
@@ -54,14 +54,20 @@ export function setupPrecios(app) {
                 // Usamos el costo del último lote comprado para el cálculo
                 const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
                 const ultimoLote = lotesOrdenados[0];
-                const costoUnitario = ultimoLote.costoUnitario || 0;
+                const costoUnitarioMateriaPrima = ultimoLote.costoUnitario || 0;
                 
-                costoTotal += costoUnitario * ingredienteEnReceta.cantidad;
+                costoTotalDeIngredientes += costoUnitarioMateriaPrima * ingredienteEnReceta.cantidad;
             }
         });
 
-        // Devolvemos el costo total de la receta, dividido por su rendimiento
-        return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
+        // --- MODIFICACIÓN CLAVE: Costo por Unidad ---
+        // Dividimos el costo total de los ingredientes por la cantidad de unidades que rinde la receta.
+        // Si el rendimiento no está definido (o es 0), devolvemos el costo total para evitar errores.
+        if (receta.rendimiento && receta.rendimiento > 0) {
+            return costoTotalDeIngredientes / receta.rendimiento;
+        } else {
+            return costoTotalDeIngredientes; // Fallback por si no hay rendimiento
+        }
     };
 
     // Función que dibuja la lista en el HTML
@@ -100,7 +106,7 @@ export function setupPrecios(app) {
             recetasDeCategoria.forEach(receta => {
                 const li = document.createElement('li');
                 li.innerHTML = `
-                    <span>${receta.nombreTorta}</span>
+                    <span>${receta.nombreTorta} (x unidad)</span>
                     <strong style="color: var(--primary-color); font-size: 1.1rem;">
                         $${receta.costoCalculado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </strong>
