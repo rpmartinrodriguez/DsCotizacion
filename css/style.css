@@ -1821,3 +1821,48 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .btn-delete-cat:hover {
     color: var(--danger-color);
 }
+
+/* ================================================================== */
+/* --- Estilos para la Modal de Edición Completa de Productos --- */
+/* ================================================================== */
+
+/* Contenedor principal para la lista de lotes editables */
+.lotes-editor-container {
+    max-height: 40vh; /* Altura máxima antes de que aparezca el scroll */
+    overflow-y: auto; /* Habilita el scroll vertical si el contenido es muy alto */
+    padding: 0.5rem;
+    margin-top: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-color);
+}
+
+/* Estilo para cada item de lote individual dentro del editor */
+.lote-editor-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: grid;
+    /* Dos columnas para los campos de datos */
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.lote-editor-item:last-child {
+    border-bottom: none;
+}
+
+/* Estilo para el título de cada lote (ej: "Lote #1") */
+.lote-editor-item .fecha-lote {
+    /* Ocupa las dos columnas */
+    grid-column: 1 / -1; 
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.lote-editor-item .form-group {
+    margin: 0;
+}
