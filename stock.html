@@ -22,21 +22,21 @@
         </header>
 
         <nav class="nav-menu" id="nav-menu">
-    <div class="nav-menu__header">
-        <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-        <span class="nav-menu__title">Dulce App</span>
-    </div>
-    <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-    <a href="finanzas.html" class="nav-menu__link">💰 Finanzas</a> 
-    <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-    <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-    <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-    <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-    <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-    <a href="stock.html" class="nav-menu__link">📦 Stock</a>
-    <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-    <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-</nav>        
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Dulce App</span>
+            </div>
+            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+            <a href="finanzas.html" class="nav-menu__link">💰 Finanzas</a> 
+            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
+            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link active">📦 Stock</a>
+            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
+            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+        </nav>      
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -54,54 +54,57 @@
                             <th>Nombre</th>
                             <th>Stock Actual</th>
                             <th>Precio Base (Última Compra)</th>
+                            <th>Última Carga</th> <!-- Columna añadida para consistencia -->
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td colspan="4" style="text-align: center;">Cargando stock...</td></tr>
+                        <tr><td colspan="5" style="text-align: center;">Cargando stock...</td></tr> <!-- Colspan actualizado a 5 -->
                     </tbody>
                 </table>
             </section>
         </main>
     </div>
     
-    <div id="edit-producto-modal-overlay" class="modal-overlay">
+    <!-- ====================================================== -->
+    <!-- NUEVO MODAL PARA EDICIÓN COMPLETA                      -->
+    <!-- ====================================================== -->
+    <div id="edit-producto-completo-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="producto-modal-title">Editar Materia Prima</h2>
-            <div class="form-modern" style="grid-template-columns: 1fr;">
-                <div class="form-group">
-                    <label>Nombre del Producto</label>
-                    <input type="text" id="producto-nombre-input">
-                </div>
-                 <div class="form-group">
-                    <label>Unidad de Medida</label>
-                    <select id="producto-unidad-select">
-                        <option value="gr">Gramo (gr)</option>
-                        <option value="kg">Kilogramo (kg)</option>
-                        <option value="l">Litro (l)</option>
-                        <option value="ml">Mililitro (ml)</option>
-                        <option value="unidad">Unidad</option>
-                    </select>
-                </div>
-                <h4 class="card__subtitle">Datos de la Última Compra</h4>
-                <div class="form-modern" style="grid-template-columns: 1fr 1fr;">
+            <h2 class="card__title" id="producto-completo-modal-title">Editar Producto</h2>
+            <div class="modal-body">
+                <div class="form-modern" style="grid-template-columns: 2fr 1fr;">
                     <div class="form-group">
-                        <label>Precio de Compra ($)</label>
-                        <input type="number" id="lote-precio-input" step="any">
+                        <label for="producto-nombre-completo-input">Nombre del Producto</label>
+                        <input type="text" id="producto-nombre-completo-input">
                     </div>
                     <div class="form-group">
-                        <label>Cantidad Comprada</label>
-                        <input type="number" id="lote-cantidad-input" step="any">
+                        <label for="producto-unidad-completo-select">Unidad</label>
+                        <select id="producto-unidad-completo-select">
+                            <option value="gr">Gramos (gr)</option>
+                            <option value="kg">Kilos (kg)</option>
+                            <option value="unidad">Unidad</option>
+                            <option value="cc">cc</option>
+                            <option value="ml">ml</option>
+                            <option value="l">Litros (l)</option>
+                        </select>
                     </div>
+                </div>
+
+                <h4 class="card__subtitle">Lotes de Compra</h4>
+                <div id="lotes-editor-container" class="lotes-editor-container">
+                    <!-- Los lotes editables se insertarán aquí con JavaScript -->
+                    <p>Cargando lotes...</p>
                 </div>
             </div>
             <div class="modal-actions">
-                <button id="producto-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="producto-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
+                <button id="producto-completo-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="producto-completo-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
             </div>
         </div>
     </div>
 
+    <!-- Modal de Historial (sin cambios) -->
     <div id="historial-movimientos-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title" id="movimientos-modal-title">Historial de Movimientos</h2>
@@ -114,6 +117,7 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
