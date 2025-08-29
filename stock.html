@@ -54,21 +54,19 @@
                             <th>Nombre</th>
                             <th>Stock Actual</th>
                             <th>Precio Base (Última Compra)</th>
-                            <th>Última Carga</th> <!-- Columna añadida para consistencia -->
+                            <th>Última Carga</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td colspan="5" style="text-align: center;">Cargando stock...</td></tr> <!-- Colspan actualizado a 5 -->
+                        <tr><td colspan="5" style="text-align: center;">Cargando stock...</td></tr>
                     </tbody>
                 </table>
             </section>
         </main>
     </div>
     
-    <!-- ====================================================== -->
-    <!-- NUEVO MODAL PARA EDICIÓN COMPLETA                      -->
-    <!-- ====================================================== -->
+    <!-- Modal para Edición Completa de Lotes -->
     <div id="edit-producto-completo-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title" id="producto-completo-modal-title">Editar Producto</h2>
@@ -90,10 +88,8 @@
                         </select>
                     </div>
                 </div>
-
                 <h4 class="card__subtitle">Lotes de Compra</h4>
                 <div id="lotes-editor-container" class="lotes-editor-container">
-                    <!-- Los lotes editables se insertarán aquí con JavaScript -->
                     <p>Cargando lotes...</p>
                 </div>
             </div>
@@ -104,7 +100,29 @@
         </div>
     </div>
 
-    <!-- Modal de Historial (sin cambios) -->
+    <!-- Nuevo Modal para Ajuste Rápido de Stock -->
+    <div id="ajustar-stock-modal-overlay" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 class="card__title" id="ajustar-stock-modal-title">Ajustar Stock Total</h2>
+            <div class="modal-body">
+                <p>Estás ajustando el stock de: <strong id="ajustar-stock-nombre-producto"></strong></p>
+                <div class="form-group">
+                    <label>Stock Actual Calculado</label>
+                    <input type="text" id="stock-actual-calculado" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="nuevo-stock-real">Nuevo Stock Real (la cantidad que contaste)</label>
+                    <input type="number" id="nuevo-stock-real" step="any" placeholder="Ingresa la cantidad correcta">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="ajustar-stock-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="ajustar-stock-btn-guardar" class="btn-primary">Confirmar Ajuste</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Historial -->
     <div id="historial-movimientos-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title" id="movimientos-modal-title">Historial de Movimientos</h2>
