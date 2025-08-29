@@ -1866,3 +1866,10 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .lote-editor-item .form-group {
     margin: 0;
 }
+
+/* --- Estilos para el nuevo botón de Ajuste de Stock --- */
+
+.stock-actions .ajustar {
+    color: #0d9488; /* Un color turquesa/verde azulado */
+    background-color: #ccfbf1;
+}
