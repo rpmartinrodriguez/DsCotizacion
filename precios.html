@@ -8,7 +8,10 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
-    <!-- LIBRERÍAS PARA GENERAR PDF (MUY IMPORTANTE) -->
+
+    <!-- ====================================================== -->
+    <!-- LIBRERÍAS PARA GENERAR PDF (MUY IMPORTANTE)            -->
+    <!-- ====================================================== -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 </head>
@@ -24,16 +27,15 @@
             </a>
             <div class="header__spacer"></div>
         </header>
-
         <nav class="nav-menu" id="nav-menu">
-            <!-- Pega aquí tu menú de navegación actualizado -->
+            <!-- (Pega aquí tu menú de navegación actualizado) -->
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
             <h1 class="header__slogan">Listas de Precios</h1>
 
-            <!-- SECCIÓN NUEVA: Panel de Control para Descargas PDF -->
+            <!-- Panel de Control para Descargas PDF -->
             <section class="card">
                 <h2 class="card__title">Generar Listas de Precios en PDF</h2>
                 <div class="form-modern">
@@ -45,11 +47,10 @@
                         <label for="porcentaje-minorista">Ganancia Minorista (%)</label>
                         <input type="number" id="porcentaje-minorista" placeholder="Ej: 70" value="70">
                     </div>
-                    <div class="form-group" style="grid-column: 1 / -1;">
-                        <label for="logo-url">URL del Logo para marca de agua</label>
-                        <input type="url" id="logo-url" placeholder="Pega aquí el link a tu logo (ej: https://i.imgur.com/logo.png)">
-                    </div>
                 </div>
+                <p style="font-size: 0.8rem; color: var(--text-light); text-align: center; margin-top: 1rem;">
+                    El PDF se generará con el logo de tu app como marca de agua.
+                </p>
                 <div class="modal-actions" style="justify-content: center; gap: 1rem; margin-top: 1.5rem;">
                     <button id="btn-pdf-costo" class="btn-secondary">Descargar Costos</button>
                     <button id="btn-pdf-mayorista" class="btn-primary">Descargar Lista Mayorista</button>
@@ -57,7 +58,7 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN VISUAL: Lista de Precios de Costo -->
+            <!-- Vista Rápida de Costos de Producción -->
             <section class="card">
                 <div class="card-header-actions">
                     <h2 class="card__title">Vista Rápida de Costos de Producción (por unidad)</h2>
