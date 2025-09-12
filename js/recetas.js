@@ -8,7 +8,6 @@ export function setupRecetas(app) {
     const db = getFirestore(app);
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
-    // --- NUEVA COLECCIÓN PARA CATEGORÍAS ---
     const categoriasCollection = collection(db, 'categorias');
 
     // Referencias al DOM
@@ -29,7 +28,7 @@ export function setupRecetas(app) {
     const btnGuardarReceta = document.getElementById('receta-modal-btn-guardar');
     const btnCancelarReceta = document.getElementById('receta-modal-btn-cancelar');
 
-    // --- NUEVAS REFERENCIAS PARA GESTIÓN DE CATEGORÍAS ---
+    // Referencias para Gestión de Categorías
     const formCategoria = document.getElementById('form-categoria');
     const inputNuevaCategoria = document.getElementById('nueva-categoria-nombre');
     const listaCategoriasContainer = document.getElementById('lista-categorias-container');
@@ -40,13 +39,10 @@ export function setupRecetas(app) {
     let ingredientesRecetaActual = [];
     let editandoId = null;
 
-    // --- LÓGICA PARA CARGAR Y GESTIONAR CATEGORÍAS ---
-
-    // Escucha los cambios en la colección de categorías en tiempo real
+    // Lógica para Cargar y Gestionar Categorías
     onSnapshot(query(categoriasCollection, orderBy("nombre")), (snapshot) => {
         const categorias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // 1. Actualiza el menú desplegable en el modal de recetas
         categoriaSelect.innerHTML = '<option value="" disabled selected>Selecciona una categoría...</option>';
         categorias.forEach(cat => {
             const option = document.createElement('option');
@@ -55,7 +51,6 @@ export function setupRecetas(app) {
             categoriaSelect.appendChild(option);
         });
 
-        // 2. Actualiza la lista de gestión de categorías en la página principal
         listaCategoriasContainer.innerHTML = '';
         if (categorias.length === 0) {
             listaCategoriasContainer.innerHTML = '<p>Aún no has creado categorías.</p>';
@@ -63,52 +58,37 @@ export function setupRecetas(app) {
             categorias.forEach(cat => {
                 const catTag = document.createElement('div');
                 catTag.className = 'categoria-tag';
-                catTag.innerHTML = `
-                    <span>${cat.nombre}</span>
-                    <button class="btn-delete-cat" data-id="${cat.id}" title="Eliminar categoría">×</button>
-                `;
+                catTag.innerHTML = `<span>${cat.nombre}</span><button class="btn-delete-cat" data-id="${cat.id}" title="Eliminar categoría">×</button>`;
                 listaCategoriasContainer.appendChild(catTag);
             });
         }
 
-        // Añade listeners a los botones de borrar categoría
         document.querySelectorAll('.btn-delete-cat').forEach(button => {
             button.addEventListener('click', async (e) => {
                 const id = e.currentTarget.dataset.id;
-                if (confirm('¿Estás seguro de que quieres eliminar esta categoría? Las recetas que la usen no se borrarán, pero quedarán sin categoría.')) {
+                if (confirm('¿Estás seguro de que quieres eliminar esta categoría?')) {
                     await deleteDoc(doc(db, 'categorias', id));
                 }
             });
         });
     });
 
-    // Añade el listener para el formulario de crear nueva categoría
     formCategoria.addEventListener('submit', async (e) => {
         e.preventDefault();
         const nombreCategoria = inputNuevaCategoria.value.trim();
         if (nombreCategoria) {
-            try {
-                await addDoc(categoriasCollection, {
-                    nombre: nombreCategoria
-                });
-                inputNuevaCategoria.value = '';
-            } catch (error) {
-                console.error("Error al añadir categoría:", error);
-                alert("No se pudo añadir la categoría.");
-            }
+            await addDoc(categoriasCollection, { nombre: nombreCategoria });
+            inputNuevaCategoria.value = '';
         }
     });
 
-
-    // --- LÓGICA PARA RECETAS (CÓDIGO EXISTENTE ADAPTADO) ---
-
+    // Lógica para Recetas
     const cargarMateriasPrimas = async () => {
         btnCrearReceta.disabled = true;
         btnCrearReceta.textContent = 'Cargando...';
         try {
             const snapshot = await getDocs(query(materiasPrimasCollection, orderBy('nombre')));
             materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
             ingredientesDatalist.innerHTML = '';
             materiasPrimasDisponibles.forEach(mp => {
                 if (mp.lotes && mp.lotes.length > 0) {
@@ -169,14 +149,13 @@ export function setupRecetas(app) {
     const anadirIngrediente = () => {
         const nombreIngrediente = ingredienteInput.value;
         const cantidad = parseFloat(cantidadIngredienteInput.value);
-
         if (!nombreIngrediente || isNaN(cantidad) || cantidad <= 0) {
             alert('Escribe o selecciona un ingrediente y una cantidad válida.');
             return;
         }
         const materiaPrima = materiasPrimasDisponibles.find(mp => mp.nombre === nombreIngrediente);
         if (!materiaPrima) {
-            alert('Ingrediente no encontrado. Por favor, selecciónalo de la lista o verifica el nombre.');
+            alert('Ingrediente no encontrado.');
             return;
         }
         if (ingredientesRecetaActual.some(ing => ing.idMateriaPrima === materiaPrima.id)) {
@@ -198,22 +177,15 @@ export function setupRecetas(app) {
         const nombreTorta = recetaNombreInput.value.trim();
         const categoria = categoriaSelect.value;
         const rendimiento = parseInt(rendimientoInput.value, 10);
-
         if (!nombreTorta || !categoria || !rendimiento || isNaN(rendimiento) || rendimiento <= 0 || ingredientesRecetaActual.length === 0) {
             alert('Por favor, completa el nombre, selecciona una categoría, un rendimiento válido y añade al menos un ingrediente.');
             return;
         }
-        
         const id = editandoId || doc(collection(db, 'recetas')).id;
-        const recetaData = { 
-            nombreTorta, 
-            categoria, 
-            rendimiento, 
-            ingredientes: ingredientesRecetaActual 
-        };
+        const recetaData = { nombreTorta, categoria, rendimiento, ingredientes: ingredientesRecetaActual };
         try {
             await setDoc(doc(db, 'recetas', id), recetaData);
-            alert(editandoId ? '¡Receta actualizada con éxito!' : '¡Receta creada con éxito!');
+            alert(editandoId ? '¡Receta actualizada!' : '¡Receta creada!');
             closeModal();
         } catch (error) {
             console.error("Error al guardar receta:", error);
@@ -224,22 +196,15 @@ export function setupRecetas(app) {
     const mostrarRecetas = (recetas) => {
         listaRecetasContainer.innerHTML = '';
         const recetasPorCategoria = {};
-
-        // Agrupa las recetas por su categoría
         recetas.forEach(receta => {
             const categoria = receta.data.categoria || 'Sin Categoría';
-            if (!recetasPorCategoria[categoria]) {
-                recetasPorCategoria[categoria] = [];
-            }
+            if (!recetasPorCategoria[categoria]) recetasPorCategoria[categoria] = [];
             recetasPorCategoria[categoria].push(receta);
         });
-
         if (recetas.length === 0) {
             listaRecetasContainer.innerHTML = '<p>No tienes recetas guardadas. ¡Crea la primera!</p>';
             return;
         }
-
-        // Muestra las recetas agrupadas en acordeones por categoría
         Object.keys(recetasPorCategoria).sort().forEach(categoria => {
             const listaDeRecetas = recetasPorCategoria[categoria];
             if (listaDeRecetas && listaDeRecetas.length > 0) {
@@ -253,6 +218,10 @@ export function setupRecetas(app) {
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
+                            <!-- ====================================================== -->
+                            <!-- BOTÓN NUEVO: Borrar Receta                             -->
+                            <!-- ====================================================== -->
+                            <button class="btn-secondary btn-borrar-receta" data-id="${receta.id}">Borrar</button>
                             <button class="btn-secondary btn-anadir-cotizacion" data-id="${receta.id}">Añadir 🛒</button>
                             <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary">Presupuestar</a>
                         </div>
@@ -276,7 +245,7 @@ export function setupRecetas(app) {
         mostrarRecetas(todasLasRecetas);
     });
 
-    listaRecetasContainer.addEventListener('click', (e) => {
+    listaRecetasContainer.addEventListener('click', async (e) => {
         const header = e.target.closest('.categoria-acordeon__header');
         if (header) {
             header.parentElement.classList.toggle('active');
@@ -291,6 +260,23 @@ export function setupRecetas(app) {
             return;
         }
         
+        // --- MODIFICACIÓN: Lógica para el botón de borrar ---
+        const targetBorrar = e.target.closest('.btn-borrar-receta');
+        if (targetBorrar) {
+            const id = targetBorrar.dataset.id;
+            const recetaParaBorrar = todasLasRecetas.find(r => r.id === id);
+            if (recetaParaBorrar && confirm(`¿Estás seguro de que quieres borrar la receta "${recetaParaBorrar.data.nombreTorta}"? Esta acción no se puede deshacer.`)) {
+                try {
+                    await deleteDoc(doc(db, 'recetas', id));
+                    alert('Receta borrada con éxito.');
+                } catch (error) {
+                    console.error("Error al borrar receta:", error);
+                    alert("No se pudo borrar la receta.");
+                }
+            }
+            return;
+        }
+
         const targetAnadir = e.target.closest('.btn-anadir-cotizacion');
         if(targetAnadir) {
             const id = targetAnadir.dataset.id;
@@ -299,14 +285,6 @@ export function setupRecetas(app) {
                 addToCart(recetaParaAnadir);
             }
             return;
-        }
-
-        const targetBorrar = e.target.closest('.btn-borrar-receta');
-        if (targetBorrar) {
-            const id = targetBorrar.dataset.id;
-            if (confirm('¿Estás seguro de que quieres borrar esta receta? Esta acción no se puede deshacer.')) {
-                deleteDoc(doc(db, 'recetas', id));
-            }
         }
     });
 
