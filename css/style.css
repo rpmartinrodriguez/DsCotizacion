@@ -165,36 +165,51 @@ body.menu-open {
     font-size: 1.1rem;
 }
 
+/* --- ESTILO DE ENLACES DE MENÚ ACTUALIZADO --- */
 .nav-menu__link {
     color: var(--text-color);
     text-decoration: none;
     font-weight: 500;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-    transition: all 0.2s ease; /* Transición más general */
+    border-bottom: none; /* REEMPLAZADO: quitamos la línea */
+    border-radius: 50px; /* AÑADIDO: bordes píldora */
+    margin: 0.5rem 0.75rem; /* AÑADIDO: espacio entre botones */
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     gap: 1rem;
     position: relative;
-    overflow: hidden; /* Para el efecto de la barra */
+    box-shadow: var(--shadow-neumorphic); /* AÑADIDO: efecto "emergente" */
 }
 
 .nav-menu__link:hover {
     background-color: var(--secondary-button-hover-bg);
-    color: var(--primary-color); /* El texto se vuelve rosa */
-    letter-spacing: 0.5px;
-    transform: translateX(5px); /* Deslizamiento suave */
+    color: var(--primary-color);
+    letter-spacing: 0px; /* Quitamos el letter-spacing */
+    transform: translateY(-2px); /* Mantenemos el "lift" */
+    box-shadow: 0 4px 10px rgba(255, 150, 197, 0.4); /* Sombra más fuerte */
+}
+
+.nav-menu__link:active {
+    transform: translateY(1px);
+    box-shadow: var(--shadow-neumorphic-inset);
 }
 
 .nav-menu__link.active {
     background-color: var(--primary-color);
     color: white;
     font-weight: 600;
-    /* Efecto "hundido" para el elemento activo */
+    box-shadow: var(--shadow-neumorphic-inset); /* Efecto "hundido" */
+    border-radius: 50px; /* Aseguramos la píldora */
+    margin: 0.5rem 0.75rem; /* Mantenemos el margen */
+    padding: 1rem 1.5rem; /* Mantenemos el padding */
+}
+
+.nav-menu__link.active:hover {
+    background-color: var(--primary-color-hover);
+    color: white;
+    transform: none;
     box-shadow: var(--shadow-neumorphic-inset);
-    border-radius: var(--border-radius-modern); /* Bordes redondeados */
-    margin: 0.5rem 0.75rem; /* Margen para que se vea el redondeado */
-    padding: 1rem 1.25rem; /* Ajuste de padding */
 }
 
 .nav-menu__overlay {
