@@ -9,22 +9,35 @@
 :root {
     --primary-color: #ff96c5;
     --primary-color-hover: #e686b2;
-    --secondary-button-hover-bg: #fff0f6; /* Rosa muy pálido */
+    --secondary-button-hover-bg: #fff0f6;
     --background-color: #fff5f9;
     --success-color: #28a745;
     --danger-color: #e55039;
     --card-background: #ffffff;
     --text-color: #333333;
-    --text-light: #6b7280; /* Gris más suave */
-    --border-color: #f0e6ea; /* Borde más sutil y rosado */
-    --shadow: 0 4px 15px rgba(0, 0, 0, 0.06); /* Sombra más suave */
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
+    --text-light: #6b7280;
+    --border-color: #f0e6ea;
+    
+    /* --- NUEVOS ESTILOS DRÁSTICOS --- */
+    --border-radius-modern: 20px; /* Bordes super redondeados */
+    --shadow-light: #ffffff;
+    --shadow-dark: #ffd9ec; /* Sombra basada en tu fondo rosa */
+    
+    /* Sombra Neumórfica para elementos que "salen" */
+    --shadow-neumorphic: 
+        8px 8px 16px var(--shadow-dark),
+        -8px -8px 16px var(--shadow-light);
+    
+    /* Sombra Neumórfica Inversa (para elementos "hundidos") */
+    --shadow-neumorphic-inset:
+        inset 5px 5px 10px var(--shadow-dark),
+        inset -5px -5px 10px var(--shadow-light);
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
-    padding-top: 80px;
+    padding-top: 80px; /* Espacio para el header fijo */
     background-color: var(--background-color);
     color: var(--text-color);
 }
@@ -39,15 +52,13 @@ body.menu-open {
     padding: 2em;
 }
 
-/* ------------------ Header y Menú ------------------ */
+/* ------------------ Header y Menú (Modernizado) ------------------ */
 .header {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    background-color: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    background-color: var(--background-color); /* Fondo sólido */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -55,6 +66,8 @@ body.menu-open {
     border-bottom: 1px solid var(--border-color);
     z-index: 1002;
     box-sizing: border-box;
+    /* Aplicamos la sombra suave al header */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .header__menu-icon {
@@ -74,7 +87,8 @@ body.menu-open {
     height: 3px;
     background-color: var(--text-color);
     border-radius: 3px;
-    transition: all 0.3s ease-in-out;
+    /* Transición para la animación de "X" */
+    transition: all 0.3s ease-in-out; 
 }
 
 .header__logo-link {
@@ -89,13 +103,6 @@ body.menu-open {
 
 .header__spacer {
     width: 40px;
-}
-
-.header__title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    margin: 0;
-    text-align: center;
 }
 
 .header__slogan {
@@ -113,7 +120,7 @@ body.menu-open {
     left: 0;
     width: 280px;
     height: 100%;
-    background-color: var(--card-background);
+    background-color: var(--background-color); /* Mismo fondo */
     box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
@@ -121,6 +128,7 @@ body.menu-open {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    border-right: 1px solid var(--border-color);
 }
 
 .nav-menu__header {
@@ -129,7 +137,7 @@ body.menu-open {
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    margin-top: 65px;
+    margin-top: 65px; /* Espacio para el header fijo */
 }
 
 .nav-menu__title {
@@ -143,14 +151,15 @@ body.menu-open {
     font-weight: 500;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s, color 0.2s;
+    transition: background-color 0.2s, color 0.2s, letter-spacing 0.2s;
     display: flex;
     align-items: center;
     gap: 1rem;
 }
 
 .nav-menu__link:hover {
-    background-color: var(--background-color);
+    background-color: var(--secondary-button-hover-bg);
+    letter-spacing: 0.5px; /* Pequeño efecto al pasar el mouse */
 }
 
 .nav-menu__link.active {
@@ -172,6 +181,7 @@ body.menu-open {
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
 }
 
+/* --- ANIMACIÓN DEL MENÚ DE HAMBURGUESA --- */
 body.menu-open .nav-menu {
     transform: translateX(0);
 }
@@ -193,14 +203,14 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     transform: rotate(-45deg) translate(7px, -7px);
 }
 
-/* --- Componentes Generales Modernizados --- */
+/* --- Componentes Generales Modernizados (Soft UI) --- */
 .card {
-    background: var(--card-background);
+    background: var(--background-color); /* Mismo fondo que el body */
     padding: 2rem;
-    border-radius: 16px; /* Más redondeado */
-    box-shadow: var(--shadow);
+    border-radius: var(--border-radius-modern); /* Bordes super redondeados */
+    box-shadow: var(--shadow-neumorphic); /* Sombra Neumórfica */
     margin-bottom: 2rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.5); /* Borde de luz */
 }
 
 .card__title {
@@ -208,6 +218,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-weight: 600;
     margin-top: 0;
     margin-bottom: 1.5rem;
+    color: var(--primary-color); /* Títulos en rosa */
 }
 
 .card__subtitle {
@@ -248,6 +259,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     border-left: 5px solid var(--danger-color);
 }
 
+/* --- Formularios Modernizados (Hundidos) --- */
 .form-modern {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -270,24 +282,28 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .form-group select,
 .form-group textarea {
     padding: 0.8rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border: none; /* Sin bordes */
+    border-radius: 12px; /* Redondeado */
     font-size: 1rem;
     font-family: inherit;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: box-shadow 0.2s;
     box-sizing: border-box;
     width: 100%;
-    background-color: #fff; /* Fondo blanco para inputs */
+    background-color: var(--background-color);
+    color: var(--text-color);
+    /* Efecto "hundido" */
+    box-shadow: var(--shadow-neumorphic-inset);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.4); /* Sombra de foco más fuerte */
+    /* Resaltado de foco en rosa */
+    box-shadow: var(--shadow-neumorphic-inset), 0 0 0 3px rgba(255, 150, 197, 0.4);
 }
 
+/* --- Botones Modernizados (Píldora) --- */
 .btn-primary {
     background-color: var(--primary-color);
     color: white;
@@ -295,17 +311,23 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 1rem;
     padding: 1rem;
     border: none;
-    border-radius: 12px; /* Más redondeado */
+    border-radius: 50px; /* Estilo Píldora */
     cursor: pointer;
     width: 100%;
-    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 2px 5px rgba(255, 150, 197, 0.3); /* Sombra sutil del color */
+    transition: all 0.2s ease-in-out;
+    box-shadow: var(--shadow-neumorphic);
 }
 
 .btn-primary:hover {
     background-color: var(--primary-color-hover);
     transform: translateY(-2px); /* Efecto de "levantarse" */
     box-shadow: 0 4px 10px rgba(255, 150, 197, 0.4); /* Sombra más fuerte al pasar el mouse */
+}
+
+.btn-primary:active {
+    /* Efecto de presionado */
+    transform: translateY(1px);
+    box-shadow: var(--shadow-neumorphic-inset);
 }
 
 .btn-primary:disabled {
@@ -316,75 +338,71 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 }
 
 .btn-secondary {
-    background-color: #fff; /* Fondo blanco */
-    color: var(--primary-color); /* Texto rosa */
+    background-color: var(--background-color);
+    color: var(--text-light);
     font-weight: 600;
     font-size: 1rem;
     padding: 1rem;
-    border: 1px solid var(--primary-color); /* Borde rosa */
-    border-radius: 12px; /* Más redondeado */
+    border: none;
+    border-radius: 50px; /* Estilo Píldora */
     cursor: pointer;
-    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+    transition: all 0.2s ease-in-out;
+    box-shadow: var(--shadow-neumorphic);
 }
 
 .btn-secondary:hover {
-    background-color: var(--secondary-button-hover-bg);
-    color: var(--primary-color);
-    transform: translateY(-2px); /* Efecto de "levantarse" */
+    background-color: var(--card-background);
+    color: var(--text-color);
+    transform: translateY(-2px);
+}
+
+.btn-secondary:active {
+    transform: translateY(1px);
+    box-shadow: var(--shadow-neumorphic-inset);
 }
 
 .btn-primary.danger {
     background-color: var(--danger-color);
     box-shadow: 0 2px 5px rgba(229, 80, 57, 0.3);
 }
-
 .btn-primary.danger:hover {
     background-color: #c82333;
     box-shadow: 0 4px 10px rgba(229, 80, 57, 0.4);
 }
 
-/* --- Estilo de Tabla Modernizado --- */
+/* --- Tabla Modernizada (Limpia, dentro de un Card) --- */
 .table-clean {
     width: 100%;
-    border-collapse: separate; /* Clave para usar border-radius en filas */
-    border-spacing: 0 10px; /* Espacio vertical entre filas */
+    border-collapse: collapse; /* Volvemos a colapsar */
+    background-color: var(--card-background); /* Fondo blanco para la tabla */
+    border-radius: 12px; /* Redondeamos la tabla entera */
+    overflow: hidden; /* Oculta los bordes que se salen */
+    box-shadow: var(--shadow-neumorphic-inset); /* La "hundimos" en el card */
 }
 
 .table-clean th,
 .table-clean td {
     padding: 1rem 1.25rem;
     text-align: left;
-    border-bottom: none; /* Quitamos el borde inferior tradicional */
+    border-bottom: 1px solid var(--border-color); /* Líneas separadoras sutiles */
     vertical-align: middle;
+}
+
+.table-clean tr:last-child td {
+    border-bottom: none; /* Quitamos la última línea */
 }
 
 .table-clean th {
     font-size: 0.8rem;
-    color: var(--text-light);
+    color: var(--primary-color); /* Encabezado en rosa */
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
-}
-
-.table-clean tr {
-    background-color: var(--card-background);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-    transition: transform 0.2s, box-shadow 0.2s;
+    background-color: var(--secondary-button-hover-bg);
 }
 
 .table-clean tr:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow);
-}
-
-.table-clean td:first-child {
-    border-top-left-radius: 12px;
-    border-bottom-left-radius: 12px;
-}
-
-.table-clean td:last-child {
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
+    background-color: var(--secondary-button-hover-bg); /* Resaltado rosa suave */
 }
 
 /* 8. Layout de la página de Presupuesto */
@@ -441,6 +459,8 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     width: 80px;
     padding: 0.5rem;
     text-align: right;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
 }
 
 .ingrediente-cantidad input[type="number"]:disabled {
@@ -460,12 +480,13 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 #mensaje-final {
     width: 100%;
     box-sizing: border-box;
-    border: 1px solid var(--border-color);
+    border: none;
     border-radius: 8px;
     padding: 1rem;
     font-size: 1rem;
     line-height: 1.6;
-    background-color: #fdfdfd;
+    background-color: var(--background-color);
+    box-shadow: var(--shadow-neumorphic-inset);
     resize: vertical;
 }
 
@@ -527,14 +548,17 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 
 /* 13. Estilos para la página de Historial */
 .historial-card {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border: none;
+    border-radius: var(--border-radius-modern);
     padding: 1.5rem;
     margin-bottom: 1rem;
-    transition: box-shadow 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background-color: var(--background-color);
+    box-shadow: var(--shadow-neumorphic);
 }
 .historial-card:hover {
-    box-shadow: var(--shadow);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px var(--shadow-dark);
 }
 .historial-card.es-venta {
     border-left: 5px solid var(--success-color);
@@ -576,7 +600,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     list-style: disc;
 }
 
-/* 14. Estilos para Acciones del Historial */
+/* 14. Estilos para Acciones del Historial (Botones píldora) */
 .historial-card__actions {
     margin-top: 1rem;
     display: flex;
@@ -584,37 +608,44 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     align-items: center;
 }
 .btn-ver-detalle {
-    background: none;
-    border: 1px solid var(--border-color);
+    background: var(--background-color);
+    border: none;
     color: var(--primary-color);
     padding: 0.5rem 1rem;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     font-weight: 500;
+    box-shadow: var(--shadow-neumorphic);
+    transition: all 0.2s;
+}
+.btn-ver-detalle:hover {
+    transform: translateY(-2px);
 }
 .btn-borrar-presupuesto {
-    background: none;
-    border: 1px solid var(--danger-color);
+    background: var(--background-color);
+    border: none;
     color: var(--danger-color);
     padding: 0.5rem 1rem;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
+    box-shadow: var(--shadow-neumorphic);
+    transition: all 0.2s;
 }
 .btn-borrar-presupuesto:hover {
     background-color: var(--danger-color);
     color: white;
 }
 .btn-marcar-venta {
-    background: none;
-    border: 1px solid var(--success-color);
+    background: var(--background-color);
+    border: none;
     color: var(--success-color);
     padding: 0.5rem 1rem;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
+    box-shadow: var(--shadow-neumorphic);
+    transition: all 0.2s;
 }
 .btn-marcar-venta:hover {
     background-color: var(--success-color);
@@ -626,7 +657,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 0.875rem;
     color: var(--success-color);
     background-color: #eaf7ed;
-    border-radius: 5px;
+    border-radius: 50px;
     text-align: center;
 }
 
@@ -647,36 +678,28 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     border-radius: 50%; /* Botones redondos */
     font-weight: 500;
     cursor: pointer;
-    border: 1px solid transparent;
-    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+    border: none;
+    transition: all 0.2s ease-in-out;
     text-decoration: none;
-    font-size: 1.1rem; /* Iconos un poco más grandes */
+    font-size: 1.1rem;
+    color: var(--text-light);
+    background-color: var(--background-color);
+    box-shadow: var(--shadow-neumorphic);
 }
 .stock-actions .btn-stock-link:hover,
 .stock-actions .btn-stock:hover {
-    transform: scale(1.15); /* Efecto de zoom al pasar el mouse */
+    transform: translateY(-2px);
 }
-.stock-actions .add {
-    color: var(--success-color);
-    background-color: #eaf7ed;
+.stock-actions .btn-stock-link:active,
+.stock-actions .btn-stock:active {
+    box-shadow: var(--shadow-neumorphic-inset);
+    transform: translateY(1px);
 }
-.stock-actions .subtract {
-    color: var(--danger-color);
-    background-color: #fde8e5;
-}
-/* Estilos para los botones nuevos de stock */
-.stock-actions .ajustar {
-    color: #0d9488;
-    background-color: #ccfbf1;
-}
-.stock-actions .edit {
-    color: #f59e0b;
-    background-color: #fef9c3;
-}
-.stock-actions .history {
-    color: #6366f1;
-    background-color: #e0e7ff;
-}
+.stock-actions .add { color: var(--success-color); }
+.stock-actions .subtract { color: var(--danger-color); }
+.stock-actions .ajustar { color: #0d9488; }
+.stock-actions .edit { color: #f59e0b; }
+.stock-actions .history { color: #6366f1; }
 
 /* 16. Estilos para el Desglose de Lotes en Historial */
 .historial-card__detalle > ul > li {
@@ -730,8 +753,8 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .precio-venta-final {
     background-color: var(--primary-color);
     color: white;
-    padding: 1rem;
-    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    border-radius: var(--border-radius-modern);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -745,7 +768,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     float: right;
 }
 
-/* 18. Estilos para el Buscador */
+/* 18. Estilos para el Buscador (Hundido) */
 .buscador-container {
     margin-bottom: 1.5rem;
     width: 100%;
@@ -753,16 +776,16 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .buscador-container input[type="search"] {
     width: 100%;
     padding: 0.8rem 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border: none;
+    border-radius: 12px;
     font-size: 1rem;
     box-sizing: border-box;
-    background-color: #fff;
+    background-color: var(--background-color);
+    box-shadow: var(--shadow-neumorphic-inset);
 }
 .buscador-container input[type="search"]:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(255, 150, 197, 0.3);
+    box-shadow: var(--shadow-neumorphic-inset), 0 0 0 3px rgba(255, 150, 197, 0.4);
 }
 
 /* 19. Estilos para la Modal de Edición de Lotes */
@@ -771,9 +794,9 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     overflow-y: auto;
     padding: 0.5rem;
     margin-top: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: var(--background-color);
+    box-shadow: var(--shadow-neumorphic-inset);
 }
 .lote-editor-item {
     padding: 1rem;
@@ -798,7 +821,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin: 0;
 }
 
-/* 20. Estilos para el Dashboard */
+/* 20. Estilos para el Dashboard (Modernizado) */
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -806,10 +829,10 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-bottom: 2rem;
 }
 .stat-card {
-    background-color: var(--card-background);
+    background-color: var(--background-color);
     padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+    border-radius: var(--border-radius-modern);
+    box-shadow: var(--shadow-neumorphic);
     text-align: center;
 }
 .stat-card h4 {
@@ -882,17 +905,22 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     margin-bottom: 1rem;
+    background-color: var(--card-background);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 .receta-card__info h3 { margin: 0 0 0.25rem 0; }
 .receta-card__info p { margin: 0; font-size: 0.9rem; color: var(--text-light); }
 .receta-card__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .receta-card__actions .btn-primary,
-.receta-card__actions .btn-secondary { width: auto; padding: 0.6rem 1.2rem; }
+.receta-card__actions .btn-secondary { 
+    width: auto; 
+    padding: 0.6rem 1.2rem; 
+    border-radius: 50px; /* Botones píldora */
+}
 
-/* 22. Estilos Responsive (Tabla Modernizada) */
+/* 22. Estilos Responsive (Modernizado) */
 @media (max-width: 768px) {
     body { 
         padding: 1em; 
@@ -903,10 +931,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     }
     .card { 
         padding: 1.5rem; 
-        border-radius: 12px; 
-    }
-    .header__title { 
-        font-size: 1.8rem; 
+        border-radius: var(--border-radius-modern); 
     }
     .header__slogan { 
         font-size: 1.5rem; 
@@ -915,7 +940,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
         font-size: 1.1rem; 
     }
     .form-modern { 
-        grid-template-columns: 1fr; /* Hacemos que todos los grids de formulario sean de 1 columna */
+        grid-template-columns: 1fr;
         gap: 1rem; 
     }
     .card-header-actions { 
@@ -924,7 +949,9 @@ body.menu-open .header__menu-icon span:nth-child(3) {
         gap: 1rem; 
     }
     .table-clean { 
-        border: none; 
+        border: none;
+        background: none;
+        box-shadow: none;
         border-spacing: 0;
     }
     .table-clean thead { 
@@ -932,11 +959,12 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     }
     .table-clean tr { 
         display: block; 
-        border: 1px solid var(--border-color); 
-        border-radius: 12px; 
-        margin-bottom: 1rem; 
+        border: none;
+        border-radius: var(--border-radius-modern); 
+        margin-bottom: 1.5rem; 
         padding: 1rem; 
-        box-shadow: var(--shadow);
+        background-color: var(--background-color);
+        box-shadow: var(--shadow-neumorphic);
     }
     .table-clean tr:hover {
         transform: none;
@@ -947,8 +975,9 @@ body.menu-open .header__menu-icon span:nth-child(3) {
         align-items: center;
         text-align: right; 
         padding: 0.8rem 0; 
-        border-bottom: 1px dashed var(--border-color); 
-        position: relative; 
+        border-bottom: 1px dashed var(--border-color);
+        position: relative;
+        background: none;
     }
     .table-clean td:last-child {
         border-bottom: none;
@@ -970,10 +999,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     .table-clean td.action-buttons:before { 
         content: ''; 
     }
-    .calculo-grid { 
-        grid-template-columns: 1fr; 
-    }
-    .presupuesto-layout, .dashboard-layout { 
+    .calculo-grid, .presupuesto-layout, .dashboard-layout { 
         grid-template-columns: 1fr; 
     }
     .modal-content { 
@@ -986,20 +1012,20 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 
     /* --- NUEVOS AJUSTES RESPONSIVE PARA EL EDITOR DE RECETAS --- */
     .receta-editor-grid {
-        grid-template-columns: 1fr; /* La grilla de añadir ingrediente pasa a 1 columna */
+        grid-template-columns: 1fr;
     }
     .receta-editor-grid button {
-        grid-column: 1 / -1; /* El botón ocupa todo el ancho */
+        grid-column: 1 / -1;
     }
     .receta-card {
-        flex-direction: column; /* Apila la info y los botones */
+        flex-direction: column;
         align-items: flex-start;
         gap: 1rem;
     }
     .receta-card__actions {
         width: 100%;
         display: grid;
-        grid-template-columns: 1fr 1fr; /* Botones uno al lado del otro */
+        grid-template-columns: 1fr 1fr;
     }
     /* --- FIN DE NUEVOS AJUSTES --- */
 
@@ -1050,16 +1076,18 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     }
 }
 
+/* (El resto de tu CSS desde la sección 23 en adelante) */
 /* 23. Estilos para el botón "Marcar como Venta" */
 .btn-marcar-venta {
-    background: none;
-    border: 1px solid var(--success-color);
+    background: var(--background-color);
+    border: none;
     color: var(--success-color);
     padding: 0.5rem 1rem;
-    border-radius: 5px;
+    border-radius: 50px;
     cursor: pointer;
     font-weight: 500;
-    transition: background-color 0.2s, color 0.2s;
+    box-shadow: var(--shadow-neumorphic);
+    transition: all 0.2s;
 }
 .btn-marcar-venta:hover {
     background-color: var(--success-color);
@@ -1071,7 +1099,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 0.875rem;
     color: var(--success-color);
     background-color: #eaf7ed;
-    border-radius: 5px;
+    border-radius: 50px;
     text-align: center;
 }
 
@@ -1086,7 +1114,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 
 /* 25. Estilos para el botón de Paginación (Cargar Más) */
 .cargar-mas-container {
-    display: none; /* Ocultamos por defecto ya que no se usa */
+    display: none;
     justify-content: center;
     padding: 1rem 0;
 }
@@ -1107,12 +1135,12 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 
 /* 27. Estilos para el Resumen de Clientes */
 .cliente-resumen-card {
-    background-color: var(--card-background);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background-color: var(--background-color);
+    border: none;
+    border-radius: var(--border-radius-modern);
     padding: 1.5rem;
     margin-bottom: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-neumorphic);
 }
 .cliente-resumen-card h3 {
     margin: 0 0 1rem 0;
@@ -1187,7 +1215,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-weight: 600;
     text-align: center;
     padding: 0.75rem;
-    border-radius: 8px;
+    border-radius: 12px;
     min-width: 65px;
     line-height: 1.2;
 }
@@ -1227,7 +1255,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     gap: 2rem;
 }
 #lista-faltantes-dashboard .lista-sencilla span {
-    color: var(--danger-color); /* Resaltamos la cantidad faltante */
+    color: var(--danger-color);
 }
 
 /* Estilos para el Ranking de Clientes */
@@ -1320,12 +1348,13 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 
 /* Estilos para el nuevo Acordeón de Categorías */
 .categoria-acordeon {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border: none;
+    border-radius: var(--border-radius-modern);
     margin-bottom: 1rem;
-    overflow: hidden; /* Clave para la animación */
+    overflow: hidden;
+    background-color: var(--background-color);
+    box-shadow: var(--shadow-neumorphic);
 }
-
 .categoria-acordeon__header {
     background-color: var(--card-background);
     padding: 1rem 1.5rem;
@@ -1339,59 +1368,47 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     font-size: 1.25rem;
     font-weight: 600;
 }
-
 .categoria-acordeon__header:hover {
-    background-color: var(--background-color);
+    background-color: var(--secondary-button-hover-bg);
 }
-
 .acordeon-icono {
     font-size: 1.5rem;
     font-weight: bold;
     color: var(--primary-color);
     transition: transform 0.3s ease;
 }
-
 .categoria-acordeon__content {
-    max-height: 0; /* Oculto por defecto */
+    max-height: 0;
     transition: max-height 0.4s ease-out, padding 0.4s ease-out;
     background-color: var(--background-color);
-    padding: 0 1.5rem; /* Padding horizontal para el contenido */
+    padding: 0 1.5rem;
 }
-
-/* Estilos para cuando el acordeón está activo/abierto */
 .categoria-acordeon.active .categoria-acordeon__content {
-    max-height: 1000px; /* Un valor alto para permitir que el contenido se vea */
+    max-height: 1000px;
     padding: 1.5rem;
     transition: max-height 0.5s ease-in, padding 0.5s ease-in;
 }
-
 .categoria-acordeon.active .acordeon-icono {
     transform: rotate(45deg);
 }
-
-/* Ajustamos las tarjetas de receta dentro del acordeón */
 .categoria-acordeon__content .receta-card {
-    border-radius: 8px;
+    border-radius: 12px;
     background-color: var(--card-background);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: var(--shadow-neumorphic-inset);
 }
-
 .dashboard-lista .fecha-tag {
     background-color: var(--primary-color);
     color: white;
     padding: 0.2rem 0.5rem;
-    border-radius: 4px;
+    border-radius: 50px;
     font-size: 0.8rem;
     font-weight: 500;
 }
-
-/* Estilos para la Modal de Historial de Movimientos */
 .movimientos-container {
     max-height: 60vh;
     overflow-y: auto;
-    padding-right: 1em; /* Espacio para la barra de scroll */
+    padding-right: 1em;
 }
-
 .movimiento-item {
     display: flex;
     justify-content: space-between;
@@ -1402,63 +1419,51 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .movimiento-item:last-child {
     border-bottom: none;
 }
-
 .movimiento-info .movimiento-fecha {
     font-size: 0.8rem;
     color: var(--text-light);
     display: block;
 }
-
 .movimiento-info .movimiento-descripcion {
     font-size: 1rem;
     font-weight: 500;
 }
-
 .movimiento-cantidad {
     font-size: 1.1rem;
     font-weight: 600;
     white-space: nowrap;
     margin-left: 1rem;
 }
-
 .movimiento-cantidad.entrada {
     color: var(--success-color);
 }
-
 .movimiento-cantidad.salida {
     color: var(--danger-color);
 }
-
 .warning-icon {
     margin-left: 0.5rem;
     cursor: help;
 }
-
-/* Estilos para Modales de Advertencia/Peligro */
 .modal-overlay--danger .modal-content {
     border-left: 5px solid var(--danger-color);
 }
-
 .modal-overlay--danger .card__title {
     color: var(--danger-color);
 }
 .cliente-card__info p {
     line-height: 1.5;
 }
-/* --- Estilos para la Agenda Visual (Calendario) --- */
 .calendario-container {
     padding: 1rem;
     border-top: 1px solid var(--border-color);
     margin-top: 1rem;
 }
-
 .calendario-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
 }
-
 .calendario-header h3 {
     margin: 0;
     color: var(--primary-color);
@@ -1466,29 +1471,26 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     text-align: center;
     flex-grow: 1;
 }
-
 .calendario-header button {
     padding: 0.5rem 1rem;
     font-size: 1.2rem;
     line-height: 1;
+    border-radius: 50px;
 }
-
 .calendario-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 5px;
 }
-
 .calendario-dia-semana {
     font-weight: bold;
     text-align: center;
     padding: 0.5rem 0;
     color: var(--text-light);
 }
-
 .calendario-dia {
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 12px;
     min-height: 100px;
     padding: 0.5rem;
     display: flex;
@@ -1496,28 +1498,23 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     background-color: #fff;
     transition: background-color 0.2s;
 }
-
 .calendario-dia.vacia {
     background-color: transparent;
     border-color: transparent;
 }
-
 .calendario-dia.hoy {
     border-color: var(--primary-color);
     background-color: #fff8fb;
 }
-
 .calendario-dia span:first-child {
     font-weight: bold;
 }
-
 .lista-entregas {
     list-style: none;
     padding: 0;
     margin-top: 0.5rem;
     flex-grow: 1;
 }
-
 .item-entrega {
     background-color: var(--primary-color);
     color: white;
@@ -1530,54 +1527,44 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     text-overflow: ellipsis;
     cursor: help;
 }
-
-/* --- Estilos para Calendario Interactivo --- */
 .calendario-dia.con-eventos {
     cursor: pointer;
     background-color: #fff8fb;
 }
-
 .calendario-dia.con-eventos:hover {
     border-color: var(--primary-color);
     box-shadow: 0 0 5px rgba(255, 150, 197, 0.5);
 }
-
 #agenda-modal-lista .lista-sencilla span:last-child {
     color: var(--text-light);
     font-weight: normal;
 }
-
-/* Estilos para Modal de Recetas con Scroll Interno */
 #receta-modal-overlay .modal-content {
     display: flex;
     flex-direction: column;
-    max-height: 85vh; 
+    max-height: 85vh;
 }
-
 #receta-modal-overlay #ingredientes-en-receta-container {
-    flex-grow: 1; 
-    overflow-y: auto; 
-    min-height: 100px; 
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 100px;
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
     padding: 1rem;
     margin-top: 1rem;
     background-color: var(--background-color);
+    border-radius: 12px;
 }
-
 #receta-modal-overlay .modal-body {
     flex-grow: 1;
     overflow-y: auto;
     padding: 1rem 0;
 }
-
 #receta-modal-overlay .modal-actions {
     border-top: 1px solid var(--border-color);
     padding-top: 1.5rem;
     margin-top: 0;
 }
-
-/* --- Estilos para la Página de Finanzas --- */
 .reporte-financiero {
     display: flex;
     flex-direction: column;
@@ -1608,10 +1595,10 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .total-neto {
     background-color: var(--background-color);
     padding: 1rem;
-    border-radius: 8px;
+    border-radius: 12px;
     margin-top: 1rem;
+    box-shadow: var(--shadow-neumorphic-inset);
 }
-/* --- Estilos para el Ícono del Carrito --- */
 .header__cart-link {
     text-decoration: none;
 }
@@ -1635,9 +1622,8 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     align-items: center;
     font-size: 0.75rem;
     font-weight: bold;
-    display: none; /* Se muestra con JS */
+    display: none;
 }
-/* --- Estilos para la página del Carrito de Cotización --- */
 .cart-item {
     display: flex;
     justify-content: space-between;
@@ -1669,6 +1655,9 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     width: 60px;
     padding: 0.5rem;
     text-align: center;
+    box-shadow: var(--shadow-neumorphic-inset);
+    border: none;
+    border-radius: 8px;
 }
 .cart-item__actions .btn-remove-item {
     background: none;
@@ -1678,12 +1667,11 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     cursor: pointer;
     padding: 0 0.5rem;
 }
-/* --- Estilos para el Campo de Cantidad a Cotizar --- */
 .cantidad-a-cotizar {
     background-color: var(--danger-color);
     color: white;
     padding: 1rem 1.5rem;
-    border-radius: 8px;
+    border-radius: var(--border-radius-modern);
     margin-bottom: 1.5rem;
 }
 .cantidad-a-cotizar label {
@@ -1697,6 +1685,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     text-align: center;
     padding: 0.5rem;
     margin-top: 0.5rem;
+    border-radius: 12px;
 }
 .cantidad-a-cotizar small {
     display: block;
@@ -1704,18 +1693,16 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-top: 0.5rem;
     opacity: 0.9;
 }
-/* --- Estilos para el nuevo botón de Borrar Receta --- */
 .receta-card__actions .btn-borrar-receta {
-    background-color: #fff1f2; /* Un fondo rosa muy pálido */
+    background-color: var(--background-color);
     color: var(--danger-color);
-    border: 1px solid #fecdd3; /* Un borde rosa claro */
+    border: none;
+    box-shadow: var(--shadow-neumorphic);
 }
 .receta-card__actions .btn-borrar-receta:hover {
     background-color: var(--danger-color);
     color: white;
-    border-color: var(--danger-color);
 }
-/* --- Estilos para la Gestión de Categorías --- */
 #lista-categorias-container {
     display: flex;
     flex-wrap: wrap;
@@ -1723,14 +1710,15 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     margin-top: 1.5rem;
 }
 .categoria-tag {
-    background-color: var(--secondary-button-hover-bg);
+    background-color: var(--background-color);
     color: var(--primary-color-hover);
     padding: 0.5rem 1rem;
-    border-radius: 20px;
+    border-radius: 50px;
     font-weight: 500;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    box-shadow: var(--shadow-neumorphic);
 }
 .btn-delete-cat {
     background: none;
