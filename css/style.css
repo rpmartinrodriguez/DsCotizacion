@@ -74,20 +74,35 @@ body.menu-open {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0.5rem;
+    padding: 0.75rem; /* Un poco más de padding */
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px; /* Aumenta el espacio entre las barras */
     z-index: 1003;
+    
+    /* Neumorfismo para el botón de hamburguesa */
+    background-color: var(--background-color);
+    border-radius: var(--border-radius-modern); /* Bordes redondeados */
+    box-shadow: var(--shadow-neumorphic); /* Sombra neumórfica */
+    transition: all 0.2s ease-in-out;
+}
+
+.header__menu-icon:hover {
+    transform: translateY(-2px); /* Ligero efecto de levantamiento */
+    box-shadow: 0 4px 10px rgba(255, 150, 197, 0.4);
+}
+
+.header__menu-icon:active {
+    transform: translateY(1px); /* Efecto de presionado */
+    box-shadow: var(--shadow-neumorphic-inset);
 }
 
 .header__menu-icon span {
     display: block;
-    width: 24px;
-    height: 3px;
-    background-color: var(--text-color);
+    width: 28px; /* Haz las barras un poco más largas */
+    height: 4px; /* Y un poco más gruesas */
+    background-color: var(--primary-color); /* Color rosa */
     border-radius: 3px;
-    /* Transición para la animación de "X" */
     transition: all 0.3s ease-in-out; 
 }
 
@@ -120,15 +135,17 @@ body.menu-open {
     left: 0;
     width: 280px;
     height: 100%;
-    background-color: var(--background-color); /* Mismo fondo */
-    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+    background-color: var(--background-color);
+    /* Nuevo box-shadow para el menú lateral */
+    box-shadow: 12px 0 25px rgba(0, 0, 0, 0.15); /* Sombra más pronunciada al abrir */
     transform: translateX(-100%);
-    transition: transform 0.3s ease-in-out;
+    transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* Transición más elástica */
     z-index: 1001;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    border-right: 1px solid var(--border-color);
+    border-right: none; /* Quitamos el borde, la sombra lo reemplaza */
+    border-radius: 0 var(--border-radius-modern) var(--border-radius-modern) 0; /* Bordes redondeados a la derecha */
 }
 
 .nav-menu__header {
@@ -137,7 +154,10 @@ body.menu-open {
     gap: 1rem;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    margin-top: 65px; /* Espacio para el header fijo */
+    margin-top: 65px;
+    background-color: var(--secondary-button-hover-bg); /* Un fondo suave para el header del menú */
+    border-radius: 0 var(--border-radius-modern) 0 0; /* Redondeado arriba a la derecha */
+    box-shadow: var(--shadow-neumorphic-inset); /* Efecto hundido */
 }
 
 .nav-menu__title {
@@ -151,21 +171,30 @@ body.menu-open {
     font-weight: 500;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s, color 0.2s, letter-spacing 0.2s;
+    transition: all 0.2s ease; /* Transición más general */
     display: flex;
     align-items: center;
     gap: 1rem;
+    position: relative;
+    overflow: hidden; /* Para el efecto de la barra */
 }
 
 .nav-menu__link:hover {
     background-color: var(--secondary-button-hover-bg);
-    letter-spacing: 0.5px; /* Pequeño efecto al pasar el mouse */
+    color: var(--primary-color); /* El texto se vuelve rosa */
+    letter-spacing: 0.5px;
+    transform: translateX(5px); /* Deslizamiento suave */
 }
 
 .nav-menu__link.active {
     background-color: var(--primary-color);
     color: white;
     font-weight: 600;
+    /* Efecto "hundido" para el elemento activo */
+    box-shadow: var(--shadow-neumorphic-inset);
+    border-radius: var(--border-radius-modern); /* Bordes redondeados */
+    margin: 0.5rem 0.75rem; /* Margen para que se vea el redondeado */
+    padding: 1rem 1.25rem; /* Ajuste de padding */
 }
 
 .nav-menu__overlay {
@@ -178,7 +207,7 @@ body.menu-open {
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
 }
 
 /* --- ANIMACIÓN DEL MENÚ DE HAMBURGUESA --- */
@@ -191,16 +220,25 @@ body.menu-open .nav-menu__overlay {
     visibility: visible;
 }
 
+body.menu-open .header__menu-icon {
+    /* Efecto de presionado cuando está abierto */
+    box-shadow: var(--shadow-neumorphic-inset);
+    transform: translateY(1px);
+}
+
 body.menu-open .header__menu-icon span:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
+    transform: rotate(45deg) translate(8px, 8px); /* Ajusta los valores */
+    width: 32px; /* Haz la barra un poco más larga cuando gira */
 }
 
 body.menu-open .header__menu-icon span:nth-child(2) {
     opacity: 0;
+    transform: translateX(-30px); /* Desaparece deslizándose */
 }
 
 body.menu-open .header__menu-icon span:nth-child(3) {
-    transform: rotate(-45deg) translate(7px, -7px);
+    transform: rotate(-45deg) translate(8px, -8px); /* Ajusta los valores */
+    width: 32px; /* Haz la barra un poco más larga cuando gira */
 }
 
 /* --- Componentes Generales Modernizados (Soft UI) --- */
@@ -933,6 +971,9 @@ body.menu-open .header__menu-icon span:nth-child(3) {
         padding: 1.5rem; 
         border-radius: var(--border-radius-modern); 
     }
+    .header__logo {
+        height: 40px;
+    }
     .header__slogan { 
         font-size: 1.5rem; 
     }
@@ -1076,7 +1117,6 @@ body.menu-open .header__menu-icon span:nth-child(3) {
     }
 }
 
-/* (El resto de tu CSS desde la sección 23 en adelante) */
 /* 23. Estilos para el botón "Marcar como Venta" */
 .btn-marcar-venta {
     background: var(--background-color);
@@ -1114,7 +1154,7 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 
 /* 25. Estilos para el botón de Paginación (Cargar Más) */
 .cargar-mas-container {
-    display: none;
+    display: none; /* Ocultamos por defecto ya que no se usa */
     justify-content: center;
     padding: 1rem 0;
 }
