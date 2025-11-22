@@ -44,9 +44,7 @@
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
         <main>
-            <!-- ====================================================== -->
-            <!-- SECCIÓN NUEVA: GESTIÓN DE CATEGORÍAS                   -->
-            <!-- ====================================================== -->
+            <!-- SECCIÓN: GESTIÓN DE CATEGORÍAS -->
             <section class="card">
                 <h2 class="card__title">Gestionar Categorías</h2>
                 <form id="form-categoria" class="form-modern" style="grid-template-columns: 2fr 1fr; align-items: flex-end;">
@@ -57,14 +55,11 @@
                     <button type="submit" class="btn-secondary">Añadir Categoría</button>
                 </form>
                 <div id="lista-categorias-container" style="margin-top: 1.5rem;">
-                    <!-- La lista de categorías existentes se mostrará aquí -->
                     <p>Cargando categorías...</p>
                 </div>
             </section>
 
-            <!-- ====================================================== -->
-            <!-- SECCIÓN EXISTENTE: LISTA DE RECETAS                    -->
-            <!-- ====================================================== -->
+            <!-- SECCIÓN: LISTA DE RECETAS -->
             <section class="card">
                 <div class="card-header-actions">
                     <h2 class="card__title">Mis Recetas de Postres</h2>
@@ -77,9 +72,7 @@
         </main>
     </div>
     
-    <!-- ====================================================== -->
-    <!-- MODAL PARA CREAR/EDITAR RECETAS (CON MODIFICACIÓN)     -->
-    <!-- ====================================================== -->
+    <!-- MODAL PARA CREAR/EDITAR RECETAS -->
     <div id="receta-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
@@ -92,7 +85,6 @@
                     </div>
                     <div class="form-group">
                         <label for="receta-categoria-select">Categoría</label>
-                        <!-- Este select ahora se llenará dinámicamente -->
                         <select id="receta-categoria-select">
                             <option value="" disabled selected>Cargando categorías...</option>
                         </select>
@@ -127,6 +119,35 @@
             <div class="modal-actions">
                 <button id="receta-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
                 <button id="receta-modal-btn-guardar" class="btn-primary">Guardar Receta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================== -->
+    <!-- NUEVO MODAL: SELECCIÓN DE PORCIONES PARA EL CARRITO    -->
+    <!-- ====================================================== -->
+    <div id="modal-porciones" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 400px;">
+            <h2 class="card__title">Añadir al Presupuesto</h2>
+            <div class="modal-body">
+                <p id="porciones-receta-nombre" style="font-weight: 600; color: var(--primary-color); margin-bottom: 1rem;"></p>
+                <p style="font-size: 0.9rem; color: var(--text-light);">
+                    Esta receta rinde para <strong id="porciones-rendimiento-total"></strong> unidades/porciones.
+                </p>
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="input-cantidad-porciones">¿Cuántas unidades vas a cotizar?</label>
+                    <input type="number" id="input-cantidad-porciones" class="form-control" value="1" min="1">
+                </div>
+                
+                <div class="cantidad-a-cotizar" style="margin-top: 1rem; padding: 0.8rem;">
+                    <small style="color: white;">Costo estimado de estas porciones:</small>
+                    <div id="porciones-costo-estimado" style="font-size: 1.2rem; font-weight: bold; text-align: center; margin-top: 5px;">$0.00</div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="btn-cancelar-porciones" class="btn-secondary">Cancelar</button>
+                <button id="btn-confirmar-porciones" class="btn-primary">Añadir al Carrito</button>
             </div>
         </div>
     </div>
