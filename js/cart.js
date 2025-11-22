@@ -18,42 +18,60 @@ function saveCartItems(items) {
 export function addToCart(item) {
     const items = getCartItems();
 
-    // Creamos un objeto estándar para el carrito para evitar datos vacíos
-    const cartItem = {
-        // Generamos un ID Único combinando el ID de la receta y la hora actual.
-        // Esto es CLAVE para poder borrar este ítem específico después sin borrar otros iguales.
-        cartId: item.cartId || `${item.id}-${Date.now()}`,
-        
-        recetaId: item.id,
-        
-        // Datos de visualización: Normalizamos el nombre
-        // Si viene de recetas.js nuevo, usa 'item.name'. Si es viejo, 'item.data.nombreTorta'.
-        nombre: item.name || (item.data ? item.data.nombreTorta : 'Producto sin nombre'),
-        
-        // Precio: Si viene fraccionado, es el precio total calculado. 
-        precio: item.price !== undefined ? item.price : 0,
-        
-        cantidad: item.cantidad || 1,
-        
-        // Guardamos detalles extra para mostrar en el carrito
-        detalle: item.cantidadPorciones ? `${item.cantidadPorciones} porciones/u.` : 'Unidad entera'
-    };
+    // Creamos el objeto final que se guardará en el carrito
+    let cartItem = {};
+
+    // CASO A: Viene desde el modal de porciones (Datos ya calculados en recetas.js)
+    if (item.type === 'receta_fraccionada') {
+        cartItem = {
+            // Generamos un ID único (cartId) usando la hora exacta. 
+            // Esto es VITAL para borrar: permite diferenciar "Lemon Pie (8u)" de "Lemon Pie (4u)".
+            cartId: `${item.id}-${Date.now()}`, 
+            recetaId: item.id,
+            nombre: item.name,      // Ej: "Lemon Pie (8 u.)"
+            precio: item.price,     // Ej: 8000
+            cantidad: item.cantidadPorciones || 1,
+            detalle: 'Porciones calculadas'
+        };
+    } 
+    // CASO B: Viene directo sin calcular (Formato antiguo, por seguridad)
+    else if (item.data) {
+        cartItem = {
+            cartId: `${item.id}-${Date.now()}`,
+            recetaId: item.id,
+            nombre: item.data.nombreTorta,
+            precio: 0, // Costo 0 porque no se calculó
+            cantidad: 1,
+            detalle: 'Unidad entera'
+        };
+    } 
+    // CASO C: Otros formatos posibles
+    else {
+        cartItem = {
+            cartId: `${item.id || 'item'}-${Date.now()}`,
+            recetaId: item.id,
+            nombre: item.nombre || 'Producto sin nombre',
+            precio: item.precio || 0,
+            cantidad: 1,
+            detalle: ''
+        };
+    }
 
     items.push(cartItem);
     saveCartItems(items);
     
-    // Feedback visual simple
-    const precioMsg = cartItem.precio > 0 
-        ? ` - $${cartItem.precio.toLocaleString('es-AR', {minimumFractionDigits: 2})}` 
-        : '';
+    // Mensaje de confirmación para el usuario
+    const precioFormateado = cartItem.precio > 0 
+        ? `$${cartItem.precio.toLocaleString('es-AR', {minimumFractionDigits: 2})}` 
+        : 'Sin precio calculado';
         
-    alert(`"${cartItem.nombre}" se añadió al presupuesto${precioMsg}.`);
+    alert(`Se añadió "${cartItem.nombre}" al presupuesto.\nValor: ${precioFormateado}`);
 }
 
-// Eliminar un ítem del carrito usando su ID único
+// Función de BORRAR corregida: Usa el cartId único
 export function removeFromCart(cartId) {
     let items = getCartItems();
-    // Filtramos para quitar SOLO el que coincida con el ID único
+    // Borramos solo el ítem que tenga ese ID único exacto
     items = items.filter(item => item.cartId !== cartId);
     saveCartItems(items);
 }
