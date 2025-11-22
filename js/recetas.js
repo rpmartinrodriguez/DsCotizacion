@@ -33,11 +33,24 @@ export function setupRecetas(app) {
     const inputNuevaCategoria = document.getElementById('nueva-categoria-nombre');
     const listaCategoriasContainer = document.getElementById('lista-categorias-container');
 
+    // --- NUEVAS REFERENCIAS: Modal de Porciones ---
+    const modalPorciones = document.getElementById('modal-porciones');
+    const porcionesRecetaNombre = document.getElementById('porciones-receta-nombre');
+    const porcionesRendimientoTotal = document.getElementById('porciones-rendimiento-total');
+    const inputCantidadPorciones = document.getElementById('input-cantidad-porciones');
+    const porcionesCostoEstimado = document.getElementById('porciones-costo-estimado');
+    const btnConfirmarPorciones = document.getElementById('btn-confirmar-porciones');
+    const btnCancelarPorciones = document.getElementById('btn-cancelar-porciones');
+
     // Variables de Estado
     let materiasPrimasDisponibles = [];
     let todasLasRecetas = [];
     let ingredientesRecetaActual = [];
     let editandoId = null;
+    
+    // Variable para guardar la receta que se está por añadir al carrito
+    let recetaSeleccionadaParaCarrito = null; 
+    let costoUnitarioCalculado = 0;
 
     // Lógica para Cargar y Gestionar Categorías
     onSnapshot(query(categoriasCollection, orderBy("nombre")), (snapshot) => {
@@ -103,6 +116,23 @@ export function setupRecetas(app) {
             btnCrearReceta.disabled = false;
             btnCrearReceta.textContent = 'Crear Nueva Receta';
         }
+    };
+
+    // Función auxiliar para calcular costo de receta al vuelo
+    const calcularCostoReceta = (recetaData) => {
+        let costoTotal = 0;
+        if (!recetaData.ingredientes) return 0;
+        
+        recetaData.ingredientes.forEach(ing => {
+            const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === ing.idMateriaPrima);
+            if (materiaPrima && materiaPrima.lotes && materiaPrima.lotes.length > 0) {
+                // Usamos el precio del último lote comprado para el cálculo actual
+                const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
+                const costoUnitarioMP = lotesOrdenados[0].costoUnitario || 0;
+                costoTotal += costoUnitarioMP * ing.cantidad;
+            }
+        });
+        return costoTotal;
     };
 
     const openModal = (receta = null) => {
@@ -214,13 +244,10 @@ export function setupRecetas(app) {
                     <div class="receta-card">
                         <div class="receta-card__info">
                             <h3>${receta.data.nombreTorta}</h3>
-                            <p>${receta.data.ingredientes.length} ingrediente(s) - Rinde: ${receta.data.rendimiento || 'N/A'}</p>
+                            <p>${receta.data.ingredientes.length} ingrediente(s) - Rinde: ${receta.data.rendimiento || 'N/A'} u.</p>
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
-                            <!-- ====================================================== -->
-                            <!-- BOTÓN NUEVO: Borrar Receta                             -->
-                            <!-- ====================================================== -->
                             <button class="btn-secondary btn-borrar-receta" data-id="${receta.id}">Borrar</button>
                             <button class="btn-secondary btn-anadir-cotizacion" data-id="${receta.id}">Añadir 🛒</button>
                             <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary">Presupuestar</a>
@@ -240,6 +267,74 @@ export function setupRecetas(app) {
         });
     };
     
+    // --- FUNCIONES NUEVAS: Lógica del Modal de Porciones ---
+
+    const actualizarCostoEstimado = () => {
+        const cantidad = parseFloat(inputCantidadPorciones.value) || 0;
+        const total = costoUnitarioCalculado * cantidad;
+        porcionesCostoEstimado.textContent = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    const abrirModalPorciones = (receta) => {
+        recetaSeleccionadaParaCarrito = receta;
+        
+        // 1. Calcular costo total de la receta
+        const costoTotalReceta = calcularCostoReceta(receta.data);
+        
+        // 2. Calcular costo por porción (unitario)
+        const rendimiento = receta.data.rendimiento || 1; // Evitar división por cero
+        costoUnitarioCalculado = costoTotalReceta / rendimiento;
+
+        // 3. Llenar datos del modal
+        porcionesRecetaNombre.textContent = receta.data.nombreTorta;
+        porcionesRendimientoTotal.textContent = rendimiento;
+        
+        // Si es la primera vez, sugerimos 1 porción, o el rendimiento total (opcional)
+        // Vamos a sugerir 1 para ventas unitarias, o el usuario puede poner el total.
+        inputCantidadPorciones.value = 1; 
+        
+        actualizarCostoEstimado();
+        modalPorciones.classList.add('visible');
+    };
+
+    const cerrarModalPorciones = () => {
+        modalPorciones.classList.remove('visible');
+        recetaSeleccionadaParaCarrito = null;
+        costoUnitarioCalculado = 0;
+    };
+
+    const confirmarAnadirAlCarrito = () => {
+        if (!recetaSeleccionadaParaCarrito) return;
+
+        const cantidad = parseFloat(inputCantidadPorciones.value);
+        if (isNaN(cantidad) || cantidad <= 0) {
+            alert("Por favor, ingresa una cantidad válida.");
+            return;
+        }
+
+        // Creamos el objeto para el carrito
+        // OJO: Aquí es donde hacemos la magia. El 'price' que mandamos al carrito
+        // NO es el de la receta entera, sino el calculado (Unitario * Cantidad).
+        const itemParaCarrito = {
+            id: recetaSeleccionadaParaCarrito.id, // ID de la receta
+            name: `${recetaSeleccionadaParaCarrito.data.nombreTorta} (${cantidad} u.)`, // Nombre descriptivo
+            price: costoUnitarioCalculado * cantidad, // Costo total de las porciones seleccionadas
+            type: 'receta_fraccionada', // Tipo interno por si sirve luego
+            originalYield: recetaSeleccionadaParaCarrito.data.rendimiento
+        };
+
+        addToCart(itemParaCarrito);
+        cerrarModalPorciones();
+    };
+
+    // Listeners del nuevo modal
+    inputCantidadPorciones.addEventListener('input', actualizarCostoEstimado);
+    btnCancelarPorciones.addEventListener('click', cerrarModalPorciones);
+    btnConfirmarPorciones.addEventListener('click', confirmarAnadirAlCarrito);
+
+
+    // --- Inicialización y Listeners Generales ---
+
     onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
         todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         mostrarRecetas(todasLasRecetas);
@@ -260,7 +355,6 @@ export function setupRecetas(app) {
             return;
         }
         
-        // --- MODIFICACIÓN: Lógica para el botón de borrar ---
         const targetBorrar = e.target.closest('.btn-borrar-receta');
         if (targetBorrar) {
             const id = targetBorrar.dataset.id;
@@ -277,12 +371,14 @@ export function setupRecetas(app) {
             return;
         }
 
+        // --- MODIFICACIÓN: Botón Añadir al Carrito ---
         const targetAnadir = e.target.closest('.btn-anadir-cotizacion');
         if(targetAnadir) {
             const id = targetAnadir.dataset.id;
             const recetaParaAnadir = todasLasRecetas.find(r => r.id === id);
             if (recetaParaAnadir) {
-                addToCart(recetaParaAnadir);
+                // En lugar de addToCart directo, abrimos el modal de porciones
+                abrirModalPorciones(recetaParaAnadir);
             }
             return;
         }
