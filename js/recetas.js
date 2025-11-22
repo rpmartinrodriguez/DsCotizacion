@@ -2,7 +2,6 @@ import {
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
     setDoc, getDocs, deleteDoc, addDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-// Importamos las funciones del carrito que acabamos de crear
 import { addToCart, updateCartIcon } from './cart.js';
 
 export function setupRecetas(app) {
@@ -11,7 +10,11 @@ export function setupRecetas(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const categoriasCollection = collection(db, 'categorias');
 
-    // --- Referencias al DOM ---
+    // ==================================================================
+    // 1. REFERENCIAS AL DOM
+    // ==================================================================
+    
+    // Contenedores Principales
     const listaRecetasContainer = document.getElementById('lista-recetas-container');
     const btnCrearReceta = document.getElementById('btn-crear-receta');
     
@@ -29,12 +32,12 @@ export function setupRecetas(app) {
     const btnGuardarReceta = document.getElementById('receta-modal-btn-guardar');
     const btnCancelarReceta = document.getElementById('receta-modal-btn-cancelar');
 
-    // Gestión de Categorías
+    // Sección de Gestión de Categorías
     const formCategoria = document.getElementById('form-categoria');
     const inputNuevaCategoria = document.getElementById('nueva-categoria-nombre');
     const listaCategoriasContainer = document.getElementById('lista-categorias-container');
 
-    // --- Modal de Porciones (EL QUE NO TE APARECÍA) ---
+    // Modal de Selección de Porciones (Nuevo)
     const modalPorciones = document.getElementById('modal-porciones');
     const porcionesRecetaNombre = document.getElementById('porciones-receta-nombre');
     const porcionesRendimientoTotal = document.getElementById('porciones-rendimiento-total');
@@ -43,23 +46,27 @@ export function setupRecetas(app) {
     const btnConfirmarPorciones = document.getElementById('btn-confirmar-porciones');
     const btnCancelarPorciones = document.getElementById('btn-cancelar-porciones');
 
-    // Variables de Estado
+    // ==================================================================
+    // 2. VARIABLES DE ESTADO
+    // ==================================================================
     let materiasPrimasDisponibles = [];
     let todasLasRecetas = [];
     let ingredientesRecetaActual = [];
     let editandoId = null;
     
-    // Variables para el cálculo del carrito
+    // Variables temporales para el flujo del carrito
     let recetaSeleccionadaParaCarrito = null; 
     let costoUnitarioCalculado = 0;
 
-    // ------------------------------------------------------------------
-    // 1. GESTIÓN DE CATEGORÍAS
-    // ------------------------------------------------------------------
+    // ==================================================================
+    // 3. LÓGICA DE GESTIÓN DE CATEGORÍAS
+    // ==================================================================
+
+    // Escuchar cambios en la colección de categorías
     onSnapshot(query(categoriasCollection, orderBy("nombre")), (snapshot) => {
         const categorias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Llenar select del modal
+        // A. Actualizar el select del modal de recetas
         categoriaSelect.innerHTML = '<option value="" disabled selected>Selecciona una categoría...</option>';
         categorias.forEach(cat => {
             const option = document.createElement('option');
@@ -68,7 +75,7 @@ export function setupRecetas(app) {
             categoriaSelect.appendChild(option);
         });
 
-        // Llenar lista de gestión
+        // B. Actualizar la lista visual de gestión de categorías
         listaCategoriasContainer.innerHTML = '';
         if (categorias.length === 0) {
             listaCategoriasContainer.innerHTML = '<p>Aún no has creado categorías.</p>';
@@ -76,7 +83,10 @@ export function setupRecetas(app) {
             categorias.forEach(cat => {
                 const catTag = document.createElement('div');
                 catTag.className = 'categoria-tag';
-                catTag.innerHTML = `<span>${cat.nombre}</span><button class="btn-delete-cat" data-id="${cat.id}" title="Eliminar">×</button>`;
+                catTag.innerHTML = `
+                    <span>${cat.nombre}</span>
+                    <button class="btn-delete-cat" data-id="${cat.id}" title="Eliminar categoría">×</button>
+                `;
                 listaCategoriasContainer.appendChild(catTag);
             });
         }
@@ -85,25 +95,37 @@ export function setupRecetas(app) {
         document.querySelectorAll('.btn-delete-cat').forEach(button => {
             button.addEventListener('click', async (e) => {
                 const id = e.currentTarget.dataset.id;
-                if (confirm('¿Eliminar esta categoría?')) {
-                    await deleteDoc(doc(db, 'categorias', id));
+                if (confirm('¿Estás seguro de que quieres eliminar esta categoría?')) {
+                    try {
+                        await deleteDoc(doc(db, 'categorias', id));
+                    } catch (error) {
+                        console.error("Error al eliminar categoría:", error);
+                    }
                 }
             });
         });
     });
 
+    // Listener para crear nueva categoría
     formCategoria.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const nombre = inputNuevaCategoria.value.trim();
-        if (nombre) {
-            await addDoc(categoriasCollection, { nombre });
-            inputNuevaCategoria.value = '';
+        const nombreCategoria = inputNuevaCategoria.value.trim();
+        if (nombreCategoria) {
+            try {
+                await addDoc(categoriasCollection, { nombre: nombreCategoria });
+                inputNuevaCategoria.value = '';
+            } catch (error) {
+                console.error("Error al crear categoría:", error);
+                alert("No se pudo crear la categoría.");
+            }
         }
     });
 
-    // ------------------------------------------------------------------
-    // 2. GESTIÓN DE RECETAS (Carga y Guardado)
-    // ------------------------------------------------------------------
+    // ==================================================================
+    // 4. LÓGICA DE GESTIÓN DE RECETAS (CRUD)
+    // ==================================================================
+
+    // Cargar materias primas para el autocompletado
     const cargarMateriasPrimas = async () => {
         btnCrearReceta.disabled = true;
         btnCrearReceta.textContent = 'Cargando...';
@@ -113,6 +135,7 @@ export function setupRecetas(app) {
             
             ingredientesDatalist.innerHTML = '';
             materiasPrimasDisponibles.forEach(mp => {
+                // Solo mostramos materias primas que tengan lotes cargados (opcional)
                 if (mp.lotes && mp.lotes.length > 0) {
                     const option = document.createElement('option');
                     option.value = mp.nombre;
@@ -120,14 +143,14 @@ export function setupRecetas(app) {
                 }
             });
         } catch (error) {
-            console.error("Error:", error);
+            console.error("Error al cargar materias primas:", error);
         } finally {
             btnCrearReceta.disabled = false;
             btnCrearReceta.textContent = 'Crear Nueva Receta';
         }
     };
 
-    // Función clave: Calcula cuánto cuesta hacer la receta completa hoy
+    // Función auxiliar: Calcular costo total de una receta (para uso interno)
     const calcularCostoTotalReceta = (recetaData) => {
         let costoTotal = 0;
         if (!recetaData.ingredientes) return 0;
@@ -135,7 +158,7 @@ export function setupRecetas(app) {
         recetaData.ingredientes.forEach(ing => {
             const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === ing.idMateriaPrima);
             if (materiaPrima && materiaPrima.lotes && materiaPrima.lotes.length > 0) {
-                // Usamos el precio del último lote comprado
+                // Usamos el costo del último lote comprado para el cálculo
                 const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
                 const costoUnitarioMP = lotesOrdenados[0].costoUnitario || 0;
                 costoTotal += costoUnitarioMP * ing.cantidad;
@@ -144,175 +167,11 @@ export function setupRecetas(app) {
         return costoTotal;
     };
 
-    // ------------------------------------------------------------------
-    // 3. LÓGICA DEL CARRITO Y PORCIONES (Lo que pediste)
-    // ------------------------------------------------------------------
-
-    const actualizarCostoEstimado = () => {
-        const cantidad = parseFloat(inputCantidadPorciones.value) || 0;
-        // Cálculo: (Costo Unitario) * (Cantidad Seleccionada)
-        const total = costoUnitarioCalculado * cantidad;
-        porcionesCostoEstimado.textContent = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    };
-
-    const abrirModalPorciones = (receta) => {
-        recetaSeleccionadaParaCarrito = receta;
-        
-        // 1. Calculamos costo TOTAL de la receta (ej: $10.000)
-        const costoTotalReceta = calcularCostoTotalReceta(receta.data);
-        
-        // 2. Obtenemos el rendimiento declarado (ej: 10 porciones)
-        const rendimiento = receta.data.rendimiento || 1; 
-        
-        // 3. Calculamos costo UNITARIO (ej: $1.000)
-        costoUnitarioCalculado = costoTotalReceta / rendimiento;
-
-        // 4. Preparamos el modal visualmente
-        porcionesRecetaNombre.textContent = receta.data.nombreTorta;
-        porcionesRendimientoTotal.textContent = rendimiento;
-        
-        // Por defecto sugerimos 1 unidad
-        inputCantidadPorciones.value = 1; 
-        
-        actualizarCostoEstimado(); // Muestra el precio inicial (ej: $1.000)
-        modalPorciones.classList.add('visible');
-    };
-
-    const cerrarModalPorciones = () => {
-        modalPorciones.classList.remove('visible');
-        recetaSeleccionadaParaCarrito = null;
-        costoUnitarioCalculado = 0;
-    };
-
-    const confirmarAnadirAlCarrito = () => {
-        if (!recetaSeleccionadaParaCarrito) return;
-
-        const cantidad = parseFloat(inputCantidadPorciones.value);
-        if (isNaN(cantidad) || cantidad <= 0) {
-            alert("Por favor, ingresa una cantidad válida.");
-            return;
-        }
-
-        // Calculamos el precio final para el carrito (ej: 8 * 1000 = 8000)
-        const precioFinalParaCarrito = costoUnitarioCalculado * cantidad;
-
-        const itemParaCarrito = {
-            id: recetaSeleccionadaParaCarrito.id, 
-            name: `${recetaSeleccionadaParaCarrito.data.nombreTorta} (${cantidad} porciones/u.)`, 
-            price: precioFinalParaCarrito, 
-            type: 'receta_fraccionada'
-        };
-
-        addToCart(itemParaCarrito); // Función importada de cart.js
-        cerrarModalPorciones();
-    };
-
-    // Listeners del modal de porciones
-    inputCantidadPorciones.addEventListener('input', actualizarCostoEstimado);
-    btnCancelarPorciones.addEventListener('click', cerrarModalPorciones);
-    btnConfirmarPorciones.addEventListener('click', confirmarAnadirAlCarrito);
-
-
-    // ------------------------------------------------------------------
-    // 4. RENDERIZADO DE LA LISTA Y EVENTOS
-    // ------------------------------------------------------------------
-    
-    const mostrarRecetas = (recetas) => {
-        listaRecetasContainer.innerHTML = '';
-        const recetasPorCategoria = {};
-        recetas.forEach(receta => {
-            const categoria = receta.data.categoria || 'Sin Categoría';
-            if (!recetasPorCategoria[categoria]) recetasPorCategoria[categoria] = [];
-            recetasPorCategoria[categoria].push(receta);
-        });
-
-        if (recetas.length === 0) {
-            listaRecetasContainer.innerHTML = '<p>No tienes recetas guardadas. ¡Crea la primera!</p>';
-            return;
-        }
-
-        Object.keys(recetasPorCategoria).sort().forEach(categoria => {
-            const listaDeRecetas = recetasPorCategoria[categoria];
-            if (listaDeRecetas.length > 0) {
-                const acordeonItem = document.createElement('div');
-                acordeonItem.className = 'categoria-acordeon';
-                
-                const contenidoHtml = listaDeRecetas.map(receta => `
-                    <div class="receta-card">
-                        <div class="receta-card__info">
-                            <h3>${receta.data.nombreTorta}</h3>
-                            <p>${receta.data.ingredientes.length} ingr. - Rinde: ${receta.data.rendimiento || '?'} u.</p>
-                        </div>
-                        <div class="receta-card__actions">
-                            <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
-                            <button class="btn-secondary btn-borrar-receta" data-id="${receta.id}">Borrar</button>
-                            <button class="btn-secondary btn-anadir-cotizacion" data-id="${receta.id}">Añadir 🛒</button>
-                        </div>
-                    </div>
-                `).join('');
-                
-                acordeonItem.innerHTML = `
-                    <button class="categoria-acordeon__header">
-                        <span class="categoria-acordeon__titulo">${categoria}</span>
-                        <span class="acordeon-icono">+</span>
-                    </button>
-                    <div class="categoria-acordeon__content">${contenidoHtml}</div>
-                `;
-                listaRecetasContainer.appendChild(acordeonItem);
-            }
-        });
-    };
-    
-    onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
-        todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-        mostrarRecetas(todasLasRecetas);
-    });
-
-    // Manejo de Clics en la Lista (Delegación de Eventos)
-    listaRecetasContainer.addEventListener('click', (e) => {
-        // Abrir/Cerrar Acordeón
-        const header = e.target.closest('.categoria-acordeon__header');
-        if (header) {
-            header.parentElement.classList.toggle('active');
-            return;
-        }
-        
-        // Editar Receta
-        const targetEditar = e.target.closest('.btn-editar-receta');
-        if (targetEditar) {
-            const id = targetEditar.dataset.id;
-            const receta = todasLasRecetas.find(r => r.id === id);
-            if (receta) openModalReceta(receta);
-            return;
-        }
-        
-        // Borrar Receta
-        const targetBorrar = e.target.closest('.btn-borrar-receta');
-        if (targetBorrar) {
-            const id = targetBorrar.dataset.id;
-            if (confirm('¿Estás seguro de borrar esta receta?')) {
-                deleteDoc(doc(db, 'recetas', id));
-            }
-            return;
-        }
-
-        // AÑADIR AL CARRITO (Aquí se activa tu lógica)
-        const targetAnadir = e.target.closest('.btn-anadir-cotizacion');
-        if(targetAnadir) {
-            const id = targetAnadir.dataset.id;
-            const receta = todasLasRecetas.find(r => r.id === id);
-            if (receta) {
-                abrirModalPorciones(receta); // Abre el modal que no te salía
-            }
-            return;
-        }
-    });
-
-    // --- Lógica del Modal de Crear/Editar (Standard) ---
-    const openModalReceta = (receta = null) => {
-        if (receta) {
+    // Abrir modal para crear o editar
+    const openModal = (receta = null) => {
+        if (receta && receta.data) {
             editandoId = receta.id;
-            modalTitle.textContent = `Editar: ${receta.data.nombreTorta}`;
+            modalTitle.textContent = `Editar Receta: ${receta.data.nombreTorta}`;
             recetaNombreInput.value = receta.data.nombreTorta;
             categoriaSelect.value = receta.data.categoria || '';
             rendimientoInput.value = receta.data.rendimiento || '';
@@ -329,46 +188,278 @@ export function setupRecetas(app) {
         modal.classList.add('visible');
     };
 
+    const closeModal = () => modal.classList.remove('visible');
+
+    // Renderizar lista de ingredientes dentro del modal
     const renderizarIngredientesEnReceta = () => {
         ingredientesEnRecetaContainer.innerHTML = '';
         if (ingredientesRecetaActual.length === 0) {
-            ingredientesEnRecetaContainer.innerHTML = '<p>Sin ingredientes.</p>';
+            ingredientesEnRecetaContainer.innerHTML = '<p>Aún no has añadido ingredientes.</p>';
             return;
         }
         const ul = document.createElement('ul');
         ul.className = 'lista-sencilla';
         ingredientesRecetaActual.forEach((ing, index) => {
             const li = document.createElement('li');
-            li.innerHTML = `${ing.nombreMateriaPrima} <span>${ing.cantidad} ${ing.unidad}</span> <button class="btn-quitar-ingrediente" data-index="${index}">🗑️</button>`;
+            li.innerHTML = `
+                ${ing.nombreMateriaPrima} <span>${ing.cantidad.toLocaleString('es-AR')} ${ing.unidad}</span>
+                <button class="btn-quitar-ingrediente" data-index="${index}">🗑️</button>
+            `;
             ul.appendChild(li);
         });
         ingredientesEnRecetaContainer.appendChild(ul);
     };
 
+    // Añadir ingrediente a la receta temporal
+    const anadirIngrediente = () => {
+        const nombreIngrediente = ingredienteInput.value;
+        const cantidad = parseFloat(cantidadIngredienteInput.value);
+
+        if (!nombreIngrediente || isNaN(cantidad) || cantidad <= 0) {
+            alert('Escribe o selecciona un ingrediente y una cantidad válida.');
+            return;
+        }
+        const materiaPrima = materiasPrimasDisponibles.find(mp => mp.nombre === nombreIngrediente);
+        if (!materiaPrima) {
+            alert('Ingrediente no encontrado. Por favor, selecciónalo de la lista o verifica el nombre.');
+            return;
+        }
+        if (ingredientesRecetaActual.some(ing => ing.idMateriaPrima === materiaPrima.id)) {
+            alert('Este ingrediente ya está en la receta.');
+            return;
+        }
+        ingredientesRecetaActual.push({
+            idMateriaPrima: materiaPrima.id,
+            nombreMateriaPrima: materiaPrima.nombre,
+            cantidad: cantidad,
+            unidad: materiaPrima.unidad
+        });
+        renderizarIngredientesEnReceta();
+        ingredienteInput.value = '';
+        cantidadIngredienteInput.value = '';
+    };
+
+    // Guardar receta en Firebase
+    const guardarReceta = async () => {
+        const nombreTorta = recetaNombreInput.value.trim();
+        const categoria = categoriaSelect.value;
+        const rendimiento = parseInt(rendimientoInput.value, 10);
+
+        if (!nombreTorta || !categoria || !rendimiento || isNaN(rendimiento) || rendimiento <= 0 || ingredientesRecetaActual.length === 0) {
+            alert('Por favor, completa el nombre, selecciona una categoría, un rendimiento válido y añade al menos un ingrediente.');
+            return;
+        }
+        
+        const id = editandoId || doc(collection(db, 'recetas')).id;
+        const recetaData = { 
+            nombreTorta, 
+            categoria, 
+            rendimiento, 
+            ingredientes: ingredientesRecetaActual 
+        };
+        try {
+            await setDoc(doc(db, 'recetas', id), recetaData);
+            alert(editandoId ? '¡Receta actualizada con éxito!' : '¡Receta creada con éxito!');
+            closeModal();
+        } catch (error) {
+            console.error("Error al guardar receta:", error);
+            alert("Hubo un error al guardar la receta.");
+        }
+    };
+    
+    // Mostrar lista de recetas agrupadas por categoría
+    const mostrarRecetas = (recetas) => {
+        listaRecetasContainer.innerHTML = '';
+        const recetasPorCategoria = {};
+
+        recetas.forEach(receta => {
+            const categoria = receta.data.categoria || 'Sin Categoría';
+            if (!recetasPorCategoria[categoria]) {
+                recetasPorCategoria[categoria] = [];
+            }
+            recetasPorCategoria[categoria].push(receta);
+        });
+
+        if (recetas.length === 0) {
+            listaRecetasContainer.innerHTML = '<p>No tienes recetas guardadas. ¡Crea la primera!</p>';
+            return;
+        }
+
+        // Ordenar categorías alfabéticamente
+        Object.keys(recetasPorCategoria).sort().forEach(categoria => {
+            const listaDeRecetas = recetasPorCategoria[categoria];
+            if (listaDeRecetas && listaDeRecetas.length > 0) {
+                const acordeonItem = document.createElement('div');
+                acordeonItem.className = 'categoria-acordeon';
+                const contenidoHtml = listaDeRecetas.map(receta => `
+                    <div class="receta-card">
+                        <div class="receta-card__info">
+                            <h3>${receta.data.nombreTorta}</h3>
+                            <p>${receta.data.ingredientes.length} ingrediente(s) - Rinde: ${receta.data.rendimiento || 'N/A'} u.</p>
+                        </div>
+                        <div class="receta-card__actions">
+                            <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
+                            <button class="btn-secondary btn-borrar-receta" data-id="${receta.id}">Borrar</button>
+                            <button class="btn-secondary btn-anadir-cotizacion" data-id="${receta.id}">Añadir 🛒</button>
+                            <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary">Presupuestar</a>
+                        </div>
+                    </div>
+                `).join('');
+                
+                acordeonItem.innerHTML = `
+                    <button class="categoria-acordeon__header">
+                        <span class="categoria-acordeon__titulo">${categoria}</span>
+                        <span class="acordeon-icono">+</span>
+                    </button>
+                    <div class="categoria-acordeon__content">${contenidoHtml}</div>
+                `;
+                listaRecetasContainer.appendChild(acordeonItem);
+            }
+        });
+    };
+
+    // ==================================================================
+    // 5. LÓGICA DEL MODAL DE PORCIONES (CÁLCULO DE PRECIO)
+    // ==================================================================
+
+    // Actualiza el precio visualmente cuando cambias la cantidad
+    const actualizarCostoEstimado = () => {
+        const cantidad = parseFloat(inputCantidadPorciones.value) || 0;
+        const total = costoUnitarioCalculado * cantidad;
+        porcionesCostoEstimado.textContent = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    // Abre el modal y prepara los cálculos
+    const abrirModalPorciones = (receta) => {
+        recetaSeleccionadaParaCarrito = receta;
+        
+        // 1. Calcular costo total de la receta (suma de ingredientes)
+        const costoTotalReceta = calcularCostoTotalReceta(receta.data);
+        
+        // 2. Obtener rendimiento declarado
+        const rendimiento = receta.data.rendimiento || 1; 
+        
+        // 3. Calcular costo unitario (precio por porción)
+        costoUnitarioCalculado = costoTotalReceta / rendimiento;
+
+        // 4. Llenar la UI del modal
+        porcionesRecetaNombre.textContent = receta.data.nombreTorta;
+        porcionesRendimientoTotal.textContent = rendimiento;
+        inputCantidadPorciones.value = 1; // Empezamos sugiriendo 1 porción
+        
+        actualizarCostoEstimado();
+        modalPorciones.classList.add('visible');
+    };
+
+    const cerrarModalPorciones = () => {
+        modalPorciones.classList.remove('visible');
+        recetaSeleccionadaParaCarrito = null;
+        costoUnitarioCalculado = 0;
+    };
+
+    // Confirma la acción y envía los datos al carrito
+    const confirmarAnadirAlCarrito = () => {
+        if (!recetaSeleccionadaParaCarrito) return;
+
+        const cantidad = parseFloat(inputCantidadPorciones.value);
+        if (isNaN(cantidad) || cantidad <= 0) {
+            alert("Por favor, ingresa una cantidad válida.");
+            return;
+        }
+
+        // El precio que se envía es el TOTAL de las porciones seleccionadas
+        const precioFinalParaCarrito = costoUnitarioCalculado * cantidad;
+
+        const itemParaCarrito = {
+            id: recetaSeleccionadaParaCarrito.id, 
+            name: `${recetaSeleccionadaParaCarrito.data.nombreTorta} (${cantidad} u.)`, 
+            price: precioFinalParaCarrito, 
+            type: 'receta_fraccionada',
+            // Guardamos datos extra por si son necesarios luego
+            cantidadPorciones: cantidad,
+            costoUnitario: costoUnitarioCalculado
+        };
+
+        addToCart(itemParaCarrito);
+        cerrarModalPorciones();
+    };
+
+    // ==================================================================
+    // 6. LISTENERS Y PUNTO DE ENTRADA
+    // ==================================================================
+
+    // Listeners del modal de porciones
+    inputCantidadPorciones.addEventListener('input', actualizarCostoEstimado);
+    btnCancelarPorciones.addEventListener('click', cerrarModalPorciones);
+    btnConfirmarPorciones.addEventListener('click', confirmarAnadirAlCarrito);
+
+    // Escuchar cambios en recetas para actualizar la lista
+    onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
+        todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        mostrarRecetas(todasLasRecetas);
+    });
+
+    // Listener de la lista principal (Delegación de eventos)
+    listaRecetasContainer.addEventListener('click', (e) => {
+        // Acordeón
+        const header = e.target.closest('.categoria-acordeon__header');
+        if (header) {
+            header.parentElement.classList.toggle('active');
+            return;
+        }
+        
+        // Editar
+        const targetEditar = e.target.closest('.btn-editar-receta');
+        if (targetEditar) {
+            const id = targetEditar.dataset.id;
+            const recetaParaEditar = todasLasRecetas.find(r => r.id === id);
+            if (recetaParaEditar) openModal(recetaParaEditar);
+            return;
+        }
+        
+        // Borrar
+        const targetBorrar = e.target.closest('.btn-borrar-receta');
+        if (targetBorrar) {
+            const id = targetBorrar.dataset.id;
+            const recetaParaBorrar = todasLasRecetas.find(r => r.id === id);
+            if (recetaParaBorrar && confirm(`¿Estás seguro de que quieres borrar la receta "${recetaParaBorrar.data.nombreTorta}"? Esta acción no se puede deshacer.`)) {
+                deleteDoc(doc(db, 'recetas', id)).then(() => {
+                    // No es necesario alert, el onSnapshot actualizará la lista
+                }).catch(err => console.error(err));
+            }
+            return;
+        }
+        
+        // Añadir al Carrito (Abre el modal de porciones)
+        const targetAnadir = e.target.closest('.btn-anadir-cotizacion');
+        if(targetAnadir) {
+            const id = targetAnadir.dataset.id;
+            const recetaParaAnadir = todasLasRecetas.find(r => r.id === id);
+            if (recetaParaAnadir) {
+                abrirModalPorciones(recetaParaAnadir);
+            }
+            return;
+        }
+    });
+
+    // Listeners del modal de ingredientes
     ingredientesEnRecetaContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-quitar-ingrediente')) {
-            ingredientesRecetaActual.splice(e.target.dataset.index, 1);
+            const index = parseInt(e.target.dataset.index, 10);
+            ingredientesRecetaActual.splice(index, 1);
             renderizarIngredientesEnReceta();
         }
     });
-
-    btnAnadirIngrediente.addEventListener('click', anadirIngrediente);
-    btnCrearReceta.addEventListener('click', () => openModalReceta(null));
-    btnCancelarReceta.addEventListener('click', closeModal);
     
-    btnGuardarReceta.addEventListener('click', async () => {
-        const nombre = recetaNombreInput.value.trim();
-        const cat = categoriaSelect.value;
-        const rend = parseInt(rendimientoInput.value);
-        if (!nombre || !cat || !rend || ingredientesRecetaActual.length === 0) {
-            alert('Completa todos los campos.'); return;
-        }
-        const data = { nombreTorta: nombre, categoria: cat, rendimiento: rend, ingredientes: ingredientesRecetaActual };
-        const id = editandoId || doc(collection(db, 'recetas')).id;
-        await setDoc(doc(db, 'recetas', id), data);
-        closeModal();
-    });
-
+    // Listeners generales
+    btnCrearReceta.addEventListener('click', () => openModal(null));
+    btnCancelarReceta.addEventListener('click', closeModal);
+    btnGuardarReceta.addEventListener('click', guardarReceta);
+    btnAnadirIngrediente.addEventListener('click', anadirIngrediente);
+    
+    // Inicialización
     cargarMateriasPrimas();
     updateCartIcon();
 }
+```
+```eof
