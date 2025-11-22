@@ -11,7 +11,9 @@
 </head>
 <body>
     <div class="main-container">
-        <!-- HEADER -->
+        <!-- ====================================================== -->
+        <!-- HEADER                                                 -->
+        <!-- ====================================================== -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
@@ -27,7 +29,9 @@
             </a>
         </header>
 
-        <!-- MENÚ DE NAVEGACIÓN -->
+        <!-- ====================================================== -->
+        <!-- MENÚ DE NAVEGACIÓN                                     -->
+        <!-- ====================================================== -->
         <nav class="nav-menu" id="nav-menu">
             <div class="nav-menu__header">
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
@@ -39,7 +43,7 @@
             <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
             <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
             <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-            <!-- Este es la página actual, pero no es "Presupuesto" (historial), es el carrito activo -->
+            <!-- Esta página es el carrito activo -->
             <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
             <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
             <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial</a>
@@ -51,11 +55,19 @@
         <main>
             <h1 class="header__slogan">Cotización Actual</h1>
 
-            <!-- SECCIÓN 1: Ítems del Carrito -->
+            <!-- ====================================================== -->
+            <!-- SECCIÓN 1: Ítems del Carrito                           -->
+            <!-- ====================================================== -->
             <section class="card">
-                <h2 class="card__title">🛒 Productos Seleccionados</h2>
+                <div class="card-header-actions">
+                    <h2 class="card__title">🛒 Productos Seleccionados</h2>
+                    <!-- Botón Vaciar (Oculto por defecto hasta que haya ítems) -->
+                    <button id="btn-vaciar-carrito" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; display: none;">
+                        Vaciar Carrito
+                    </button>
+                </div>
                 
-                <!-- Mensaje Vacío -->
+                <!-- Mensaje cuando está vacío -->
                 <div id="carrito-vacio-msg" style="text-align: center; padding: 2rem; display: none;">
                     <p style="color: var(--text-light); font-size: 1.1rem; margin-bottom: 1.5rem;">Tu cotización está vacía.</p>
                     <a href="recetas.html" class="btn-primary" style="display: inline-block; width: auto;">Ir a Postres</a>
@@ -63,19 +75,14 @@
 
                 <!-- Lista de Productos -->
                 <div id="lista-carrito-container">
-                    <!-- Se llena con JS -->
-                </div>
-
-                <!-- Botón Vaciar -->
-                <div style="text-align: right; margin-top: 1rem;">
-                    <button id="btn-vaciar-carrito" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; display: none;">
-                        Vaciar Carrito
-                    </button>
+                    <!-- Se llena dinámicamente con JS -->
                 </div>
             </section>
 
-            <!-- SECCIÓN 2: Calculadora de Precios -->
-            <section class="card" id="calculo-precio-venta">
+            <!-- ====================================================== -->
+            <!-- SECCIÓN 2: Calculadora de Precios                      -->
+            <!-- ====================================================== -->
+            <section class="card" id="calculo-precio-venta" style="display: none;">
                 <h2 class="card__title">Cálculo de Precio de Venta</h2>
                 
                 <div class="form-modern">
@@ -128,8 +135,10 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN 3: Datos del Cliente y Guardado -->
-            <section class="card">
+            <!-- ====================================================== -->
+            <!-- SECCIÓN 3: Datos del Cliente y Guardado                -->
+            <!-- ====================================================== -->
+            <section class="card" id="seccion-guardar" style="display: none;">
                 <h2 class="card__title">Datos para Guardar</h2>
                 <div class="form-modern">
                     <div class="form-group">
@@ -147,13 +156,15 @@
         </main>
     </div>
 
-    <!-- Modal de Resumen/Confirmación -->
+    <!-- ====================================================== -->
+    <!-- MODAL: Resumen/Confirmación                            -->
+    <!-- ====================================================== -->
     <div id="resumen-cotizacion-modal" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title">¡Cotización Guardada!</h2>
             <p class="text-light" style="margin-bottom: 1rem;">Puedes copiar el siguiente resumen para enviarlo a tu cliente.</p>
             
-            <textarea id="resumen-cotizacion-texto" class="form-control" rows="8" style="width: 100%; padding: 1rem; border-radius: 12px; border: none; background: var(--background-color); box-shadow: inset 5px 5px 10px #e6e6e6, inset -5px -5px 10px #ffffff;"></textarea>
+            <textarea id="resumen-cotizacion-texto" class="form-control" rows="8" style="width: 100%; padding: 1rem; border-radius: 12px; border: none; background: var(--background-color); box-shadow: inset 5px 5px 10px #e6e6e6, inset -5px -5px 10px #ffffff; resize: vertical;"></textarea>
             
             <div class="modal-actions">
                 <button id="resumen-cotizacion-btn-copiar" class="btn-secondary">Copiar Mensaje</button>
@@ -163,9 +174,19 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <!-- Usamos 'js/cotizacion.js' que es el nombre que le dimos en el paso anterior -->
-    <script type="module" src="js/cotizacion.js"></script>
+    <!-- ====================================================== -->
+    <!-- SCRIPTS                                                -->
+    <!-- ====================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        // IMPORTANTE: Cargamos el script 'cotizacion-actual.js' actualizado
+        import { setupCotizacion } from './js/cotizacion-actual.js';
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupCotizacion(app);
+        } catch (error) { console.error(error); }
+    </script>
     <script src="js/menu.js" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
