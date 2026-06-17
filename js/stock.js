@@ -1,317 +1,263 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    updateDoc, getDoc, runTransaction, where, addDoc, Timestamp
+    setDoc, addDoc, deleteDoc, updateDoc, Timestamp, getDoc 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { firebaseConfig } from './firebase-config.js';
+import { updateCartIcon } from './cart.js';
 
-export function setupStock(app) {
-    const db = getFirestore(app);
-    const materiasPrimasCollection = collection(db, 'materiasPrimas');
-    const movimientosStockCollection = collection(db, 'movimientosStock');
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const materiasPrimasCollection = collection(db, 'materiasPrimas');
+
+// Referencias DOM
+const listaMateriasPrimas = document.getElementById('lista-materias-primas');
+const btnCrearMP = document.getElementById('btn-crear-mp');
+const modalMP = document.getElementById('modal-materia-prima');
+const btnGuardarMP = document.getElementById('mp-btn-guardar');
+const btnCancelarMP = document.getElementById('mp-btn-cancelar');
+
+// Inputs del Modal
+const mpIdInput = { value: null }; // Referencia virtual
+const mpNombreInput = document.getElementById('mp-nombre-input');
+const mpCategoriaInput = document.getElementById('mp-categoria-input');
+const mpUnidadSelect = document.getElementById('mp-unidad-select');
+const mpStockMinimoInput = document.getElementById('mp-stock-minimo-input');
+const mpUrlInput = document.getElementById('mp-url-input'); // Nuevo
+
+// Elementos Actualización Web
+const btnActualizarWeb = document.getElementById('btn-actualizar-precios-web');
+const modalActualizacion = document.getElementById('modal-actualizacion-web');
+const textoActualizacion = document.getElementById('actualizacion-estado-texto');
+const btnCerrarActualizacion = document.getElementById('btn-cerrar-actualizacion');
+
+let todasLasMateriasPrimas = [];
+
+// =========================================================
+// 1. RENDERIZADO DE LA TABLA
+// =========================================================
+
+const renderTabla = (materiasPrimas) => {
+    listaMateriasPrimas.innerHTML = '';
     
-    // Referencias DOM principales
-    const tablaStockBody = document.querySelector("#tabla-stock tbody");
-    const buscadorInput = document.getElementById('buscador-stock');
+    if (materiasPrimas.length === 0) {
+        listaMateriasPrimas.innerHTML = '<tr><td colspan="5" style="text-align:center;">No hay materias primas registradas.</td></tr>';
+        return;
+    }
 
-    // Referencias Modal Edición Completa
-    const modalCompleto = document.getElementById('edit-producto-completo-modal-overlay');
-    const modalCompletoTitle = document.getElementById('producto-completo-modal-title');
-    const nombreCompletoInput = document.getElementById('producto-nombre-completo-input');
-    const unidadCompletoSelect = document.getElementById('producto-unidad-completo-select');
-    const lotesEditorContainer = document.getElementById('lotes-editor-container');
-    const btnGuardarCompleto = document.getElementById('producto-completo-modal-btn-guardar');
-    const btnCancelarCompleto = document.getElementById('producto-completo-modal-btn-cancelar');
-    
-    // Referencias para el Modal de Ajuste Rápido
-    const modalAjuste = document.getElementById('ajustar-stock-modal-overlay');
-    const ajusteNombreProducto = document.getElementById('ajustar-stock-nombre-producto');
-    const stockCalculadoInput = document.getElementById('stock-actual-calculado');
-    const nuevoStockInput = document.getElementById('nuevo-stock-real');
-    const btnGuardarAjuste = document.getElementById('ajustar-stock-btn-guardar');
-    const btnCancelarAjuste = document.getElementById('ajustar-stock-btn-cancelar');
-
-    // Referencias Modal Historial
-    const historialModal = document.getElementById('historial-movimientos-modal-overlay');
-    const historialModalTitle = document.getElementById('movimientos-modal-title');
-    const historialListaContainer = document.getElementById('movimientos-lista-container');
-    const btnCerrarHistorial = document.getElementById('movimientos-modal-btn-cerrar');
-
-    let editandoId = null;
-    let todoElStock = [];
-    let unsubHistorial = null;
-
-    const renderizarTabla = (datos) => {
-        tablaStockBody.innerHTML = '';
-        if (datos.length === 0) {
-            tablaStockBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No se encontraron productos.</td></tr>';
-            return;
+    materiasPrimas.forEach(mp => {
+        let stockTotal = 0;
+        if (mp.lotes && mp.lotes.length > 0) {
+            stockTotal = mp.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
         }
-        datos.forEach(itemConId => {
-            try {
-                const item = itemConId.data;
-                const id = itemConId.id;
 
-                if (!item.lotes || !Array.isArray(item.lotes) || item.lotes.length === 0) return;
-                
-                const stockTotal = item.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
-                
-                const lotesOrdenados = [...item.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
-                const ultimoLote = lotesOrdenados[0];
-
-                let fechaUltimaCarga = 'N/A';
-                if (ultimoLote && ultimoLote.fechaCompra && typeof ultimoLote.fechaCompra.toDate === 'function') {
-                    fechaUltimaCarga = ultimoLote.fechaCompra.toDate().toLocaleDateString('es-AR');
-                }
-                
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
-                    <td data-label="Nombre">${item.nombre}</td>
-                    <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
-                    <td data-label="Precio Base">$${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${item.unidad}</td>
-                    <td data-label="Última Carga">${fechaUltimaCarga}</td>
-                    <td class="action-buttons stock-actions">
-                        <button class="btn-stock-link ajustar" data-id="${id}" title="Ajustar Stock Total">⚖️</button>
-                        <button class="btn-stock-link edit" data-id="${id}" title="Editar Producto y Lotes">✏️</button>
-                        <button class="btn-stock-link history" data-id="${id}" data-nombre="${item.nombre}" title="Ver Historial de Movimientos">📜</button>
-                    </td>
-                `;
-                tablaStockBody.appendChild(fila);
-            } catch (error) {
-                console.error(`Error al renderizar el producto: ${itemConId.data.nombre || 'Desconocido'}.`, error);
-            }
-        });
-    };
-    
-    const openModalParaEdicionCompleta = async (id) => {
-        editandoId = id;
-        try {
-            const docRef = doc(db, 'materiasPrimas', id);
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) {
-                alert("Este producto ya no existe.");
-                return;
-            }
-            const producto = docSnap.data();
-            
-            modalCompletoTitle.textContent = `Editando: ${producto.nombre}`;
-            nombreCompletoInput.value = producto.nombre;
-            unidadCompletoSelect.value = producto.unidad;
-
-            lotesEditorContainer.innerHTML = '';
-            if (producto.lotes && producto.lotes.length > 0) {
-                const lotesOrdenados = [...producto.lotes].sort((a,b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
-                lotesOrdenados.forEach((lote, index) => {
-                    const fechaCompra = lote.fechaCompra.toDate().toISOString().split('T')[0];
-                    const loteDiv = document.createElement('div');
-                    loteDiv.className = 'lote-editor-item';
-                    const originalIndex = producto.lotes.indexOf(lote);
-                    loteDiv.innerHTML = `
-                        <p class="fecha-lote">Lote #${index + 1} (Compra del ${lote.fechaCompra.toDate().toLocaleDateString('es-AR')})</p>
-                        <div class="form-group"><label>Fecha Compra</label><input type="date" value="${fechaCompra}" data-lote-index="${originalIndex}" data-field="fechaCompra" class="form-control"></div>
-                        <div class="form-group"><label>Precio Compra ($)</label><input type="number" value="${lote.precioCompra}" data-lote-index="${originalIndex}" data-field="precioCompra" step="any" class="form-control"></div>
-                        <div class="form-group"><label>Cant. Comprada</label><input type="number" value="${lote.cantidadComprada}" data-lote-index="${originalIndex}" data-field="cantidadComprada" step="any" class="form-control"></div>
-                        <div class="form-group"><label>Stock Restante</label><input type="number" value="${lote.stockRestante}" data-lote-index="${originalIndex}" data-field="stockRestante" step="any" class="form-control"></div>
-                    `;
-                    lotesEditorContainer.appendChild(loteDiv);
-                });
-            } else {
-                lotesEditorContainer.innerHTML = '<p>Este producto no tiene lotes de compra registrados.</p>';
-            }
-            modalCompleto.classList.add('visible');
-        } catch (error) {
-            console.error("Error al abrir modal de edición completa:", error);
-            alert("No se pudo cargar la información para editar.");
+        const tr = document.createElement('tr');
+        if (stockTotal <= (mp.stockMinimo || 0)) {
+            tr.style.backgroundColor = '#fef2f2'; // Fondo rojizo si hay poco stock
         }
-    };
 
-    const closeModalCompleta = () => {
-        modalCompleto.classList.remove('visible');
-        editandoId = null;
-    };
-    
-    const guardarCambiosCompletos = async () => {
-        if (!editandoId) return;
-        const docRef = doc(db, 'materiasPrimas', editandoId);
-        btnGuardarCompleto.disabled = true;
-        btnGuardarCompleto.textContent = 'Guardando...';
-        try {
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) throw new Error("El producto fue eliminado mientras se editaba.");
-            const productoOriginal = docSnap.data();
-            const nuevosLotes = new Array(productoOriginal.lotes.length);
-            const loteItems = lotesEditorContainer.querySelectorAll('.lote-editor-item');
-            loteItems.forEach(loteItem => {
-                const index = parseInt(loteItem.querySelector('input').dataset.loteIndex, 10);
-                const fechaInput = loteItem.querySelector(`[data-lote-index="${index}"][data-field="fechaCompra"]`).value;
-                const [year, month, day] = fechaInput.split('-');
-                const fecha = new Date(year, month - 1, day);
-                const precio = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="precioCompra"]`).value);
-                const cantidad = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="cantidadComprada"]`).value);
-                const restante = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="stockRestante"]`).value);
-                if (isNaN(precio) || isNaN(cantidad) || isNaN(restante)) throw new Error(`Hay valores numéricos inválidos en uno de los lotes.`);
-                if (!fechaInput) throw new Error(`La fecha es inválida en uno de los lotes.`);
-                nuevosLotes[index] = {
-                    fechaCompra: Timestamp.fromDate(fecha),
-                    precioCompra: precio,
-                    cantidadComprada: cantidad,
-                    stockRestante: restante,
-                    costoUnitario: cantidad > 0 ? precio / cantidad : 0
-                };
-            });
-            const datosParaActualizar = {
-                nombre: nombreCompletoInput.value.trim(),
-                unidad: unidadCompletoSelect.value,
-                lotes: nuevosLotes
-            };
-            await updateDoc(docRef, datosParaActualizar);
-            alert('¡Producto actualizado con éxito!');
-            closeModalCompleta();
-        } catch (error) {
-            console.error("Error al guardar cambios completos:", error);
-            alert(`No se pudieron guardar los cambios: ${error.message}`);
-        } finally {
-            btnGuardarCompleto.disabled = false;
-            btnGuardarCompleto.textContent = 'Guardar Cambios';
-        }
-    };
+        // Indicador visual si tiene link
+        const linkIcono = mp.urlProveedor 
+            ? `<a href="${mp.urlProveedor}" target="_blank" title="Ver en tienda" style="color:#3b82f6; text-decoration:none;">🔗 Link Activo</a>` 
+            : `<span style="color:var(--text-light); font-size:0.8rem;">Sin link</span>`;
 
-    btnGuardarCompleto.addEventListener('click', guardarCambiosCompletos);
-    btnCancelarCompleto.addEventListener('click', closeModalCompleta);
-
-    const openModalParaAjustar = (id) => {
-        editandoId = id;
-        const producto = todoElStock.find(p => p.id === id);
-        if (!producto) return;
-        const stockTotal = producto.data.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
-        ajusteNombreProducto.textContent = producto.data.nombre;
-        stockCalculadoInput.value = `${stockTotal.toLocaleString('es-AR')} ${producto.data.unidad}`;
-        nuevoStockInput.value = '';
-        modalAjuste.classList.add('visible');
-    };
-
-    const closeModalAjuste = () => {
-        modalAjuste.classList.remove('visible');
-        editandoId = null;
-    };
-
-    const guardarAjusteStock = async () => {
-        if (!editandoId) return;
-        const productoData = todoElStock.find(p => p.id === editandoId).data;
-        const stockActual = productoData.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
-        const nuevoStock = parseFloat(nuevoStockInput.value);
-        if (isNaN(nuevoStock) || nuevoStock < 0) {
-            alert("Por favor, ingresa un número válido para el nuevo stock.");
-            return;
-        }
-        const diferencia = nuevoStock - stockActual;
-        if (diferencia === 0) {
-            closeModalAjuste();
-            return;
-        }
-        btnGuardarAjuste.disabled = true;
-        btnGuardarAjuste.textContent = 'Ajustando...';
-        const docRef = doc(db, 'materiasPrimas', editandoId);
-        try {
-            await runTransaction(db, async (transaction) => {
-                const docSnap = await transaction.get(docRef);
-                if (!docSnap.exists()) throw "El producto ya no existe.";
-                let data = docSnap.data();
-                let lotesActualizados = [...data.lotes];
-                let cantidadAjustada = Math.abs(diferencia);
-                if (diferencia < 0) {
-                    lotesActualizados.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
-                    for (const lote of lotesActualizados) {
-                        if (cantidadAjustada <= 0) break;
-                        const aDescontar = Math.min(lote.stockRestante, cantidadAjustada);
-                        lote.stockRestante -= aDescontar;
-                        cantidadAjustada -= aDescontar;
-                    }
-                } else {
-                    lotesActualizados.sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
-                    if (lotesActualizados.length > 0) {
-                        lotesActualizados[0].stockRestante += cantidadAjustada;
-                    } else {
-                        throw "No hay lotes para ajustar. Registra una compra primero.";
-                    }
-                }
-                transaction.update(docRef, { lotes: lotesActualizados });
-            });
-            await addDoc(movimientosStockCollection, {
-                materiaPrimaId: editandoId,
-                materiaPrimaNombre: productoData.nombre,
-                tipo: 'Ajuste de Inventario',
-                cantidad: diferencia,
-                fecha: new Date(),
-                descripcion: `Ajuste manual de ${stockActual.toLocaleString('es-AR')} a ${nuevoStock.toLocaleString('es-AR')}`
-            });
-            alert("Stock ajustado y movimiento registrado con éxito.");
-            closeModalAjuste();
-        } catch (error) {
-            console.error("Error al ajustar stock:", error);
-            alert(`No se pudo realizar el ajuste: ${error}`);
-        } finally {
-            btnGuardarAjuste.disabled = false;
-            btnGuardarAjuste.textContent = 'Confirmar Ajuste';
-        }
-    };
-
-    btnGuardarAjuste.addEventListener('click', guardarAjusteStock);
-    btnCancelarAjuste.addEventListener('click', closeModalAjuste);
-
-    const openHistorialModal = (productoId, productoNombre) => {
-        historialModalTitle.textContent = `Historial de: ${productoNombre}`;
-        historialListaContainer.innerHTML = '<p>Cargando...</p>';
-        historialModal.classList.add('visible');
-        const q = query(movimientosStockCollection, where("materiaPrimaId", "==", productoId), orderBy("fecha", "desc"));
-        unsubHistorial = onSnapshot(q, (snapshot) => {
-            if (snapshot.empty) {
-                historialListaContainer.innerHTML = '<p>No hay movimientos registrados para este producto.</p>';
-                return;
-            }
-            historialListaContainer.innerHTML = '';
-            snapshot.forEach(doc => {
-                const mov = doc.data();
-                const fecha = mov.fecha.toDate().toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'numeric' });
-                const esEntrada = mov.cantidad > 0;
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'movimiento-item';
-                itemDiv.innerHTML = `<div class="movimiento-info"><span class="movimiento-fecha">${fecha}</span><strong class="movimiento-descripcion">${mov.descripcion}</strong></div><div class="movimiento-cantidad ${esEntrada ? 'entrada' : 'salida'}">${esEntrada ? '+' : ''}${mov.cantidad.toLocaleString('es-AR')}</div>`;
-                historialListaContainer.appendChild(itemDiv);
-            });
-        }, (error) => {
-            console.error("Error al cargar historial:", error);
-            historialListaContainer.innerHTML = `<p style="color:var(--danger-color);">Error al cargar. Revisa la consola.</p>`;
-        });
-    };
-
-    const closeHistorialModal = () => {
-        if (unsubHistorial) unsubHistorial();
-        historialModal.classList.remove('visible');
-    };
-
-    btnCerrarHistorial.addEventListener('click', closeHistorialModal);
-    
-    onSnapshot(query(materiasPrimasCollection, orderBy("nombre")), (snapshot) => {
-        todoElStock = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-        buscadorInput.dispatchEvent(new Event('input'));
+        tr.innerHTML = `
+            <td data-label="Nombre"><strong>${mp.nombre}</strong></td>
+            <td data-label="Categoría">${mp.categoria || '-'}</td>
+            <td data-label="Stock Total" style="font-weight:bold; color: ${stockTotal <= mp.stockMinimo ? 'var(--danger-color)' : 'inherit'}">
+                ${stockTotal.toLocaleString('es-AR')} ${mp.unidad}
+            </td>
+            <td data-label="Link Web">${linkIcono}</td>
+            <td data-label="Acciones" class="stock-actions">
+                <button class="btn-stock edit btn-editar" data-id="${mp.id}" title="Editar M. Prima">✏️</button>
+                <button class="btn-stock subtract btn-borrar" data-id="${mp.id}" title="Borrar M. Prima">🗑️</button>
+            </td>
+        `;
+        listaMateriasPrimas.appendChild(tr);
     });
+};
 
-    buscadorInput.addEventListener('input', (e) => {
-        const terminoBusqueda = e.target.value.toLowerCase();
-        const datosFiltrados = todoElStock.filter(item => item.data.nombre && item.data.nombre.toLowerCase().includes(terminoBusqueda));
-        renderizarTabla(datosFiltrados);
-    });
+onSnapshot(query(materiasPrimasCollection, orderBy('nombre')), (snapshot) => {
+    todasLasMateriasPrimas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderTabla(todasLasMateriasPrimas);
+});
 
-    tablaStockBody.addEventListener('click', (e) => {
-        const target = e.target.closest('.ajustar, .edit, .history');
-        if (!target) return;
-        const id = target.dataset.id;
+// =========================================================
+// 2. CREAR Y EDITAR MATERIA PRIMA
+// =========================================================
+
+const abrirModalMP = (mp = null) => {
+    if (mp) {
+        mpIdInput.value = mp.id;
+        document.getElementById('mp-modal-title').textContent = 'Editar Materia Prima';
+        mpNombreInput.value = mp.nombre;
+        mpCategoriaInput.value = mp.categoria || '';
+        mpUnidadSelect.value = mp.unidad;
+        mpStockMinimoInput.value = mp.stockMinimo || 0;
+        mpUrlInput.value = mp.urlProveedor || '';
+    } else {
+        mpIdInput.value = null;
+        document.getElementById('mp-modal-title').textContent = 'Nueva Materia Prima';
+        mpNombreInput.value = '';
+        mpCategoriaInput.value = '';
+        mpUnidadSelect.value = 'kg';
+        mpStockMinimoInput.value = 0;
+        mpUrlInput.value = '';
+    }
+    modalMP.classList.add('visible');
+};
+
+btnGuardarMP.addEventListener('click', async () => {
+    const nombre = mpNombreInput.value.trim();
+    const unidad = mpUnidadSelect.value;
+    const stockMinimo = parseFloat(mpStockMinimoInput.value) || 0;
+    const categoria = mpCategoriaInput.value.trim();
+    const urlProveedor = mpUrlInput.value.trim();
+
+    if (!nombre) { alert("El nombre es obligatorio."); return; }
+
+    const mpData = { nombre, unidad, stockMinimo, categoria, urlProveedor };
+    
+    try {
+        if (mpIdInput.value) {
+            await updateDoc(doc(db, 'materiasPrimas', mpIdInput.value), mpData);
+        } else {
+            // Si es nueva, inicializamos los lotes vacíos
+            mpData.lotes = [];
+            await addDoc(materiasPrimasCollection, mpData);
+        }
+        modalMP.classList.remove('visible');
+    } catch (error) {
+        console.error("Error al guardar: ", error);
+        alert("Error al guardar.");
+    }
+});
+
+btnCancelarMP.addEventListener('click', () => modalMP.classList.remove('visible'));
+
+listaMateriasPrimas.addEventListener('click', async (e) => {
+    const btnEditar = e.target.closest('.btn-editar');
+    if (btnEditar) {
+        const mp = todasLasMateriasPrimas.find(m => m.id === btnEditar.dataset.id);
+        if (mp) abrirModalMP(mp);
+    }
+    
+    const btnBorrar = e.target.closest('.btn-borrar');
+    if (btnBorrar) {
+        if(confirm("¿Seguro que deseas eliminar esta materia prima y todo su historial de stock?")) {
+            await deleteDoc(doc(db, 'materiasPrimas', btnBorrar.dataset.id));
+        }
+    }
+});
+
+btnCrearMP.addEventListener('click', () => abrirModalMP(null));
+
+// =========================================================
+// 3. ACTUALIZACIÓN AUTOMÁTICA DE PRECIOS WEB
+// =========================================================
+
+// Scraper con AllOrigins
+async function consultarPrecioRazzetto(urlProducto) {
+    try {
+        // Usamos encodeURIComponent para que la URL viaje segura por internet
+        const urlPuente = `https://api.allorigins.win/get?url=${encodeURIComponent(urlProducto)}`;
+        const respuesta = await fetch(urlPuente);
+        const data = await respuesta.json();
         
-        if (target.classList.contains('ajustar')) {
-            openModalParaAjustar(id);
-        } else if (target.classList.contains('edit')) {
-            openModalParaEdicionCompleta(id);
-        } else if (target.classList.contains('history')) {
-            openHistorialModal(id, target.dataset.nombre);
-        }
-    });
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data.contents, "text/html");
+        
+        // WooCommerce usa .price
+        const cajaPrecio = doc.querySelector('.price');
+        if (!cajaPrecio) return null;
+
+        // Busca precio oferta (<ins>) o precio normal
+        let elementoPrecio = cajaPrecio.querySelector('ins .woocommerce-Price-amount bdi') || 
+                             cajaPrecio.querySelector('.woocommerce-Price-amount bdi');
+                           
+        if (!elementoPrecio) return null;
+        
+        let textoPrecio = elementoPrecio.innerText; 
+        // Limpia formato: "$ 18.600,50" -> "18600.50"
+        textoPrecio = textoPrecio.replace('$', '').replace(/\./g, '').replace(',', '.').trim();
+        
+        return parseFloat(textoPrecio);
+        
+    } catch (error) {
+        console.error(`Error al consultar URL: ${urlProducto}`, error);
+        return null;
+    }
 }
+
+btnActualizarWeb.addEventListener('click', async () => {
+    // Filtramos cuáles tienen link configurado
+    const mpsConLink = todasLasMateriasPrimas.filter(mp => mp.urlProveedor && mp.urlProveedor.includes('http'));
+    
+    if (mpsConLink.length === 0) {
+        alert("No tienes materias primas con enlaces web configurados. Edita una materia prima y agrega su link primero.");
+        return;
+    }
+
+    modalActualizacion.classList.add('visible');
+    btnCerrarActualizacion.style.display = 'none';
+    
+    let actualizados = 0;
+    let fallidos = 0;
+
+    for (let i = 0; i < mpsConLink.length; i++) {
+        const mp = mpsConLink[i];
+        textoActualizacion.textContent = `Consultando ${i + 1}/${mpsConLink.length}: ${mp.nombre}...`;
+        
+        const nuevoPrecio = await consultarPrecioRazzetto(mp.urlProveedor);
+        
+        if (nuevoPrecio && !isNaN(nuevoPrecio)) {
+            // Evaluamos si necesitamos guardar este precio
+            let guardarNuevoLote = false;
+            
+            if (!mp.lotes || mp.lotes.length === 0) {
+                guardarNuevoLote = true;
+            } else {
+                // Comparamos con el precio del último lote registrado
+                const lotesOrdenados = [...mp.lotes].sort((a,b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
+                const ultimoPrecio = lotesOrdenados[0].costoUnitario;
+                // Si el precio cambió más de 1 peso, actualizamos
+                if (Math.abs(ultimoPrecio - nuevoPrecio) > 1) {
+                    guardarNuevoLote = true;
+                }
+            }
+
+            if (guardarNuevoLote) {
+                const nuevosLotes = mp.lotes ? [...mp.lotes] : [];
+                // Creamos un lote VIRTUAL: No suma stock real, pero marca el nuevo precio actual
+                nuevosLotes.push({
+                    fechaCompra: Timestamp.now(),
+                    proveedor: 'Actualización Web (Razzetto)',
+                    cantidadComprada: 0, // No altera el inventario físico
+                    precioCompra: 0,
+                    costoUnitario: nuevoPrecio,
+                    stockRestante: 0 // Se agota de inmediato, pero cotizacion.js lo usará como referencia proyectada
+                });
+
+                await updateDoc(doc(db, 'materiasPrimas', mp.id), { lotes: nuevosLotes });
+                actualizados++;
+            }
+        } else {
+            fallidos++;
+        }
+        
+        // Pequeña pausa para no saturar al servidor y que no nos bloqueen
+        await new Promise(r => setTimeout(r, 1000)); 
+    }
+
+    textoActualizacion.innerHTML = `<strong>¡Proceso terminado!</strong><br>
+                                   Actualizados/Verificados: ${actualizados} <br>
+                                   Fallidos/Sin Cambios: ${fallidos}`;
+    btnCerrarActualizacion.style.display = 'inline-block';
+});
+
+btnCerrarActualizacion.addEventListener('click', () => {
+    modalActualizacion.classList.remove('visible');
+});
+
+// Inicializar ícono de carrito
+updateCartIcon();
