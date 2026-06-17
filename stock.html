@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Stock</title>
+    <title>Mi Stock - Dulce App</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -18,7 +18,12 @@
             <a href="index.html" class="header__logo-link">
                 <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
-            <div class="header__spacer"></div>
+            <a href="cotizacion-actual.html" class="header__cart-link">
+                <div id="cart-icon" class="header__cart-icon">
+                    🛒
+                    <span id="cart-count" class="cart-count">0</span>
+                </div>
+            </a>
         </header>
 
         <nav class="nav-menu" id="nav-menu">
@@ -26,130 +31,102 @@
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
                 <span class="nav-menu__title">Dulce App</span>
             </div>
-            <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
-            <a href="finanzas.html" class="nav-menu__link">💰 Finanzas</a> 
-            <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
-            <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
-            <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
-            <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
-            <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
-            <a href="stock.html" class="nav-menu__link active">📦 Stock</a>
-            <a href="historial.html" class="nav-menu__link">📚 Historial</a>
-            <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
-        </nav>      
+            <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
+            <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
+            <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
+            <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
+            <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
+            <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
+            <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
+            <a href="stock.html" class="nav-menu__link active"><span>📦</span> Stock</a>
+            <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial</a>
+            <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
+            <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
+            <section class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header-actions" style="margin-bottom: 0;">
+                    <h2 class="card__title" style="margin: 0;">Gestión de Materias Primas</h2>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button id="btn-actualizar-precios-web" class="btn-secondary" style="color: #3b82f6; border-color: #3b82f6;">
+                            Actualizar Precios Web 🌐
+                        </button>
+                        <button id="btn-crear-mp" class="btn-primary">Nueva Materia Prima</button>
+                    </div>
+                </div>
+            </section>
+            
             <section class="card">
-                <div class="card-header-actions">
-                    <h2 class="card__title">Inventario de Materias Primas</h2>
-                    <a href="compras.html" class="btn-primary">Registrar Nueva Compra</a>
+                <div class="table-responsive">
+                    <table class="table-clean" id="tabla-stock">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Stock Total</th>
+                                <th>Link Web</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-materias-primas">
+                            </tbody>
+                    </table>
                 </div>
-                <div class="buscador-container">
-                    <input type="search" id="buscador-stock" placeholder="🔍 Buscar por nombre...">
-                </div>
-                <table class="table-clean" id="tabla-stock">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Stock Actual</th>
-                            <th>Precio Base (Última Compra)</th>
-                            <th>Última Carga</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td colspan="5" style="text-align: center;">Cargando stock...</td></tr>
-                    </tbody>
-                </table>
             </section>
         </main>
     </div>
-    
-    <!-- Modal para Edición Completa de Lotes -->
-    <div id="edit-producto-completo-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title" id="producto-completo-modal-title">Editar Producto</h2>
-            <div class="modal-body">
-                <div class="form-modern" style="grid-template-columns: 2fr 1fr;">
-                    <div class="form-group">
-                        <label for="producto-nombre-completo-input">Nombre del Producto</label>
-                        <input type="text" id="producto-nombre-completo-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="producto-unidad-completo-select">Unidad</label>
-                        <select id="producto-unidad-completo-select">
-                            <option value="gr">Gramos (gr)</option>
-                            <option value="kg">Kilos (kg)</option>
-                            <option value="unidad">Unidad</option>
-                            <option value="cc">cc</option>
-                            <option value="ml">ml</option>
-                            <option value="l">Litros (l)</option>
-                        </select>
-                    </div>
-                </div>
-                <h4 class="card__subtitle">Lotes de Compra</h4>
-                <div id="lotes-editor-container" class="lotes-editor-container">
-                    <p>Cargando lotes...</p>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button id="producto-completo-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="producto-completo-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Nuevo Modal para Ajuste Rápido de Stock -->
-    <div id="ajustar-stock-modal-overlay" class="modal-overlay">
+    <div id="modal-materia-prima" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="ajustar-stock-modal-title">Ajustar Stock Total</h2>
-            <div class="modal-body">
-                <p>Estás ajustando el stock de: <strong id="ajustar-stock-nombre-producto"></strong></p>
+            <h2 class="card__title" id="mp-modal-title">Nueva Materia Prima</h2>
+            <div class="form-modern">
                 <div class="form-group">
-                    <label>Stock Actual Calculado</label>
-                    <input type="text" id="stock-actual-calculado" disabled>
+                    <label for="mp-nombre-input">Nombre</label>
+                    <input type="text" id="mp-nombre-input" placeholder="Ej: Harina 0000">
                 </div>
                 <div class="form-group">
-                    <label for="nuevo-stock-real">Nuevo Stock Real (la cantidad que contaste)</label>
-                    <input type="number" id="nuevo-stock-real" step="any" placeholder="Ingresa la cantidad correcta">
+                    <label for="mp-categoria-input">Categoría</label>
+                    <input type="text" id="mp-categoria-input" placeholder="Ej: Secos, Lácteos...">
+                </div>
+                <div class="form-group">
+                    <label for="mp-unidad-select">Unidad de Medida</label>
+                    <select id="mp-unidad-select">
+                        <option value="kg">Kilogramos (kg)</option>
+                        <option value="g">Gramos (g)</option>
+                        <option value="L">Litros (L)</option>
+                        <option value="ml">Mililitros (ml)</option>
+                        <option value="u">Unidades (u)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mp-stock-minimo-input">Stock Mínimo (Alerta)</label>
+                    <input type="number" id="mp-stock-minimo-input" min="0" step="any" placeholder="Ej: 2">
+                </div>
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="mp-url-input">Link Exacto de Razzetto (Opcional)</label>
+                    <input type="url" id="mp-url-input" placeholder="https://razzettodistribuciones.com.ar/tienda/...">
                 </div>
             </div>
             <div class="modal-actions">
-                <button id="ajustar-stock-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="ajustar-stock-btn-guardar" class="btn-primary">Confirmar Ajuste</button>
+                <button id="mp-btn-cancelar" class="btn-secondary">Cancelar</button>
+                <button id="mp-btn-guardar" class="btn-primary">Guardar</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Historial -->
-    <div id="historial-movimientos-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title" id="movimientos-modal-title">Historial de Movimientos</h2>
-            <div id="movimientos-lista-container" class="movimientos-container">
-                <p>Cargando historial...</p>
-            </div>
-            <div class="modal-actions">
-                <button id="movimientos-modal-btn-cerrar" class="btn-primary">Cerrar</button>
+    <div id="modal-actualizacion-web" class="modal-overlay">
+        <div class="modal-content card" style="text-align: center;">
+            <h2 class="card__title">Consultando Precios... 🌐</h2>
+            <p id="actualizacion-estado-texto" style="margin: 1.5rem 0; color: var(--text-light);">Conectando con Razzetto...</p>
+            <div class="modal-actions" style="justify-content: center;">
+                <button id="btn-cerrar-actualizacion" class="btn-primary" style="display: none;">Entendido</button>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { setupStock } from './js/stock.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupStock(app);
-        } catch (error) { console.error(error); }
-    </script>
+    <script type="module" src="js/stock.js"></script>
     <script src="js/menu.js" defer></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
-        }
-    </script>
 </body>
 </html>
