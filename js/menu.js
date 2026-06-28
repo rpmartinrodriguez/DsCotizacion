@@ -1,33 +1,57 @@
-// js/menu.js (Versión mejorada con resaltado de página activa)
 document.addEventListener('DOMContentLoaded', () => {
-    const menuToggleBtn = document.getElementById('menu-toggle-btn');
-    const navMenu = document.getElementById('nav-menu');
-    const navOverlay = document.getElementById('nav-overlay');
-    const body = document.body;
-
-    // Lógica para abrir y cerrar el menú
+    // ==========================================
+    // 1. ABRIR Y CERRAR EL MENÚ LATERAL
+    // ==========================================
+    const menuBtn = document.getElementById('menu-toggle-btn');
+    const overlay = document.getElementById('nav-overlay');
+    
     const toggleMenu = () => {
-        body.classList.toggle('menu-open');
+        document.body.classList.toggle('menu-open');
     };
 
-    if (menuToggleBtn && navMenu && navOverlay) {
-        menuToggleBtn.addEventListener('click', toggleMenu);
-        navOverlay.addEventListener('click', toggleMenu);
-    }
+    if (menuBtn) menuBtn.addEventListener('click', toggleMenu);
+    if (overlay) overlay.addEventListener('click', toggleMenu);
 
-    // --- NUEVA LÓGICA PARA RESALTAR LA PÁGINA ACTIVA ---
-    const navLinks = navMenu.querySelectorAll('.nav-menu__link');
-    const currentPage = window.location.pathname.split('/').pop(); // Obtiene el nombre del archivo actual (ej: "stock.html")
-
-    navLinks.forEach(link => {
-        const linkPage = link.getAttribute('href');
-        // Si estamos en la página de inicio (index.html) y el enlace también
-        if ((currentPage === '' || currentPage === 'index.html') && (linkPage === 'index.html')) {
-            link.classList.add('active');
-        } 
-        // Si el nombre del archivo del enlace está en la URL actual
-        else if (linkPage !== 'index.html' && currentPage === linkPage) {
-            link.classList.add('active');
-        }
+    // ==========================================
+    // 2. LÓGICA DE CATEGORÍAS DESPLEGABLES (ACORDEÓN)
+    // ==========================================
+    const categoryBtns = document.querySelectorAll('.nav-category-btn');
+    
+    categoryBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const currentCategory = btn.parentElement;
+            const isActive = currentCategory.classList.contains('active');
+            
+            // Cerrar todas las demás categorías para mantener ordenado
+            document.querySelectorAll('.nav-category').forEach(cat => {
+                cat.classList.remove('active');
+            });
+            
+            // Si la que tocamos no estaba abierta, la abrimos
+            if (!isActive) {
+                currentCategory.classList.add('active');
+            }
+        });
     });
+
+    // ==========================================
+    // 3. AUTO-SELECCIONAR PÁGINA ACTUAL
+    // ==========================================
+    // Obtenemos el nombre del archivo actual (ej: "index.html" o "pos.html")
+    let currentPath = window.location.pathname.split('/').pop();
+    if (currentPath === '') currentPath = 'index.html'; // Por si entra a la raíz
+
+    // Buscamos el link que coincide con la página actual
+    const activeLink = document.querySelector(`.nav-menu__link[href="${currentPath}"]`);
+    
+    if (activeLink) {
+        // Pintamos el link de color activo
+        activeLink.classList.add('active');
+        
+        // Buscamos a qué categoría pertenece y la dejamos desplegada
+        const parentCategory = activeLink.closest('.nav-category');
+        if (parentCategory) {
+            parentCategory.classList.add('active');
+        }
+    }
 });
