@@ -13,38 +13,37 @@
 <body>
     <div class="main-container">
         <header class="header">
-            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span><span></span><span></span>
-            </button>
-            <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
-            </a>
-            <a href="cotizacion-actual.html" class="header__cart-link">
-                <div id="cart-icon" class="header__cart-icon">
-                    🛒
-                    <span id="cart-count" class="cart-count">0</span>
-                </div>
-            </a>
-        </header>
-
+    <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+    </button>
+    <a href="index.html" class="header__logo-link">
+        <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+    </a>
+    <a href="cotizacion-actual.html" class="header__cart-link">
+        <div id="cart-icon" class="header__cart-icon">
+            🛒
+            <span id="cart-count" class="cart-count">0</span>
+        </div>
+    </a>
+</header>
         <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
-            <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a> 
-            <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
-            <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
-            <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-            <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-            <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-            <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
-            <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-            <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial</a>
-            <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-            <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
-            <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+    <div class="nav-menu__header">
+        <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+        <span class="nav-menu__title">Dulce App</span>
+    </div>
+    <a href="index.html" class="nav-menu__link">📊 Indicadores</a>
+    <a href="finanzas.html" class="nav-menu__link">💰 Finanzas</a> 
+    <a href="pos.html" class="nav-menu__link">🏪 Mostrador</a>
+    <a href="recetas.html" class="nav-menu__link">🍰 Postres</a>
+    <a href="clientes.html" class="nav-menu__link">👥 Clientes</a>
+    <a href="agenda.html" class="nav-menu__link">🗓️ Agenda</a>
+    <a href="compras-lista.html" class="nav-menu__link">🛒 Lista de Compras</a>
+    <a href="presupuesto.html" class="nav-menu__link">🧾 Presupuesto</a>
+    <a href="stock.html" class="nav-menu__link">📦 Stock</a>
+    <a href="historial.html" class="nav-menu__link">📚 Historial</a>
+    <a href="compras.html" class="nav-menu__link">🛍️ Registrar Compra</a>
+    <a href="precios.html" class="nav-menu__link">💲 Lista de Precios</a>
+    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
         </nav>        
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
@@ -60,14 +59,12 @@
                     <div id="lista-proximas-entregas"><p>Calculando...</p></div>
                 </section>
             </a>
-            
             <a href="compras-lista.html" class="card-link">
                 <section class="card card-aviso">
                     <h2 class="card__title">Faltantes para Próximas Ventas</h2>
                     <div id="lista-faltantes-dashboard"><p>Calculando...</p></div>
                 </section>
             </a>
-            
             <section class="card">
                 <div class="form-group">
                     <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
@@ -76,43 +73,36 @@
                     </select>
                 </div>
             </section>
-            
             <div class="dashboard-grid">
                 <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
                 <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
                 <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
                 <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
             </div>
-            
             <section class="card">
                 <h2 class="card__title">Ingresos por Mes (Ventas Reales)</h2>
                 <canvas id="grafico-ingresos"></canvas>
             </section>
-            
             <section class="card">
                 <h2 class="card__title">Valor Actual del Stock</h2>
                 <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
             </section>
-            
             <a href="clientes.html" class="card-link">
                 <section class="card">
                     <h2 class="card__title">Top 5 Clientes (por Monto)</h2>
                     <div id="lista-top-clientes"><p>Calculando...</p></div>
                 </section>
             </a>
-            
             <section class="card">
                 <h2 class="card__title">🏆 Postres Más Vendidos (Top 5)</h2>
                 <div id="reporte-mas-vendidos"><p>Calculando...</p></div>
             </section>
-            
             <section class="card">
                 <h2 class="card__title">💰 Postres Más Rentables (Top 5)</h2>
                 <div id="reporte-mas-rentables"><p>Calculando...</p></div>
             </section>
         </main>
     </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
