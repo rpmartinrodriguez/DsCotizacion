@@ -1787,3 +1787,56 @@ body.menu-open .header__menu-icon span:nth-child(3) {
 .btn-delete-cat:hover {
     color: var(--danger-color);
 }
+
+/* ====================================================== */
+/* MENÚ DE CATEGORÍAS (ACORDEÓN DESPLEGABLE)              */
+/* ====================================================== */
+.nav-category {
+    border-bottom: 1px solid var(--border-color);
+}
+.nav-category-btn {
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    padding: 1.2rem 1.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.nav-category-btn:hover { 
+    background: var(--secondary-bg); 
+}
+.nav-category-btn .nav-icon {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    font-weight: 300;
+    transition: transform 0.3s ease;
+}
+.nav-category-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background: #ffffff;
+}
+.nav-category.active .nav-category-content {
+    max-height: 600px; 
+}
+.nav-category.active .nav-category-btn .nav-icon {
+    transform: rotate(45deg); 
+}
+.nav-category-content .nav-menu__link {
+    margin: 0;
+    padding: 0.8rem 1.5rem 0.8rem 2.5rem;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(0,0,0,0.03);
+    font-size: 0.95rem;
+}
+.nav-category-content .nav-menu__link:last-child { 
+    border-bottom: none; 
+}
