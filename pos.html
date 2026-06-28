@@ -78,6 +78,25 @@
             background-color: var(--secondary-bg);
             color: var(--primary-color);
         }
+
+        /* Estilos específicos para la auditoría de stock */
+        .historial-auditoria {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 0.5rem;
+            background: #fafafa;
+            margin-top: 1rem;
+        }
+        .log-item {
+            font-size: 0.85rem;
+            padding: 0.4rem;
+            border-bottom: 1px solid #eee;
+        }
+        .log-item:last-child { border-bottom: none; }
+        .log-tipo-sumar { color: var(--success-color); font-weight: bold; }
+        .log-tipo-restar { color: var(--danger-color); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -97,17 +116,38 @@
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
                 <span class="nav-menu__title">Dulce App</span>
             </div>
-            <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
-            <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-            <a href="pos.html" class="nav-menu__link active"><span>🏪</span> Mostrador</a>
-            <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
-            <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-            <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-            <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-            <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
-            <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-            <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial</a>
-            <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
+
+            <div class="nav-category">
+                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="pos.html" class="nav-menu__link active"><span>🏪</span> Mostrador</a>
+                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
+                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
+                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
+                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
+                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
+                </div>
+            </div>
+
+            <div class="nav-category">
+                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
+                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
+                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
+                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
+                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
+                </div>
+            </div>
+
+            <div class="nav-category">
+                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
+                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
+                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+                </div>
+            </div>
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
@@ -130,11 +170,12 @@
             <section id="pantalla-pos" class="pos-grid" style="display: none;">
                 
                 <div class="card" style="margin-bottom: 0;">
-                    <div class="card-header-actions" style="margin-bottom: 1.5rem;">
+                    <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                         <h2 class="card__title" style="margin: 0;">Productos</h2>
-                        <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">
-                            Cerrar Caja
-                        </button>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button id="btn-ir-stock" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
+                            <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">Cerrar Caja</button>
+                        </div>
                     </div>
                     
                     <div class="buscador-container">
@@ -172,6 +213,33 @@
                         </div>
                         <button id="btn-cobrar" class="btn-primary" disabled>Cobrar y Registrar</button>
                     </div>
+                </div>
+            </section>
+
+            <section id="pantalla-stock-mostrador" class="card" style="display: none;">
+                <div class="card-header-actions" style="margin-bottom: 1.5rem;">
+                    <h2 class="card__title" style="margin: 0;">Inventario de Mostrador</h2>
+                    <button id="btn-volver-mostrador" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">🏪 Volver a Ventas</button>
+                </div>
+
+                <div class="buscador-container" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <input type="search" id="buscador-inventario" placeholder="Buscar en el inventario..." style="flex-grow: 1;">
+                    <button id="btn-nuevo-producto-mostrador" class="btn-primary" style="width: auto; padding: 0 1rem; font-size: 0.9rem;">➕ Nuevo Producto</button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="table-clean">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Precio Venta</th>
+                                <th style="text-align: center;">Stock Actual</th>
+                                <th style="text-align: center; width: 150px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-inventario-mostrador">
+                            </tbody>
+                    </table>
                 </div>
             </section>
         </main>
@@ -236,6 +304,53 @@
                 <button id="btn-confirmar-cierre" class="btn-primary" style="width: 48%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 10px 20px -5px rgba(239, 68, 68, 0.4);">
                     Cerrar Turno
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-stock-detalle" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 550px;">
+            <h2 class="card__title" id="modal-prod-titulo">Editar Producto</h2>
+            
+            <input type="hidden" id="modal-prod-id">
+            
+            <div class="form-group">
+                <label for="modal-prod-nombre">Nombre del Producto</label>
+                <input type="text" id="modal-prod-nombre" placeholder="Ej: Lemon Pie Grande">
+            </div>
+
+            <div class="form-group">
+                <label for="modal-prod-precio">Precio de Venta ($)</label>
+                <input type="number" id="modal-prod-precio" min="0" placeholder="0.00" step="50">
+            </div>
+
+            <div style="background: var(--secondary-bg); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                <h4 style="margin-top: 0; margin-bottom: 0.5rem;">Modificar Stock Actual</h4>
+                <p style="font-size: 0.9rem; margin: 0 0 0.75rem 0;">Stock actual en sistema: <strong id="modal-prod-stock-actual">0</strong> u.</p>
+                
+                <div style="display: flex; gap: 0.5rem;">
+                    <select id="modal-prod-tipo-movimiento" style="width: 130px;">
+                        <option value="SUMAR">➕ Agregar</option>
+                        <option value="RESTAR">➖ Quitar</option>
+                    </select>
+                    <input type="number" id="modal-prod-cantidad-movimiento" min="1" value="1" style="flex-grow: 1;" placeholder="Cantidad">
+                </div>
+                <div class="form-group" style="margin-top: 0.75rem; margin-bottom: 0;">
+                    <input type="text" id="modal-prod-motivo" placeholder="Motivo (Ej: Nueva tanda, Descarte, Rotura)" style="font-size: 0.85rem; padding: 0.4rem;">
+                </div>
+            </div>
+
+            <h4 style="margin-bottom: 0.5rem;">📋 Historial de Movimientos (Auditoría)</h4>
+            <div class="historial-auditoria" id="modal-prod-auditoria-logs">
+                <p class="text-light" style="font-size: 0.85rem; text-align: center;">Sin movimientos registrados.</p>
+            </div>
+
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
+                <button id="btn-eliminar-producto-mostrador" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem;">Eliminar Producto</button>
+                <div style="display: flex; gap: 0.5rem; width: 60%; justify-content: flex-end;">
+                    <button id="btn-cerrar-modal-stock" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">Cancelar</button>
+                    <button id="btn-guardar-modal-stock" class="btn-primary" style="width: auto; padding: 0.5rem 1.5rem;">Actualizar</button>
+                </div>
             </div>
         </div>
     </div>
