@@ -127,6 +127,7 @@
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
                 <span class="nav-menu__title">Dulce App</span>
             </div>
+            
             <div class="nav-category">
                 <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -138,6 +139,7 @@
                     <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
                 </div>
             </div>
+            
             <div class="nav-category">
                 <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -148,6 +150,7 @@
                     <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
                 </div>
             </div>
+            
             <div class="nav-category">
                 <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -296,7 +299,7 @@
 
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
-            <h2 class="card__title">Ajustar Movimiento de Stock</h2>
+            <h2 class="card__title">Ajustar Ficha de Producto</h2>
             <input type="hidden" id="modal-prod-id">
             
             <div class="form-group">
@@ -306,7 +309,7 @@
 
             <div class="form-group admin-only">
                 <label for="modal-prod-ganancia-indiv">Porcentaje de Ganancia Individual (%)</label>
-                <input type="number" id="modal-prod-ganancia-indiv" min="0" placeholder="Ej: 120 (Vacío usa margen global)">
+                <input type="number" id="modal-prod-ganancia-indiv" min="0" placeholder="Ej: 120 (Vacío usa el margen global)">
             </div>
 
             <div style="background: var(--secondary-bg); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
