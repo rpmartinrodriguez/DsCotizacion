@@ -68,7 +68,7 @@
         }
 
         .historial-auditoria {
-            max-height: 200px;
+            max-height: 150px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
@@ -90,6 +90,20 @@
             background: var(--secondary-bg);
             border-radius: 4px;
             color: var(--text-light);
+        }
+        
+        /* Clases ocultas para el rol de administrador */
+        .admin-only {
+            display: none !important;
+        }
+        .admin-open .admin-only {
+            display: inline-block !important;
+        }
+        table .admin-only {
+            display: none;
+        }
+        .admin-open table .admin-only {
+            display: table-cell !important;
         }
     </style>
 </head>
@@ -191,7 +205,7 @@
 
                 <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <h2 class="card__title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Detalle del Cliente</h2>
+                        <h2 class="card__title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Detail de Venta</h2>
                         <div class="cart-lista" id="carrito-pos-container">
                             <p class="text-light" style="text-align: center; margin-top: 2rem;">No hay productos en la venta actual.</p>
                         </div>
@@ -208,13 +222,17 @@
             </section>
 
             <section id="pantalla-stock-mostrador" class="card" style="display: none;">
-                <div class="card-header-actions" style="margin-bottom: 1.5rem;">
+                <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                     <h2 class="card__title" style="margin: 0;">Inventario de Mostrador</h2>
-                    <button id="btn-volver-mostrador" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">🏪 Volver a Ventas</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button id="btn-desbloquear-admin" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: #6366f1; color: #6366f1;">🔑 Modo Admin</button>
+                        <button id="btn-margen-global" class="btn-primary admin-only" style="width: auto; padding: 0.5rem 1rem; background: #6366f1;">⚙️ % Margen Global</button>
+                        <button id="btn-volver-mostrador" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">🏪 Volver a Ventas</button>
+                    </div>
                 </div>
 
-                <div class="buscador-container" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
-                    <input type="search" id="buscador-inventario" placeholder="Buscar en el inventario por nombre o categoría..." style="flex-grow: 1;">
+                <div class="buscador-container" style="margin-bottom: 1.5rem;">
+                    <input type="search" id="buscador-inventario" placeholder="Buscar en el inventario por nombre o categoría...">
                 </div>
 
                 <div style="overflow-x: auto;">
@@ -223,6 +241,8 @@
                             <tr>
                                 <th>Categoría</th>
                                 <th>Producto</th>
+                                <th>Costo Base</th>
+                                <th class="admin-only">% Ganancia</th>
                                 <th>Precio Venta</th>
                                 <th style="text-align: center;">Stock</th>
                                 <th style="text-align: center; width: 100px;">Acción</th>
@@ -273,17 +293,17 @@
 
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
-            <h2 class="card__title">Ajuste de Stock y Precio</h2>
+            <h2 class="card__title">Ajuste de Ficha de Producto</h2>
             <input type="hidden" id="modal-prod-id">
             
             <div class="form-group">
-                <label>Producto (Creado en Recetas)</label>
-                <input type="text" id="modal-prod-nombre" readonly style="background: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #e2e8f0;">
+                <label>Producto</label>
+                <input type="text" id="modal-prod-nombre" readonly style="background: #f1f5f9; color: #64748b; cursor: not-allowed;">
             </div>
 
-            <div class="form-group">
-                <label for="modal-prod-precio">Precio de Venta Mostrador ($)</label>
-                <input type="number" id="modal-prod-precio" min="0" placeholder="0.00" step="50">
+            <div class="form-group admin-only">
+                <label for="modal-prod-ganancia-indiv">Porcentaje de Ganancia Individual (%)</label>
+                <input type="number" id="modal-prod-ganancia-indiv" min="0" placeholder="Ej: 100 (Dejar vacío para usar margen global)">
             </div>
 
             <div style="background: var(--secondary-bg); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
@@ -295,7 +315,7 @@
                         <option value="SUMAR">➕ Agregar</option>
                         <option value="RESTAR">➖ Quitar</option>
                     </select>
-                    <input type="number" id="modal-prod-cantidad-movimiento" min="1" value="0" style="flex-grow: 1;" placeholder="Cantidad (Dejar en 0 si no se mueve)">
+                    <input type="number" id="modal-prod-cantidad-movimiento" min="0" value="0" style="flex-grow: 1;" placeholder="Cantidad">
                 </div>
                 <div class="form-group" style="margin-top: 0.75rem; margin-bottom: 0;">
                     <input type="text" id="modal-prod-motivo" placeholder="Motivo (Ej: Nueva tanda, Descarte)" style="font-size: 0.85rem; padding: 0.4rem;">
