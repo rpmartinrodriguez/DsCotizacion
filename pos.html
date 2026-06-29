@@ -92,7 +92,7 @@
             color: var(--text-light);
         }
         
-        /* Clases ocultas para el rol de administrador */
+        /* Control visual estricto para el rol de administrador */
         .admin-only {
             display: none !important;
         }
@@ -104,6 +104,9 @@
         }
         .admin-open table .admin-only {
             display: table-cell !important;
+        }
+        .admin-open div.admin-only {
+            display: block !important;
         }
     </style>
 </head>
@@ -205,7 +208,7 @@
 
                 <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <h2 class="card__title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Detail de Venta</h2>
+                        <h2 class="card__title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Detalle de Venta</h2>
                         <div class="cart-lista" id="carrito-pos-container">
                             <p class="text-light" style="text-align: center; margin-top: 2rem;">No hay productos en la venta actual.</p>
                         </div>
@@ -226,7 +229,7 @@
                     <h2 class="card__title" style="margin: 0;">Inventario de Mostrador</h2>
                     <div style="display: flex; gap: 0.5rem;">
                         <button id="btn-desbloquear-admin" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: #6366f1; color: #6366f1;">🔑 Modo Admin</button>
-                        <button id="btn-margen-global" class="btn-primary admin-only" style="width: auto; padding: 0.5rem 1rem; background: #6366f1;">⚙️ % Margen Global</button>
+                        <button id="btn-margen-global" class="btn-primary admin-only" style="width: auto; padding: 0.5rem 1rem; background: #6366f1;">⚙️ Margen Global</button>
                         <button id="btn-volver-mostrador" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">🏪 Volver a Ventas</button>
                     </div>
                 </div>
@@ -245,7 +248,7 @@
                                 <th class="admin-only">% Ganancia</th>
                                 <th>Precio Venta</th>
                                 <th style="text-align: center;">Stock</th>
-                                <th style="text-align: center; width: 100px;">Acción</th>
+                                <th style="text-align: center; width: 180px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-inventario-mostrador">
@@ -293,7 +296,7 @@
 
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
-            <h2 class="card__title">Ajuste de Ficha de Producto</h2>
+            <h2 class="card__title">Ajustar Movimiento de Stock</h2>
             <input type="hidden" id="modal-prod-id">
             
             <div class="form-group">
@@ -303,11 +306,11 @@
 
             <div class="form-group admin-only">
                 <label for="modal-prod-ganancia-indiv">Porcentaje de Ganancia Individual (%)</label>
-                <input type="number" id="modal-prod-ganancia-indiv" min="0" placeholder="Ej: 100 (Dejar vacío para usar margen global)">
+                <input type="number" id="modal-prod-ganancia-indiv" min="0" placeholder="Ej: 120 (Vacío usa margen global)">
             </div>
 
             <div style="background: var(--secondary-bg); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-                <h4 style="margin-top: 0; margin-bottom: 0.5rem;">Modificar Stock Actual</h4>
+                <h4 style="margin-top: 0; margin-bottom: 0.5rem;">Modificar Unidades</h4>
                 <p style="font-size: 0.9rem; margin: 0 0 0.75rem 0;">Stock actual en sistema: <strong id="modal-prod-stock-actual">0</strong> u.</p>
                 
                 <div style="display: flex; gap: 0.5rem;">
