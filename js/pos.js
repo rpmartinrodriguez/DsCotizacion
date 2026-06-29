@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, where, orderBy, doc, 
-    addDoc, updateDoc, Timestamp, runTransaction, getDocs 
+    addDoc, updateDoc, Timestamp, runTransaction, getDocs, setDoc 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
@@ -11,7 +11,7 @@ export function setupPOS(app) {
     // Colecciones principales
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
-    const recetasCollection = collection(db, 'recetas'); // ¡Ahora leemos de acá!
+    const recetasCollection = collection(db, 'recetas'); 
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
 
     // --- Referencias DOM: Vistas ---
@@ -45,17 +45,20 @@ export function setupPOS(app) {
     const btnCancelarCierre = document.getElementById('btn-cancelar-cierre');
     const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
 
-    // --- Referencias DOM: Inventario y Auditoría ---
+    // --- Referencias DOM: Inventario y Reglas Admin ---
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const buscadorInventario = document.getElementById('buscador-inventario');
     const tablaInventario = document.getElementById('tabla-inventario-mostrador');
+    const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
+    const btnMargenGlobal = document.getElementById('btn-margen-global');
 
     // Modal Stock
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
-    const modalProdPrecio = document.getElementById('modal-prod-precio');
+    const modalProdPrecio = document.getElementById('modal-prod-precio'); // Queda en desuso directo, se calcula
+    const modalProdGananciaIndiv = document.getElementById('modal-prod-ganancia-indiv');
     const modalProdStockActual = document.getElementById('modal-prod-stock-actual');
     const modalProdTipoMov = document.getElementById('modal-prod-tipo-movimiento');
     const modalProdCantMov = document.getElementById('modal-prod-cantidad-movimiento');
@@ -71,8 +74,9 @@ export function setupPOS(app) {
     let productosDisponibles = [];
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
+    let margenGlobal = 0; // Se sincroniza desde Firebase
 
-    // Helpers
+    // Helpers de Formato
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp) return '';
@@ -80,8 +84,76 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
+    // Helper: Calcular Precio de Venta basado en Costo y Margen
+    const calcularPrecioVenta = (receta) => {
+        const costo = receta.costoTotal || receta.costoMateriaPrima || receta.costo || 0;
+        
+        // Si tiene margen individual asignado usa ese, sino cae en el global
+        const tieneMargenIndiv = receta.margenIndividual !== undefined && receta.margenIndividual !== null && receta.margenIndividual !== '';
+        const margenAplicado = tieneMargenIndiv ? parseFloat(receta.margenIndividual) : margenGlobal;
+        
+        return costo * (1 + (margenAplicado / 100));
+    };
+
     // ==========================================
-    // 1. AUTENTICACIÓN Y CONTROL DE CAJA
+    // 1. CONTROL DE CONFIGURACIÓN GLOBAL (MARGEN)
+    // ==========================================
+    onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
+        if (docSnap.exists()) {
+            margenGlobal = docSnap.data().margenGlobal || 0;
+        } else {
+            setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: 0 });
+        }
+        // Refrescar las listas si cambian los márgenes globales en vivo
+        if (productosDisponibles.length > 0) {
+            if (pantallaPOS.style.display !== 'none') renderizarProductosPOS(productosDisponibles);
+            if (pantallaStock.style.display !== 'none') renderizarInventario(productosDisponibles);
+        }
+    });
+
+    // Contraseña modo administrador
+    if (btnDesbloquearAdmin) {
+        btnDesbloquearAdmin.addEventListener('click', () => {
+            if (document.body.classList.contains('admin-open')) {
+                document.body.classList.remove('admin-open');
+                btnDesbloquearAdmin.textContent = "🔑 Modo Admin";
+                renderizarInventario(productosDisponibles);
+                return;
+            }
+
+            const pass = prompt("Ingrese la contraseña de Administrador:");
+            if (pass === "Lautaro2026") {
+                document.body.classList.add('admin-open');
+                btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
+                renderizarInventario(productosDisponibles);
+            } else if (pass !== null) {
+                alert("Contraseña incorrecta.");
+            }
+        });
+    }
+
+    // Modificar margen global (Admin Only)
+    if (btnMargenGlobal) {
+        btnMargenGlobal.addEventListener('click', async () => {
+            const nuevoMargen = prompt("Ingrese el nuevo porcentaje de Margen Ganancia Global (%):", margenGlobal);
+            if (nuevoMargen !== null && nuevoMargen.trim() !== "") {
+                const margenNum = parseFloat(nuevoMargen);
+                if (isNaN(margenNum) || margenNum < 0) {
+                    alert("Por favor, ingrese un número válido.");
+                    return;
+                }
+                try {
+                    await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
+                    alert(`Margen global actualizado al ${margenNum}% correctamente.`);
+                } catch (e) {
+                    alert("Error al guardar el margen global.");
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // 2. AUTENTICACIÓN Y CONTROL DE CAJA
     // ==========================================
     onAuthStateChanged(auth, user => {
         if (user) {
@@ -137,7 +209,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 2. NAVEGACIÓN Y CARGA DE PRODUCTOS (RECETAS)
+    // 3. NAVEGACIÓN INTERNA
     // ==========================================
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
@@ -156,11 +228,9 @@ export function setupPOS(app) {
     }
 
     const cargarProductos = () => {
-        // Leemos la colección RECETAS ordenando por nombre de la torta
         onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
             productosDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // Actualizar la vista activa
             if (pantallaPOS.style.display !== 'none') {
                 renderizarProductosPOS(productosDisponibles);
             } else if (pantallaStock.style.display !== 'none') {
@@ -170,27 +240,35 @@ export function setupPOS(app) {
     };
 
     // ==========================================
-    // 3. LÓGICA DE INVENTARIO Y AUDITORÍA
+    // 4. LÓGICA DE INVENTARIO (LISTADO INDEPENDIENTE)
     // ==========================================
     const renderizarInventario = (productos) => {
         if (!tablaInventario) return;
         tablaInventario.innerHTML = '';
         
         if (productos.length === 0) {
-            tablaInventario.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">No hay recetas cargadas en el sistema.</td></tr>';
+            tablaInventario.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem;">No hay recetas cargadas en el sistema.</td></tr>';
             return;
         }
 
         productos.forEach(prod => {
-            const precio = prod.precioVenta || 0;
+            const costo = prod.costoTotal || prod.costoMateriaPrima || prod.costo || 0;
             const stock = prod.stockMostrador || 0;
             const categoria = prod.categoria || 'Sin Categoría';
+            
+            const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
+            const margenMostrado = tieneMargenIndiv ? parseFloat(prod.margenIndividual) : margenGlobal;
+            const tipoMargenTexto = tieneMargenIndiv ? '(Indiv)' : '(Global)';
+            
+            const precioVentaCalculado = calcularPrecioVenta(prod);
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td data-label="Categoría"><span class="categoria-tag">${categoria}</span></td>
                 <td data-label="Producto"><strong>${prod.nombreTorta}</strong></td>
-                <td data-label="Precio">${formatMoneda(precio)}</td>
+                <td data-label="Costo Base">${formatMoneda(costo)}</td>
+                <td class="admin-only" data-label="% Ganancia">${margenMostrado}% <small style="color:var(--text-light);">${tipoMargenTexto}</small></td>
+                <td data-label="Precio Venta" style="font-weight: bold; color: var(--primary-color);">${formatMoneda(precioVentaCalculado)}</td>
                 <td data-label="Stock" style="text-align: center; color: ${stock > 0 ? 'var(--text-main)' : 'var(--danger-color)'}">
                     <strong>${stock}</strong> u.
                 </td>
@@ -226,7 +304,7 @@ export function setupPOS(app) {
     const abrirModalStock = async (prod) => {
         modalProdId.value = prod.id;
         modalProdNombre.value = prod.nombreTorta;
-        modalProdPrecio.value = prod.precioVenta || '';
+        modalProdGananciaIndiv.value = prod.margenIndividual !== undefined ? prod.margenIndividual : '';
         modalProdStockActual.textContent = prod.stockMostrador || '0';
         modalProdCantMov.value = '0';
         modalProdMotivo.value = '';
@@ -267,7 +345,7 @@ export function setupPOS(app) {
             });
         } catch (error) {
             console.error("Error al cargar auditoría:", error);
-            modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Error al cargar historial. Recordá que requiere los índices compuestos en Firebase.</p>';
+            modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Error al cargar historial.</p>';
         }
     };
 
@@ -279,12 +357,10 @@ export function setupPOS(app) {
         btnGuardarStock.addEventListener('click', async () => {
             const id = modalProdId.value;
             const nombre = modalProdNombre.value;
-            const precio = parseFloat(modalProdPrecio.value) || 0;
+            const gananciaIndivRaw = modalProdGananciaIndiv.value.trim();
             const tipoMov = modalProdTipoMov.value;
             const cantMov = parseInt(modalProdCantMov.value) || 0;
             const motivo = modalProdMotivo.value.trim();
-
-            if (precio < 0) return alert("El precio no puede ser negativo.");
 
             btnGuardarStock.disabled = true;
             btnGuardarStock.textContent = 'Guardando...';
@@ -299,7 +375,6 @@ export function setupPOS(app) {
                     let nuevoStock = stockActual;
                     let movimientoRegistrado = false;
 
-                    // Procesar stock si se ingresó cantidad > 0
                     if (cantMov > 0) {
                         if (tipoMov === 'SUMAR') {
                             nuevoStock = stockActual + cantMov;
@@ -310,13 +385,16 @@ export function setupPOS(app) {
                         movimientoRegistrado = true;
                     }
 
-                    // Actualizar documento de la receta
-                    transaction.update(docRef, {
-                        precioVenta: precio,
-                        stockMostrador: nuevoStock
-                    });
+                    // Preparar datos de actualización de la receta
+                    const updates = { stockMostrador: nuevoStock };
+                    
+                    // Solo el administrador o la presencia de la clase guarda cambios de margen
+                    if (document.body.classList.contains('admin-open')) {
+                        updates.margenIndividual = gananciaIndivRaw === "" ? null : parseFloat(gananciaIndivRaw);
+                    }
 
-                    // Generar auditoría si se movió el stock
+                    transaction.update(docRef, updates);
+
                     if (movimientoRegistrado) {
                         const auditRef = doc(auditoriaCollection); 
                         transaction.set(auditRef, {
@@ -336,7 +414,7 @@ export function setupPOS(app) {
                 modalStock.classList.remove('visible');
             } catch (error) {
                 console.error("Error al guardar producto:", error);
-                alert("Hubo un error al actualizar el stock o precio.");
+                alert("Hubo un error al guardar los cambios.");
             }
 
             btnGuardarStock.disabled = false;
@@ -345,24 +423,24 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 4. LÓGICA DEL MOSTRADOR (P.O.S)
+    // 5. LÓGICA DEL MOSTRADOR (P.O.S)
     // ==========================================
     const renderizarProductosPOS = (productos) => {
         if (!listaProductosPOS) return;
         listaProductosPOS.innerHTML = '';
         productos.forEach(prod => {
-            const precio = prod.precioVenta || 0;
             const stock = prod.stockMostrador || 0;
+            const precioCalculado = calcularPrecioVenta(prod);
             
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td data-label="Producto"><strong>${prod.nombreTorta}</strong></td>
                 <td data-label="Stock" style="color: ${stock > 0 ? 'var(--text-main)' : 'var(--danger-color)'}">${stock} u.</td>
-                <td data-label="Precio" style="color: var(--primary-color); font-weight: 500;">${formatMoneda(precio)}</td>
+                <td data-label="Precio" style="color: var(--primary-color); font-weight: 500;">${formatMoneda(precioCalculado)}</td>
                 <td data-label="Cantidad" style="text-align: center;">
                     <div style="display: flex; gap: 5px; align-items: center; justify-content: center;">
                         <input type="number" min="1" max="${stock}" value="1" class="producto-cantidad-input" id="cant-${prod.id}" ${stock <= 0 ? 'disabled' : ''} style="padding: 0.3rem; border: 1px solid var(--border-color); border-radius: 4px;">
-                        <button class="btn-primary btn-add-cart" data-id="${prod.id}" data-nombre="${prod.nombreTorta}" data-precio="${precio}" data-stock="${stock}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.9rem;" ${stock <= 0 || precio <= 0 ? 'disabled' : ''} title="Agregar">+</button>
+                        <button class="btn-primary btn-add-cart" data-id="${prod.id}" data-nombre="${prod.nombreTorta}" data-precio="${precioCalculated = precioCalculado}" data-stock="${stock}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.9rem;" ${stock <= 0 ? 'disabled' : ''} title="Agregar">+</button>
                     </div>
                 </td>
             `;
@@ -456,7 +534,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 5. PROCESO DE COBRO Y CIERRE
+    // 6. PROCESO DE COBRO Y CIERRE
     // ==========================================
     if (btnCobrar) {
         btnCobrar.addEventListener('click', () => {
@@ -492,7 +570,6 @@ export function setupPOS(app) {
                     return { id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad };
                 });
 
-                // 1. Restar stock y generar auditoría usando transacciones (En RECETAS)
                 for (const item of carritoActual) {
                     const docRef = doc(db, 'recetas', item.id);
                     await runTransaction(db, async (transaction) => {
@@ -503,10 +580,8 @@ export function setupPOS(app) {
                         let nuevoStock = stockActual - item.cantidad;
                         if (nuevoStock < 0) nuevoStock = 0;
                         
-                        // Actualizar stock en la receta
                         transaction.update(docRef, { stockMostrador: nuevoStock });
 
-                        // Generar log de auditoría
                         const auditRef = doc(auditoriaCollection);
                         transaction.set(auditRef, {
                             productoId: item.id,
@@ -522,7 +597,6 @@ export function setupPOS(app) {
                     });
                 }
 
-                // 2. Registrar la venta global
                 await addDoc(ventasCollection, {
                     cajaId: cajaActiva.id,
                     fecha: Timestamp.now(),
@@ -532,7 +606,6 @@ export function setupPOS(app) {
                     vendedor: userName
                 });
 
-                // 3. Actualizar caja
                 const cajaRef = doc(db, 'cajas', cajaActiva.id);
                 const actualizacionCaja = {};
                 if (metodoPagoSeleccionado === 'Efectivo') {
