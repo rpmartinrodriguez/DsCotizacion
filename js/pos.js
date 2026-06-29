@@ -8,18 +8,18 @@ export function setupPOS(app) {
     const db = getFirestore(app);
     const auth = getAuth(app);
     
-    // Colecciones principales
+    // Colecciones principales de la App
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const recetasCollection = collection(db, 'recetas'); 
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
 
-    // --- Referencias DOM: Vistas ---
+    // --- Referencias DOM: Vistas de Pantalla ---
     const pantallaApertura = document.getElementById('pantalla-apertura');
     const pantallaPOS = document.getElementById('pantalla-pos');
     const pantallaStock = document.getElementById('pantalla-stock-mostrador');
 
-    // --- Referencias DOM: Caja y POS ---
+    // --- Referencias DOM: Caja y Mostrador Vendedor ---
     const usuarioNombreEl = document.getElementById('usuario-activo-nombre');
     const fondoCajaInput = document.getElementById('fondo-caja-input');
     const btnAbrirCaja = document.getElementById('btn-abrir-caja');
@@ -30,7 +30,7 @@ export function setupPOS(app) {
     const posTotalMonto = document.getElementById('pos-total-monto');
     const btnCobrar = document.getElementById('btn-cobrar');
 
-    // Modales Caja
+    // Modales de Cobro y Cierre de Caja
     const modalCobro = document.getElementById('modal-cobro');
     const modalCobroTotal = document.getElementById('modal-cobro-total');
     const btnPaymentMethods = document.querySelectorAll('.btn-payment');
@@ -45,7 +45,7 @@ export function setupPOS(app) {
     const btnCancelarCierre = document.getElementById('btn-cancelar-cierre');
     const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
 
-    // --- Referencias DOM: Inventario y Reglas Admin ---
+    // --- Referencias DOM: Inventario y Reglas del Administrador ---
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const buscadorInventario = document.getElementById('buscador-inventario');
@@ -53,11 +53,10 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
-    // Modal Stock
+    // Modal de Edición de Stock e Historial
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
-    const modalProdPrecio = document.getElementById('modal-prod-precio'); // Queda en desuso directo, se calcula
     const modalProdGananciaIndiv = document.getElementById('modal-prod-ganancia-indiv');
     const modalProdStockActual = document.getElementById('modal-prod-stock-actual');
     const modalProdTipoMov = document.getElementById('modal-prod-tipo-movimiento');
@@ -67,16 +66,16 @@ export function setupPOS(app) {
     const btnCancelarStock = document.getElementById('btn-cerrar-modal-stock');
     const btnGuardarStock = document.getElementById('btn-guardar-modal-stock');
 
-    // --- Estado de la App ---
+    // --- Estado General de la Aplicación ---
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
     let productosDisponibles = [];
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
-    let margenGlobal = 0; // Se sincroniza desde Firebase
+    let margenGlobal = 0; 
 
-    // Helpers de Formato
+    // Métodos Helpers para Formatos Comunes
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp) return '';
@@ -84,19 +83,16 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
-    // Helper: Calcular Precio de Venta basado en Costo y Margen
+    // FUNCIÓN MATEMÁTICA: Calcular el precio de venta final según costos de insumos y márgenes establecidos
     const calcularPrecioVenta = (receta) => {
         const costo = receta.costoTotal || receta.costoMateriaPrima || receta.costo || 0;
-        
-        // Si tiene margen individual asignado usa ese, sino cae en el global
         const tieneMargenIndiv = receta.margenIndividual !== undefined && receta.margenIndividual !== null && receta.margenIndividual !== '';
         const margenAplicado = tieneMargenIndiv ? parseFloat(receta.margenIndividual) : margenGlobal;
-        
         return costo * (1 + (margenAplicado / 100));
     };
 
     // ==========================================
-    // 1. CONTROL DE CONFIGURACIÓN GLOBAL (MARGEN)
+    // 1. CONFIGURACIÓN GLOBAL (MARGEN DE GANANCIAS)
     // ==========================================
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
         if (docSnap.exists()) {
@@ -104,14 +100,13 @@ export function setupPOS(app) {
         } else {
             setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: 0 });
         }
-        // Refrescar las listas si cambian los márgenes globales en vivo
         if (productosDisponibles.length > 0) {
-            if (pantallaPOS.style.display !== 'none') renderizarProductosPOS(productosDisponibles);
-            if (pantallaStock.style.display !== 'none') renderizarInventario(productosDisponibles);
+            renderizarProductosPOS(productosDisponibles);
+            renderizarInventario(productosDisponibles);
         }
     });
 
-    // Contraseña modo administrador
+    // Control de Clave de Seguridad Administrador
     if (btnDesbloquearAdmin) {
         btnDesbloquearAdmin.addEventListener('click', () => {
             if (document.body.classList.contains('admin-open')) {
@@ -127,33 +122,33 @@ export function setupPOS(app) {
                 btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
                 renderizarInventario(productosDisponibles);
             } else if (pass !== null) {
-                alert("Contraseña incorrecta.");
+                alert("Contraseña incorrecta de acceso.");
             }
         });
     }
 
-    // Modificar margen global (Admin Only)
+    // Configurar Margen de Ganancia Global
     if (btnMargenGlobal) {
         btnMargenGlobal.addEventListener('click', async () => {
-            const nuevoMargen = prompt("Ingrese el nuevo porcentaje de Margen Ganancia Global (%):", margenGlobal);
+            const nuevoMargen = prompt("Defina el nuevo porcentaje de Margen de Ganancia Global (%):", margenGlobal);
             if (nuevoMargen !== null && nuevoMargen.trim() !== "") {
                 const margenNum = parseFloat(nuevoMargen);
                 if (isNaN(margenNum) || margenNum < 0) {
-                    alert("Por favor, ingrese un número válido.");
+                    alert("Ingrese un porcentaje numérico válido.");
                     return;
                 }
                 try {
                     await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
-                    alert(`Margen global actualizado al ${margenNum}% correctamente.`);
+                    alert(`Margen global configurado en ${margenNum}% exitosamente.`);
                 } catch (e) {
-                    alert("Error al guardar el margen global.");
+                    alert("Error guardando configuraciones globales.");
                 }
             }
         });
     }
 
     // ==========================================
-    // 2. AUTENTICACIÓN Y CONTROL DE CAJA
+    // 2. AUTENTICACIÓN Y APERTURA DE TURNOS
     // ==========================================
     onAuthStateChanged(auth, user => {
         if (user) {
@@ -173,7 +168,14 @@ export function setupPOS(app) {
                 const cajaDoc = snapshot.docs[0];
                 cajaActiva = { id: cajaDoc.id, ...cajaDoc.data() };
                 pantallaApertura.style.display = 'none';
-                pantallaPOS.style.display = 'grid';
+                
+                // Mantener al usuario en la vista que estaba antes de la actualización en tiempo real
+                if (pantallaStock.style.display === 'block') {
+                    pantallaPOS.style.display = 'none';
+                } else {
+                    pantallaPOS.style.display = 'grid';
+                    pantallaStock.style.display = 'none';
+                }
                 cargarProductos();
             } else {
                 cajaActiva = null;
@@ -202,14 +204,14 @@ export function setupPOS(app) {
                 btnAbrirCaja.disabled = false;
             } catch (e) {
                 console.error("Error al abrir caja:", e);
-                alert("No se pudo abrir la caja.");
+                alert("No se pudo iniciar el turno de caja.");
                 btnAbrirCaja.disabled = false;
             }
         });
     }
 
     // ==========================================
-    // 3. NAVEGACIÓN INTERNA
+    // 3. CONTROL DE NAVEGACIÓN DE VISTAS INTERNAS
     // ==========================================
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
@@ -233,21 +235,22 @@ export function setupPOS(app) {
             
             if (pantallaPOS.style.display !== 'none') {
                 renderizarProductosPOS(productosDisponibles);
-            } else if (pantallaStock.style.display !== 'none') {
+            } 
+            if (pantallaStock.style.display !== 'none') {
                 renderizarInventario(productosDisponibles);
             }
         });
     };
 
     // ==========================================
-    // 4. LÓGICA DE INVENTARIO (LISTADO INDEPENDIENTE)
+    // 4. LOGICA DE CONTROL DE STOCK (ADMIN / INVENTARIO)
     // ==========================================
     const renderizarInventario = (productos) => {
         if (!tablaInventario) return;
         tablaInventario.innerHTML = '';
         
         if (productos.length === 0) {
-            tablaInventario.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem;">No hay recetas cargadas en el sistema.</td></tr>';
+            tablaInventario.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem;">No hay recetas dadas de alta en el sistema.</td></tr>';
             return;
         }
 
@@ -304,7 +307,7 @@ export function setupPOS(app) {
     const abrirModalStock = async (prod) => {
         modalProdId.value = prod.id;
         modalProdNombre.value = prod.nombreTorta;
-        modalProdGananciaIndiv.value = prod.margenIndividual !== undefined ? prod.margenIndividual : '';
+        modalProdGananciaIndiv.value = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
         modalProdStockActual.textContent = prod.stockMostrador || '0';
         modalProdCantMov.value = '0';
         modalProdMotivo.value = '';
@@ -344,7 +347,7 @@ export function setupPOS(app) {
                 modalProdAuditoria.appendChild(logDiv);
             });
         } catch (error) {
-            console.error("Error al cargar auditoría:", error);
+            console.error("Error cargando logs auditoria:", error);
             modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Error al cargar historial.</p>';
         }
     };
@@ -385,10 +388,9 @@ export function setupPOS(app) {
                         movimientoRegistrado = true;
                     }
 
-                    // Preparar datos de actualización de la receta
                     const updates = { stockMostrador: nuevoStock };
                     
-                    // Solo el administrador o la presencia de la clase guarda cambios de margen
+                    // Solo el Administrador autenticado tiene permisos para modificar márgenes
                     if (document.body.classList.contains('admin-open')) {
                         updates.margenIndividual = gananciaIndivRaw === "" ? null : parseFloat(gananciaIndivRaw);
                     }
@@ -413,7 +415,7 @@ export function setupPOS(app) {
                 
                 modalStock.classList.remove('visible');
             } catch (error) {
-                console.error("Error al guardar producto:", error);
+                console.error("Error al actualizar la ficha del producto:", error);
                 alert("Hubo un error al guardar los cambios.");
             }
 
@@ -423,11 +425,12 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 5. LÓGICA DEL MOSTRADOR (P.O.S)
+    // 5. CAJA REGISTRADORA DEL MOSTRADOR (VENDEDOR)
     // ==========================================
     const renderizarProductosPOS = (productos) => {
         if (!listaProductosPOS) return;
         listaProductosPOS.innerHTML = '';
+        
         productos.forEach(prod => {
             const stock = prod.stockMostrador || 0;
             const precioCalculado = calcularPrecioVenta(prod);
@@ -440,7 +443,7 @@ export function setupPOS(app) {
                 <td data-label="Cantidad" style="text-align: center;">
                     <div style="display: flex; gap: 5px; align-items: center; justify-content: center;">
                         <input type="number" min="1" max="${stock}" value="1" class="producto-cantidad-input" id="cant-${prod.id}" ${stock <= 0 ? 'disabled' : ''} style="padding: 0.3rem; border: 1px solid var(--border-color); border-radius: 4px;">
-                        <button class="btn-primary btn-add-cart" data-id="${prod.id}" data-nombre="${prod.nombreTorta}" data-precio="${precioCalculated = precioCalculado}" data-stock="${stock}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.9rem;" ${stock <= 0 ? 'disabled' : ''} title="Agregar">+</button>
+                        <button class="btn-primary btn-add-cart" data-id="${prod.id}" data-nombre="${prod.nombreTorta}" data-precio="${precioCalculado}" data-stock="${stock}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.9rem;" ${stock <= 0 ? 'disabled' : ''} title="Agregar">+</button>
                     </div>
                 </td>
             `;
@@ -468,14 +471,14 @@ export function setupPOS(app) {
                 const cantidad = parseInt(inputCant.value) || 1;
 
                 if (cantidad > stockMax) {
-                    alert(`Solo hay ${stockMax} en stock.`);
+                    alert(`Solo hay ${stockMax} unidades en stock.`);
                     return;
                 }
 
                 const existe = carritoActual.find(i => i.id === id);
                 if (existe) {
                     if (existe.cantidad + cantidad > stockMax) {
-                        alert(`Superas el stock disponible (${stockMax}).`);
+                        alert(`Superas el stock disponible físico (${stockMax}).`);
                         return;
                     }
                     existe.cantidad += cantidad;
@@ -534,7 +537,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 6. PROCESO DE COBRO Y CIERRE
+    // 6. PROCESAMIENTO DE TRANSACCIONES Y CIERRES
     // ==========================================
     if (btnCobrar) {
         btnCobrar.addEventListener('click', () => {
@@ -570,6 +573,7 @@ export function setupPOS(app) {
                     return { id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad };
                 });
 
+                // Descontar existencias y generar trazabilidad del movimiento en la base
                 for (const item of carritoActual) {
                     const docRef = doc(db, 'recetas', item.id);
                     await runTransaction(db, async (transaction) => {
@@ -597,6 +601,7 @@ export function setupPOS(app) {
                     });
                 }
 
+                // Guardar movimiento contable de la venta
                 await addDoc(ventasCollection, {
                     cajaId: cajaActiva.id,
                     fecha: Timestamp.now(),
@@ -606,6 +611,7 @@ export function setupPOS(app) {
                     vendedor: userName
                 });
 
+                // Registrar ingresos en la caja activa del turno
                 const cajaRef = doc(db, 'cajas', cajaActiva.id);
                 const actualizacionCaja = {};
                 if (metodoPagoSeleccionado === 'Efectivo') {
@@ -621,8 +627,8 @@ export function setupPOS(app) {
                 btnConfirmarVenta.textContent = 'Confirmar';
 
             } catch (error) {
-                console.error("Error al procesar venta:", error);
-                alert("Hubo un error al confirmar la venta.");
+                console.error("Error al procesar la venta:", error);
+                alert("Hubo un error de red al procesar el cobro.");
                 btnConfirmarVenta.disabled = false;
                 btnConfirmarVenta.textContent = 'Confirmar';
             }
@@ -662,8 +668,8 @@ export function setupPOS(app) {
                 btnConfirmarCierre.disabled = false;
                 btnConfirmarCierre.textContent = 'Cerrar Turno';
             } catch (error) {
-                console.error("Error cerrando caja:", error);
-                alert("No se pudo cerrar la caja.");
+                console.error("Error cerrando caja de forma definitiva:", error);
+                alert("No se pudo efectuar el cierre.");
                 btnConfirmarCierre.disabled = false;
                 btnConfirmarCierre.textContent = 'Cerrar Turno';
             }
