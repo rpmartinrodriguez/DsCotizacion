@@ -12,6 +12,7 @@ export function setupPOS(app) {
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const recetasCollection = collection(db, 'recetas'); 
+    const materiasPrimasCollection = collection(db, 'materiasPrimas'); // Nueva conexión para costos
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
 
     // --- Referencias DOM: Vistas de Pantalla ---
@@ -57,7 +58,6 @@ export function setupPOS(app) {
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
-    // El input del modal para ganancia individual ya no es tan necesario con el botón rápido, pero lo mantenemos sincronizado
     const modalProdGananciaIndiv = document.getElementById('modal-prod-ganancia-indiv');
     const modalProdStockActual = document.getElementById('modal-prod-stock-actual');
     const modalProdTipoMov = document.getElementById('modal-prod-tipo-movimiento');
@@ -71,7 +71,11 @@ export function setupPOS(app) {
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
-    let productosDisponibles = [];
+    
+    let materiasPrimasMap = new Map(); // Para calcular costos
+    let recetasBrutas = []; // Las recetas tal como vienen de Firebase
+    let productosDisponibles = []; // Recetas ya procesadas con el costo matemático
+    
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
@@ -84,20 +88,25 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
-    // Función extra para buscar el costo sin importar cómo lo haya guardado la otra página
-    const obtenerCostoBase = (receta) => {
-        return Number(receta.costoTotal) || 
-               Number(receta.precioCosto) || 
-               Number(receta.costoMateriaPrima) || 
-               Number(receta.costo) || 
-               0;
+    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base (Extraído de Lista de Precios)
+    const calcularCostoUnitarioReceta = (receta) => {
+        let costoTotal = 0;
+        if (!receta.ingredientes) return 0;
+        receta.ingredientes.forEach(ing => {
+            const mp = materiasPrimasMap.get(ing.idMateriaPrima);
+            if (mp && mp.lotes && mp.lotes.length > 0) {
+                const ultimoLote = [...mp.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds)[0];
+                costoTotal += (ultimoLote.costoUnitario || 0) * ing.cantidad;
+            }
+        });
+        return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
-    // FUNCIÓN MATEMÁTICA: Calcular el precio de venta final según costos de insumos y márgenes
-    const calcularPrecioVenta = (receta) => {
-        const costo = obtenerCostoBase(receta);
-        const tieneMargenIndiv = receta.margenIndividual !== undefined && receta.margenIndividual !== null && receta.margenIndividual !== '';
-        const margenAplicado = tieneMargenIndiv ? parseFloat(receta.margenIndividual) : margenGlobal;
+    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final aplicando márgenes
+    const calcularPrecioVenta = (prod) => {
+        const costo = prod.costoBaseCalculado || 0;
+        const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
+        const margenAplicado = tieneMargenIndiv ? parseFloat(prod.margenIndividual) : margenGlobal;
         return costo * (1 + (margenAplicado / 100));
     };
 
@@ -110,10 +119,7 @@ export function setupPOS(app) {
         } else {
             setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: 0 });
         }
-        if (productosDisponibles.length > 0) {
-            renderizarProductosPOS(productosDisponibles);
-            renderizarInventario(productosDisponibles);
-        }
+        procesarYRenderizar();
     });
 
     // Control de Clave de Seguridad Administrador
@@ -122,7 +128,7 @@ export function setupPOS(app) {
             if (document.body.classList.contains('admin-open')) {
                 document.body.classList.remove('admin-open');
                 btnDesbloquearAdmin.textContent = "🔑 Modo Admin";
-                renderizarInventario(productosDisponibles);
+                procesarYRenderizar();
                 return;
             }
 
@@ -130,7 +136,7 @@ export function setupPOS(app) {
             if (pass === "Lautaro2026") {
                 document.body.classList.add('admin-open');
                 btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
-                renderizarInventario(productosDisponibles);
+                procesarYRenderizar();
             } else if (pass !== null) {
                 alert("Contraseña incorrecta de acceso.");
             }
@@ -149,7 +155,6 @@ export function setupPOS(app) {
                 }
                 try {
                     await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
-                    // No hace falta alert, se actualiza en tiempo real
                 } catch (e) {
                     alert("Error guardando configuraciones globales.");
                 }
@@ -185,7 +190,7 @@ export function setupPOS(app) {
                     pantallaPOS.style.display = 'grid';
                     pantallaStock.style.display = 'none';
                 }
-                cargarProductos();
+                cargarDataYCostos();
             } else {
                 cajaActiva = null;
                 pantallaPOS.style.display = 'none';
@@ -220,13 +225,13 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 3. CONTROL DE NAVEGACIÓN DE VISTAS INTERNAS
+    // 3. CARGA DE DATOS Y MATEMÁTICA AUTOMÁTICA
     // ==========================================
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
             pantallaStock.style.display = 'block';
-            renderizarInventario(productosDisponibles);
+            procesarYRenderizar();
         });
     }
 
@@ -234,21 +239,40 @@ export function setupPOS(app) {
         btnVolverMostrador.addEventListener('click', () => {
             pantallaStock.style.display = 'none';
             pantallaPOS.style.display = 'grid';
-            renderizarProductosPOS(productosDisponibles);
+            procesarYRenderizar();
         });
     }
 
-    const cargarProductos = () => {
-        onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
-            productosDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            if (pantallaPOS.style.display !== 'none') {
-                renderizarProductosPOS(productosDisponibles);
-            } 
-            if (pantallaStock.style.display !== 'none') {
-                renderizarInventario(productosDisponibles);
-            }
+    const cargarDataYCostos = () => {
+        // Escuchar cambios en la materia prima (para actualizar costos en vivo)
+        onSnapshot(materiasPrimasCollection, (snapshot) => {
+            materiasPrimasMap.clear();
+            snapshot.forEach(doc => materiasPrimasMap.set(doc.id, doc.data()));
+            procesarYRenderizar();
         });
+
+        // Escuchar cambios en las recetas (para actualizar stock o nombres en vivo)
+        onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
+            recetasBrutas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            procesarYRenderizar();
+        });
+    };
+
+    const procesarYRenderizar = () => {
+        if (recetasBrutas.length === 0) return;
+
+        // Armamos el array final calculando el costo matemático en tiempo real
+        productosDisponibles = recetasBrutas.map(receta => {
+            const costoBase = calcularCostoUnitarioReceta(receta);
+            return { ...receta, costoBaseCalculado: costoBase };
+        });
+
+        if (pantallaPOS.style.display !== 'none') {
+            renderizarProductosPOS(productosDisponibles);
+        } 
+        if (pantallaStock.style.display !== 'none') {
+            renderizarInventario(productosDisponibles);
+        }
     };
 
     // ==========================================
@@ -264,7 +288,7 @@ export function setupPOS(app) {
         }
 
         productos.forEach(prod => {
-            const costo = obtenerCostoBase(prod);
+            const costo = prod.costoBaseCalculado || 0;
             const stock = prod.stockMostrador || 0;
             const categoria = prod.categoria || 'Sin Categoría';
             
