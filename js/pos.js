@@ -57,6 +57,7 @@ export function setupPOS(app) {
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
+    // El input del modal para ganancia individual ya no es tan necesario con el botón rápido, pero lo mantenemos sincronizado
     const modalProdGananciaIndiv = document.getElementById('modal-prod-ganancia-indiv');
     const modalProdStockActual = document.getElementById('modal-prod-stock-actual');
     const modalProdTipoMov = document.getElementById('modal-prod-tipo-movimiento');
@@ -83,9 +84,18 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
-    // FUNCIÓN MATEMÁTICA: Calcular el precio de venta final según costos de insumos y márgenes establecidos
+    // Función extra para buscar el costo sin importar cómo lo haya guardado la otra página
+    const obtenerCostoBase = (receta) => {
+        return Number(receta.costoTotal) || 
+               Number(receta.precioCosto) || 
+               Number(receta.costoMateriaPrima) || 
+               Number(receta.costo) || 
+               0;
+    };
+
+    // FUNCIÓN MATEMÁTICA: Calcular el precio de venta final según costos de insumos y márgenes
     const calcularPrecioVenta = (receta) => {
-        const costo = receta.costoTotal || receta.costoMateriaPrima || receta.costo || 0;
+        const costo = obtenerCostoBase(receta);
         const tieneMargenIndiv = receta.margenIndividual !== undefined && receta.margenIndividual !== null && receta.margenIndividual !== '';
         const margenAplicado = tieneMargenIndiv ? parseFloat(receta.margenIndividual) : margenGlobal;
         return costo * (1 + (margenAplicado / 100));
@@ -139,7 +149,7 @@ export function setupPOS(app) {
                 }
                 try {
                     await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
-                    alert(`Margen global configurado en ${margenNum}% exitosamente.`);
+                    // No hace falta alert, se actualiza en tiempo real
                 } catch (e) {
                     alert("Error guardando configuraciones globales.");
                 }
@@ -169,7 +179,6 @@ export function setupPOS(app) {
                 cajaActiva = { id: cajaDoc.id, ...cajaDoc.data() };
                 pantallaApertura.style.display = 'none';
                 
-                // Mantener al usuario en la vista que estaba antes de la actualización en tiempo real
                 if (pantallaStock.style.display === 'block') {
                     pantallaPOS.style.display = 'none';
                 } else {
@@ -255,7 +264,7 @@ export function setupPOS(app) {
         }
 
         productos.forEach(prod => {
-            const costo = prod.costoTotal || prod.costoMateriaPrima || prod.costo || 0;
+            const costo = obtenerCostoBase(prod);
             const stock = prod.stockMostrador || 0;
             const categoria = prod.categoria || 'Sin Categoría';
             
@@ -276,7 +285,10 @@ export function setupPOS(app) {
                     <strong>${stock}</strong> u.
                 </td>
                 <td data-label="Acción" style="text-align: center;">
-                    <button class="btn-primary btn-editar-prod" data-id="${prod.id}" style="padding: 0.3rem 0.8rem; width: auto; font-size: 0.85rem;">📝 Editar</button>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button class="btn-primary btn-editar-prod" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;" title="Ajustar Stock y Auditoría">📝 Stock</button>
+                        <button class="btn-secondary btn-editar-margen admin-only" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem; border-color: #6366f1; color: #6366f1;" title="Modificar % Individual">⚙️ %</button>
+                    </div>
                 </td>
             `;
             tablaInventario.appendChild(tr);
@@ -295,11 +307,41 @@ export function setupPOS(app) {
     }
 
     if (tablaInventario) {
-        tablaInventario.addEventListener('click', (e) => {
-            const btn = e.target.closest('.btn-editar-prod');
-            if (btn) {
-                const prod = productosDisponibles.find(p => p.id === btn.dataset.id);
+        tablaInventario.addEventListener('click', async (e) => {
+            // Acción: Abrir modal de Stock
+            const btnStock = e.target.closest('.btn-editar-prod');
+            if (btnStock) {
+                const prod = productosDisponibles.find(p => p.id === btnStock.dataset.id);
                 if (prod) abrirModalStock(prod);
+                return;
+            }
+
+            // Acción: Editar margen individual directo (Solo Admin)
+            const btnMargen = e.target.closest('.btn-editar-margen');
+            if (btnMargen) {
+                const prod = productosDisponibles.find(p => p.id === btnMargen.dataset.id);
+                if (prod) {
+                    const actual = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
+                    const nuevo = prompt(`Ingrese el % de ganancia para "${prod.nombreTorta}"\n(Deje el campo vacío si quiere volver a usar el % Global):`, actual);
+                    
+                    if (nuevo !== null) {
+                        try {
+                            const docRef = doc(db, 'recetas', prod.id);
+                            if (nuevo.trim() === '') {
+                                await updateDoc(docRef, { margenIndividual: null });
+                            } else {
+                                const val = parseFloat(nuevo);
+                                if (!isNaN(val) && val >= 0) {
+                                    await updateDoc(docRef, { margenIndividual: val });
+                                } else {
+                                    alert("Por favor ingrese un número válido mayor o igual a 0.");
+                                }
+                            }
+                        } catch (error) {
+                            alert("Error al actualizar el margen individual.");
+                        }
+                    }
+                }
             }
         });
     }
@@ -307,7 +349,7 @@ export function setupPOS(app) {
     const abrirModalStock = async (prod) => {
         modalProdId.value = prod.id;
         modalProdNombre.value = prod.nombreTorta;
-        modalProdGananciaIndiv.value = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
+        if(modalProdGananciaIndiv) modalProdGananciaIndiv.value = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
         modalProdStockActual.textContent = prod.stockMostrador || '0';
         modalProdCantMov.value = '0';
         modalProdMotivo.value = '';
@@ -360,7 +402,6 @@ export function setupPOS(app) {
         btnGuardarStock.addEventListener('click', async () => {
             const id = modalProdId.value;
             const nombre = modalProdNombre.value;
-            const gananciaIndivRaw = modalProdGananciaIndiv.value.trim();
             const tipoMov = modalProdTipoMov.value;
             const cantMov = parseInt(modalProdCantMov.value) || 0;
             const motivo = modalProdMotivo.value.trim();
@@ -390,8 +431,9 @@ export function setupPOS(app) {
 
                     const updates = { stockMostrador: nuevoStock };
                     
-                    // Solo el Administrador autenticado tiene permisos para modificar márgenes
-                    if (document.body.classList.contains('admin-open')) {
+                    // Si editamos el margen desde adentro del modal
+                    if (document.body.classList.contains('admin-open') && modalProdGananciaIndiv) {
+                        const gananciaIndivRaw = modalProdGananciaIndiv.value.trim();
                         updates.margenIndividual = gananciaIndivRaw === "" ? null : parseFloat(gananciaIndivRaw);
                     }
 
