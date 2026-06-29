@@ -1,6 +1,6 @@
 // sw.js (Versión final que ignora peticiones que no son GET)
 
-const CACHE_NAME = 'dulce-app-cache-v6.0'; // Nueva versión para forzar la actualización
+const CACHE_NAME = 'dulce-app-cache-v6.1'; // Nueva versión para forzar la actualización
 
 // Lista de archivos esenciales de la "carcasa" de la app
 const APP_SHELL_URLS = [
