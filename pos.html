@@ -8,6 +8,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <style>
         .pos-grid {
             display: grid;
@@ -93,20 +96,29 @@
         }
         
         /* Control visual estricto para el rol de administrador */
-        .admin-only {
-            display: none !important;
-        }
-        .admin-open .admin-only {
-            display: inline-block !important;
-        }
-        table .admin-only {
-            display: none;
-        }
-        .admin-open table .admin-only {
-            display: table-cell !important;
-        }
-        .admin-open div.admin-only {
-            display: block !important;
+        .admin-only { display: none !important; }
+        .admin-open .admin-only { display: inline-block !important; }
+        table .admin-only { display: none; }
+        .admin-open table .admin-only { display: table-cell !important; }
+        .admin-open div.admin-only { display: block !important; }
+
+        /* Estilos específicos para aislar la impresión del código QR */
+        @media print {
+            body.imprimiendo-qr * {
+                visibility: hidden;
+            }
+            body.imprimiendo-qr #print-area-qr, 
+            body.imprimiendo-qr #print-area-qr * {
+                visibility: visible;
+            }
+            body.imprimiendo-qr #print-area-qr {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                text-align: center;
+                padding: 20px;
+            }
         }
     </style>
 </head>
@@ -127,7 +139,6 @@
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
                 <span class="nav-menu__title">Dulce App</span>
             </div>
-            
             <div class="nav-category">
                 <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -139,7 +150,6 @@
                     <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
                 </div>
             </div>
-            
             <div class="nav-category">
                 <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -150,7 +160,6 @@
                     <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
                 </div>
             </div>
-            
             <div class="nav-category">
                 <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -170,7 +179,6 @@
                 <p class="text-light" style="margin-bottom: 1.5rem;">
                     Usuario activo: <strong id="usuario-activo-nombre">Cargando...</strong>
                 </p>
-                
                 <div class="form-group" style="text-align: left; margin-bottom: 1.5rem;">
                     <label for="fondo-caja-input">Fondo de Caja Inicial ($)</label>
                     <input type="number" id="fondo-caja-input" placeholder="Ej: 5000" min="0" step="100">
@@ -189,11 +197,14 @@
                         </div>
                     </div>
                     
-                    <div class="buscador-container">
-                        <input type="search" id="buscador-pos" placeholder="Buscar producto por nombre...">
+                    <div class="buscador-container" style="display: flex; gap: 0.5rem;">
+                        <input type="search" id="buscador-pos" placeholder="🔍 Buscar por nombre o escanear QR..." style="flex-grow: 1;">
                     </div>
+                    <p class="text-light" style="font-size: 0.8rem; margin-top: 0.5rem;">
+                        <em>Tip: Conectá tu pistola lectora y escaneá el QR, el producto se agregará solo.</em>
+                    </p>
 
-                    <div style="overflow-x: auto;">
+                    <div style="overflow-x: auto; margin-top: 1rem;">
                         <table class="table-clean">
                             <thead>
                                 <tr>
@@ -251,7 +262,7 @@
                                 <th class="admin-only">% Ganancia</th>
                                 <th>Precio Venta</th>
                                 <th style="text-align: center;">Stock</th>
-                                <th style="text-align: center; width: 180px;">Acciones</th>
+                                <th style="text-align: center; width: 220px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-inventario-mostrador">
@@ -301,21 +312,17 @@
         <div class="modal-content card" style="max-width: 550px;">
             <h2 class="card__title">Ajustar Ficha de Producto</h2>
             <input type="hidden" id="modal-prod-id">
-            
             <div class="form-group">
                 <label>Producto</label>
                 <input type="text" id="modal-prod-nombre" readonly style="background: #f1f5f9; color: #64748b; cursor: not-allowed;">
             </div>
-
             <div class="form-group admin-only">
                 <label for="modal-prod-ganancia-indiv">Porcentaje de Ganancia Individual (%)</label>
                 <input type="number" id="modal-prod-ganancia-indiv" min="0" placeholder="Ej: 120 (Vacío usa el margen global)">
             </div>
-
             <div style="background: var(--secondary-bg); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
                 <h4 style="margin-top: 0; margin-bottom: 0.5rem;">Modificar Unidades</h4>
                 <p style="font-size: 0.9rem; margin: 0 0 0.75rem 0;">Stock actual en sistema: <strong id="modal-prod-stock-actual">0</strong> u.</p>
-                
                 <div style="display: flex; gap: 0.5rem;">
                     <select id="modal-prod-tipo-movimiento" style="width: 130px;">
                         <option value="SUMAR">➕ Agregar</option>
@@ -327,17 +334,33 @@
                     <input type="text" id="modal-prod-motivo" placeholder="Motivo (Ej: Nueva tanda, Descarte)" style="font-size: 0.85rem; padding: 0.4rem;">
                 </div>
             </div>
-
             <h4 style="margin-bottom: 0.5rem;">📋 Historial de Movimientos</h4>
             <div class="historial-auditoria" id="modal-prod-auditoria-logs">
                 <p class="text-light" style="font-size: 0.85rem; text-align: center;">Sin movimientos registrados.</p>
             </div>
-
             <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
                 <div style="display: flex; gap: 0.5rem;">
                     <button id="btn-cerrar-modal-stock" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">Cancelar</button>
                     <button id="btn-guardar-modal-stock" class="btn-primary" style="width: auto; padding: 0.5rem 1.5rem;">Guardar Cambios</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-qr" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 350px; text-align: center;">
+            <h2 class="card__title">Etiqueta de Producto</h2>
+            
+            <div id="print-area-qr" style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem;">
+                <h3 id="qr-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
+                <div id="qr-codigo-contenedor" style="display: flex; justify-content: center; margin: 0 auto;">
+                    </div>
+                <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666;">Dulce App</p>
+            </div>
+
+            <div class="modal-actions" style="justify-content: space-between;">
+                <button id="btn-cerrar-qr" class="btn-secondary" style="width: 48%;">Volver</button>
+                <button id="btn-imprimir-qr" class="btn-primary" style="width: 48%;">🖨️ Imprimir</button>
             </div>
         </div>
     </div>
