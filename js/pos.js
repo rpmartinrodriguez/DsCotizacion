@@ -342,11 +342,23 @@ export function setupPOS(app) {
                 return;
             }
 
-            // Acción: Abrir modal del Código de Barras
+            // Acción: Abrir modal del Código de Barras y Auto-generar si no existe
             const btnBarcode = e.target.closest('.btn-ver-barcode');
             if (btnBarcode) {
                 const prod = productosDisponibles.find(p => p.id === btnBarcode.dataset.id);
-                if (prod) abrirModalBarcode(prod);
+                if (prod) {
+                    // Si el producto no tiene un código numérico de 13 dígitos, se lo creamos en el momento
+                    if (!prod.codigoBarras) {
+                        const nuevoCodigo = Date.now().toString(); // Genera un código único de 13 dígitos numéricos
+                        try {
+                            await updateDoc(doc(db, 'recetas', prod.id), { codigoBarras: nuevoCodigo });
+                            prod.codigoBarras = nuevoCodigo; 
+                        } catch(error) {
+                            console.error("Error al asignar código de barras en Firebase:", error);
+                        }
+                    }
+                    abrirModalBarcode(prod);
+                }
                 return;
             }
 
@@ -382,20 +394,17 @@ export function setupPOS(app) {
 
     // --- Modal Código de Barras 1D ---
     const abrirModalBarcode = (prod) => {
-        // Dejamos el título en pantalla limpio
         barcodeTituloProducto.textContent = prod.nombreTorta;
         
         try {
-            // Generamos las barras utilizando el ID de Firebase (sin espacios ni acentos)
-            // Pero configuramos 'text' para que lo que se lea abajo de la barra sea el nombre real.
-            JsBarcode("#barcode-canvas", prod.id, {
+            // JsBarcode ahora dibuja la línea de barras leyendo estrictamente los 13 dígitos numéricos
+            JsBarcode("#barcode-canvas", prod.codigoBarras, {
                 format: "CODE128",
                 lineColor: "#000",
                 width: 2,
                 height: 60,
                 displayValue: true, 
-                text: prod.nombreTorta, // Esto es clave: El lector lee el ID, el humano lee el nombre.
-                fontSize: 14,
+                fontSize: 16,
                 margin: 10
             });
             modalBarcode.classList.add('visible');
@@ -601,7 +610,7 @@ export function setupPOS(app) {
             renderizarProductosPOS(filtrados);
         });
 
-        // Evento 2: Lectura de la Pistola (Detecta el "Enter" automático y busca por ID O Nombre)
+        // Evento 2: Lectura de la Pistola (Detecta el "Enter" automático de la lectora)
         buscadorPOS.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault(); 
@@ -609,9 +618,9 @@ export function setupPOS(app) {
                 const terminoEscaneado = e.target.value.trim();
                 if (!terminoEscaneado) return;
 
-                // Buscamos coincidencia exacta de ID (si escaneó el código) o de nombre
+                // Buscamos coincidencia del código exacto de 13 números o del nombre tipeado
                 const productoEscaneado = productosDisponibles.find(p => 
-                    (p.id && p.id === terminoEscaneado) || 
+                    (p.codigoBarras && p.codigoBarras === terminoEscaneado) || 
                     (p.nombreTorta && p.nombreTorta.toLowerCase() === terminoEscaneado.toLowerCase())
                 );
                 
@@ -620,7 +629,7 @@ export function setupPOS(app) {
                     e.target.value = '';
                     renderizarProductosPOS(productosDisponibles);
                 } else {
-                    alert("El código escaneado no coincide con ningún producto.");
+                    alert("El código escaneado no coincide con ningún producto del sistema.");
                     e.target.value = '';
                 }
             }
