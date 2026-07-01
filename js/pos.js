@@ -12,7 +12,7 @@ export function setupPOS(app) {
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const recetasCollection = collection(db, 'recetas'); 
-    const materiasPrimasCollection = collection(db, 'materiasPrimas'); // Nueva conexión para costos
+    const materiasPrimasCollection = collection(db, 'materiasPrimas'); 
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
 
     // --- Referencias DOM: Vistas de Pantalla ---
@@ -54,7 +54,7 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
-    // Modal de Edición de Stock e Historial
+    // Modales de Stock y Código QR
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
@@ -67,14 +67,20 @@ export function setupPOS(app) {
     const btnCancelarStock = document.getElementById('btn-cerrar-modal-stock');
     const btnGuardarStock = document.getElementById('btn-guardar-modal-stock');
 
+    const modalQR = document.getElementById('modal-qr');
+    const qrTituloProducto = document.getElementById('qr-titulo-producto');
+    const qrCodigoContenedor = document.getElementById('qr-codigo-contenedor');
+    const btnCerrarQR = document.getElementById('btn-cerrar-qr');
+    const btnImprimirQR = document.getElementById('btn-imprimir-qr');
+
     // --- Estado General de la Aplicación ---
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
     
-    let materiasPrimasMap = new Map(); // Para calcular costos
-    let recetasBrutas = []; // Las recetas tal como vienen de Firebase
-    let productosDisponibles = []; // Recetas ya procesadas con el costo matemático
+    let materiasPrimasMap = new Map(); 
+    let recetasBrutas = []; 
+    let productosDisponibles = []; 
     
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
@@ -89,7 +95,7 @@ export function setupPOS(app) {
     };
 
     // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base (Extraído de Lista de Precios)
-    const calcularCostoUnitarioReceta = (receta) => {
+    const obtenerCostoBase = (receta) => {
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
         receta.ingredientes.forEach(ing => {
@@ -122,7 +128,6 @@ export function setupPOS(app) {
         procesarYRenderizar();
     });
 
-    // Control de Clave de Seguridad Administrador
     if (btnDesbloquearAdmin) {
         btnDesbloquearAdmin.addEventListener('click', () => {
             if (document.body.classList.contains('admin-open')) {
@@ -143,7 +148,6 @@ export function setupPOS(app) {
         });
     }
 
-    // Configurar Margen de Ganancia Global
     if (btnMargenGlobal) {
         btnMargenGlobal.addEventListener('click', async () => {
             const nuevoMargen = prompt("Defina el nuevo porcentaje de Margen de Ganancia Global (%):", margenGlobal);
@@ -240,18 +244,17 @@ export function setupPOS(app) {
             pantallaStock.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             procesarYRenderizar();
+            if (buscadorPOS) buscadorPOS.focus(); // Foco automático para la pistola lectora
         });
     }
 
     const cargarDataYCostos = () => {
-        // Escuchar cambios en la materia prima (para actualizar costos en vivo)
         onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
             snapshot.forEach(doc => materiasPrimasMap.set(doc.id, doc.data()));
             procesarYRenderizar();
         });
 
-        // Escuchar cambios en las recetas (para actualizar stock o nombres en vivo)
         onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
             recetasBrutas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             procesarYRenderizar();
@@ -261,9 +264,8 @@ export function setupPOS(app) {
     const procesarYRenderizar = () => {
         if (recetasBrutas.length === 0) return;
 
-        // Armamos el array final calculando el costo matemático en tiempo real
         productosDisponibles = recetasBrutas.map(receta => {
-            const costoBase = calcularCostoUnitarioReceta(receta);
+            const costoBase = obtenerCostoBase(receta);
             return { ...receta, costoBaseCalculado: costoBase };
         });
 
@@ -276,7 +278,7 @@ export function setupPOS(app) {
     };
 
     // ==========================================
-    // 4. LOGICA DE CONTROL DE STOCK (ADMIN / INVENTARIO)
+    // 4. LOGICA DE CONTROL DE STOCK E INVENTARIO
     // ==========================================
     const renderizarInventario = (productos) => {
         if (!tablaInventario) return;
@@ -308,9 +310,10 @@ export function setupPOS(app) {
                 <td data-label="Stock" style="text-align: center; color: ${stock > 0 ? 'var(--text-main)' : 'var(--danger-color)'}">
                     <strong>${stock}</strong> u.
                 </td>
-                <td data-label="Acción" style="text-align: center;">
-                    <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                <td data-label="Acciones" style="text-align: center;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
                         <button class="btn-primary btn-editar-prod" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;" title="Ajustar Stock y Auditoría">📝 Stock</button>
+                        <button class="btn-secondary btn-ver-qr" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;" title="Imprimir Código QR">🖨️ QR</button>
                         <button class="btn-secondary btn-editar-margen admin-only" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem; border-color: #6366f1; color: #6366f1;" title="Modificar % Individual">⚙️ %</button>
                     </div>
                 </td>
@@ -337,6 +340,14 @@ export function setupPOS(app) {
             if (btnStock) {
                 const prod = productosDisponibles.find(p => p.id === btnStock.dataset.id);
                 if (prod) abrirModalStock(prod);
+                return;
+            }
+
+            // Acción: Abrir modal del Código QR
+            const btnQR = e.target.closest('.btn-ver-qr');
+            if (btnQR) {
+                const prod = productosDisponibles.find(p => p.id === btnQR.dataset.id);
+                if (prod) abrirModalQR(prod);
                 return;
             }
 
@@ -370,6 +381,41 @@ export function setupPOS(app) {
         });
     }
 
+    // --- Modal Código QR ---
+    const abrirModalQR = (prod) => {
+        qrTituloProducto.textContent = prod.nombreTorta;
+        qrCodigoContenedor.innerHTML = ''; // Limpiar QR anterior
+        
+        // Generar QR nuevo con la librería
+        new QRCode(qrCodigoContenedor, {
+            text: prod.nombreTorta,
+            width: 150,
+            height: 150,
+            colorDark : "#000000",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+        
+        modalQR.classList.add('visible');
+    };
+
+    if (btnCerrarQR) {
+        btnCerrarQR.addEventListener('click', () => modalQR.classList.remove('visible'));
+    }
+
+    if (btnImprimirQR) {
+        btnImprimirQR.addEventListener('click', () => {
+            // Activa el modo impresión exclusivo para el QR mediante CSS
+            document.body.classList.add('imprimiendo-qr');
+            window.print();
+            // Lo apaga cuando se cierra la ventana de la impresora
+            setTimeout(() => {
+                document.body.classList.remove('imprimiendo-qr');
+            }, 500);
+        });
+    }
+
+    // --- Modal Ajuste de Stock ---
     const abrirModalStock = async (prod) => {
         modalProdId.value = prod.id;
         modalProdNombre.value = prod.nombreTorta;
@@ -455,7 +501,6 @@ export function setupPOS(app) {
 
                     const updates = { stockMostrador: nuevoStock };
                     
-                    // Si editamos el margen desde adentro del modal
                     if (document.body.classList.contains('admin-open') && modalProdGananciaIndiv) {
                         const gananciaIndivRaw = modalProdGananciaIndiv.value.trim();
                         updates.margenIndividual = gananciaIndivRaw === "" ? null : parseFloat(gananciaIndivRaw);
@@ -491,7 +536,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 5. CAJA REGISTRADORA DEL MOSTRADOR (VENDEDOR)
+    // 5. CAJA REGISTRADORA (ESCANER QR Y BÚSQUEDA)
     // ==========================================
     const renderizarProductosPOS = (productos) => {
         if (!listaProductosPOS) return;
@@ -509,7 +554,7 @@ export function setupPOS(app) {
                 <td data-label="Cantidad" style="text-align: center;">
                     <div style="display: flex; gap: 5px; align-items: center; justify-content: center;">
                         <input type="number" min="1" max="${stock}" value="1" class="producto-cantidad-input" id="cant-${prod.id}" ${stock <= 0 ? 'disabled' : ''} style="padding: 0.3rem; border: 1px solid var(--border-color); border-radius: 4px;">
-                        <button class="btn-primary btn-add-cart" data-id="${prod.id}" data-nombre="${prod.nombreTorta}" data-precio="${precioCalculado}" data-stock="${stock}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.9rem;" ${stock <= 0 ? 'disabled' : ''} title="Agregar">+</button>
+                        <button class="btn-primary btn-add-cart" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.9rem;" ${stock <= 0 ? 'disabled' : ''} title="Agregar">+</button>
                     </div>
                 </td>
             `;
@@ -517,11 +562,66 @@ export function setupPOS(app) {
         });
     };
 
+    // Función interna para agregar al carrito, útil para el botón y para el escáner
+    const agregarProductoAlCarrito = (prod, cantidadIngresada = 1) => {
+        const stockMax = prod.stockMostrador || 0;
+
+        if (cantidadIngresada > stockMax) {
+            alert(`Solo hay ${stockMax} unidades en stock.`);
+            return;
+        }
+
+        const existe = carritoActual.find(i => i.id === prod.id);
+        if (existe) {
+            if (existe.cantidad + cantidadIngresada > stockMax) {
+                alert(`Superas el stock físico disponible (${stockMax}).`);
+                return;
+            }
+            existe.cantidad += cantidadIngresada;
+        } else {
+            const precioCalculado = calcularPrecioVenta(prod);
+            carritoActual.push({ 
+                id: prod.id, 
+                nombre: prod.nombreTorta, 
+                precio: precioCalculado, 
+                cantidad: cantidadIngresada 
+            });
+        }
+        renderizarCarrito();
+    };
+
     if (buscadorPOS) {
+        // 1. Evento para cuando el usuario tipea normalmente (búsqueda en vivo)
         buscadorPOS.addEventListener('input', (e) => {
             const termino = e.target.value.toLowerCase();
             const filtrados = productosDisponibles.filter(p => p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino));
             renderizarProductosPOS(filtrados);
+        });
+
+        // 2. Evento para detectar el "Enter" de la pistola lectora QR
+        buscadorPOS.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Evita que se recargue la página si está en un form
+                
+                const terminoQR = e.target.value.trim();
+                if (!terminoQR) return;
+
+                // Las pistolas leen exacto, buscamos el nombre tal cual sin importar mayúsculas
+                const productoEscaneado = productosDisponibles.find(p => 
+                    p.nombreTorta && p.nombreTorta.toLowerCase() === terminoQR.toLowerCase()
+                );
+                
+                if (productoEscaneado) {
+                    agregarProductoAlCarrito(productoEscaneado, 1);
+                    
+                    // Limpiar el buscador inmediatamente para el próximo escaneo
+                    e.target.value = '';
+                    renderizarProductosPOS(productosDisponibles);
+                } else {
+                    alert("El QR escaneado no coincide con ningún producto del inventario.");
+                    e.target.value = '';
+                }
+            }
         });
     }
 
@@ -530,30 +630,14 @@ export function setupPOS(app) {
             const btn = e.target.closest('.btn-add-cart');
             if (btn) {
                 const id = btn.dataset.id;
-                const nombre = btn.dataset.nombre;
-                const precio = parseFloat(btn.dataset.precio);
-                const stockMax = parseInt(btn.dataset.stock);
                 const inputCant = document.getElementById(`cant-${id}`);
                 const cantidad = parseInt(inputCant.value) || 1;
-
-                if (cantidad > stockMax) {
-                    alert(`Solo hay ${stockMax} unidades en stock.`);
-                    return;
-                }
-
-                const existe = carritoActual.find(i => i.id === id);
-                if (existe) {
-                    if (existe.cantidad + cantidad > stockMax) {
-                        alert(`Superas el stock disponible físico (${stockMax}).`);
-                        return;
-                    }
-                    existe.cantidad += cantidad;
-                } else {
-                    carritoActual.push({ id, nombre, precio, cantidad });
-                }
                 
-                inputCant.value = 1;
-                renderizarCarrito();
+                const prod = productosDisponibles.find(p => p.id === id);
+                if (prod) {
+                    agregarProductoAlCarrito(prod, cantidad);
+                    inputCant.value = 1;
+                }
             }
         });
     }
@@ -639,7 +723,6 @@ export function setupPOS(app) {
                     return { id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad };
                 });
 
-                // Descontar existencias y generar trazabilidad del movimiento en la base
                 for (const item of carritoActual) {
                     const docRef = doc(db, 'recetas', item.id);
                     await runTransaction(db, async (transaction) => {
@@ -667,7 +750,6 @@ export function setupPOS(app) {
                     });
                 }
 
-                // Guardar movimiento contable de la venta
                 await addDoc(ventasCollection, {
                     cajaId: cajaActiva.id,
                     fecha: Timestamp.now(),
@@ -677,7 +759,6 @@ export function setupPOS(app) {
                     vendedor: userName
                 });
 
-                // Registrar ingresos en la caja activa del turno
                 const cajaRef = doc(db, 'cajas', cajaActiva.id);
                 const actualizacionCaja = {};
                 if (metodoPagoSeleccionado === 'Efectivo') {
@@ -691,6 +772,9 @@ export function setupPOS(app) {
                 renderizarCarrito();
                 modalCobro.classList.remove('visible');
                 btnConfirmarVenta.textContent = 'Confirmar';
+                
+                // Si la venta se cierra con éxito, vuelve a poner el foco para seguir escaneando.
+                if (buscadorPOS) buscadorPOS.focus();
 
             } catch (error) {
                 console.error("Error al procesar la venta:", error);
@@ -734,7 +818,7 @@ export function setupPOS(app) {
                 btnConfirmarCierre.disabled = false;
                 btnConfirmarCierre.textContent = 'Cerrar Turno';
             } catch (error) {
-                console.error("Error cerrando caja de forma definitiva:", error);
+                console.error("Error cerrando caja:", error);
                 alert("No se pudo efectuar el cierre.");
                 btnConfirmarCierre.disabled = false;
                 btnConfirmarCierre.textContent = 'Cerrar Turno';
