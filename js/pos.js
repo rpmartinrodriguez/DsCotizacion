@@ -243,7 +243,7 @@ export function setupPOS(app) {
             pantallaStock.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             procesarYRenderizar();
-            if (buscadorPOS) buscadorPOS.focus(); // Foco automático para la pistola lectora
+            if (buscadorPOS) buscadorPOS.focus();
         });
     }
 
@@ -350,7 +350,7 @@ export function setupPOS(app) {
                 return;
             }
 
-            // Acción: Editar margen individual directo (Solo Admin)
+            // Acción: Editar margen individual
             const btnMargen = e.target.closest('.btn-editar-margen');
             if (btnMargen) {
                 const prod = productosDisponibles.find(p => p.id === btnMargen.dataset.id);
@@ -382,23 +382,26 @@ export function setupPOS(app) {
 
     // --- Modal Código de Barras 1D ---
     const abrirModalBarcode = (prod) => {
+        // Dejamos el título en pantalla limpio
         barcodeTituloProducto.textContent = prod.nombreTorta;
         
-        // Generar Código de Barras con la librería JsBarcode en formato CODE128
         try {
-            JsBarcode("#barcode-canvas", prod.nombreTorta, {
+            // Generamos las barras utilizando el ID de Firebase (sin espacios ni acentos)
+            // Pero configuramos 'text' para que lo que se lea abajo de la barra sea el nombre real.
+            JsBarcode("#barcode-canvas", prod.id, {
                 format: "CODE128",
                 lineColor: "#000",
                 width: 2,
                 height: 60,
-                displayValue: true, // Muestra el nombre impreso abajo de las barras
+                displayValue: true, 
+                text: prod.nombreTorta, // Esto es clave: El lector lee el ID, el humano lee el nombre.
                 fontSize: 14,
                 margin: 10
             });
             modalBarcode.classList.add('visible');
         } catch(error) {
             console.error("Error al generar código de barras:", error);
-            alert("No se pudo generar el código de barras para este nombre.");
+            alert("No se pudo generar el código de barras.");
         }
     };
 
@@ -563,7 +566,6 @@ export function setupPOS(app) {
         });
     };
 
-    // Función interna para agregar al carrito (Manual o por Escáner)
     const agregarProductoAlCarrito = (prod, cantidadIngresada = 1) => {
         const stockMax = prod.stockMostrador || 0;
 
@@ -592,14 +594,14 @@ export function setupPOS(app) {
     };
 
     if (buscadorPOS) {
-        // Evento 1: Tipeo manual (filtrado en vivo)
+        // Evento 1: Tipeo manual (búsqueda por nombre)
         buscadorPOS.addEventListener('input', (e) => {
             const termino = e.target.value.toLowerCase();
             const filtrados = productosDisponibles.filter(p => p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino));
             renderizarProductosPOS(filtrados);
         });
 
-        // Evento 2: Lectura de la Pistola (Detecta el "Enter" automático)
+        // Evento 2: Lectura de la Pistola (Detecta el "Enter" automático y busca por ID O Nombre)
         buscadorPOS.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault(); 
@@ -607,8 +609,10 @@ export function setupPOS(app) {
                 const terminoEscaneado = e.target.value.trim();
                 if (!terminoEscaneado) return;
 
+                // Buscamos coincidencia exacta de ID (si escaneó el código) o de nombre
                 const productoEscaneado = productosDisponibles.find(p => 
-                    p.nombreTorta && p.nombreTorta.toLowerCase() === terminoEscaneado.toLowerCase()
+                    (p.id && p.id === terminoEscaneado) || 
+                    (p.nombreTorta && p.nombreTorta.toLowerCase() === terminoEscaneado.toLowerCase())
                 );
                 
                 if (productoEscaneado) {
