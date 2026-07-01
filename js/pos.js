@@ -334,7 +334,6 @@ export function setupPOS(app) {
 
     if (tablaInventario) {
         tablaInventario.addEventListener('click', async (e) => {
-            // Acción: Abrir modal de Stock
             const btnStock = e.target.closest('.btn-editar-prod');
             if (btnStock) {
                 const prod = productosDisponibles.find(p => p.id === btnStock.dataset.id);
@@ -342,14 +341,12 @@ export function setupPOS(app) {
                 return;
             }
 
-            // Acción: Abrir modal del Código de Barras y Auto-generar si no existe
             const btnBarcode = e.target.closest('.btn-ver-barcode');
             if (btnBarcode) {
                 const prod = productosDisponibles.find(p => p.id === btnBarcode.dataset.id);
                 if (prod) {
-                    // Si el producto no tiene un código numérico de 13 dígitos, se lo creamos en el momento
                     if (!prod.codigoBarras) {
-                        const nuevoCodigo = Date.now().toString(); // Genera un código único de 13 dígitos numéricos
+                        const nuevoCodigo = Date.now().toString(); 
                         try {
                             await updateDoc(doc(db, 'recetas', prod.id), { codigoBarras: nuevoCodigo });
                             prod.codigoBarras = nuevoCodigo; 
@@ -362,7 +359,6 @@ export function setupPOS(app) {
                 return;
             }
 
-            // Acción: Editar margen individual
             const btnMargen = e.target.closest('.btn-editar-margen');
             if (btnMargen) {
                 const prod = productosDisponibles.find(p => p.id === btnMargen.dataset.id);
@@ -395,9 +391,7 @@ export function setupPOS(app) {
     // --- Modal Código de Barras 1D ---
     const abrirModalBarcode = (prod) => {
         barcodeTituloProducto.textContent = prod.nombreTorta;
-        
         try {
-            // JsBarcode ahora dibuja la línea de barras leyendo estrictamente los 13 dígitos numéricos
             JsBarcode("#barcode-canvas", prod.codigoBarras, {
                 format: "CODE128",
                 lineColor: "#000",
@@ -549,7 +543,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 5. CAJA REGISTRADORA (ESCANER BARRAS Y BÚSQUEDA)
+    // 5. CAJA REGISTRADORA Y LECTURA GLOBAL DE BARRAS
     // ==========================================
     const renderizarProductosPOS = (productos) => {
         if (!listaProductosPOS) return;
@@ -579,14 +573,14 @@ export function setupPOS(app) {
         const stockMax = prod.stockMostrador || 0;
 
         if (cantidadIngresada > stockMax) {
-            alert(`Solo hay ${stockMax} unidades en stock.`);
+            alert(`Solo hay ${stockMax} unidades en stock de ${prod.nombreTorta}.`);
             return;
         }
 
         const existe = carritoActual.find(i => i.id === prod.id);
         if (existe) {
             if (existe.cantidad + cantidadIngresada > stockMax) {
-                alert(`Superas el stock físico disponible (${stockMax}).`);
+                alert(`Superas el stock físico disponible (${stockMax}) de ${prod.nombreTorta}.`);
                 return;
             }
             existe.cantidad += cantidadIngresada;
@@ -602,39 +596,70 @@ export function setupPOS(app) {
         renderizarCarrito();
     };
 
+    // --- MANEJO DEL BUSCADOR NORMAL ---
     if (buscadorPOS) {
-        // Evento 1: Tipeo manual (búsqueda por nombre)
         buscadorPOS.addEventListener('input', (e) => {
             const termino = e.target.value.toLowerCase();
-            const filtrados = productosDisponibles.filter(p => p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino));
+            const filtrados = productosDisponibles.filter(p => 
+                (p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino)) ||
+                (p.codigoBarras && String(p.codigoBarras).includes(termino))
+            );
             renderizarProductosPOS(filtrados);
         });
 
-        // Evento 2: Lectura de la Pistola (Detecta el "Enter" automático de la lectora)
+        // Para evitar que la tecla Enter reinicie la página si estamos en el input
         buscadorPOS.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); 
-                
-                const terminoEscaneado = e.target.value.trim();
-                if (!terminoEscaneado) return;
-
-                // Buscamos coincidencia del código exacto de 13 números o del nombre tipeado
-                const productoEscaneado = productosDisponibles.find(p => 
-                    (p.codigoBarras && p.codigoBarras === terminoEscaneado) || 
-                    (p.nombreTorta && p.nombreTorta.toLowerCase() === terminoEscaneado.toLowerCase())
-                );
-                
-                if (productoEscaneado) {
-                    agregarProductoAlCarrito(productoEscaneado, 1);
-                    e.target.value = '';
-                    renderizarProductosPOS(productosDisponibles);
-                } else {
-                    alert("El código escaneado no coincide con ningún producto del sistema.");
-                    e.target.value = '';
-                }
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
             }
         });
     }
+
+    // --- ESCUCHADOR GLOBAL DE LA PISTOLA LECTORA ---
+    // Esto te permite escanear sin tener que darle clic a ninguna barra de búsqueda.
+    let scanBuffer = '';
+    let lastKeyTime = Date.now();
+
+    document.addEventListener('keydown', (e) => {
+        // Si no estamos en el mostrador de ventas, ignoramos el lector
+        if (pantallaPOS.style.display === 'none') return;
+        
+        // Evitamos capturar teclas sueltas como Shift o Control
+        if (e.key.length > 1 && e.key !== 'Enter') return;
+
+        const currentTime = Date.now();
+        // Las pistolas lectoras tipean cada número en menos de 50ms. Si pasa más tiempo, es un humano tipeando y reseteamos el buffer.
+        if (currentTime - lastKeyTime > 50) {
+            scanBuffer = '';
+        }
+        lastKeyTime = currentTime;
+
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            // Un código de barras generado por nosotros tiene 13 caracteres
+            if (scanBuffer.length >= 8) { 
+                e.preventDefault();
+                const codigoEscaneado = scanBuffer.trim();
+                
+                // Conversión ultra-segura a String para evitar problemas de tipos de datos en la validación
+                const productoEncontrado = productosDisponibles.find(p => 
+                    p.codigoBarras && String(p.codigoBarras) === codigoEscaneado
+                );
+                
+                if (productoEncontrado) {
+                    agregarProductoAlCarrito(productoEncontrado, 1);
+                } else {
+                    alert("El código escaneado (" + codigoEscaneado + ") no existe en el sistema.");
+                }
+
+                // Limpiamos todo para el siguiente escaneo
+                scanBuffer = '';
+                if (buscadorPOS) buscadorPOS.value = '';
+                renderizarProductosPOS(productosDisponibles); // Restaurar lista visual
+            }
+        } else {
+            scanBuffer += e.key;
+        }
+    });
 
     if (listaProductosPOS) {
         listaProductosPOS.addEventListener('click', (e) => {
@@ -783,8 +808,6 @@ export function setupPOS(app) {
                 renderizarCarrito();
                 modalCobro.classList.remove('visible');
                 btnConfirmarVenta.textContent = 'Confirmar';
-                
-                if (buscadorPOS) buscadorPOS.focus();
 
             } catch (error) {
                 console.error("Error al procesar la venta:", error);
