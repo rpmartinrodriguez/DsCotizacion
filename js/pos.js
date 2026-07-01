@@ -607,7 +607,6 @@ export function setupPOS(app) {
             renderizarProductosPOS(filtrados);
         });
 
-        // Para evitar que la tecla Enter reinicie la página si estamos en el input
         buscadorPOS.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.keyCode === 13) {
                 e.preventDefault();
@@ -616,31 +615,25 @@ export function setupPOS(app) {
     }
 
     // --- ESCUCHADOR GLOBAL DE LA PISTOLA LECTORA ---
-    // Esto te permite escanear sin tener que darle clic a ninguna barra de búsqueda.
     let scanBuffer = '';
     let lastKeyTime = Date.now();
 
     document.addEventListener('keydown', (e) => {
-        // Si no estamos en el mostrador de ventas, ignoramos el lector
         if (pantallaPOS.style.display === 'none') return;
         
-        // Evitamos capturar teclas sueltas como Shift o Control
         if (e.key.length > 1 && e.key !== 'Enter') return;
 
         const currentTime = Date.now();
-        // Las pistolas lectoras tipean cada número en menos de 50ms. Si pasa más tiempo, es un humano tipeando y reseteamos el buffer.
         if (currentTime - lastKeyTime > 50) {
             scanBuffer = '';
         }
         lastKeyTime = currentTime;
 
         if (e.key === 'Enter' || e.keyCode === 13) {
-            // Un código de barras generado por nosotros tiene 13 caracteres
             if (scanBuffer.length >= 8) { 
                 e.preventDefault();
                 const codigoEscaneado = scanBuffer.trim();
                 
-                // Conversión ultra-segura a String para evitar problemas de tipos de datos en la validación
                 const productoEncontrado = productosDisponibles.find(p => 
                     p.codigoBarras && String(p.codigoBarras) === codigoEscaneado
                 );
@@ -651,10 +644,9 @@ export function setupPOS(app) {
                     alert("El código escaneado (" + codigoEscaneado + ") no existe en el sistema.");
                 }
 
-                // Limpiamos todo para el siguiente escaneo
                 scanBuffer = '';
                 if (buscadorPOS) buscadorPOS.value = '';
-                renderizarProductosPOS(productosDisponibles); // Restaurar lista visual
+                renderizarProductosPOS(productosDisponibles);
             }
         } else {
             scanBuffer += e.key;
@@ -678,6 +670,7 @@ export function setupPOS(app) {
         });
     }
 
+    // --- RENDERIZADO DEL CARRITO CON INPUT EDITABLE ---
     const renderizarCarrito = () => {
         if (!carritoContainer) return;
         carritoContainer.innerHTML = '';
@@ -698,7 +691,10 @@ export function setupPOS(app) {
             div.innerHTML = `
                 <div class="cart-item-info">
                     <h4>${item.nombre}</h4>
-                    <p>${item.cantidad} u. x ${formatMoneda(item.precio)}</p>
+                    <div class="cantidad-control">
+                        <input type="number" min="1" class="cart-item-cantidad" data-index="${index}" value="${item.cantidad}">
+                        <span class="cart-item-precio-unit">x ${formatMoneda(item.precio)}</span>
+                    </div>
                 </div>
                 <div class="cart-item-total">${formatMoneda(subtotal)}</div>
                 <button class="btn-remove-cart" data-index="${index}" style="background:none; border:none; color:var(--danger-color); cursor:pointer; font-size:1.2rem;">🗑️</button>
@@ -711,12 +707,42 @@ export function setupPOS(app) {
         if (btnCobrar) btnCobrar.disabled = false;
     };
 
+    // Escuchar el botón de basura y la edición manual de cantidad en el carrito
     if (carritoContainer) {
         carritoContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-remove-cart');
             if (btn) {
                 const index = parseInt(btn.dataset.index);
                 carritoActual.splice(index, 1);
+                renderizarCarrito();
+            }
+        });
+
+        // Evento que detecta cuando el usuario cambia el numerito en el input del carrito
+        carritoContainer.addEventListener('change', (e) => {
+            if (e.target.classList.contains('cart-item-cantidad')) {
+                const index = parseInt(e.target.dataset.index);
+                let nuevaCantidad = parseInt(e.target.value);
+                
+                // Si borra el número o pone 0, lo forzamos a 1
+                if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
+                    nuevaCantidad = 1;
+                    e.target.value = 1;
+                }
+
+                // Validación de stock al editar la cantidad
+                const item = carritoActual[index];
+                const prod = productosDisponibles.find(p => p.id === item.id);
+                const stockMax = prod ? (prod.stockMostrador || 0) : 0;
+
+                if (nuevaCantidad > stockMax) {
+                    alert(`Solo hay ${stockMax} unidades en stock de ${item.nombre}.`);
+                    e.target.value = item.cantidad; // Revertir visualmente a lo que había
+                    return;
+                }
+
+                // Guardar y refrescar
+                carritoActual[index].cantidad = nuevaCantidad;
                 renderizarCarrito();
             }
         });
@@ -808,6 +834,8 @@ export function setupPOS(app) {
                 renderizarCarrito();
                 modalCobro.classList.remove('visible');
                 btnConfirmarVenta.textContent = 'Confirmar';
+                
+                if (buscadorPOS) buscadorPOS.focus();
 
             } catch (error) {
                 console.error("Error al procesar la venta:", error);
