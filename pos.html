@@ -30,6 +30,7 @@
             min-height: 200px;
             max-height: 400px;
             overflow-y: auto;
+            padding-right: 5px;
         }
         .cart-item {
             display: flex;
@@ -39,9 +40,11 @@
             border-bottom: 1px dashed var(--border-color);
         }
         .cart-item-info { flex-grow: 1; }
-        .cart-item-info h4 { margin: 0; font-size: 0.95rem; }
-        .cart-item-info p { margin: 0; font-size: 0.85rem; color: var(--text-light); }
-        .cart-item-total { font-weight: bold; color: var(--primary-color); margin: 0 1rem; }
+        .cart-item-info h4 { margin: 0 0 0.3rem 0; font-size: 0.95rem; }
+        .cart-item-info .cantidad-control { display: flex; align-items: center; gap: 0.5rem; }
+        .cart-item-cantidad { width: 50px; text-align: center; padding: 0.2rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; }
+        .cart-item-precio-unit { font-size: 0.85rem; color: var(--text-light); }
+        .cart-item-total { font-weight: bold; color: var(--primary-color); margin: 0 1rem; min-width: 70px; text-align: right; }
         
         .payment-methods {
             display: grid;
@@ -102,7 +105,7 @@
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        /* Estilos específicos corregidos para no imprimir 11 hojas en blanco */
+        /* Estilos específicos para aislar la impresión del código de barras */
         @media print {
             body.imprimiendo-barcode .main-container {
                 display: none !important;
@@ -367,11 +370,9 @@
             
             <div id="print-area-barcode" style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
                 <h3 id="barcode-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
-                
                 <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden;">
                     <svg id="barcode-canvas"></svg>
                 </div>
-                
                 <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666;">Dulce App</p>
             </div>
 
