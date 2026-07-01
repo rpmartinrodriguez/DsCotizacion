@@ -9,7 +9,7 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 
     <style>
         .pos-grid {
@@ -102,16 +102,16 @@
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        /* Estilos específicos para aislar la impresión del código QR */
+        /* Estilos específicos para aislar la impresión del código de barras */
         @media print {
-            body.imprimiendo-qr * {
+            body.imprimiendo-barcode * {
                 visibility: hidden;
             }
-            body.imprimiendo-qr #print-area-qr, 
-            body.imprimiendo-qr #print-area-qr * {
+            body.imprimiendo-barcode #print-area-barcode, 
+            body.imprimiendo-barcode #print-area-barcode * {
                 visibility: visible;
             }
-            body.imprimiendo-qr #print-area-qr {
+            body.imprimiendo-barcode #print-area-barcode {
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -198,10 +198,10 @@
                     </div>
                     
                     <div class="buscador-container" style="display: flex; gap: 0.5rem;">
-                        <input type="search" id="buscador-pos" placeholder="🔍 Buscar por nombre o escanear QR..." style="flex-grow: 1;">
+                        <input type="search" id="buscador-pos" placeholder="🔍 Escanear código de barras o buscar..." style="flex-grow: 1;">
                     </div>
                     <p class="text-light" style="font-size: 0.8rem; margin-top: 0.5rem;">
-                        <em>Tip: Conectá tu pistola lectora y escaneá el QR, el producto se agregará solo.</em>
+                        <em>Tip: Conectá tu pistola lectora y escaneá, el producto se agregará solo.</em>
                     </p>
 
                     <div style="overflow-x: auto; margin-top: 1rem;">
@@ -347,20 +347,23 @@
         </div>
     </div>
 
-    <div id="modal-qr" class="modal-overlay">
-        <div class="modal-content card" style="max-width: 350px; text-align: center;">
+    <div id="modal-barcode" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 400px; text-align: center;">
             <h2 class="card__title">Etiqueta de Producto</h2>
             
-            <div id="print-area-qr" style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem;">
-                <h3 id="qr-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
-                <div id="qr-codigo-contenedor" style="display: flex; justify-content: center; margin: 0 auto;">
-                    </div>
+            <div id="print-area-barcode" style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
+                <h3 id="barcode-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
+                
+                <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden;">
+                    <svg id="barcode-canvas"></svg>
+                </div>
+                
                 <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666;">Dulce App</p>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
-                <button id="btn-cerrar-qr" class="btn-secondary" style="width: 48%;">Volver</button>
-                <button id="btn-imprimir-qr" class="btn-primary" style="width: 48%;">🖨️ Imprimir</button>
+                <button id="btn-cerrar-barcode" class="btn-secondary" style="width: 48%;">Volver</button>
+                <button id="btn-imprimir-barcode" class="btn-primary" style="width: 48%;">🖨️ Imprimir</button>
             </div>
         </div>
     </div>
