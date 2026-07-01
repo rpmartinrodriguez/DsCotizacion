@@ -543,7 +543,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 5. CAJA REGISTRADORA Y LECTURA GLOBAL DE BARRAS
+    // 5. CAJA REGISTRADORA (ESCANER BARRAS Y BÚSQUEDA)
     // ==========================================
     const renderizarProductosPOS = (productos) => {
         if (!listaProductosPOS) return;
@@ -596,7 +596,6 @@ export function setupPOS(app) {
         renderizarCarrito();
     };
 
-    // --- MANEJO DEL BUSCADOR NORMAL ---
     if (buscadorPOS) {
         buscadorPOS.addEventListener('input', (e) => {
             const termino = e.target.value.toLowerCase();
@@ -614,7 +613,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- ESCUCHADOR GLOBAL DE LA PISTOLA LECTORA ---
     let scanBuffer = '';
     let lastKeyTime = Date.now();
 
@@ -646,7 +644,7 @@ export function setupPOS(app) {
 
                 scanBuffer = '';
                 if (buscadorPOS) buscadorPOS.value = '';
-                renderizarProductosPOS(productosDisponibles);
+                renderizarProductosPOS(productosDisponibles); 
             }
         } else {
             scanBuffer += e.key;
@@ -670,7 +668,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- RENDERIZADO DEL CARRITO CON INPUT EDITABLE ---
     const renderizarCarrito = () => {
         if (!carritoContainer) return;
         carritoContainer.innerHTML = '';
@@ -707,7 +704,6 @@ export function setupPOS(app) {
         if (btnCobrar) btnCobrar.disabled = false;
     };
 
-    // Escuchar el botón de basura y la edición manual de cantidad en el carrito
     if (carritoContainer) {
         carritoContainer.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-remove-cart');
@@ -718,30 +714,26 @@ export function setupPOS(app) {
             }
         });
 
-        // Evento que detecta cuando el usuario cambia el numerito en el input del carrito
         carritoContainer.addEventListener('change', (e) => {
             if (e.target.classList.contains('cart-item-cantidad')) {
                 const index = parseInt(e.target.dataset.index);
                 let nuevaCantidad = parseInt(e.target.value);
                 
-                // Si borra el número o pone 0, lo forzamos a 1
                 if (isNaN(nuevaCantidad) || nuevaCantidad < 1) {
                     nuevaCantidad = 1;
                     e.target.value = 1;
                 }
 
-                // Validación de stock al editar la cantidad
                 const item = carritoActual[index];
                 const prod = productosDisponibles.find(p => p.id === item.id);
                 const stockMax = prod ? (prod.stockMostrador || 0) : 0;
 
                 if (nuevaCantidad > stockMax) {
                     alert(`Solo hay ${stockMax} unidades en stock de ${item.nombre}.`);
-                    e.target.value = item.cantidad; // Revertir visualmente a lo que había
+                    e.target.value = item.cantidad; 
                     return;
                 }
 
-                // Guardar y refrescar
                 carritoActual[index].cantidad = nuevaCantidad;
                 renderizarCarrito();
             }
