@@ -54,7 +54,7 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
-    // Modales de Stock y Código QR
+    // Modales de Stock y Código de Barras
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
@@ -67,11 +67,10 @@ export function setupPOS(app) {
     const btnCancelarStock = document.getElementById('btn-cerrar-modal-stock');
     const btnGuardarStock = document.getElementById('btn-guardar-modal-stock');
 
-    const modalQR = document.getElementById('modal-qr');
-    const qrTituloProducto = document.getElementById('qr-titulo-producto');
-    const qrCodigoContenedor = document.getElementById('qr-codigo-contenedor');
-    const btnCerrarQR = document.getElementById('btn-cerrar-qr');
-    const btnImprimirQR = document.getElementById('btn-imprimir-qr');
+    const modalBarcode = document.getElementById('modal-barcode');
+    const barcodeTituloProducto = document.getElementById('barcode-titulo-producto');
+    const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
+    const btnImprimirBarcode = document.getElementById('btn-imprimir-barcode');
 
     // --- Estado General de la Aplicación ---
     let currentUser = null;
@@ -94,7 +93,7 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
-    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base (Extraído de Lista de Precios)
+    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base
     const obtenerCostoBase = (receta) => {
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
@@ -108,7 +107,7 @@ export function setupPOS(app) {
         return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
-    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final aplicando márgenes
+    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final
     const calcularPrecioVenta = (prod) => {
         const costo = prod.costoBaseCalculado || 0;
         const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
@@ -313,7 +312,7 @@ export function setupPOS(app) {
                 <td data-label="Acciones" style="text-align: center;">
                     <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
                         <button class="btn-primary btn-editar-prod" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;" title="Ajustar Stock y Auditoría">📝 Stock</button>
-                        <button class="btn-secondary btn-ver-qr" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;" title="Imprimir Código QR">🖨️ QR</button>
+                        <button class="btn-secondary btn-ver-barcode" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;" title="Imprimir Código de Barras">🖨️ Barras</button>
                         <button class="btn-secondary btn-editar-margen admin-only" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem; border-color: #6366f1; color: #6366f1;" title="Modificar % Individual">⚙️ %</button>
                     </div>
                 </td>
@@ -343,11 +342,11 @@ export function setupPOS(app) {
                 return;
             }
 
-            // Acción: Abrir modal del Código QR
-            const btnQR = e.target.closest('.btn-ver-qr');
-            if (btnQR) {
-                const prod = productosDisponibles.find(p => p.id === btnQR.dataset.id);
-                if (prod) abrirModalQR(prod);
+            // Acción: Abrir modal del Código de Barras
+            const btnBarcode = e.target.closest('.btn-ver-barcode');
+            if (btnBarcode) {
+                const prod = productosDisponibles.find(p => p.id === btnBarcode.dataset.id);
+                if (prod) abrirModalBarcode(prod);
                 return;
             }
 
@@ -381,36 +380,38 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modal Código QR ---
-    const abrirModalQR = (prod) => {
-        qrTituloProducto.textContent = prod.nombreTorta;
-        qrCodigoContenedor.innerHTML = ''; // Limpiar QR anterior
+    // --- Modal Código de Barras 1D ---
+    const abrirModalBarcode = (prod) => {
+        barcodeTituloProducto.textContent = prod.nombreTorta;
         
-        // Generar QR nuevo con la librería
-        new QRCode(qrCodigoContenedor, {
-            text: prod.nombreTorta,
-            width: 150,
-            height: 150,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
-        
-        modalQR.classList.add('visible');
+        // Generar Código de Barras con la librería JsBarcode en formato CODE128
+        try {
+            JsBarcode("#barcode-canvas", prod.nombreTorta, {
+                format: "CODE128",
+                lineColor: "#000",
+                width: 2,
+                height: 60,
+                displayValue: true, // Muestra el nombre impreso abajo de las barras
+                fontSize: 14,
+                margin: 10
+            });
+            modalBarcode.classList.add('visible');
+        } catch(error) {
+            console.error("Error al generar código de barras:", error);
+            alert("No se pudo generar el código de barras para este nombre.");
+        }
     };
 
-    if (btnCerrarQR) {
-        btnCerrarQR.addEventListener('click', () => modalQR.classList.remove('visible'));
+    if (btnCerrarBarcode) {
+        btnCerrarBarcode.addEventListener('click', () => modalBarcode.classList.remove('visible'));
     }
 
-    if (btnImprimirQR) {
-        btnImprimirQR.addEventListener('click', () => {
-            // Activa el modo impresión exclusivo para el QR mediante CSS
-            document.body.classList.add('imprimiendo-qr');
+    if (btnImprimirBarcode) {
+        btnImprimirBarcode.addEventListener('click', () => {
+            document.body.classList.add('imprimiendo-barcode');
             window.print();
-            // Lo apaga cuando se cierra la ventana de la impresora
             setTimeout(() => {
-                document.body.classList.remove('imprimiendo-qr');
+                document.body.classList.remove('imprimiendo-barcode');
             }, 500);
         });
     }
@@ -536,7 +537,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 5. CAJA REGISTRADORA (ESCANER QR Y BÚSQUEDA)
+    // 5. CAJA REGISTRADORA (ESCANER BARRAS Y BÚSQUEDA)
     // ==========================================
     const renderizarProductosPOS = (productos) => {
         if (!listaProductosPOS) return;
@@ -562,7 +563,7 @@ export function setupPOS(app) {
         });
     };
 
-    // Función interna para agregar al carrito, útil para el botón y para el escáner
+    // Función interna para agregar al carrito (Manual o por Escáner)
     const agregarProductoAlCarrito = (prod, cantidadIngresada = 1) => {
         const stockMax = prod.stockMostrador || 0;
 
@@ -591,34 +592,31 @@ export function setupPOS(app) {
     };
 
     if (buscadorPOS) {
-        // 1. Evento para cuando el usuario tipea normalmente (búsqueda en vivo)
+        // Evento 1: Tipeo manual (filtrado en vivo)
         buscadorPOS.addEventListener('input', (e) => {
             const termino = e.target.value.toLowerCase();
             const filtrados = productosDisponibles.filter(p => p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino));
             renderizarProductosPOS(filtrados);
         });
 
-        // 2. Evento para detectar el "Enter" de la pistola lectora QR
+        // Evento 2: Lectura de la Pistola (Detecta el "Enter" automático)
         buscadorPOS.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault(); // Evita que se recargue la página si está en un form
+                e.preventDefault(); 
                 
-                const terminoQR = e.target.value.trim();
-                if (!terminoQR) return;
+                const terminoEscaneado = e.target.value.trim();
+                if (!terminoEscaneado) return;
 
-                // Las pistolas leen exacto, buscamos el nombre tal cual sin importar mayúsculas
                 const productoEscaneado = productosDisponibles.find(p => 
-                    p.nombreTorta && p.nombreTorta.toLowerCase() === terminoQR.toLowerCase()
+                    p.nombreTorta && p.nombreTorta.toLowerCase() === terminoEscaneado.toLowerCase()
                 );
                 
                 if (productoEscaneado) {
                     agregarProductoAlCarrito(productoEscaneado, 1);
-                    
-                    // Limpiar el buscador inmediatamente para el próximo escaneo
                     e.target.value = '';
                     renderizarProductosPOS(productosDisponibles);
                 } else {
-                    alert("El QR escaneado no coincide con ningún producto del inventario.");
+                    alert("El código escaneado no coincide con ningún producto.");
                     e.target.value = '';
                 }
             }
@@ -773,7 +771,6 @@ export function setupPOS(app) {
                 modalCobro.classList.remove('visible');
                 btnConfirmarVenta.textContent = 'Confirmar';
                 
-                // Si la venta se cierra con éxito, vuelve a poner el foco para seguir escaneando.
                 if (buscadorPOS) buscadorPOS.focus();
 
             } catch (error) {
@@ -818,7 +815,7 @@ export function setupPOS(app) {
                 btnConfirmarCierre.disabled = false;
                 btnConfirmarCierre.textContent = 'Cerrar Turno';
             } catch (error) {
-                console.error("Error cerrando caja:", error);
+                console.error("Error cerrando caja de forma definitiva:", error);
                 alert("No se pudo efectuar el cierre.");
                 btnConfirmarCierre.disabled = false;
                 btnConfirmarCierre.textContent = 'Cerrar Turno';
