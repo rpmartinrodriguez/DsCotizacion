@@ -102,22 +102,36 @@
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        /* Estilos específicos para aislar la impresión del código de barras */
+        /* Estilos específicos corregidos para no imprimir 11 hojas en blanco */
         @media print {
-            body.imprimiendo-barcode * {
-                visibility: hidden;
+            body.imprimiendo-barcode .main-container {
+                display: none !important;
             }
-            body.imprimiendo-barcode #print-area-barcode, 
-            body.imprimiendo-barcode #print-area-barcode * {
-                visibility: visible;
+            body.imprimiendo-barcode .modal-overlay {
+                position: static;
+                background: none;
+                padding: 0;
+            }
+            body.imprimiendo-barcode .modal-content {
+                box-shadow: none;
+                border: none;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+            }
+            body.imprimiendo-barcode .card__title,
+            body.imprimiendo-barcode .modal-actions {
+                display: none !important;
             }
             body.imprimiendo-barcode #print-area-barcode {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+                display: block;
                 text-align: center;
-                padding: 20px;
+                margin: 0 auto;
+            }
+            @page {
+                margin: 0;
+                size: auto;
             }
         }
     </style>
