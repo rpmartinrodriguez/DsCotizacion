@@ -19,6 +19,7 @@ export function setupPOS(app) {
     const pantallaApertura = document.getElementById('pantalla-apertura');
     const pantallaPOS = document.getElementById('pantalla-pos');
     const pantallaStock = document.getElementById('pantalla-stock-mostrador');
+    const pantallaPromociones = document.getElementById('pantalla-promociones');
 
     // --- Referencias DOM: Caja y Mostrador Vendedor ---
     const usuarioNombreEl = document.getElementById('usuario-activo-nombre');
@@ -54,6 +55,14 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
+    // --- Referencias DOM: Promociones ---
+    const btnIrPromos = document.getElementById('btn-ir-promos');
+    const btnVolverMostradorPromos = document.getElementById('btn-volver-mostrador-promos');
+    const selectPromoProd = document.getElementById('promo-producto-select');
+    const inputPromoTipo = document.getElementById('promo-tipo');
+    const inputPromoFrase = document.getElementById('promo-frase');
+    const btnImprimirPromo = document.getElementById('btn-imprimir-promo');
+
     // Modales de Stock y Código de Barras
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
@@ -69,6 +78,7 @@ export function setupPOS(app) {
 
     const modalBarcode = document.getElementById('modal-barcode');
     const barcodeTituloProducto = document.getElementById('barcode-titulo-producto');
+    const barcodeTituloImpresion = document.getElementById('barcode-titulo-impresion');
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
     const btnImprimirBarcode = document.getElementById('btn-imprimir-barcode');
 
@@ -185,20 +195,22 @@ export function setupPOS(app) {
             if (!snapshot.empty) {
                 const cajaDoc = snapshot.docs[0];
                 cajaActiva = { id: cajaDoc.id, ...cajaDoc.data() };
-                pantallaApertura.style.display = 'none';
+                if (pantallaApertura) pantallaApertura.style.display = 'none';
                 
-                if (pantallaStock.style.display === 'block') {
-                    pantallaPOS.style.display = 'none';
+                if (pantallaStock && pantallaStock.style.display === 'block' || (pantallaPromociones && pantallaPromociones.style.display === 'block')) {
+                    if (pantallaPOS) pantallaPOS.style.display = 'none';
                 } else {
-                    pantallaPOS.style.display = 'grid';
-                    pantallaStock.style.display = 'none';
+                    if (pantallaPOS) pantallaPOS.style.display = 'grid';
+                    if (pantallaStock) pantallaStock.style.display = 'none';
+                    if (pantallaPromociones) pantallaPromociones.style.display = 'none';
                 }
                 cargarDataYCostos();
             } else {
                 cajaActiva = null;
-                pantallaPOS.style.display = 'none';
-                pantallaStock.style.display = 'none';
-                pantallaApertura.style.display = 'block';
+                if (pantallaPOS) pantallaPOS.style.display = 'none';
+                if (pantallaStock) pantallaStock.style.display = 'none';
+                if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+                if (pantallaApertura) pantallaApertura.style.display = 'block';
             }
         });
     };
@@ -233,16 +245,39 @@ export function setupPOS(app) {
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaStock.style.display = 'block';
             procesarYRenderizar();
+        });
+    }
+
+    if (btnIrPromos) {
+        btnIrPromos.addEventListener('click', () => {
+            pantallaPOS.style.display = 'none';
+            pantallaStock.style.display = 'none';
+            if (pantallaPromociones) {
+                pantallaPromociones.style.display = 'block';
+                if (selectPromoProd) {
+                    selectPromoProd.innerHTML = productosDisponibles.map(p => `<option value="${p.nombreTorta}">${p.nombreTorta}</option>`).join('');
+                }
+            }
         });
     }
 
     if (btnVolverMostrador) {
         btnVolverMostrador.addEventListener('click', () => {
             pantallaStock.style.display = 'none';
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             procesarYRenderizar();
+            if (buscadorPOS) buscadorPOS.focus();
+        });
+    }
+
+    if (btnVolverMostradorPromos) {
+        btnVolverMostradorPromos.addEventListener('click', () => {
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+            pantallaPOS.style.display = 'grid';
             if (buscadorPOS) buscadorPOS.focus();
         });
     }
@@ -268,13 +303,36 @@ export function setupPOS(app) {
             return { ...receta, costoBaseCalculado: costoBase };
         });
 
-        if (pantallaPOS.style.display !== 'none') {
+        if (pantallaPOS && pantallaPOS.style.display !== 'none') {
             renderizarProductosPOS(productosDisponibles);
         } 
-        if (pantallaStock.style.display !== 'none') {
+        if (pantallaStock && pantallaStock.style.display !== 'none') {
             renderizarInventario(productosDisponibles);
         }
     };
+
+    // ==========================================
+    // 3.5. IMPRESIÓN DE PROMOCIONES
+    // ==========================================
+    if (btnImprimirPromo) {
+        btnImprimirPromo.addEventListener('click', () => {
+            const tipo = inputPromoTipo ? (inputPromoTipo.value || 'OFERTA') : 'OFERTA';
+            const prod = selectPromoProd ? selectPromoProd.value : '';
+            const frase = inputPromoFrase ? (inputPromoFrase.value || '') : '';
+            
+            const elTipo = document.getElementById('print-promo-tipo');
+            const elProd = document.getElementById('print-promo-prod');
+            const elFrase = document.getElementById('print-promo-frase');
+
+            if(elTipo) elTipo.textContent = tipo;
+            if(elProd) elProd.textContent = prod;
+            if(elFrase) elFrase.textContent = frase;
+            
+            document.body.classList.add('imprimiendo-promo');
+            window.print();
+            setTimeout(() => document.body.classList.remove('imprimiendo-promo'), 500);
+        });
+    }
 
     // ==========================================
     // 4. LOGICA DE CONTROL DE STOCK E INVENTARIO
@@ -346,7 +404,8 @@ export function setupPOS(app) {
                 const prod = productosDisponibles.find(p => p.id === btnBarcode.dataset.id);
                 if (prod) {
                     if (!prod.codigoBarras) {
-                        const nuevoCodigo = Date.now().toString(); 
+                        // Generamos el EAN-13: 12 dígitos y jsBarcode calcula el 13
+                        const nuevoCodigo = String(Date.now()).substring(0, 12); 
                         try {
                             await updateDoc(doc(db, 'recetas', prod.id), { codigoBarras: nuevoCodigo });
                             prod.codigoBarras = nuevoCodigo; 
@@ -390,21 +449,36 @@ export function setupPOS(app) {
 
     // --- Modal Código de Barras 1D ---
     const abrirModalBarcode = (prod) => {
-        barcodeTituloProducto.textContent = prod.nombreTorta;
+        if(barcodeTituloProducto) barcodeTituloProducto.textContent = prod.nombreTorta;
+        if(barcodeTituloImpresion) barcodeTituloImpresion.textContent = prod.nombreTorta;
+
         try {
-            JsBarcode("#barcode-canvas", prod.codigoBarras, {
-                format: "CODE128",
+            // Visualización en pantalla
+            JsBarcode("#barcode-canvas-preview", prod.codigoBarras, {
+                format: "EAN13",
                 lineColor: "#000",
-                width: 2,
-                height: 60,
+                width: 1.5,
+                height: 40,
                 displayValue: true, 
-                fontSize: 16,
-                margin: 10
+                fontSize: 14,
+                margin: 5
             });
-            modalBarcode.classList.add('visible');
+
+            // Código oculto exacto para impresión en rollo 50x30
+            JsBarcode("#barcode-canvas-print", prod.codigoBarras, {
+                format: "EAN13",
+                lineColor: "#000",
+                width: 1.5,
+                height: 35,
+                displayValue: true, 
+                fontSize: 12,
+                margin: 2
+            });
+
+            if(modalBarcode) modalBarcode.classList.add('visible');
         } catch(error) {
             console.error("Error al generar código de barras:", error);
-            alert("No se pudo generar el código de barras.");
+            alert("No se pudo generar el código de barras EAN-13.");
         }
     };
 
@@ -617,7 +691,7 @@ export function setupPOS(app) {
     let lastKeyTime = Date.now();
 
     document.addEventListener('keydown', (e) => {
-        if (pantallaPOS.style.display === 'none') return;
+        if (pantallaPOS && pantallaPOS.style.display === 'none') return;
         
         if (e.key.length > 1 && e.key !== 'Enter') return;
 
@@ -662,7 +736,7 @@ export function setupPOS(app) {
                 const prod = productosDisponibles.find(p => p.id === id);
                 if (prod) {
                     agregarProductoAlCarrito(prod, cantidad);
-                    inputCant.value = 1;
+                    if(inputCant) inputCant.value = 1;
                 }
             }
         });
