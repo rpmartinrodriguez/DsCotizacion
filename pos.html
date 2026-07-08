@@ -105,37 +105,34 @@
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        /* Estilos específicos corregidos para no imprimir hojas en blanco */
+        /* ============================================================== */
+        /* CONFIGURACIÓN ESTRICTA PARA IMPRESORA NIIMBOT 50x30mm          */
+        /* ============================================================== */
         @media print {
-            body.imprimiendo-barcode .main-container {
-                display: none !important;
-            }
-            body.imprimiendo-barcode .modal-overlay {
-                position: static;
-                background: none;
-                padding: 0;
-            }
-            body.imprimiendo-barcode .modal-content {
-                box-shadow: none;
-                border: none;
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                max-width: 100%;
-            }
-            body.imprimiendo-barcode .card__title,
-            body.imprimiendo-barcode .modal-actions {
-                display: none !important;
-            }
+            @page { size: 50mm 30mm; margin: 0; }
+            
+            /* Ocultamos absolutamente TODA la web para evitar hojas en blanco */
+            .main-container, .modal-overlay { display: none !important; }
+
+            /* Mostramos SOLO el área de impresión de código de barras */
             body.imprimiendo-barcode #print-area-barcode {
-                display: block;
-                text-align: center;
-                margin: 0 auto;
+                display: flex !important; position: fixed; left: 0; top: 0; width: 50mm; height: 30mm;
+                flex-direction: column; justify-content: center; align-items: center; background: white; z-index: 99999;
+                padding: 1mm; box-sizing: border-box;
             }
-            @page {
-                margin: 0;
-                size: auto;
+            body.imprimiendo-barcode #print-area-barcode * { margin: 0; padding: 0; }
+            #barcode-titulo-impresion { font-size: 11px; font-weight: bold; max-height: 14px; overflow: hidden; margin-bottom: 2px; text-align: center; color: #000; font-family: sans-serif; }
+            
+            /* Mostramos SOLO el área de impresión de promociones */
+            body.imprimiendo-promo #print-area-promo {
+                display: flex !important; position: fixed; left: 0; top: 0; width: 50mm; height: 30mm;
+                flex-direction: column; justify-content: center; align-items: center; background: white; z-index: 99999;
+                text-align: center; font-family: sans-serif; padding: 2mm; box-sizing: border-box; border: 2px solid #000;
             }
+            #print-area-promo * { margin: 0; padding: 0; line-height: 1.2; }
+            #print-promo-tipo { font-size: 20px; font-weight: 900; text-transform: uppercase; color: #000; }
+            #print-promo-prod { font-size: 13px; font-weight: bold; margin: 4px 0; color: #000; max-height: 16px; overflow: hidden; }
+            #print-promo-frase { font-size: 11px; font-weight: bold; color: #000; border-top: 1px solid #000; padding-top: 2px; width: 90%; }
         }
     </style>
 </head>
@@ -210,6 +207,7 @@
                         <h2 class="card__title" style="margin: 0;">Productos</h2>
                         <div style="display: flex; gap: 0.5rem;">
                             <button id="btn-ir-stock" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
+                            <button id="btn-ir-promos" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: #f59e0b; color: #f59e0b;">🏷️ Promos</button>
                             <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">Cerrar Caja</button>
                         </div>
                     </div>
@@ -286,6 +284,29 @@
                     </table>
                 </div>
             </section>
+
+            <section id="pantalla-promociones" class="card" style="display: none; max-width: 600px; margin: 0 auto;">
+                <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h2 class="card__title" style="margin: 0;">Crear Etiqueta Promo</h2>
+                    <button id="btn-volver-mostrador-promos" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">🏪 Volver a Ventas</button>
+                </div>
+                
+                <div class="form-group">
+                    <label>Producto a Promocionar</label>
+                    <select id="promo-producto-select"></select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Promoción</label>
+                    <input type="text" id="promo-tipo" placeholder="Ej: 2x1, 50% OFF, OFERTA" maxlength="15">
+                </div>
+                <div class="form-group">
+                    <label>Frase Corta Adicional</label>
+                    <input type="text" id="promo-frase" placeholder="Ej: Válido por hoy" maxlength="25">
+                </div>
+                <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">La etiqueta está calibrada para salir perfecta en rollos NIIMBOT B1 de 50x30mm.</p>
+                <button id="btn-imprimir-promo" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">🖨️ Imprimir Etiqueta Promo</button>
+            </section>
+
         </main>
     </div>
 
@@ -367,12 +388,11 @@
         <div class="modal-content card" style="max-width: 400px; text-align: center;">
             <h2 class="card__title">Etiqueta de Producto</h2>
             
-            <div id="print-area-barcode" style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
+            <div style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
                 <h3 id="barcode-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
                 <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden;">
-                    <svg id="barcode-canvas"></svg>
+                    <svg id="barcode-canvas-preview"></svg>
                 </div>
-                <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666;">Dulce App</p>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
@@ -380,6 +400,17 @@
                 <button id="btn-imprimir-barcode" class="btn-primary" style="width: 48%;">🖨️ Imprimir</button>
             </div>
         </div>
+    </div>
+
+    <div id="print-area-barcode" style="display: none;">
+        <h3 id="barcode-titulo-impresion">Producto</h3>
+        <svg id="barcode-canvas-print"></svg>
+    </div>
+
+    <div id="print-area-promo" style="display: none;">
+        <h2 id="print-promo-tipo">2x1</h2>
+        <h3 id="print-promo-prod">Producto</h3>
+        <p id="print-promo-frase">Frase</p>
     </div>
 
     <script type="module">
