@@ -15,10 +15,8 @@
     <style>
         .main-container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
         
-        /* Título elegante */
-        .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 1.5rem;}
+        .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 1px;}
 
-        /* Tabs */
         .tabs-container { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem; overflow-x: auto; }
         .tab-btn { background: none; border: none; font-size: 1.1rem; font-weight: bold; color: #94a3b8; cursor: pointer; padding: 0.5rem 1rem; transition: color 0.3s; border-radius: 8px 8px 0 0; white-space: nowrap;}
         .tab-btn:hover { color: #ec4899; background: #fdf2f8; }
@@ -51,18 +49,26 @@
 
         /* Dashboard Styles */
         .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-        .dash-card { background: white; border: 1px solid #fbcfe8; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(251, 207, 232, 0.2); text-align: center; }
-        .dash-card h3 { margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #831843; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dash-card { background: white; border: 1px solid #fbcfe8; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(251, 207, 232, 0.2); text-align: center; position: relative; }
+        .dash-card h3 { margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #831843; text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: center; align-items: center; gap: 0.5rem; }
         .dash-card .valor { font-size: 1.8rem; font-weight: 900; color: #ec4899; }
         .dash-card .subtext { font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
 
         .charts-container { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
         @media(min-width: 768px) { .charts-container { grid-template-columns: 2fr 1fr; } }
-        .chart-box { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; }
+        .chart-box { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; position: relative;}
 
         .stats-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
         .stats-table th, .stats-table td { padding: 0.8rem; border-bottom: 1px solid #eee; text-align: left; }
         .stats-table th { background: #fdf2f8; color: #831843; font-weight: bold; }
+
+        /* Estilos para el icono de Información (i) */
+        .info-icon { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; background: #ec4899; color: white; border-radius: 50%; font-size: 12px; font-weight: bold; font-family: serif; font-style: italic; cursor: pointer; transition: transform 0.2s; }
+        .info-icon:hover { transform: scale(1.1); background: #be185d; }
+        
+        .list-top-productos { list-style: none; padding: 0; margin: 0; text-align: left; }
+        .list-top-productos li { padding: 0.4rem 0; border-bottom: 1px dashed #eee; font-size: 0.9rem; display: flex; justify-content: space-between;}
+        .list-top-productos li:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
@@ -117,10 +123,8 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
-            <!-- Título Elegante Rosa igual a Mostrador -->
             <h1 class="page-title">Historial de Cajas</h1>
 
-            <!-- Pestañas de Navegación -->
             <div class="tabs-container">
                 <button class="tab-btn active" id="tab-btn-historial">🗃️ Historial y Facturación</button>
                 <button class="tab-btn" id="tab-btn-estadisticas">📊 Dashboard Estadístico</button>
@@ -128,7 +132,6 @@
 
             <!-- SECCIÓN 1: HISTORIAL Y FACTURACIÓN -->
             <div id="section-historial">
-                <!-- CALCULADORA DE FACTURACIÓN MP -->
                 <div class="card" style="margin-bottom: 1.5rem; background-color: #f0f9ff; border: 1px solid #bae6fd;">
                     <h2 class="card__title" style="color: #0369a1; margin-bottom: 1rem;">Calculadora de Facturación (MercadoPago)</h2>
                     <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
@@ -159,14 +162,12 @@
                     </div>
                 </div>
 
-                <!-- FILTRO DE MESES -->
                 <div class="buscador-container" style="margin-bottom: 1.5rem;">
                     <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
                         <option value="todos">Cargando meses...</option>
                     </select>
                 </div>
 
-                <!-- CONTENEDOR DE CAJAS -->
                 <div id="lista-cajas-container">
                     <p class="text-light" style="text-align: center;">Cargando historial...</p>
                 </div>
@@ -184,47 +185,95 @@
                 </div>
 
                 <div id="stats-content" style="display: none;">
-                    <!-- Tarjetas de KPIs Principales -->
+                    
                     <div class="dashboard-grid">
                         <div class="dash-card">
-                            <h3>Venta Promedio (Media)</h3>
+                            <h3>Media <span class="info-icon" data-info="media">i</span></h3>
                             <div class="valor" id="stat-media">$0.00</div>
-                            <div class="subtext">Por día trabajado</div>
+                            <div class="subtext">Venta promedio por día</div>
                         </div>
                         <div class="dash-card">
-                            <h3>Punto Central (Mediana)</h3>
+                            <h3>Mediana <span class="info-icon" data-info="mediana">i</span></h3>
                             <div class="valor" id="stat-mediana">$0.00</div>
-                            <div class="subtext">Mitad de los días facturan más que esto</div>
+                            <div class="subtext">Valor central de ventas</div>
                         </div>
-                        <div class="dash-card">
-                            <h3>Producto Estrella (Moda)</h3>
-                            <div class="valor" id="stat-moda" style="font-size: 1.4rem;">-</div>
-                            <div class="subtext">El artículo que más se repite</div>
-                        </div>
-                        <div class="dash-card">
-                            <h3>Nivel Desperdicio</h3>
-                            <div class="valor" id="stat-desperdicio" style="color: #eab308;">0%</div>
-                            <div class="subtext">Sobre el volumen total producido</div>
+                        <div class="dash-card" style="grid-column: span 2;">
+                            <h3 style="margin-bottom: 1rem;">Productos Estrella (Moda) <span class="info-icon" data-info="moda">i</span></h3>
+                            <ul class="list-top-productos" id="lista-top-productos"></ul>
+                            <ul class="list-top-productos" id="lista-resto-productos" style="display: none; margin-top: 0;"></ul>
+                            <button id="btn-ver-mas-productos" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; padding: 0.3rem; font-size: 0.8rem; border: none; background: #fdf2f8; color: #ec4899; cursor: pointer; display: none;">Ver detalle completo ⬇</button>
                         </div>
                     </div>
 
-                    <!-- Gráficos -->
                     <div class="charts-container">
                         <div class="chart-box">
-                            <h3 style="margin-top: 0; color: #475569;">Ventas Diarias (Últimos 15 días activos)</h3>
+                            <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Ventas Diarias <span class="info-icon" data-info="ventas_diarias">i</span></h3>
                             <canvas id="chartLineVentas" height="250"></canvas>
                         </div>
                         <div class="chart-box">
-                            <h3 style="margin-top: 0; color: #475569;">Distribución de Categorías</h3>
-                            <canvas id="chartPieCategorias" height="250"></canvas>
+                            <h3 style="margin-top: 0; color: #475569;">Desperdicio <span class="info-icon" data-info="desperdicio">i</span></h3>
+                            <div style="text-align: center; margin-top: 2rem;">
+                                <div id="stat-desperdicio" style="font-size: 3rem; font-weight: 900; color: #eab308;">0%</div>
+                                <p style="color: var(--text-light); font-size: 0.9rem;">Sobre el volumen producido</p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Detalles Avanzados en Tablas -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-                        <!-- Tabla Medidas Estadísticas -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
                         <div class="card" style="margin: 0;">
-                            <h3 style="margin-top: 0; color: #831843;">Medidas de Dispersión</h3>
+                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Clasificación ABC <span class="info-icon" data-info="abc">i</span></h3>
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th>Clase</th>
+                                        <th>Porcentaje</th>
+                                        <th>Descripción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong style="color:#15803d; font-size: 1.2rem;">A</strong></td>
+                                        <td>~80% Ventas</td>
+                                        <td id="abc-a-text" style="font-size: 0.8rem; color: #666;">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong style="color:#eab308; font-size: 1.2rem;">B</strong></td>
+                                        <td>~15% Ventas</td>
+                                        <td id="abc-b-text" style="font-size: 0.8rem; color: #666;">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong style="color:#b91c1c; font-size: 1.2rem;">C</strong></td>
+                                        <td>~5% Ventas</td>
+                                        <td id="abc-c-text" style="font-size: 0.8rem; color: #666;">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="card" style="margin: 0;">
+                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Indicadores Estratégicos <span class="info-icon" data-info="estrategicos">i</span></h3>
+                            <table class="stats-table">
+                                <tr>
+                                    <td><strong>Crecimiento Clientes</strong></td>
+                                    <td id="stat-crecimiento-clientes" style="font-weight: bold;">-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Crecimiento Ingresos</strong></td>
+                                    <td id="stat-crecimiento-ingresos" style="font-weight: bold;">-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Margen Global Promedio</strong></td>
+                                    <td id="stat-margen-promedio" style="font-weight: bold;">-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Línea más Rentable</strong></td>
+                                    <td id="stat-linea-rentable" style="font-weight: bold; color: #15803d;">-</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <div class="card" style="margin: 0;">
+                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Medidas de Dispersión <span class="info-icon" data-info="dispersion">i</span></h3>
                             <table class="stats-table">
                                 <tr>
                                     <td><strong>Día Máximo (Récord)</strong></td>
@@ -235,7 +284,7 @@
                                     <td id="stat-min" style="color: #b91c1c; font-weight: bold;">$0.00</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Rango (Diferencia Max-Min)</strong></td>
+                                    <td><strong>Rango (Max - Min)</strong></td>
                                     <td id="stat-rango">$0.00</td>
                                 </tr>
                                 <tr>
@@ -247,34 +296,6 @@
                                     <td id="stat-stddev">-</td>
                                 </tr>
                             </table>
-                            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem;">* Una desviación alta indica ventas muy variables e inestables. Una desviación baja indica ventas predecibles.</p>
-                        </div>
-
-                        <!-- Tabla KPIs de Negocio -->
-                        <div class="card" style="margin: 0;">
-                            <h3 style="margin-top: 0; color: #831843;">Indicadores (KPIs)</h3>
-                            <table class="stats-table">
-                                <tr>
-                                    <td><strong>Rotación de Inventario</strong></td>
-                                    <td style="font-weight: bold;">Alta (Saludable)</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Producto con Mayor Ganancia</strong></td>
-                                    <td id="stat-mayor-ganancia" style="color: #15803d; font-weight: bold;">-</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Margen Global Promedio</strong></td>
-                                    <td id="stat-margen-promedio" style="font-weight: bold;">-</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Tiempo Prom. Atención</strong></td>
-                                    <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">Dato Muestra</span><br>2 min 15 seg</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Satisfacción del Cliente</strong></td>
-                                    <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">Dato Muestra</span><br>⭐ 4.8 / 5</td>
-                                </tr>
-                            </table>
                         </div>
                     </div>
                 </div>
@@ -282,11 +303,36 @@
         </main>
     </div>
 
+    <!-- MODAL DE INFORMACIÓN GLOBAL (i) -->
+    <div id="modal-info" class="modal-overlay" style="display: none; z-index: 9999;">
+        <div class="modal-content card" style="max-width: 500px;">
+            <h2 id="info-title" style="color: #ec4899; margin-top: 0; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Título</h2>
+            
+            <div style="margin-top: 1rem;">
+                <h4 style="color: #831843; margin-bottom: 0.2rem;">¿Qué muestra?</h4>
+                <p id="info-desc" style="font-size: 0.95rem; color: #475569; margin-top: 0;"></p>
+                
+                <h4 style="color: #831843; margin-bottom: 0.2rem;">¿Para qué sirve?</h4>
+                <p id="info-sirve" style="font-size: 0.95rem; color: #475569; margin-top: 0;"></p>
+                
+                <h4 style="color: #831843; margin-bottom: 0.2rem;">Ejemplo práctico:</h4>
+                <div style="background: #f1f5f9; padding: 0.8rem; border-left: 3px solid #0ea5e9; border-radius: 4px; font-size: 0.9rem; margin-bottom: 1rem;" id="info-ej"></div>
+                
+                <h4 style="color: #831843; margin-bottom: 0.2rem;">¿Qué decisiones tomar?</h4>
+                <p id="info-dec" style="font-size: 0.95rem; color: #15803d; font-weight: 500; margin-top: 0;"></p>
+            </div>
+
+            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
+                <button id="btn-cerrar-info" class="btn-primary" style="width: auto;">Entendido</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=3';
+        import { setupCajas } from './js/cajas.js?v=4';
         
         try {
             const app = initializeApp(firebaseConfig);
