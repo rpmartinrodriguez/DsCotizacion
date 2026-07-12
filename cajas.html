@@ -55,14 +55,13 @@
         .dash-card .subtext { font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
 
         .charts-container { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
-        @media(min-width: 768px) { .charts-container { grid-template-columns: 2fr 1fr; } }
+        @media(min-width: 768px) { .charts-container { grid-template-columns: 1fr 1fr; } }
         .chart-box { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; position: relative;}
 
         .stats-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
         .stats-table th, .stats-table td { padding: 0.8rem; border-bottom: 1px solid #eee; text-align: left; }
         .stats-table th { background: #fdf2f8; color: #831843; font-weight: bold; }
 
-        /* Estilos para el icono de Información (i) */
         .info-icon { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; background: #ec4899; color: white; border-radius: 50%; font-size: 12px; font-weight: bold; font-family: serif; font-style: italic; cursor: pointer; transition: transform 0.2s; }
         .info-icon:hover { transform: scale(1.1); background: #be185d; }
         
@@ -173,138 +172,158 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN 2: ESTADÍSTICAS Y KPIs -->
+            <!-- SECCIÓN 2: ESTADÍSTICAS DEL NEGOCIO -->
             <div id="section-estadisticas" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-                    <p class="text-light" style="margin:0;">Analizando datos históricos para extraer KPIs.</p>
-                    <button id="btn-cargar-stats" class="btn-primary" style="width: auto; background: #be185d;">🔄 Recalcular Datos</button>
+                    <p class="text-light" style="margin:0;">Procesando historial para extraer indicadores financieros y operativos avanzados.</p>
+                    <button id="btn-cargar-stats" class="btn-primary" style="width: auto; background: #be185d;">🔄 Recalcular Todo</button>
                 </div>
 
                 <div id="stats-loading" style="text-align: center; padding: 2rem; display: none;">
-                    <p style="color: #ec4899; font-weight: bold;">Cargando y procesando matriz de datos...</p>
+                    <p style="color: #ec4899; font-weight: bold;">Calculando algoritmos y procesando gráficos...</p>
                 </div>
 
                 <div id="stats-content" style="display: none;">
                     
+                    <!-- Fila 1: KPIs Monetarios -->
                     <div class="dashboard-grid">
                         <div class="dash-card">
-                            <h3>Media <span class="info-icon" data-info="media">i</span></h3>
+                            <h3>Venta Promedio <span class="info-icon" data-info="media">i</span></h3>
                             <div class="valor" id="stat-media">$0.00</div>
-                            <div class="subtext">Venta promedio por día</div>
+                            <div class="subtext">Media diaria facturada</div>
                         </div>
                         <div class="dash-card">
-                            <h3>Mediana <span class="info-icon" data-info="mediana">i</span></h3>
+                            <h3>Punto Central <span class="info-icon" data-info="mediana">i</span></h3>
                             <div class="valor" id="stat-mediana">$0.00</div>
-                            <div class="subtext">Valor central de ventas</div>
+                            <div class="subtext">Mediana libre de picos</div>
                         </div>
-                        <div class="dash-card" style="grid-column: span 2;">
-                            <h3 style="margin-bottom: 1rem;">Productos Estrella (Moda) <span class="info-icon" data-info="moda">i</span></h3>
-                            <ul class="list-top-productos" id="lista-top-productos"></ul>
-                            <ul class="list-top-productos" id="lista-resto-productos" style="display: none; margin-top: 0;"></ul>
-                            <button id="btn-ver-mas-productos" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; padding: 0.3rem; font-size: 0.8rem; border: none; background: #fdf2f8; color: #ec4899; cursor: pointer; display: none;">Ver detalle completo ⬇</button>
+                        <div class="dash-card">
+                            <h3>Ticket Promedio <span class="info-icon" data-info="ticket_promedio">i</span></h3>
+                            <div class="valor" id="stat-ticket-promedio" style="color: #0ea5e9;">$0.00</div>
+                            <div class="subtext">Gasto medio por cliente</div>
+                        </div>
+                        <div class="dash-card">
+                            <h3>Desperdicio Real <span class="info-icon" data-info="desperdicio">i</span></h3>
+                            <div class="valor" id="stat-desperdicio" style="color: #eab308;">0%</div>
+                            <div class="subtext">Pérdida por descartes</div>
                         </div>
                     </div>
 
+                    <!-- Panel de Productos Estrella (Moda) -->
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <h3 style="margin-top:0; margin-bottom: 1rem; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Top 5 Productos Estrella (Moda) <span class="info-icon" data-info="moda">i</span></h3>
+                        <ul class="list-top-productos" id="lista-top-productos"></ul>
+                        <ul class="list-top-productos" id="lista-resto-productos" style="display: none; margin-top: 0;"></ul>
+                        <button id="btn-ver-mas-productos" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; padding: 0.3rem; font-size: 0.8rem; border: none; background: #fdf2f8; color: #ec4899; cursor: pointer; display: none;">Ver detalle completo ⬇</button>
+                    </div>
+
+                    <!-- Gráficos de Ventas e Histograma Horario -->
                     <div class="charts-container">
                         <div class="chart-box">
-                            <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Ventas Diarias <span class="info-icon" data-info="ventas_diarias">i</span></h3>
-                            <canvas id="chartLineVentas" height="250"></canvas>
+                            <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Evolución de Ventas <span class="info-icon" data-info="ventas_diarias">i</span></h3>
+                            <canvas id="chartLineVentas" height="230"></canvas>
                         </div>
                         <div class="chart-box">
-                            <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Desperdicio <span class="info-icon" data-info="desperdicio">i</span></h3>
-                            <div style="text-align: center; margin-top: 2rem;">
-                                <div id="stat-desperdicio" style="font-size: 3rem; font-weight: 900; color: #eab308;">0%</div>
-                                <p style="color: var(--text-light); font-size: 0.9rem;">Sobre el volumen producido</p>
-                            </div>
+                            <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Horas Pico de Consumo <span class="info-icon" data-info="horas_pico">i</span></h3>
+                            <canvas id="chartBarHoras" height="230"></canvas>
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <!-- Tablas Avanzadas -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                        
+                        <!-- Clasificación de Pareto ABC -->
                         <div class="card" style="margin: 0;">
-                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Clasificación ABC <span class="info-icon" data-info="abc">i</span></h3>
+                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Clasificación ABC (Pareto) <span class="info-icon" data-info="abc">i</span></h3>
                             <table class="stats-table">
                                 <thead>
                                     <tr>
                                         <th>Clase</th>
-                                        <th>Porcentaje</th>
-                                        <th>Descripción</th>
+                                        <th>Impacto</th>
+                                        <th>Productos Clave</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
                                         <td><strong style="color:#15803d; font-size: 1.2rem;">A</strong></td>
-                                        <td>~80% Ventas</td>
-                                        <td id="abc-a-text" style="font-size: 0.8rem; color: #666;">-</td>
+                                        <td>80% ingresos</td>
+                                        <td id="abc-a-text" style="font-size: 0.8rem; color: #555;">-</td>
                                     </tr>
                                     <tr>
                                         <td><strong style="color:#eab308; font-size: 1.2rem;">B</strong></td>
-                                        <td>~15% Ventas</td>
-                                        <td id="abc-b-text" style="font-size: 0.8rem; color: #666;">-</td>
+                                        <td>15% ingresos</td>
+                                        <td id="abc-b-text" style="font-size: 0.8rem; color: #555;">-</td>
                                     </tr>
                                     <tr>
                                         <td><strong style="color:#b91c1c; font-size: 1.2rem;">C</strong></td>
-                                        <td>~5% Ventas</td>
-                                        <td id="abc-c-text" style="font-size: 0.8rem; color: #666;">-</td>
+                                        <td>5% ingresos</td>
+                                        <td id="abc-c-text" style="font-size: 0.8rem; color: #555;">-</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
 
+                        <!-- Indicadores de Negocio y Crecimiento -->
                         <div class="card" style="margin: 0;">
-                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Indicadores Estratégicos <span class="info-icon" data-info="estrategicos">i</span></h3>
+                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Métricas de Crecimiento y Stock <span class="info-icon" data-info="estrategicos">i</span></h3>
                             <table class="stats-table">
                                 <tr>
-                                    <td><strong>Crecimiento Clientes</strong></td>
+                                    <td><strong>Crecimiento Clientes (Turnos)</strong></td>
                                     <td id="stat-crecimiento-clientes" style="font-weight: bold;">-</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Crecimiento Ingresos</strong></td>
+                                    <td><strong>Crecimiento de Ingresos</strong></td>
                                     <td id="stat-crecimiento-ingresos" style="font-weight: bold;">-</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Margen Global Promedio</strong></td>
-                                    <td id="stat-margen-promedio" style="font-weight: bold;">-</td>
+                                    <td><strong>Rotación de Inventario</strong></td>
+                                    <td id="stat-rotacion-inventario" style="font-weight: bold; color: #2563eb;">-</td>
                                 </tr>
                                 <tr>
                                     <td><strong>Línea más Rentable</strong></td>
                                     <td id="stat-linea-rentable" style="font-weight: bold; color: #15803d;">-</td>
                                 </tr>
+                                <tr>
+                                    <td><strong>Margen Recetas Promedio</strong></td>
+                                    <td id="stat-margen-promedio" style="font-weight: bold;">-</td>
+                                </tr>
                             </table>
                         </div>
 
+                        <!-- Estabilidad y Dispersión -->
                         <div class="card" style="margin: 0;">
-                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Medidas de Dispersión <span class="info-icon" data-info="dispersion">i</span></h3>
+                            <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Estabilidad de Ventas <span class="info-icon" data-info="dispersion">i</span></h3>
                             <table class="stats-table">
                                 <tr>
-                                    <td><strong>Día Máximo (Récord)</strong></td>
+                                    <td><strong>Turno Récord (Máx)</strong></td>
                                     <td id="stat-max" style="color: #15803d; font-weight: bold;">$0.00</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Día Mínimo (Suelo)</strong></td>
+                                    <td><strong>Turno Suelo (Mín)</strong></td>
                                     <td id="stat-min" style="color: #b91c1c; font-weight: bold;">$0.00</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Rango (Max - Min)</strong></td>
+                                    <td><strong>Rango de Variación</strong></td>
                                     <td id="stat-rango">$0.00</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Varianza</strong></td>
-                                    <td id="stat-varianza">-</td>
+                                    <td><strong>Varianza Financiera</strong></td>
+                                    <td id="stat-varianza" style="font-size: 0.8rem; color:#777;">-</td>
                                 </tr>
                                 <tr>
                                     <td><strong>Desviación Estándar</strong></td>
-                                    <td id="stat-stddev">-</td>
+                                    <td id="stat-stddev" style="font-weight: bold; color: #475569;">-</td>
                                 </tr>
                             </table>
                         </div>
+
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <!-- MODAL DE INFORMACIÓN GLOBAL (i) -->
-    <!-- FIX: Le quitamos el display none para que funcione con tu CSS global "visible" -->
+    <!-- MODAL DE INFORMACIÓN INTELIGENTE (i) -->
     <div id="modal-info" class="modal-overlay">
         <div class="modal-content card" style="max-width: 500px;">
             <h2 id="info-title" style="color: #ec4899; margin-top: 0; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Título</h2>
@@ -333,7 +352,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=10';
+        import { setupCajas } from './js/cajas.js?v=11'; // Forzar actualización estricta
         
         try {
             const app = initializeApp(firebaseConfig);
