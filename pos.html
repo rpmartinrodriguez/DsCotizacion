@@ -319,25 +319,12 @@
         </div>
     </div>
 
-    <!-- MODAL DE DESCARGA DE CÓDIGO DE BARRAS (AHORA CON FECHAS) -->
+    <!-- MODAL DE DESCARGA DE CÓDIGO DE BARRAS -->
     <div id="modal-barcode" class="modal-overlay">
         <div class="modal-content card" style="max-width: 450px; text-align: center;">
             <h2 class="card__title">Etiqueta 50x30</h2>
             
             <div style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
-                
-                <!-- Campos para Fechas que se imprimirán en el código -->
-                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; text-align: left;">
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.8rem; color: #666;">Elaboración (Opcional):</label>
-                        <input type="date" id="barcode-input-elab" style="padding: 0.3rem; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="font-size: 0.8rem; color: #666;">Vencimiento (Opcional):</label>
-                        <input type="date" id="barcode-input-vto" style="padding: 0.3rem; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
-                    </div>
-                </div>
-
                 <!-- Canvas maestro donde armamos la imagen perfecta -->
                 <canvas id="barcode-canvas-descarga" class="canvas-preview"></canvas>
             </div>
