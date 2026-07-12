@@ -307,7 +307,6 @@ export function setupPOS(app) {
             procesarYRenderizar();
         });
 
-        // ACÁ ESTABA EL ERROR: Usábamos orderBy pero no lo habíamos importado en la línea 2. Ya está solucionado.
         onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
             recetasBrutas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             procesarYRenderizar();
@@ -708,29 +707,33 @@ export function setupPOS(app) {
         ctx.fillStyle = "black";
         ctx.textAlign = "center";
         
-        let fontSize = 42;
+        // Reducido de 42 a 28 para que sea mucho más armónico
+        let fontSize = 28;
         ctx.font = `bold ${fontSize}px sans-serif`;
         
-        while (ctx.measureText(prod.nombreTorta).width > 380 && fontSize > 16) {
+        // Nos aseguramos que nunca supere los 360px de ancho
+        while (ctx.measureText(prod.nombreTorta).width > 360 && fontSize > 14) {
             fontSize -= 2;
             ctx.font = `bold ${fontSize}px sans-serif`;
         }
         
-        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 50); 
+        // Lo ponemos bien arriba (y=35)
+        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 35); 
 
         const tempCanvas = document.createElement("canvas");
         try {
+            // Achicamos el width de 3.5 a 3, para asegurar que los 13 números entren perfecto
             JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "EAN13", lineColor: "#000", width: 3.5, height: 140, displayValue: true, fontSize: 30, margin: 0
+                format: "EAN13", lineColor: "#000", width: 3, height: 120, displayValue: true, fontSize: 24, margin: 10
             });
         } catch(e) {
             JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "CODE128", lineColor: "#000", width: 3, height: 140, displayValue: true, fontSize: 26, margin: 0
+                format: "CODE128", lineColor: "#000", width: 2.5, height: 120, displayValue: true, fontSize: 22, margin: 10
             });
         }
 
         const xOffset = (canvasFinal.width - tempCanvas.width) / 2;
-        const yOffset = 70; // Pegado al texto para usar todo el papel
+        const yOffset = 55; // Lo subimos para centrarlo verticalmente
 
         ctx.drawImage(tempCanvas, xOffset, yOffset);
     };
