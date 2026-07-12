@@ -8,7 +8,7 @@ export function setupPOS(app) {
     const db = getFirestore(app);
     const auth = getAuth(app);
     
-    // Colecciones principales de la App
+    // --- Colecciones principales de la App ---
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const recetasCollection = collection(db, 'recetas'); 
@@ -21,7 +21,7 @@ export function setupPOS(app) {
     const pantallaStock = document.getElementById('pantalla-stock-mostrador');
     const pantallaPromociones = document.getElementById('pantalla-promociones');
 
-    // --- Referencias DOM: Caja y Mostrador Vendedor ---
+    // --- Referencias DOM: Caja y Mostrador ---
     const usuarioNombreEl = document.getElementById('usuario-activo-nombre');
     const fondoCajaInput = document.getElementById('fondo-caja-input');
     const btnAbrirCaja = document.getElementById('btn-abrir-caja');
@@ -32,7 +32,7 @@ export function setupPOS(app) {
     const posTotalMonto = document.getElementById('pos-total-monto');
     const btnCobrar = document.getElementById('btn-cobrar');
 
-    // Modales de Cobro y Cierre de Caja
+    // Modales de Cobro y Cierre
     const modalCobro = document.getElementById('modal-cobro');
     const modalCobroTotal = document.getElementById('modal-cobro-total');
     const btnPaymentMethods = document.querySelectorAll('.btn-payment');
@@ -47,7 +47,7 @@ export function setupPOS(app) {
     const btnCancelarCierre = document.getElementById('btn-cancelar-cierre');
     const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
 
-    // --- Referencias DOM: Inventario y Reglas del Administrador ---
+    // --- Referencias DOM: Inventario ---
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const buscadorInventario = document.getElementById('buscador-inventario');
@@ -63,7 +63,7 @@ export function setupPOS(app) {
     const inputPromoFrase = document.getElementById('promo-frase');
     const btnImprimirPromo = document.getElementById('btn-imprimir-promo');
 
-    // Modales de Stock y Código de Barras
+    // Modales de Stock y Barras
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
@@ -86,16 +86,14 @@ export function setupPOS(app) {
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
-    
     let materiasPrimasMap = new Map(); 
     let recetasBrutas = []; 
     let productosDisponibles = []; 
-    
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
 
-    // Métodos Helpers para Formatos Comunes
+    // Métodos Helpers
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp) return '';
@@ -103,7 +101,7 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
-    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base
+    // --- CÁLCULO DE PRECIOS Y COSTOS ---
     const obtenerCostoBase = (receta) => {
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
@@ -117,7 +115,6 @@ export function setupPOS(app) {
         return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
-    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final
     const calcularPrecioVenta = (prod) => {
         const costo = prod.costoBaseCalculado || 0;
         const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
@@ -125,9 +122,7 @@ export function setupPOS(app) {
         return costo * (1 + (margenAplicado / 100));
     };
 
-    // ==========================================
-    // 1. CONFIGURACIÓN GLOBAL (MARGEN DE GANANCIAS)
-    // ==========================================
+    // --- CONFIGURACIÓN GLOBAL ---
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
         if (docSnap.exists()) {
             margenGlobal = docSnap.data().margenGlobal || 0;
@@ -145,15 +140,12 @@ export function setupPOS(app) {
                 procesarYRenderizar();
                 return;
             }
-
             const pass = prompt("Ingrese la contraseña de Administrador:");
             if (pass === "Lautaro2026") {
                 document.body.classList.add('admin-open');
                 btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
                 procesarYRenderizar();
-            } else if (pass !== null) {
-                alert("Contraseña incorrecta de acceso.");
-            }
+            } else if (pass !== null) alert("Contraseña incorrecta.");
         });
     }
 
@@ -162,22 +154,13 @@ export function setupPOS(app) {
             const nuevoMargen = prompt("Defina el nuevo porcentaje de Margen de Ganancia Global (%):", margenGlobal);
             if (nuevoMargen !== null && nuevoMargen.trim() !== "") {
                 const margenNum = parseFloat(nuevoMargen);
-                if (isNaN(margenNum) || margenNum < 0) {
-                    alert("Ingrese un porcentaje numérico válido.");
-                    return;
-                }
-                try {
-                    await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
-                } catch (e) {
-                    alert("Error guardando configuraciones globales.");
-                }
+                if (isNaN(margenNum) || margenNum < 0) return alert("Porcentaje inválido.");
+                try { await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum }); } catch (e) {}
             }
         });
     }
 
-    // ==========================================
-    // 2. AUTENTICACIÓN Y APERTURA DE TURNOS
-    // ==========================================
+    // --- AUTENTICACIÓN Y TURNOS DE CAJA ---
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
@@ -239,9 +222,7 @@ export function setupPOS(app) {
         });
     }
 
-    // ==========================================
-    // 3. CARGA DE DATOS Y MATEMÁTICA AUTOMÁTICA
-    // ==========================================
+    // --- CONTROL DE NAVEGACIÓN ---
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
@@ -282,6 +263,7 @@ export function setupPOS(app) {
         });
     }
 
+    // --- OBTENCIÓN DE DATOS REAL-TIME ---
     const cargarDataYCostos = () => {
         onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
@@ -404,8 +386,18 @@ export function setupPOS(app) {
                 const prod = productosDisponibles.find(p => p.id === btnBarcode.dataset.id);
                 if (prod) {
                     if (!prod.codigoBarras) {
-                        // Generamos el EAN-13: 12 dígitos y jsBarcode calcula el 13
-                        const nuevoCodigo = String(Date.now()).substring(0, 12); 
+                        // CREACIÓN MATEMÁTICA DEL EAN-13 REAL
+                        // 1. Tomamos los primeros 12 dígitos del Timestamp
+                        let num12 = String(Date.now()).substring(0, 12); 
+                        // 2. Calculamos el dígito verificador real
+                        let sum = 0;
+                        for(let i = 0; i < 12; i++) {
+                            sum += parseInt(num12[i]) * (i % 2 === 1 ? 3 : 1);
+                        }
+                        let checkDigit = (10 - (sum % 10)) % 10;
+                        // 3. Unimos los 12 dígitos con el verificador para formar los 13 finales
+                        const nuevoCodigo = num12 + String(checkDigit); 
+                        
                         try {
                             await updateDoc(doc(db, 'recetas', prod.id), { codigoBarras: nuevoCodigo });
                             prod.codigoBarras = nuevoCodigo; 
@@ -452,33 +444,30 @@ export function setupPOS(app) {
         if(barcodeTituloProducto) barcodeTituloProducto.textContent = prod.nombreTorta;
         if(barcodeTituloImpresion) barcodeTituloImpresion.textContent = prod.nombreTorta;
 
+        // Función de apoyo para dibujar el código de barras e intentar rescatarlo si está mal generado (errores previos)
+        const renderizarBarras = (selector, width, height, fontSize, margin) => {
+            try {
+                // Intentamos EAN13 primero (El estándar estricto que ahora guardamos)
+                JsBarcode(selector, prod.codigoBarras, {
+                    format: "EAN13",
+                    lineColor: "#000", width: width, height: height, displayValue: true, fontSize: fontSize, margin: margin
+                });
+            } catch(e) {
+                // RESCATE: Si falla porque es un código de pruebas viejo sin el dígito verificador real, usamos CODE128 (Flexible)
+                JsBarcode(selector, prod.codigoBarras, {
+                    format: "CODE128",
+                    lineColor: "#000", width: width, height: height, displayValue: true, fontSize: fontSize, margin: margin
+                });
+            }
+        };
+
         try {
-            // Visualización en pantalla
-            JsBarcode("#barcode-canvas-preview", prod.codigoBarras, {
-                format: "EAN13",
-                lineColor: "#000",
-                width: 1.5,
-                height: 40,
-                displayValue: true, 
-                fontSize: 14,
-                margin: 5
-            });
-
-            // Código oculto exacto para impresión en rollo 50x30
-            JsBarcode("#barcode-canvas-print", prod.codigoBarras, {
-                format: "EAN13",
-                lineColor: "#000",
-                width: 1.5,
-                height: 35,
-                displayValue: true, 
-                fontSize: 12,
-                margin: 2
-            });
-
+            renderizarBarras("#barcode-canvas-preview", 1.5, 40, 14, 5);
+            renderizarBarras("#barcode-canvas-print", 1.5, 35, 12, 2);
             if(modalBarcode) modalBarcode.classList.add('visible');
         } catch(error) {
             console.error("Error al generar código de barras:", error);
-            alert("No se pudo generar el código de barras EAN-13.");
+            alert("Error crítico al dibujar el código de barras.");
         }
     };
 
