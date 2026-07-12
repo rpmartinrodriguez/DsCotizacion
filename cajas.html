@@ -127,7 +127,7 @@
 
             <div class="tabs-container">
                 <button class="tab-btn active" id="tab-btn-historial">🗃️ Historial y Facturación</button>
-                <button class="tab-btn" id="tab-btn-estadisticas">📊 Dashboard Estadístico</button>
+                <button class="tab-btn" id="tab-btn-estadisticas">📊 Estadísticas del Negocio</button>
             </div>
 
             <!-- SECCIÓN 1: HISTORIAL Y FACTURACIÓN -->
@@ -332,7 +332,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=4';
+        import { setupCajas } from './js/cajas.js?v=6'; // Actualizado para forzar lectura limpia
         
         try {
             const app = initializeApp(firebaseConfig);
