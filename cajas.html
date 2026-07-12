@@ -1,148 +1,321 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Historial de Cajas - Dulce App</title>
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <meta name="theme-color" content="#ff96c5">
-    <style>
-        .main-container { max-width: 900px; margin: 0 auto; padding: 1rem; }
-        
-        .caja-header { cursor: pointer; transition: background-color 0.2s; }
-        .caja-header:hover { background-color: #f8fafc; }
-        
-        .caja-estado { font-size: 0.8rem; font-weight: bold; padding: 0.2rem 0.6rem; border-radius: 20px; }
-        .estado-abierta { background-color: #dcfce3; color: #15803d; }
-        .estado-cerrada { background-color: #f1f5f9; color: #475569; }
+import { 
+    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, updateDoc, doc 
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-        .caja-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .caja-resumen-item { display: flex; flex-direction: column; gap: 0.3rem; }
-        .caja-resumen-item span:first-child { font-size: 0.85rem; color: var(--text-light); }
-        .caja-resumen-item span:last-child { font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
+export function setupCajas(app) {
+    const db = getFirestore(app);
+    const cajasCollection = collection(db, 'cajas');
+    const ventasCollection = collection(db, 'ventasMostrador');
 
-        .ticket-list { border-top: 1px dashed var(--border-color); padding-top: 1.5rem; }
-        .ticket-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid #eee; }
-        .ticket-item:last-child { border-bottom: none; }
-        .ticket-info h4 { margin: 0 0 0.3rem 0; font-size: 0.95rem; }
-        .ticket-info p { margin: 0; font-size: 0.85rem; color: var(--text-light); }
-        .ticket-monto { font-weight: bold; color: var(--primary-color); }
-        .metodo-pago-tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; background: #eee; border-radius: 4px; color: #666; margin-left: 0.5rem; }
+    const listaCajasContainer = document.getElementById('lista-cajas-container');
+    const filtroMesSelect = document.getElementById('filtro-mes-cajas');
+    
+    // Elementos de la Calculadora de Facturación
+    const btnCalcularFacturacion = document.getElementById('btn-calcular-facturacion');
+    const calcDesde = document.getElementById('calc-desde');
+    const calcHasta = document.getElementById('calc-hasta');
+    const resultadoFacturacion = document.getElementById('resultado-facturacion');
+    const resTotalMp = document.getElementById('res-total-mp');
+    const resFacturadoMp = document.getElementById('res-facturado-mp');
+    const resPendienteMp = document.getElementById('res-pendiente-mp');
 
-        .btn-facturado { transition: all 0.2s; }
-        .btn-facturado:hover { opacity: 0.8; }
-        .facturado-true { background-color: #dcfce3; border: 1px solid #22c55e; color: #15803d; }
-        .facturado-false { background-color: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; }
-    </style>
-</head>
-<body>
-    <div class="main-container">
-        <!-- HEADER -->
-        <header class="header">
-            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
-                <span></span><span></span><span></span>
-            </button>
-            <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
-            </a>
-            <div class="header__spacer"></div>
-        </header>
+    let todasLasCajas = [];
 
-        <!-- MENÚ DE NAVEGACIÓN -->
-        <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
-                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
-                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
-                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
-                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="cajas.html" class="nav-menu__link active"><span>🗃️</span> Historial Cajas</a>
-                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
-                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
-                </div>
-            </div>
-        </nav>
-        <div class="nav-menu__overlay" id="nav-overlay"></div>
+    // Funciones Helper
+    function formatMoneda(val) {
+        return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    
+    function formatearFecha(timestamp) {
+        if (!timestamp) return 'Fecha desconocida';
+        const date = timestamp.toDate();
+        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+    }
 
-        <main>
-            <h1 class="header__slogan">Historial de Cajas</h1>
+    function formatearMesAnio(timestamp) {
+        if (!timestamp) return null;
+        const date = timestamp.toDate();
+        const mes = (date.getMonth() + 1).toString().padStart(2, '0');
+        const anio = date.getFullYear();
+        return `${anio}-${mes}`; 
+    }
 
-            <!-- CALCULADORA DE FACTURACIÓN MP -->
-            <div class="card" style="margin-bottom: 1.5rem; background-color: #f0f9ff; border: 1px solid #bae6fd;">
-                <h2 class="card__title" style="color: #0369a1; margin-bottom: 1rem;">Calculadora de Facturación (MercadoPago)</h2>
-                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                    <div style="flex-grow: 1;">
-                        <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Desde:</label>
-                        <input type="date" id="calc-desde" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+    function nombreMes(mesAnio) {
+        const [anio, mes] = mesAnio.split('-');
+        const fecha = new Date(anio, parseInt(mes) - 1, 1);
+        const nombre = fecha.toLocaleDateString('es-AR', { month: 'long' });
+        return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + anio;
+    }
+
+    // ==========================================
+    // 1. RENDERIZAR LA LISTA DE CAJAS
+    // ==========================================
+    function renderizarCajas() {
+        const mesFiltro = filtroMesSelect.value;
+        listaCajasContainer.innerHTML = '';
+
+        let cajasFiltradas = todasLasCajas;
+        if (mesFiltro !== 'todos') {
+            cajasFiltradas = todasLasCajas.filter(caja => formatearMesAnio(caja.fechaApertura) === mesFiltro);
+        }
+
+        if (cajasFiltradas.length === 0) {
+            listaCajasContainer.innerHTML = '<p class="text-light" style="text-align: center; padding: 2rem;">No hay cajas registradas en este período.</p>';
+            return;
+        }
+
+        cajasFiltradas.forEach(caja => {
+            const estadoClase = caja.estado === 'abierta' ? 'estado-abierta' : 'estado-cerrada';
+            const estadoTexto = caja.estado === 'abierta' ? '🟢 EN CURSO' : '⚪ CERRADA';
+            
+            const fondo = caja.fondoInicial || 0;
+            const efvo = caja.totalEfectivo || 0;
+            const mp = caja.totalMercadoPago || 0;
+            const cajaFisica = fondo + efvo;
+
+            // Datos del tilde Facturado
+            const isFacturado = caja.facturadoMP === true;
+            const btnFacturadoClass = isFacturado ? 'facturado-true' : 'facturado-false';
+            const btnFacturadoText = isFacturado ? '✅ Facturado' : '❌ Marcar Facturado';
+
+            const div = document.createElement('div');
+            div.className = 'categoria-acordeon'; 
+            div.style.marginBottom = '1.5rem';
+
+            div.innerHTML = `
+                <div class="categoria-acordeon__header caja-header" data-id="${caja.id}">
+                    <div>
+                        <div style="font-size: 1.1rem;">Apertura: ${formatearFecha(caja.fechaApertura)}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-light); font-weight: normal; margin-top: 0.2rem;">
+                            👤 ${caja.usuarioNombre || 'Usuario'}
+                            ${caja.fechaCierre ? ` | Cierre: ${formatearFecha(caja.fechaCierre)}` : ''}
+                        </div>
                     </div>
-                    <div style="flex-grow: 1;">
-                        <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Hasta:</label>
-                        <input type="date" id="calc-hasta" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="caja-estado ${estadoClase}">${estadoTexto}</span>
+                        <span class="acordeon-icono">+</span>
                     </div>
-                    <button id="btn-calcular-facturacion" class="btn-primary" style="background-color: #0ea5e9; border-color: #0ea5e9; padding: 0.5rem 1.5rem;">Calcular</button>
                 </div>
                 
-                <div id="resultado-facturacion" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #bae6fd; display: none;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="color: #334155;">Ingresos Totales (MP):</span>
-                        <strong id="res-total-mp" style="color: #334155;">$0.00</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="color: #15803d;">Ya Facturado:</span>
-                        <strong id="res-facturado-mp" style="color: #15803d;">$0.00</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 1.2rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #bae6fd;">
-                        <span style="color: #b91c1c; font-weight: bold;">Pendiente a Facturar:</span>
-                        <strong id="res-pendiente-mp" style="color: #b91c1c;">$0.00</strong>
+                <div class="categoria-acordeon__content" style="background: white; padding: 0;">
+                    <div style="padding: 1.5rem;">
+                        <div class="caja-resumen">
+                            <div class="caja-resumen-item">
+                                <span>Fondo Inicial</span>
+                                <span>${formatMoneda(fondo)}</span>
+                            </div>
+                            <div class="caja-resumen-item">
+                                <span>Ventas Efvo. (Neto)</span>
+                                <span style="color: var(--success-color);">${formatMoneda(efvo)}</span>
+                            </div>
+                            <div class="caja-resumen-item">
+                                <span>Ventas MP (Neta)</span>
+                                <div>
+                                    <span style="color: var(--success-color); display: block; margin-bottom: 0.3rem;">${formatMoneda(mp)}</span>
+                                    <button class="btn-facturado ${btnFacturadoClass}" data-id="${caja.id}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
+                                        ${btnFacturadoText}
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="caja-resumen-item" style="border-left: 2px solid var(--border-color); padding-left: 1rem;">
+                                <span>Efectivo en Caja</span>
+                                <span style="color: var(--primary-color);">${formatMoneda(cajaFisica)}</span>
+                            </div>
+                        </div>
+
+                        <div class="ticket-list">
+                            <h3 style="font-size: 1rem; margin-top: 0; margin-bottom: 1rem;">Detalle de Ventas</h3>
+                            <div id="tickets-${caja.id}">
+                                <p class="text-light" style="font-size: 0.9rem;">Cargando tickets...</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            `;
+            listaCajasContainer.appendChild(div);
+        });
+    }
 
-            <!-- FILTRO DE MESES -->
-            <div class="buscador-container" style="margin-bottom: 1.5rem;">
-                <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
-                    <option value="todos">Cargando meses...</option>
-                </select>
-            </div>
+    // ==========================================
+    // 2. ACTUALIZAR FILTROS DE MESES
+    // ==========================================
+    function actualizarFiltros() {
+        const mesesUnicos = new Set();
+        todasLasCajas.forEach(caja => {
+            const mesAnio = formatearMesAnio(caja.fechaApertura);
+            if (mesAnio) mesesUnicos.add(mesAnio);
+        });
 
-            <!-- CONTENEDOR DE CAJAS -->
-            <div id="lista-cajas-container">
-                <p class="text-light" style="text-align: center;">Cargando historial...</p>
-            </div>
-        </main>
-    </div>
+        const valorActual = filtroMesSelect.value;
+        filtroMesSelect.innerHTML = '<option value="todos">Todos los meses</option>';
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js';
-        const app = initializeApp(firebaseConfig);
-        setupCajas(app);
-    </script>
-    <script src="js/menu.js" defer></script>
-</body>
-</html>
+        const mesesOrdenados = Array.from(mesesUnicos).sort().reverse();
+        mesesOrdenados.forEach(mesAnio => {
+            const option = document.createElement('option');
+            option.value = mesAnio;
+            option.textContent = nombreMes(mesAnio);
+            filtroMesSelect.appendChild(option);
+        });
+
+        if (mesesOrdenados.includes(valorActual)) {
+            filtroMesSelect.value = valorActual;
+        } else if (mesesOrdenados.length > 0 && valorActual !== 'todos') {
+            filtroMesSelect.value = mesesOrdenados[0]; 
+        }
+    }
+
+    // ==========================================
+    // 3. CARGAR CAJAS AL INICIAR
+    // ==========================================
+    onSnapshot(query(cajasCollection, orderBy('fechaApertura', 'desc')), (snapshot) => {
+        todasLasCajas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        actualizarFiltros();
+        renderizarCajas();
+    });
+
+    filtroMesSelect.addEventListener('change', renderizarCajas);
+
+    // ==========================================
+    // 4. INTERACCIÓN (ACORDEÓN Y TICKETS FIREBASE FIX)
+    // ==========================================
+    async function cargarTicketsDeCaja(cajaId, container) {
+        try {
+            // FIX FIREBASE (COMPROBADO): Usamos SOLO el where. El orderBy queda fuera para no exigir un index en Firestore.
+            const q = query(ventasCollection, where('cajaId', '==', cajaId));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                container.innerHTML = '<p class="text-light" style="font-size: 0.9rem;">No hubo ventas en este turno.</p>';
+                return;
+            }
+
+            // Metemos los datos en un Array y los ordenamos con JavaScript por fecha (de nuevo a viejo)
+            let ventas = [];
+            querySnapshot.forEach(docSnap => ventas.push(docSnap.data()));
+
+            ventas.sort((a, b) => {
+                if (!a.fecha || !b.fecha) return 0;
+                return b.fecha.seconds - a.fecha.seconds;
+            });
+
+            container.innerHTML = '';
+            ventas.forEach(venta => {
+                const itemsTexto = (venta.items || [])
+                    .map(item => `${item.cantidad}x ${item.nombre}`)
+                    .join(', ');
+
+                let tagMP = '';
+                if (venta.metodoPago === 'Ambos') {
+                    tagMP = `<span class="metodo-pago-tag">Efvo: ${formatMoneda(venta.pagoEfectivo)} | MP: ${formatMoneda(venta.pagoMercadoPago)}</span>`;
+                } else {
+                    tagMP = `<span class="metodo-pago-tag">${venta.metodoPago}</span>`;
+                }
+
+                const ticketDiv = document.createElement('div');
+                ticketDiv.className = 'ticket-item';
+                ticketDiv.innerHTML = `
+                    <div class="ticket-info">
+                        <h4>Hora: ${formatearFecha(venta.fecha).split(',')[1] || ''} ${tagMP}</h4>
+                        <p>${itemsTexto}</p>
+                    </div>
+                    <div class="ticket-monto">${formatMoneda(venta.total)}</div>
+                `;
+                container.appendChild(ticketDiv);
+            });
+        } catch (error) {
+            console.error("Error al cargar tickets:", error);
+            container.innerHTML = '<p style="color: var(--danger-color); font-size: 0.9rem;">Error al cargar las ventas.</p>';
+        }
+    }
+
+    listaCajasContainer.addEventListener('click', async (e) => {
+        // --- 1. MANEJO DEL BOTÓN DE FACTURADO ---
+        if (e.target.closest('.btn-facturado')) {
+            const btn = e.target.closest('.btn-facturado');
+            const cajaId = btn.dataset.id;
+            const estadoActual = btn.dataset.estado === 'true';
+
+            try {
+                btn.textContent = "..."; // Feedback visual temporal
+                await updateDoc(doc(db, 'cajas', cajaId), {
+                    facturadoMP: !estadoActual
+                });
+                // Firebase disparará onSnapshot y se re-renderizará la lista sola
+            } catch (err) {
+                console.error("Error al cambiar estado de facturación:", err);
+                alert("Hubo un error de conexión.");
+            }
+            return; // Salimos para no abrir/cerrar el acordeón por accidente
+        }
+
+        // --- 2. MANEJO DEL ACORDEÓN ---
+        const header = e.target.closest('.caja-header');
+        if (!header) return;
+
+        const acordeon = header.parentElement;
+        const cajaId = header.dataset.id;
+        const ticketsContainer = document.getElementById(`tickets-${cajaId}`);
+        const icono = header.querySelector('.acordeon-icono');
+
+        const estaActivo = acordeon.classList.contains('active');
+        
+        document.querySelectorAll('.categoria-acordeon').forEach(el => {
+            el.classList.remove('active');
+            el.querySelector('.acordeon-icono').textContent = '+';
+        });
+
+        if (!estaActivo) {
+            acordeon.classList.add('active');
+            icono.textContent = '-';
+            
+            if (ticketsContainer.innerHTML.includes('Cargando')) {
+                await cargarTicketsDeCaja(cajaId, ticketsContainer);
+            }
+        }
+    });
+
+    // ==========================================
+    // 5. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
+    // ==========================================
+    if (btnCalcularFacturacion) {
+        btnCalcularFacturacion.addEventListener('click', () => {
+            const desdeStr = calcDesde.value;
+            const hastaStr = calcHasta.value;
+
+            if (!desdeStr || !hastaStr) {
+                alert("Por favor, seleccioná la fecha 'Desde' y 'Hasta'.");
+                return;
+            }
+
+            // Normalizamos las fechas para cubrir el día entero
+            const dInicio = new Date(`${desdeStr}T00:00:00`);
+            const dFin = new Date(`${hastaStr}T23:59:59`);
+
+            let acumuladoTotalMP = 0;
+            let acumuladoFacturadoMP = 0;
+
+            todasLasCajas.forEach(caja => {
+                if (caja.fechaApertura) {
+                    const dCaja = caja.fechaApertura.toDate();
+                    
+                    if (dCaja >= dInicio && dCaja <= dFin) {
+                        const mp = caja.totalMercadoPago || 0;
+                        acumuladoTotalMP += mp;
+                        
+                        if (caja.facturadoMP === true) {
+                            acumuladoFacturadoMP += mp;
+                        }
+                    }
+                }
+            });
+
+            const pendienteFacturar = acumuladoTotalMP - acumuladoFacturadoMP;
+
+            resTotalMp.textContent = formatMoneda(acumuladoTotalMP);
+            resFacturadoMp.textContent = formatMoneda(acumuladoFacturadoMP);
+            resPendienteMp.textContent = formatMoneda(pendienteFacturar);
+
+            resultadoFacturacion.style.display = 'block';
+        });
+    }
+}
