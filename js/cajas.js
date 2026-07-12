@@ -12,70 +12,35 @@ export function setupCajas(app) {
 
     let todasLasCajas = [];
 
-    const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    function formatMoneda(val) {
+        return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
     
-    const formatearFecha = (timestamp) => {
+    function formatearFecha(timestamp) {
         if (!timestamp) return 'Fecha desconocida';
         const date = timestamp.toDate();
         return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
-    };
+    }
 
-    const formatearMesAnio = (timestamp) => {
+    function formatearMesAnio(timestamp) {
         if (!timestamp) return null;
         const date = timestamp.toDate();
         const mes = (date.getMonth() + 1).toString().padStart(2, '0');
         const anio = date.getFullYear();
         return `${anio}-${mes}`; // Ej: "2026-06"
-    };
+    }
 
-    const nombreMes = (mesAnio) => {
+    function nombreMes(mesAnio) {
         const [anio, mes] = mesAnio.split('-');
         const fecha = new Date(anio, parseInt(mes) - 1, 1);
         const nombre = fecha.toLocaleDateString('es-AR', { month: 'long' });
         return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + anio;
-    };
+    }
 
     // ==========================================
-    // 1. CARGAR CAJAS Y ARMAR FILTRO
+    // 1. RENDERIZAR LA LISTA DE CAJAS
     // ==========================================
-    onSnapshot(query(cajasCollection, orderBy('fechaApertura', 'desc')), (snapshot) => {
-        todasLasCajas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        actualizarFiltros();
-        renderizarCajas();
-    });
-
-    const actualizarFiltros = () => {
-        const mesesUnicos = new Set();
-        todasLasCajas.forEach(caja => {
-            const mesAnio = formatearMesAnio(caja.fechaApertura);
-            if (mesAnio) mesesUnicos.add(mesAnio);
-        });
-
-        const valorActual = filtroMesSelect.value;
-        filtroMesSelect.innerHTML = '<option value="todos">Todos los meses</option>';
-
-        const mesesOrdenados = Array.from(mesesUnicos).sort().reverse();
-        mesesOrdenados.forEach(mesAnio => {
-            const option = document.createElement('option');
-            option.value = mesAnio;
-            option.textContent = nombreMes(mesAnio);
-            filtroMesSelect.appendChild(option);
-        });
-
-        // Mantener la selección si todavía existe
-        if (mesesOrdenados.includes(valorActual)) {
-            filtroMesSelect.value = valorActual;
-        } else if (mesesOrdenados.length > 0 && valorActual !== 'todos') {
-            filtroMesSelect.value = mesesOrdenados[0]; // Seleccionar el más reciente por defecto
-        }
-    };
-
-    filtroMesSelect.addEventListener('change', renderizarCajas);
-
-    // ==========================================
-    // 2. RENDERIZAR LA LISTA DE CAJAS
-    // ==========================================
-    const renderizarCajas = () => {
+    function renderizarCajas() {
         const mesFiltro = filtroMesSelect.value;
         listaCajasContainer.innerHTML = '';
 
@@ -99,7 +64,7 @@ export function setupCajas(app) {
             const cajaFisica = fondo + efvo;
 
             const div = document.createElement('div');
-            div.className = 'categoria-acordeon'; // Reutilizamos estilo acordeón de recetas
+            div.className = 'categoria-acordeon'; 
             div.style.marginBottom = '1.5rem';
 
             div.innerHTML = `
@@ -149,41 +114,51 @@ export function setupCajas(app) {
             `;
             listaCajasContainer.appendChild(div);
         });
-    };
+    }
 
     // ==========================================
-    // 3. INTERACCIÓN (ABRIR ACORDEÓN Y CARGAR TICKETS)
+    // 2. ACTUALIZAR FILTROS DE MESES
     // ==========================================
-    listaCajasContainer.addEventListener('click', async (e) => {
-        const header = e.target.closest('.caja-header');
-        if (!header) return;
-
-        const acordeon = header.parentElement;
-        const cajaId = header.dataset.id;
-        const ticketsContainer = document.getElementById(`tickets-${cajaId}`);
-        const icono = header.querySelector('.acordeon-icono');
-
-        // Alternar clase active para mostrar/ocultar
-        const estaActivo = acordeon.classList.contains('active');
-        
-        // Cerrar todos los demás
-        document.querySelectorAll('.categoria-acordeon').forEach(el => {
-            el.classList.remove('active');
-            el.querySelector('.acordeon-icono').textContent = '+';
+    function actualizarFiltros() {
+        const mesesUnicos = new Set();
+        todasLasCajas.forEach(caja => {
+            const mesAnio = formatearMesAnio(caja.fechaApertura);
+            if (mesAnio) mesesUnicos.add(mesAnio);
         });
 
-        if (!estaActivo) {
-            acordeon.classList.add('active');
-            icono.textContent = '-';
-            
-            // Cargar los tickets si todavía no se cargaron
-            if (ticketsContainer.innerHTML.includes('Cargando')) {
-                await cargarTicketsDeCaja(cajaId, ticketsContainer);
-            }
+        const valorActual = filtroMesSelect.value;
+        filtroMesSelect.innerHTML = '<option value="todos">Todos los meses</option>';
+
+        const mesesOrdenados = Array.from(mesesUnicos).sort().reverse();
+        mesesOrdenados.forEach(mesAnio => {
+            const option = document.createElement('option');
+            option.value = mesAnio;
+            option.textContent = nombreMes(mesAnio);
+            filtroMesSelect.appendChild(option);
+        });
+
+        if (mesesOrdenados.includes(valorActual)) {
+            filtroMesSelect.value = valorActual;
+        } else if (mesesOrdenados.length > 0 && valorActual !== 'todos') {
+            filtroMesSelect.value = mesesOrdenados[0]; 
         }
+    }
+
+    // ==========================================
+    // 3. CARGAR CAJAS AL INICIAR
+    // ==========================================
+    onSnapshot(query(cajasCollection, orderBy('fechaApertura', 'desc')), (snapshot) => {
+        todasLasCajas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        actualizarFiltros();
+        renderizarCajas();
     });
 
-    const cargarTicketsDeCaja = async (cajaId, container) => {
+    filtroMesSelect.addEventListener('change', renderizarCajas);
+
+    // ==========================================
+    // 4. INTERACCIÓN (ABRIR ACORDEÓN Y CARGAR TICKETS)
+    // ==========================================
+    async function cargarTicketsDeCaja(cajaId, container) {
         try {
             const q = query(ventasCollection, where('cajaId', '==', cajaId), orderBy('fecha', 'desc'));
             const querySnapshot = await getDocs(q);
@@ -197,7 +172,6 @@ export function setupCajas(app) {
             querySnapshot.forEach(docSnap => {
                 const venta = docSnap.data();
                 
-                // Generar texto de los ítems (Ej: "2x Lemon Pie, 1x Rogel")
                 const itemsTexto = (venta.items || [])
                     .map(item => `${item.cantidad}x ${item.nombre}`)
                     .join(', ');
@@ -217,5 +191,31 @@ export function setupCajas(app) {
             console.error("Error al cargar tickets:", error);
             container.innerHTML = '<p style="color: var(--danger-color); font-size: 0.9rem;">Error al cargar las ventas.</p>';
         }
-    };
+    }
+
+    listaCajasContainer.addEventListener('click', async (e) => {
+        const header = e.target.closest('.caja-header');
+        if (!header) return;
+
+        const acordeon = header.parentElement;
+        const cajaId = header.dataset.id;
+        const ticketsContainer = document.getElementById(`tickets-${cajaId}`);
+        const icono = header.querySelector('.acordeon-icono');
+
+        const estaActivo = acordeon.classList.contains('active');
+        
+        document.querySelectorAll('.categoria-acordeon').forEach(el => {
+            el.classList.remove('active');
+            el.querySelector('.acordeon-icono').textContent = '+';
+        });
+
+        if (!estaActivo) {
+            acordeon.classList.add('active');
+            icono.textContent = '-';
+            
+            if (ticketsContainer.innerHTML.includes('Cargando')) {
+                await cargarTicketsDeCaja(cajaId, ticketsContainer);
+            }
+        }
+    });
 }
