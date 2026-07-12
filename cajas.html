@@ -98,6 +98,14 @@
                     <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
                 </div>
             </div>
+            <div class="nav-category">
+                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
+                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
+                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+                </div>
+            </div>
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
@@ -233,7 +241,7 @@
 
                     <!-- Tabla: Producción Óptima Sugerida -->
                     <div class="card" style="margin-bottom: 1.5rem; background: #fef08a; border: 1px solid #fef08a;">
-                        <h3 style="margin-top:0; color:#854d0e; display:flex; align-items:center; gap:0.5rem;">Volume Sugerido de Producción Óptima <span class="info-icon" data-info="produccion_optima">i</span></h3>
+                        <h3 style="margin-top:0; color:#854d0e; display:flex; align-items:center; gap:0.5rem;">Volumen Sugerido de Producción Óptima <span class="info-icon" data-info="produccion_optima">i</span></h3>
                         <p style="font-size:0.85rem; color:#854d0e; margin:0 0 1rem 0;" id="txt-dia-semana">Pronóstico basado en el historial del día de la semana...</p>
                         <table class="stats-table" id="tabla-produccion-optima" style="background:white; border-radius:8px;">
                             <thead>
@@ -301,6 +309,14 @@
                                     <td><strong>Línea más Rentable</strong></td>
                                     <td id="stat-linea-rentable" style="font-weight: bold; color: #15803d;">-</td>
                                 </tr>
+                                <tr>
+                                    <td><strong>Margen Promedio Real</strong></td>
+                                    <td id="stat-margen-promedio" style="font-weight: bold;">-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Desperdicio Operativo <span class="info-icon" data-info="desperdicio" style="background:#eab308;">i</span></strong></td>
+                                    <td id="stat-desperdicio" style="font-weight: bold; color: #eab308;">0%</td>
+                                </tr>
                             </table>
                         </div>
 
@@ -318,6 +334,10 @@
                                 <tr>
                                     <td><strong>Rango de Variación</strong></td>
                                     <td id="stat-rango">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Varianza</strong></td>
+                                    <td id="stat-varianza">-</td>
                                 </tr>
                                 <tr>
                                     <td><strong>Desviación Estándar</strong></td>
