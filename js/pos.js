@@ -1,5 +1,5 @@
 import { 
-    getFirestore, collection, onSnapshot, query, where, doc, 
+    getFirestore, collection, onSnapshot, query, where, orderBy, doc, 
     addDoc, updateDoc, Timestamp, runTransaction, getDocs, setDoc 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
@@ -15,12 +15,13 @@ export function setupPOS(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas'); 
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
 
-    // --- Referencias DOM ---
+    // --- Referencias DOM: Vistas de Pantalla ---
     const pantallaApertura = document.getElementById('pantalla-apertura');
     const pantallaPOS = document.getElementById('pantalla-pos');
     const pantallaStock = document.getElementById('pantalla-stock-mostrador');
     const pantallaPromociones = document.getElementById('pantalla-promociones');
 
+    // --- Referencias DOM: Caja y Mostrador ---
     const usuarioNombreEl = document.getElementById('usuario-activo-nombre');
     const fondoCajaInput = document.getElementById('fondo-caja-input');
     const btnAbrirCaja = document.getElementById('btn-abrir-caja');
@@ -45,6 +46,7 @@ export function setupPOS(app) {
     const btnCancelarCierre = document.getElementById('btn-cancelar-cierre');
     const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
 
+    // --- Referencias DOM: Inventario y Reglas ---
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const buscadorInventario = document.getElementById('buscador-inventario');
@@ -52,6 +54,7 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
+    // --- Referencias DOM: Promociones e Impresión ---
     const btnIrPromos = document.getElementById('btn-ir-promos');
     const btnVolverMostradorPromos = document.getElementById('btn-volver-mostrador-promos');
     const selectPromoProd = document.getElementById('promo-producto-select');
@@ -59,7 +62,7 @@ export function setupPOS(app) {
     const inputPromoFrase = document.getElementById('promo-frase');
     const btnDescargarPromo = document.getElementById('btn-descargar-promo');
 
-    // Modales Stock / Lotes
+    // Modales de Stock y Lotes
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
@@ -77,6 +80,7 @@ export function setupPOS(app) {
 
     // Modales Barras
     const modalBarcode = document.getElementById('modal-barcode');
+    const barcodeTituloProducto = document.getElementById('barcode-titulo-producto');
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
     const btnDescargarBarcode = document.getElementById('btn-descargar-barcode');
 
@@ -84,15 +88,18 @@ export function setupPOS(app) {
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
+    let datosCargados = false; // Bandera para no recargar la base de datos innecesariamente
+    
     let materiasPrimasMap = new Map(); 
     let recetasBrutas = []; 
     let productosDisponibles = []; 
+    
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
     let currentBarcodeProduct = null;
 
-    // Métodos Helpers
+    // Métodos Helpers para Formatos Comunes
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp || !timestamp.toDate) return '';
@@ -108,6 +115,7 @@ export function setupPOS(app) {
         return `${y}-${m}-${d}`;
     };
 
+    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base
     const obtenerCostoBase = (receta) => {
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
@@ -121,6 +129,7 @@ export function setupPOS(app) {
         return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
+    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final
     const calcularPrecioVenta = (prod) => {
         const costo = prod.costoBaseCalculado || 0;
         const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
@@ -128,7 +137,9 @@ export function setupPOS(app) {
         return costo * (1 + (margenAplicado / 100));
     };
 
-    // --- CONFIGURACIÓN GLOBAL ---
+    // ==========================================
+    // 1. CONFIGURACIÓN GLOBAL (MARGEN DE GANANCIAS)
+    // ==========================================
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
         if (docSnap.exists()) {
             margenGlobal = docSnap.data().margenGlobal || 0;
@@ -146,12 +157,15 @@ export function setupPOS(app) {
                 procesarYRenderizar();
                 return;
             }
+
             const pass = prompt("Ingrese la contraseña de Administrador:");
             if (pass === "Lautaro2026") {
                 document.body.classList.add('admin-open');
                 btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
                 procesarYRenderizar();
-            } else if (pass !== null) alert("Contraseña incorrecta de acceso.");
+            } else if (pass !== null) {
+                alert("Contraseña incorrecta de acceso.");
+            }
         });
     }
 
@@ -160,13 +174,22 @@ export function setupPOS(app) {
             const nuevoMargen = prompt("Defina el nuevo porcentaje de Margen de Ganancia Global (%):", margenGlobal);
             if (nuevoMargen !== null && nuevoMargen.trim() !== "") {
                 const margenNum = parseFloat(nuevoMargen);
-                if (isNaN(margenNum) || margenNum < 0) return alert("Ingrese un porcentaje numérico válido.");
-                try { await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum }); } catch (e) {}
+                if (isNaN(margenNum) || margenNum < 0) {
+                    alert("Ingrese un porcentaje numérico válido.");
+                    return;
+                }
+                try {
+                    await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
+                } catch (e) {
+                    alert("Error guardando configuraciones globales.");
+                }
             }
         });
     }
 
-    // --- AUTENTICACIÓN Y TURNOS DE CAJA ---
+    // ==========================================
+    // 2. AUTENTICACIÓN Y APERTURA DE TURNOS
+    // ==========================================
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
@@ -193,9 +216,15 @@ export function setupPOS(app) {
                     if (pantallaStock) pantallaStock.style.display = 'none';
                     if (pantallaPromociones) pantallaPromociones.style.display = 'none';
                 }
-                cargarDataYCostos();
+                
+                // Evitamos llamar a Firebase múltiples veces si ya cargamos los productos
+                if (!datosCargados) {
+                    cargarDataYCostos();
+                    datosCargados = true;
+                }
             } else {
                 cajaActiva = null;
+                datosCargados = false;
                 if (pantallaPOS) pantallaPOS.style.display = 'none';
                 if (pantallaStock) pantallaStock.style.display = 'none';
                 if (pantallaPromociones) pantallaPromociones.style.display = 'none';
@@ -222,12 +251,15 @@ export function setupPOS(app) {
                 btnAbrirCaja.disabled = false;
             } catch (e) {
                 console.error("Error al abrir caja:", e);
+                alert("No se pudo iniciar el turno de caja.");
                 btnAbrirCaja.disabled = false;
             }
         });
     }
 
-    // --- CONTROL DE NAVEGACIÓN ---
+    // ==========================================
+    // 3. CARGA DE DATOS Y NAVEGACIÓN
+    // ==========================================
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
@@ -275,6 +307,7 @@ export function setupPOS(app) {
             procesarYRenderizar();
         });
 
+        // ACÁ ESTABA EL ERROR: Usábamos orderBy pero no lo habíamos importado en la línea 2. Ya está solucionado.
         onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
             recetasBrutas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             procesarYRenderizar();
@@ -465,61 +498,61 @@ export function setupPOS(app) {
     if (modalProdTipoMov) {
         modalProdTipoMov.addEventListener('change', (e) => {
             if (e.target.value === 'SUMAR') {
-                loteFieldsContainer.style.display = 'flex';
+                if (loteFieldsContainer) loteFieldsContainer.style.display = 'flex';
             } else {
-                loteFieldsContainer.style.display = 'none';
+                if (loteFieldsContainer) loteFieldsContainer.style.display = 'none';
             }
         });
     }
 
     // --- Modal Ajuste de Stock ---
     const abrirModalStock = async (prod) => {
-        modalProdId.value = prod.id;
-        modalProdNombre.value = prod.nombreTorta;
-        if(modalProdGananciaIndiv) modalProdGananciaIndiv.value = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
-        modalProdStockActual.textContent = prod.stockMostrador || '0';
+        if (modalProdId) modalProdId.value = prod.id;
+        if (modalProdNombre) modalProdNombre.value = prod.nombreTorta;
+        if (modalProdGananciaIndiv) modalProdGananciaIndiv.value = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
+        if (modalProdStockActual) modalProdStockActual.textContent = prod.stockMostrador || '0';
         
-        modalProdTipoMov.value = 'SUMAR';
-        loteFieldsContainer.style.display = 'flex'; // Sumar por defecto muestra lotes
-        modalProdCantMov.value = '0';
-        modalProdMotivo.value = '';
+        if (modalProdTipoMov) modalProdTipoMov.value = 'SUMAR';
+        if (loteFieldsContainer) loteFieldsContainer.style.display = 'flex'; 
+        if (modalProdCantMov) modalProdCantMov.value = '0';
+        if (modalProdMotivo) modalProdMotivo.value = '';
         
-        // Fechas por defecto: Elaboración Hoy, Vto en 15 días
         const hoy = new Date();
-        modalProdLoteElab.value = dateToYMD(hoy);
+        if (modalProdLoteElab) modalProdLoteElab.value = dateToYMD(hoy);
         
         const vto = new Date();
         vto.setDate(vto.getDate() + 15);
-        modalProdLoteVto.value = dateToYMD(vto);
+        if (modalProdLoteVto) modalProdLoteVto.value = dateToYMD(vto);
 
-        modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Cargando historial...</p>';
+        if (modalProdAuditoria) modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Cargando historial...</p>';
 
         await cargarAuditoriaProducto(prod.id);
-        modalStock.classList.add('visible');
+        if (modalStock) modalStock.classList.add('visible');
     };
 
     const cargarAuditoriaProducto = async (productoId) => {
         try {
-            // SOLUCIÓN ERROR DE ÍNDICE FIREBASE: Le quitamos el orderBy de Firebase y lo ordenamos nosotros en Javascript
+            // Consulta sin orderBy para evitar el error de índice compuesto de Firebase
             const q = query(auditoriaCollection, where('productoId', '==', productoId));
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                modalProdAuditoria.innerHTML = '<p class="text-light" style="font-size: 0.85rem; text-align: center;">Sin movimientos registrados.</p>';
+                if (modalProdAuditoria) modalProdAuditoria.innerHTML = '<p class="text-light" style="font-size: 0.85rem; text-align: center;">Sin movimientos registrados.</p>';
                 return;
             }
 
-            // Metemos los datos en un array
+            // Metemos los datos en un array temporal para ordenarlos manualmente en Javascript
             let logs = [];
             querySnapshot.forEach(docSnap => logs.push(docSnap.data()));
 
-            // ORDENAMOS POR FECHA (Del más nuevo al más viejo)
+            // Ordenamos del más nuevo al más viejo
             logs.sort((a, b) => {
                 if (!a.fecha || !b.fecha) return 0;
                 return b.fecha.seconds - a.fecha.seconds;
             });
 
-            modalProdAuditoria.innerHTML = '';
+            if (modalProdAuditoria) modalProdAuditoria.innerHTML = '';
+            
             logs.forEach(log => {
                 const logDiv = document.createElement('div');
                 logDiv.className = 'log-item';
@@ -528,7 +561,6 @@ export function setupPOS(app) {
                 if (log.tipo === 'SUMA') tipoSpan = `<span class="log-tipo-sumar">[+${log.cantidad}]</span>`;
                 else if (log.tipo === 'RESTA') tipoSpan = `<span class="log-tipo-restar">[-${log.cantidad}]</span>`;
 
-                // Agregar info de lote si existe en el log
                 let infoLote = '';
                 if (log.loteVto) {
                     infoLote = ` (Vto: ${log.loteVto})`;
@@ -541,11 +573,11 @@ export function setupPOS(app) {
                     </div>
                     <div style="color: var(--text-light); font-size: 0.75rem;">👤 ${log.usuario} | Stock resultante: ${log.stockResultante}</div>
                 `;
-                modalProdAuditoria.appendChild(logDiv);
+                if (modalProdAuditoria) modalProdAuditoria.appendChild(logDiv);
             });
         } catch (error) {
             console.error("Error cargando logs auditoria:", error);
-            modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Error al cargar historial.</p>';
+            if (modalProdAuditoria) modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Error al cargar historial.</p>';
         }
     };
 
@@ -555,15 +587,15 @@ export function setupPOS(app) {
 
     if (btnGuardarStock) {
         btnGuardarStock.addEventListener('click', async () => {
-            const id = modalProdId.value;
-            const nombre = modalProdNombre.value;
-            const tipoMov = modalProdTipoMov.value;
-            const cantMov = parseInt(modalProdCantMov.value) || 0;
-            const motivo = modalProdMotivo.value.trim();
-            const fElab = modalProdLoteElab.value;
-            const fVto = modalProdLoteVto.value;
+            const id = modalProdId ? modalProdId.value : null;
+            const nombre = modalProdNombre ? modalProdNombre.value : 'Producto';
+            const tipoMov = modalProdTipoMov ? modalProdTipoMov.value : 'SUMAR';
+            const cantMov = modalProdCantMov ? parseInt(modalProdCantMov.value) : 0;
+            const motivo = modalProdMotivo ? modalProdMotivo.value.trim() : '';
+            const fElab = modalProdLoteElab ? modalProdLoteElab.value : null;
+            const fVto = modalProdLoteVto ? modalProdLoteVto.value : null;
 
-            if (cantMov <= 0) {
+            if (!id || isNaN(cantMov) || cantMov <= 0) {
                 alert("Ingrese una cantidad válida a mover.");
                 return;
             }
@@ -604,7 +636,7 @@ export function setupPOS(app) {
                             if (qtyToDeduct > 0) {
                                 if (lote.cantidad <= qtyToDeduct) {
                                     qtyToDeduct -= lote.cantidad;
-                                    // Lote consumido entero, no se pushea
+                                    // Lote consumido entero
                                 } else {
                                     lote.cantidad -= qtyToDeduct;
                                     qtyToDeduct = 0;
@@ -629,7 +661,7 @@ export function setupPOS(app) {
 
                     transaction.update(docRef, updates);
 
-                    // Guardar Log
+                    // Guardar Log de Auditoria
                     const auditRef = doc(auditoriaCollection); 
                     transaction.set(auditRef, {
                         productoId: id,
@@ -646,7 +678,7 @@ export function setupPOS(app) {
                     });
                 });
                 
-                modalStock.classList.remove('visible');
+                if (modalStock) modalStock.classList.remove('visible');
             } catch (error) {
                 console.error("Error al actualizar stock/lotes:", error);
                 alert("Hubo un error al guardar los cambios.");
@@ -657,47 +689,49 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modal Código de Barras 1D y GENERADOR DE IMAGEN CON FECHAS (50x30) ---
+    // --- Modal Código de Barras 1D y GENERADOR DE IMAGEN (50x30 SIN FECHAS) ---
     const drawBarcodeCanvas = () => {
         if(!currentBarcodeProduct) return;
         const prod = currentBarcodeProduct;
+        
+        // Ocultamos el título HTML de la ventana para que no se vea repetido en la UI
+        if(barcodeTituloProducto) barcodeTituloProducto.style.display = 'none';
         
         const canvasFinal = document.getElementById("barcode-canvas-descarga");
         canvasFinal.width = 400;
         canvasFinal.height = 240;
         const ctx = canvasFinal.getContext("2d");
         
-        // Fondo blanco total
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvasFinal.width, canvasFinal.height);
         
-        // 1. Título Autoajustable
         ctx.fillStyle = "black";
         ctx.textAlign = "center";
-        let fontSize = 38;
+        
+        let fontSize = 42;
         ctx.font = `bold ${fontSize}px sans-serif`;
         
         while (ctx.measureText(prod.nombreTorta).width > 380 && fontSize > 16) {
             fontSize -= 2;
             ctx.font = `bold ${fontSize}px sans-serif`;
         }
-        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 45); 
+        
+        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 50); 
 
-        // 2. Código de Barras (Temporal)
         const tempCanvas = document.createElement("canvas");
         try {
             JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "EAN13", lineColor: "#000", width: 3.5, height: 130, displayValue: true, fontSize: 26, margin: 0
+                format: "EAN13", lineColor: "#000", width: 3.5, height: 140, displayValue: true, fontSize: 30, margin: 0
             });
         } catch(e) {
             JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "CODE128", lineColor: "#000", width: 3, height: 130, displayValue: true, fontSize: 24, margin: 0
+                format: "CODE128", lineColor: "#000", width: 3, height: 140, displayValue: true, fontSize: 26, margin: 0
             });
         }
 
-        // Pegar código de barras en el centro
         const xOffset = (canvasFinal.width - tempCanvas.width) / 2;
-        const yOffset = 75; 
+        const yOffset = 70; // Pegado al texto para usar todo el papel
+
         ctx.drawImage(tempCanvas, xOffset, yOffset);
     };
 
@@ -925,18 +959,20 @@ export function setupPOS(app) {
             metodoPagoSeleccionado = null;
             btnPaymentMethods.forEach(b => b.classList.remove('selected'));
             btnConfirmarVenta.disabled = true;
-            modalCobro.classList.add('visible');
+            if (modalCobro) modalCobro.classList.add('visible');
         });
     }
 
-    if (btnCancelarCobro) btnCancelarCobro.addEventListener('click', () => modalCobro.classList.remove('visible'));
+    if (btnCancelarCobro) btnCancelarCobro.addEventListener('click', () => {
+        if (modalCobro) modalCobro.classList.remove('visible')
+    });
 
     btnPaymentMethods.forEach(btn => {
         btn.addEventListener('click', () => {
             btnPaymentMethods.forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
             metodoPagoSeleccionado = btn.dataset.metodo;
-            btnConfirmarVenta.disabled = false;
+            if (btnConfirmarVenta) btnConfirmarVenta.disabled = false;
         });
     });
 
@@ -1025,7 +1061,7 @@ export function setupPOS(app) {
 
                 carritoActual = [];
                 renderizarCarrito();
-                modalCobro.classList.remove('visible');
+                if (modalCobro) modalCobro.classList.remove('visible');
                 btnConfirmarVenta.textContent = 'Confirmar';
                 
                 if (buscadorPOS) buscadorPOS.focus();
@@ -1051,11 +1087,13 @@ export function setupPOS(app) {
             if (cierreMP) cierreMP.textContent = formatMoneda(mp);
             if (cierreTotalCaja) cierreTotalCaja.textContent = formatMoneda(fondo + efvo);
 
-            modalCierre.classList.add('visible');
+            if (modalCierre) modalCierre.classList.add('visible');
         });
     }
 
-    if (btnCancelarCierre) btnCancelarCierre.addEventListener('click', () => modalCierre.classList.remove('visible'));
+    if (btnCancelarCierre) btnCancelarCierre.addEventListener('click', () => {
+        if (modalCierre) modalCierre.classList.remove('visible');
+    });
 
     if (btnConfirmarCierre) {
         btnConfirmarCierre.addEventListener('click', async () => {
@@ -1068,7 +1106,7 @@ export function setupPOS(app) {
                     estado: 'cerrada',
                     fechaCierre: Timestamp.now()
                 });
-                modalCierre.classList.remove('visible');
+                if (modalCierre) modalCierre.classList.remove('visible');
                 btnConfirmarCierre.disabled = false;
                 btnConfirmarCierre.textContent = 'Cerrar Turno';
             } catch (error) {
