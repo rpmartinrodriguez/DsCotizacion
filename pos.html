@@ -9,7 +9,6 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
     
-    <!-- Librería para Código de Barras -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 
     <style>
@@ -36,14 +35,12 @@
         .log-tipo-restar { color: var(--danger-color); font-weight: bold; }
         .categoria-tag { font-size: 0.75rem; padding: 0.2rem 0.5rem; background: var(--secondary-bg); border-radius: 4px; color: var(--text-light); }
         
-        /* Control visual estricto para el rol de administrador */
         .admin-only { display: none !important; }
         .admin-open .admin-only { display: inline-block !important; }
         table .admin-only { display: none; }
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        /* Estilo para que el canvas de descarga se vea prolijo en pantalla */
         .canvas-preview { max-width: 100%; border: 1px dashed #ccc; border-radius: 4px; margin: 0 auto; display: block; }
     </style>
 </head>
@@ -133,7 +130,7 @@
                         <input type="search" id="buscador-pos" placeholder="🔍 Escanear código de barras o buscar..." style="flex-grow: 1;">
                     </div>
                     <p class="text-light" style="font-size: 0.8rem; margin-top: 0.5rem;">
-                        <em>Tip: Conectá tu pistola lectora y escaneá, el producto se agregará solo.</em>
+                        <em>Tip: Conectá tu pistola lectora y escaneá, el producto se agregará solo usando el sistema PEPS.</em>
                     </p>
 
                     <div style="overflow-x: auto; margin-top: 1rem;">
@@ -172,7 +169,7 @@
             <!-- PANTALLA 3: ADMINISTRACIÓN DE STOCK Y BARRAS -->
             <section id="pantalla-stock-mostrador" class="card" style="display: none;">
                 <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                    <h2 class="card__title" style="margin: 0;">Inventario de Mostrador</h2>
+                    <h2 class="card__title" style="margin: 0;">Inventario y Lotes</h2>
                     <div style="display: flex; gap: 0.5rem;">
                         <button id="btn-desbloquear-admin" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: #6366f1; color: #6366f1;">🔑 Modo Admin</button>
                         <button id="btn-margen-global" class="btn-primary admin-only" style="width: auto; padding: 0.5rem 1rem; background: #6366f1;">⚙️ Margen Global</button>
@@ -223,7 +220,6 @@
                     <input type="text" id="promo-frase" placeholder="Ej: Válido por hoy" maxlength="25">
                 </div>
                 
-                <!-- Canvas oculto para armar la promo y descargarla -->
                 <canvas id="promo-canvas-descarga" style="display: none;"></canvas>
 
                 <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">Se descargará una imagen de 50x30 lista para subir a la app de NIIMBOT.</p>
@@ -233,6 +229,7 @@
         </main>
     </div>
 
+    <!-- MODAL: COBRO -->
     <div id="modal-cobro" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title" style="text-align: center;">Confirmar Cobro</h2>
@@ -251,6 +248,7 @@
         </div>
     </div>
 
+    <!-- MODAL: CIERRE DE CAJA -->
     <div id="modal-cierre" class="modal-overlay">
         <div class="modal-content card">
             <h2 class="card__title">Cierre de Caja Diario</h2>
@@ -268,6 +266,7 @@
         </div>
     </div>
 
+    <!-- MODAL DE STOCK CON LOTES (PEPS) -->
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
             <h2 class="card__title">Ajustar Ficha de Producto</h2>
@@ -281,7 +280,7 @@
                 <input type="number" id="modal-prod-ganancia-indiv" min="0" placeholder="Ej: 120 (Vacío usa el margen global)">
             </div>
             <div style="background: var(--secondary-bg); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-                <h4 style="margin-top: 0; margin-bottom: 0.5rem;">Modificar Unidades</h4>
+                <h4 style="margin-top: 0; margin-bottom: 0.5rem;">Modificar Unidades (Sistema Lotes)</h4>
                 <p style="font-size: 0.9rem; margin: 0 0 0.75rem 0;">Stock actual en sistema: <strong id="modal-prod-stock-actual">0</strong> u.</p>
                 <div style="display: flex; gap: 0.5rem;">
                     <select id="modal-prod-tipo-movimiento" style="width: 130px;">
@@ -290,6 +289,19 @@
                     </select>
                     <input type="number" id="modal-prod-cantidad-movimiento" min="0" value="0" style="flex-grow: 1;" placeholder="Cantidad">
                 </div>
+                
+                <!-- Campos de Lote (Solo visibles al Sumar) -->
+                <div id="lote-fields-container" style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem;">F. Elaboración</label>
+                        <input type="date" id="modal-prod-lote-elab" style="padding: 0.4rem; font-size: 0.85rem;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem;">F. Vencimiento</label>
+                        <input type="date" id="modal-prod-lote-vto" style="padding: 0.4rem; font-size: 0.85rem;">
+                    </div>
+                </div>
+
                 <div class="form-group" style="margin-top: 0.75rem; margin-bottom: 0;">
                     <input type="text" id="modal-prod-motivo" placeholder="Motivo (Ej: Nueva tanda, Descarte)" style="font-size: 0.85rem; padding: 0.4rem;">
                 </div>
@@ -307,15 +319,26 @@
         </div>
     </div>
 
-    <!-- MODAL DE DESCARGA DE CÓDIGO DE BARRAS -->
+    <!-- MODAL DE DESCARGA DE CÓDIGO DE BARRAS (AHORA CON FECHAS) -->
     <div id="modal-barcode" class="modal-overlay">
         <div class="modal-content card" style="max-width: 450px; text-align: center;">
             <h2 class="card__title">Etiqueta 50x30</h2>
             
             <div style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
-                <h3 id="barcode-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
                 
-                <!-- Este es el canvas maestro donde armamos la imagen perfecta -->
+                <!-- Campos para Fechas que se imprimirán en el código -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; text-align: left;">
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: #666;">Elaboración (Opcional):</label>
+                        <input type="date" id="barcode-input-elab" style="padding: 0.3rem; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.8rem; color: #666;">Vencimiento (Opcional):</label>
+                        <input type="date" id="barcode-input-vto" style="padding: 0.3rem; font-size: 0.8rem; border: 1px solid #ccc; border-radius: 4px; width: 100%;">
+                    </div>
+                </div>
+
+                <!-- Canvas maestro donde armamos la imagen perfecta -->
                 <canvas id="barcode-canvas-descarga" class="canvas-preview"></canvas>
             </div>
 
