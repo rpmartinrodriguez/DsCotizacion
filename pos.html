@@ -12,10 +12,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 
     <style>
+        /* Modificación para que la pantalla de Mostrador sea más abarcativa/ancha */
+        .main-container { max-width: 1400px !important; padding: 1rem 2%; }
+
         .pos-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
-        @media (min-width: 992px) { .pos-grid { grid-template-columns: 2fr 1fr; } }
+        @media (min-width: 992px) { .pos-grid { grid-template-columns: 2.2fr 1fr; } }
+        
         .producto-cantidad-input { width: 70px; text-align: center; }
-        .cart-lista { min-height: 200px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        .cart-lista { min-height: 250px; max-height: 500px; overflow-y: auto; padding-right: 5px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px dashed var(--border-color); }
         .cart-item-info { flex-grow: 1; }
         .cart-item-info h4 { margin: 0 0 0.3rem 0; font-size: 0.95rem; }
@@ -24,9 +28,17 @@
         .cart-item-precio-unit { font-size: 0.85rem; color: var(--text-light); }
         .cart-item-total { font-weight: bold; color: var(--primary-color); margin: 0 1rem; min-width: 70px; text-align: right; }
         
-        .payment-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-        .btn-payment { padding: 1.5rem; border: 2px solid var(--border-color); border-radius: 12px; background: white; font-size: 1.1rem; font-weight: bold; color: var(--text-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-        .btn-payment.selected { border-color: var(--primary-color); background-color: var(--secondary-bg); color: var(--primary-color); }
+        /* Modal de Cobro y Métodos de Pago Mejorados */
+        .payment-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .btn-payment { position: relative; padding: 1.2rem 1rem; border: 2px solid var(--border-color); border-radius: 12px; background: white; font-size: 1rem; font-weight: bold; color: var(--text-light); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .btn-payment:hover { border-color: #cbd5e1; }
+        .btn-payment.selected { border-color: var(--primary-color); background-color: #fff0f5; color: var(--primary-color); box-shadow: 0 4px 10px rgba(255, 150, 197, 0.2); }
+        
+        /* Palomita de Selección */
+        .check-icon { display: none; position: absolute; top: -10px; right: -10px; background-color: var(--primary-color); color: white; border-radius: 50%; width: 28px; height: 28px; line-height: 28px; text-align: center; font-size: 16px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn-payment.selected .check-icon { display: block; }
+
+        .payment-input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1.2rem; margin-top: 0.3rem; }
 
         .historial-auditoria { max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; background: #fafafa; margin-top: 1rem; }
         .log-item { font-size: 0.85rem; padding: 0.4rem; border-bottom: 1px solid #eee; }
@@ -96,8 +108,9 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
-                <h1 class="header__slogan" style="margin: 0;">Ventas en Mostrador</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <!-- Título Elegante Rosa -->
+                <h1 style="margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900;">Mostrador</h1>
             </div>
 
             <!-- PANTALLA 1: APERTURA DE CAJA -->
@@ -127,11 +140,8 @@
                     </div>
                     
                     <div class="buscador-container" style="display: flex; gap: 0.5rem;">
-                        <input type="search" id="buscador-pos" placeholder="🔍 Escanear código de barras o buscar..." style="flex-grow: 1;">
+                        <input type="search" id="buscador-pos" placeholder="🔍 Escanear código de barras o buscar..." style="flex-grow: 1; font-size: 1.1rem; padding: 0.8rem;">
                     </div>
-                    <p class="text-light" style="font-size: 0.8rem; margin-top: 0.5rem;">
-                        <em>Tip: Conectá tu pistola lectora y escaneá, el producto se agregará solo usando el sistema PEPS.</em>
-                    </p>
 
                     <div style="overflow-x: auto; margin-top: 1rem;">
                         <table class="table-clean">
@@ -152,12 +162,12 @@
                 <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
                     <h2 class="card__title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">Detalle de Venta</h2>
                     
-                    <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #e2e8f0;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                            <span style="font-size: 1.1rem; color: #475569; font-weight: bold;">Total General:</span>
-                            <span id="pos-total-monto" style="font-size: 1.8rem; font-weight: 900; color: var(--primary-color);">$0.00</span>
+                    <div style="background: #fdf2f8; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #fbcfe8;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                            <span style="font-size: 1.2rem; color: #831843; font-weight: bold;">Total General:</span>
+                            <span id="pos-total-monto" style="font-size: 2.2rem; font-weight: 900; color: #be185d;">$0.00</span>
                         </div>
-                        <button id="btn-cobrar" class="btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem; text-transform: uppercase;" disabled>💳 Cobrar y Registrar</button>
+                        <button id="btn-cobrar" class="btn-primary" style="width: 100%; padding: 1.2rem; font-size: 1.2rem; font-weight: bold; background: #ec4899; text-transform: uppercase;" disabled>💳 Cobrar</button>
                     </div>
 
                     <div class="cart-lista" id="carrito-pos-container" style="flex-grow: 1; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
@@ -229,21 +239,56 @@
         </main>
     </div>
 
-    <!-- MODAL: COBRO -->
+    <!-- MODAL: COBRO CON NUEVO SISTEMA INTELIGENTE -->
     <div id="modal-cobro" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title" style="text-align: center;">Confirmar Cobro</h2>
-            <p style="text-align: center; font-size: 1.1rem;" class="text-light">
-                Monto total: <strong style="font-size: 1.6rem; color: var(--primary-color);" id="modal-cobro-total">$0.00</strong>
+        <div class="modal-content card" style="max-width: 600px;">
+            <h2 class="card__title" style="text-align: center; color: #ec4899; font-size: 1.8rem;">Confirmar Venta</h2>
+            <p style="text-align: center; font-size: 1.2rem; margin-bottom: 0.5rem;" class="text-light">
+                Total a cobrar: <strong style="font-size: 2.2rem; color: #be185d; display: block;" id="modal-cobro-total">$0.00</strong>
             </p>
-            <h3 class="card__subtitle" style="text-align: center; margin-top: 1.5rem;">Método de Pago</h3>
+            
+            <h3 class="card__subtitle" style="text-align: left; margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">1. Método de Pago</h3>
             <div class="payment-methods">
-                <button class="btn-payment" data-metodo="Efectivo"><span style="font-size: 2rem;">💵</span>Efectivo</button>
-                <button class="btn-payment" data-metodo="MercadoPago"><span style="font-size: 2rem;">📱</span>MercadoPago</button>
+                <div class="btn-payment" data-metodo="Efectivo">
+                    <div class="check-icon">✓</div>
+                    <span style="font-size: 2rem;">💵</span>
+                    <span>Efectivo</span>
+                </div>
+                <div class="btn-payment" data-metodo="MercadoPago">
+                    <div class="check-icon">✓</div>
+                    <span style="font-size: 2rem;">📱</span>
+                    <span>MercadoPago</span>
+                </div>
+                <div class="btn-payment" data-metodo="Ambos">
+                    <div class="check-icon">✓</div>
+                    <span style="font-size: 2rem;">💵+📱</span>
+                    <span>Ambos</span>
+                </div>
             </div>
+
+            <!-- Panel interactivo de cobro -->
+            <div id="payment-details-container" style="display: none; background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #cbd5e1;">
+                
+                <div id="field-mp" class="form-group" style="display: none; margin-bottom: 1rem;">
+                    <label style="color: #0369a1; font-weight: bold;">Monto a transferir por MercadoPago ($)</label>
+                    <input type="number" id="input-cobro-mp" class="payment-input" placeholder="Ej: 1500" min="0" step="10">
+                </div>
+                
+                <div id="field-efectivo" class="form-group" style="display: none; margin-bottom: 1rem;">
+                    <label style="color: #15803d; font-weight: bold;">Efectivo recibido en billetes ($)</label>
+                    <input type="number" id="input-cobro-efectivo" class="payment-input" placeholder="Ej: 5000" min="0" step="10">
+                </div>
+                
+                <div id="vuelto-container" style="display: none; text-align: right; margin-top: 1rem; border-top: 1px dashed #94a3b8; padding-top: 1rem;">
+                    <span style="font-size: 1.2rem; color: #475569;">Vuelto a entregar al cliente:</span>
+                    <span id="modal-vuelto-total" style="font-size: 1.8rem; font-weight: 900; color: var(--success-color); display: block;">$0.00</span>
+                </div>
+
+            </div>
+
             <div class="modal-actions" style="justify-content: space-between;">
-                <button id="btn-cancelar-cobro" class="btn-secondary" style="width: 48%;">Cancelar</button>
-                <button id="btn-confirmar-venta" class="btn-primary" style="width: 48%;" disabled>Confirmar</button>
+                <button id="btn-cancelar-cobro" class="btn-secondary" style="width: 48%; padding: 1rem; font-size: 1.1rem;">Cancelar</button>
+                <button id="btn-confirmar-venta" class="btn-primary" style="width: 48%; padding: 1rem; font-size: 1.1rem;" disabled>Confirmar Venta</button>
             </div>
         </div>
     </div>
@@ -266,7 +311,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE STOCK CON LOTES (PEPS) -->
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
             <h2 class="card__title">Ajustar Ficha de Producto</h2>
@@ -290,7 +334,6 @@
                     <input type="number" id="modal-prod-cantidad-movimiento" min="0" value="0" style="flex-grow: 1;" placeholder="Cantidad">
                 </div>
                 
-                <!-- Campos de Lote (Solo visibles al Sumar) -->
                 <div id="lote-fields-container" style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
                     <div style="flex: 1;">
                         <label style="font-size: 0.8rem;">F. Elaboración</label>
@@ -325,7 +368,6 @@
             <h2 class="card__title">Etiqueta 50x30</h2>
             
             <div style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
-                <!-- Canvas maestro donde armamos la imagen perfecta -->
                 <canvas id="barcode-canvas-descarga" class="canvas-preview"></canvas>
             </div>
 
