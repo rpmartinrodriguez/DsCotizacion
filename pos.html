@@ -98,19 +98,16 @@
             color: var(--text-light);
         }
         
-        /* Control visual estricto para el rol de administrador */
         .admin-only { display: none !important; }
         .admin-open .admin-only { display: inline-block !important; }
         table .admin-only { display: none; }
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        /* Estilos de Estado Bluetooth NIIMBOT */
         .bt-status { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
         .bt-status.disconnected { background: #fee2e2; color: #b91c1c; }
         .bt-status.connected { background: #dcfce3; color: #15803d; }
 
-        /* Mantenemos bloqueado el print del sistema por si acaso */
         @media print {
             body { display: none !important; }
         }
@@ -169,10 +166,11 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
                 <h1 class="header__slogan" style="margin: 0;">Ventas en Mostrador</h1>
                 
-                <!-- ESTADO Y CONEXIÓN BLUETOOTH NIIMBOT -->
+                <!-- ESTADO Y CONEXIÓN BLUETOOTH / USB NIIMBOT -->
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <span id="bt-status-indicator" class="bt-status disconnected">🔴 NIIMBOT Desconectada</span>
-                    <button id="btn-conectar-niimbot" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Conectar BLE</button>
+                    <span id="bt-status-indicator" class="bt-status disconnected">🔴 Impresora Desconectada</span>
+                    <button id="btn-conectar-niimbot" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🔵 Bluetooth</button>
+                    <button id="btn-conectar-usb" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🔌 USB</button>
                 </div>
             </div>
 
@@ -291,7 +289,7 @@
                     <label>Frase Corta Adicional</label>
                     <input type="text" id="promo-frase" placeholder="Ej: Válido por hoy" maxlength="25">
                 </div>
-                <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">La etiqueta se imprimirá instantáneamente en tu NIIMBOT B1 vía Bluetooth.</p>
+                <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">La etiqueta se imprimirá instantáneamente en tu NIIMBOT B1.</p>
                 <button id="btn-imprimir-promo" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">🖨️ Imprimir Promo en NIIMBOT</button>
             </section>
 
@@ -372,23 +370,20 @@
         </div>
     </div>
 
-    <!-- MODAL DE VISUALIZACIÓN E IMPRESIÓN BLE DE CÓDIGOS DE BARRAS -->
     <div id="modal-barcode" class="modal-overlay">
         <div class="modal-content card" style="max-width: 400px; text-align: center;">
-            <h2 class="card__title">Etiqueta NIIMBOT B1</h2>
+            <h2 class="card__title">Etiqueta de Producto</h2>
             
             <div style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
                 <h3 id="barcode-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
-                <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden; background: white;">
-                    <!-- El canvas que procesará el Bluetooth nativo -->
+                <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden;">
                     <canvas id="niimbot-canvas-print" width="384" height="240" style="border: 1px dashed #ccc; width: 100%;"></canvas>
                 </div>
-                <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666;">Se enviará por Bluetooth a la impresora</p>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
                 <button id="btn-cerrar-barcode" class="btn-secondary" style="width: 48%;">Volver</button>
-                <button id="btn-imprimir-barcode" class="btn-primary" style="width: 48%;">🖨️ Enviar a NIIMBOT</button>
+                <button id="btn-imprimir-barcode" class="btn-primary" style="width: 48%;">🖨️ Imprimir en NIIMBOT</button>
             </div>
         </div>
     </div>
