@@ -1,5 +1,5 @@
 import { 
-    getFirestore, collection, onSnapshot, query, where, orderBy, doc, 
+    getFirestore, collection, onSnapshot, query, where, doc, 
     addDoc, updateDoc, Timestamp, runTransaction, getDocs, setDoc 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
@@ -75,10 +75,8 @@ export function setupPOS(app) {
     const btnCancelarStock = document.getElementById('btn-cerrar-modal-stock');
     const btnGuardarStock = document.getElementById('btn-guardar-modal-stock');
 
-    // Modales Barras (con Fechas)
+    // Modales Barras
     const modalBarcode = document.getElementById('modal-barcode');
-    const barcodeInputElab = document.getElementById('barcode-input-elab');
-    const barcodeInputVto = document.getElementById('barcode-input-vto');
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
     const btnDescargarBarcode = document.getElementById('btn-descargar-barcode');
 
@@ -92,12 +90,12 @@ export function setupPOS(app) {
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
-    let currentBarcodeProduct = null; // Para redibujar etiqueta cuando cambian las fechas
+    let currentBarcodeProduct = null;
 
     // Métodos Helpers
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
-        if (!timestamp) return '';
+        if (!timestamp || !timestamp.toDate) return '';
         const d = timestamp.toDate();
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
@@ -426,7 +424,7 @@ export function setupPOS(app) {
                             await updateDoc(doc(db, 'recetas', prod.id), { codigoBarras: nuevoCodigo });
                             prod.codigoBarras = nuevoCodigo; 
                         } catch(error) {
-                            console.error("Error al asignar código de barras:", error);
+                            console.error("Error al asignar código de barras en Firebase:", error);
                         }
                     }
                     abrirModalBarcode(prod);
@@ -502,7 +500,8 @@ export function setupPOS(app) {
 
     const cargarAuditoriaProducto = async (productoId) => {
         try {
-            const q = query(auditoriaCollection, where('productoId', '==', productoId), orderBy('fecha', 'desc'));
+            // SOLUCIÓN ERROR DE ÍNDICE FIREBASE: Le quitamos el orderBy de Firebase y lo ordenamos nosotros en Javascript
+            const q = query(auditoriaCollection, where('productoId', '==', productoId));
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
@@ -510,9 +509,18 @@ export function setupPOS(app) {
                 return;
             }
 
+            // Metemos los datos en un array
+            let logs = [];
+            querySnapshot.forEach(docSnap => logs.push(docSnap.data()));
+
+            // ORDENAMOS POR FECHA (Del más nuevo al más viejo)
+            logs.sort((a, b) => {
+                if (!a.fecha || !b.fecha) return 0;
+                return b.fecha.seconds - a.fecha.seconds;
+            });
+
             modalProdAuditoria.innerHTML = '';
-            querySnapshot.forEach(docSnap => {
-                const log = docSnap.data();
+            logs.forEach(log => {
                 const logDiv = document.createElement('div');
                 logDiv.className = 'log-item';
                 
@@ -679,59 +687,26 @@ export function setupPOS(app) {
         const tempCanvas = document.createElement("canvas");
         try {
             JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "EAN13", lineColor: "#000", width: 3.5, height: 110, displayValue: true, fontSize: 26, margin: 0
+                format: "EAN13", lineColor: "#000", width: 3.5, height: 130, displayValue: true, fontSize: 26, margin: 0
             });
         } catch(e) {
             JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "CODE128", lineColor: "#000", width: 3, height: 110, displayValue: true, fontSize: 24, margin: 0
+                format: "CODE128", lineColor: "#000", width: 3, height: 130, displayValue: true, fontSize: 24, margin: 0
             });
         }
 
-        // Pegar código de barras un poco más arriba si hay fechas
+        // Pegar código de barras en el centro
         const xOffset = (canvasFinal.width - tempCanvas.width) / 2;
-        const yOffset = 60; 
+        const yOffset = 75; 
         ctx.drawImage(tempCanvas, xOffset, yOffset);
-
-        // 3. Dibujar Fechas (Elab y Vto) abajo del todo
-        const eVal = barcodeInputElab.value;
-        const vVal = barcodeInputVto.value;
-
-        if (eVal || vVal) {
-            ctx.font = "bold 20px sans-serif";
-            let dateText = "";
-            
-            if(eVal) {
-                const [y,m,d] = eVal.split('-');
-                dateText += `Elab: ${d}/${m}/${y.substring(2)}`;
-            }
-            if(vVal) {
-                const [y,m,d] = vVal.split('-');
-                dateText += (dateText ? ' - ' : '') + `Vto: ${d}/${m}/${y.substring(2)}`;
-            }
-            
-            ctx.fillText(dateText, canvasFinal.width / 2, 225);
-        }
     };
 
     const abrirModalBarcode = (prod) => {
         currentBarcodeProduct = prod;
-
-        // Reset Fechas a las de hoy y +15
-        const hoy = new Date();
-        barcodeInputElab.value = dateToYMD(hoy);
-        const vto = new Date();
-        vto.setDate(vto.getDate() + 15);
-        barcodeInputVto.value = dateToYMD(vto);
-
         drawBarcodeCanvas();
-
         if (btnDescargarBarcode) btnDescargarBarcode.dataset.nombre = prod.nombreTorta;
-        if(modalBarcode) modalBarcode.classList.add('visible');
+        if (modalBarcode) modalBarcode.classList.add('visible');
     };
-
-    // Redibujar si el usuario cambia las fechas en el modal
-    if (barcodeInputElab) barcodeInputElab.addEventListener('change', drawBarcodeCanvas);
-    if (barcodeInputVto) barcodeInputVto.addEventListener('change', drawBarcodeCanvas);
 
     if (btnCerrarBarcode) {
         btnCerrarBarcode.addEventListener('click', () => {
