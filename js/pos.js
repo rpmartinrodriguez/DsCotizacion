@@ -4,211 +4,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
-/* ===================================================================== */
-/* SERVICIO NIIMBOT PRINTER (Web Bluetooth BLE y Web Serial API USB)     */
-/* PROTOCOLO ESTRICTO V4 (Comandos de inicialización obligatorios)       */
-/* ===================================================================== */
-class NiimbotPrinter {
-    constructor() {
-        this.device = null;
-        this.server = null;
-        this.characteristic = null;
-        this.port = null;
-        this.connectionType = null; // 'ble' o 'usb'
-        this.SERVICE_UUID = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
-        this.onDisconnectCallback = null;
-    }
-
-    async connectBLE() {
-        if (!navigator.bluetooth) throw new Error("Web Bluetooth no es compatible en este navegador.");
-        
-        try {
-            this.device = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: 'B1' }, { namePrefix: 'B2' }, { namePrefix: 'B3' }, { namePrefix: 'D11' }, { namePrefix: 'NIIMBOT' }],
-                optionalServices: [this.SERVICE_UUID]
-            });
-
-            this.device.addEventListener('gattserverdisconnected', () => this.disconnect());
-
-            this.server = await this.device.gatt.connect();
-            const service = await this.server.getPrimaryService(this.SERVICE_UUID);
-            
-            // Buscador automático de canal de escritura
-            const characteristics = await service.getCharacteristics();
-            for (let char of characteristics) {
-                if (char.properties.write || char.properties.writeWithoutResponse) {
-                    this.characteristic = char;
-                    break;
-                }
-            }
-
-            if (!this.characteristic) {
-                throw new Error("No se encontró un canal de escritura compatible.");
-            }
-            
-            this.connectionType = 'ble';
-            return true;
-        } catch (error) {
-            console.error("Error BLE:", error);
-            throw error;
-        }
-    }
-
-    async connectUSB() {
-        if (!navigator.serial) throw new Error("Web Serial API (USB) no es compatible en este navegador.");
-        
-        try {
-            this.port = await navigator.serial.requestPort();
-            await this.port.open({ baudRate: 115200 });
-            this.connectionType = 'usb';
-            return true;
-        } catch (error) {
-            console.error("Error USB:", error);
-            throw error;
-        }
-    }
-
-    disconnect() {
-        if (this.connectionType === 'ble' && this.device && this.device.gatt.connected) {
-            this.device.gatt.disconnect();
-        }
-        if (this.connectionType === 'usb' && this.port) {
-            this.port.close();
-        }
-        this.device = null;
-        this.server = null;
-        this.characteristic = null;
-        this.port = null;
-        this.connectionType = null;
-        if (this.onDisconnectCallback) this.onDisconnectCallback();
-    }
-
-    isConnected() {
-        return (this.connectionType === 'ble' && this.characteristic) || (this.connectionType === 'usb' && this.port);
-    }
-
-    // Calcula el Checksum matemático del Protocolo V4
-    _calculateChecksum(type, cmd, data) {
-        let cs = type ^ cmd ^ data.length;
-        for (let i = 0; i < data.length; i++) cs ^= data[i];
-        return cs;
-    }
-
-    _createPacket(type, cmd, data = []) {
-        const payload = new Uint8Array(data);
-        const buffer = new Uint8Array(payload.length + 7);
-        buffer[0] = 0x55;
-        buffer[1] = 0x55;
-        buffer[2] = type;
-        buffer[3] = cmd;
-        buffer[4] = payload.length;
-        buffer.set(payload, 5);
-        buffer[buffer.length - 2] = this._calculateChecksum(type, cmd, payload);
-        buffer[buffer.length - 1] = 0xAA;
-        return buffer;
-    }
-
-    async _sendPacket(type, cmd, data = []) {
-        if (!this.isConnected()) throw new Error("Impresora desconectada");
-        const packet = this._createPacket(type, cmd, data);
-        
-        if (this.connectionType === 'ble') {
-            const chunkSize = 20; // MTU Estándar
-            for (let i = 0; i < packet.length; i += chunkSize) {
-                const chunk = packet.slice(i, i + chunkSize);
-                if (this.characteristic.properties.write) {
-                    await this.characteristic.writeValue(chunk);
-                    await new Promise(r => setTimeout(r, 5)); // Pausa mínima segura
-                } else {
-                    await this.characteristic.writeValueWithoutResponse(chunk);
-                    await new Promise(r => setTimeout(r, 20)); // Pausa mayor si no hay confirmación
-                }
-            }
-        } else if (this.connectionType === 'usb') {
-            const writer = this.port.writable.getWriter();
-            await writer.write(packet);
-            writer.releaseLock();
-            await new Promise(r => setTimeout(r, 10));
-        }
-    }
-
-    async printImage(canvas) {
-        if (!this.isConnected()) throw new Error("Conectá la impresora primero.");
-
-        // willReadFrequently elimina el warning de Google Chrome
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const width = canvas.width;   
-        const height = canvas.height; 
-        const imgData = ctx.getImageData(0, 0, width, height).data;
-
-        const highW = (width >> 8) & 0xFF;
-        const lowW = width & 0xFF;
-        const highH = (height >> 8) & 0xFF;
-        const lowH = height & 0xFF;
-
-        // --- SECUENCIA DE COMANDOS OBLIGATORIA (PROTOCOLO NIIMBOT V4) ---
-        // 1. Limpiar tareas anteriores que hayan quedado atascadas
-        await this._sendPacket(1, 0x02); 
-        await new Promise(r => setTimeout(r, 200));
-
-        // 2. Iniciar impresión: 1 Copia (Comando 0x01)
-        await this._sendPacket(1, 0x01, [0x00, 0x01]); 
-        
-        // 3. Tipo de Papel: Etiqueta con separación (Comando 0x2C)
-        await this._sendPacket(1, 0x2C, [0x01]); 
-        
-        // 4. Densidad térmica: Nivel 3 - Medio (Comando 0x21)
-        await this._sendPacket(1, 0x21, [0x03]); 
-        
-        // 5. Establecer Dimensiones de la Etiqueta 384x240 (Comando 0x15)
-        await this._sendPacket(1, 0x15, [highW, lowW, highH, lowH]); 
-        
-        // 6. Iniciar Página
-        await this._sendPacket(1, 0x03); 
-
-        // 7. Enviar datos de la imagen fila por fila
-        for (let y = 0; y < height; y++) {
-            const byteWidth = Math.ceil(width / 8); 
-            const rowData = new Uint8Array(byteWidth);
-
-            for (let x = 0; x < width; x++) {
-                const idx = (y * width + x) * 4;
-                const r = imgData[idx];
-                const g = imgData[idx + 1];
-                const b = imgData[idx + 2];
-                const a = imgData[idx + 3];
-                
-                // Conversión a monocromo (Térmica solo imprime negro puro)
-                const isBlack = (r * 0.299 + g * 0.587 + b * 0.114) < 128 && a > 128;
-                
-                if (isBlack) {
-                    rowData[Math.floor(x / 8)] |= (0x80 >> (x % 8));
-                }
-            }
-
-            // Datos de Fila (Comando 0x85)
-            const payload = new Uint8Array(rowData.length + 2);
-            payload[0] = (y >> 8) & 0xFF; 
-            payload[1] = y & 0xFF;        
-            payload.set(rowData, 2);
-
-            await this._sendPacket(2, 0x85, payload);
-        }
-
-        // 8. Fin de Página y Fin de Tarea
-        await this._sendPacket(1, 0x04); 
-        await this._sendPacket(1, 0x02); 
-    }
-}
-
-// Instancia global de la impresora
-const printer = new NiimbotPrinter();
-
 export function setupPOS(app) {
     const db = getFirestore(app);
     const auth = getAuth(app);
     
-    // --- Colecciones principales ---
+    // Colecciones principales de la App
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const recetasCollection = collection(db, 'recetas'); 
@@ -254,17 +54,13 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
-    // --- Referencias DOM: Promociones e Impresión Bluetooth/USB ---
+    // --- Referencias DOM: Promociones e Impresión ---
     const btnIrPromos = document.getElementById('btn-ir-promos');
     const btnVolverMostradorPromos = document.getElementById('btn-volver-mostrador-promos');
     const selectPromoProd = document.getElementById('promo-producto-select');
     const inputPromoTipo = document.getElementById('promo-tipo');
     const inputPromoFrase = document.getElementById('promo-frase');
-    const btnImprimirPromo = document.getElementById('btn-imprimir-promo');
-    
-    const btnConectarNiimbot = document.getElementById('btn-conectar-niimbot');
-    const btnConectarUsb = document.getElementById('btn-conectar-usb');
-    const btStatusIndicator = document.getElementById('bt-status-indicator');
+    const btnDescargarPromo = document.getElementById('btn-descargar-promo');
 
     // Modales de Stock y Barras
     const modalStock = document.getElementById('modal-stock-detalle');
@@ -282,19 +78,22 @@ export function setupPOS(app) {
     const modalBarcode = document.getElementById('modal-barcode');
     const barcodeTituloProducto = document.getElementById('barcode-titulo-producto');
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
-    const btnImprimirBarcode = document.getElementById('btn-imprimir-barcode');
+    const btnDescargarBarcode = document.getElementById('btn-descargar-barcode');
 
-    // --- Estado General ---
+    // --- Estado General de la Aplicación ---
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
+    
     let materiasPrimasMap = new Map(); 
     let recetasBrutas = []; 
     let productosDisponibles = []; 
+    
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
 
+    // Métodos Helpers para Formatos Comunes
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp) return '';
@@ -302,62 +101,7 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
-    // --- LÓGICA DE BLUETOOTH / USB UI ---
-    if (btnConectarNiimbot) {
-        btnConectarNiimbot.addEventListener('click', async () => {
-            if (printer.isConnected()) {
-                printer.disconnect();
-                return;
-            }
-            try {
-                btnConectarNiimbot.textContent = "Conectando...";
-                await printer.connectBLE();
-                btStatusIndicator.className = "bt-status connected";
-                btStatusIndicator.textContent = "🟢 NIIMBOT B1 (BLE)";
-                btnConectarNiimbot.textContent = "Desconectar";
-                if(btnConectarUsb) btnConectarUsb.style.display = 'none';
-                
-                printer.onDisconnectCallback = () => {
-                    btStatusIndicator.className = "bt-status disconnected";
-                    btStatusIndicator.textContent = "🔴 Desconectada";
-                    btnConectarNiimbot.textContent = "🔵 Bluetooth";
-                    if(btnConectarUsb) btnConectarUsb.style.display = 'inline-block';
-                };
-            } catch (error) {
-                alert("Error conectando a NIIMBOT por Bluetooth: " + error.message);
-                btnConectarNiimbot.textContent = "🔵 Bluetooth";
-            }
-        });
-    }
-
-    if (btnConectarUsb) {
-        btnConectarUsb.addEventListener('click', async () => {
-            if (printer.isConnected()) {
-                printer.disconnect();
-                return;
-            }
-            try {
-                btnConectarUsb.textContent = "Conectando...";
-                await printer.connectUSB();
-                btStatusIndicator.className = "bt-status connected";
-                btStatusIndicator.textContent = "🟢 NIIMBOT B1 (USB)";
-                btnConectarUsb.textContent = "Desconectar";
-                if(btnConectarNiimbot) btnConectarNiimbot.style.display = 'none';
-                
-                printer.onDisconnectCallback = () => {
-                    btStatusIndicator.className = "bt-status disconnected";
-                    btStatusIndicator.textContent = "🔴 Desconectada";
-                    btnConectarUsb.textContent = "🔌 USB";
-                    if(btnConectarNiimbot) btnConectarNiimbot.style.display = 'inline-block';
-                };
-            } catch (error) {
-                alert("Error conectando a NIIMBOT por USB: " + error.message);
-                btnConectarUsb.textContent = "🔌 USB";
-            }
-        });
-    }
-
-    // --- CÁLCULO DE PRECIOS Y COSTOS ---
+    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base
     const obtenerCostoBase = (receta) => {
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
@@ -371,6 +115,7 @@ export function setupPOS(app) {
         return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
+    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final
     const calcularPrecioVenta = (prod) => {
         const costo = prod.costoBaseCalculado || 0;
         const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
@@ -378,7 +123,9 @@ export function setupPOS(app) {
         return costo * (1 + (margenAplicado / 100));
     };
 
-    // --- CONFIGURACIÓN GLOBAL ---
+    // ==========================================
+    // 1. CONFIGURACIÓN GLOBAL (MARGEN DE GANANCIAS)
+    // ==========================================
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
         if (docSnap.exists()) {
             margenGlobal = docSnap.data().margenGlobal || 0;
@@ -396,12 +143,15 @@ export function setupPOS(app) {
                 procesarYRenderizar();
                 return;
             }
+
             const pass = prompt("Ingrese la contraseña de Administrador:");
             if (pass === "Lautaro2026") {
                 document.body.classList.add('admin-open');
                 btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
                 procesarYRenderizar();
-            } else if (pass !== null) alert("Contraseña incorrecta.");
+            } else if (pass !== null) {
+                alert("Contraseña incorrecta de acceso.");
+            }
         });
     }
 
@@ -410,13 +160,22 @@ export function setupPOS(app) {
             const nuevoMargen = prompt("Defina el nuevo porcentaje de Margen de Ganancia Global (%):", margenGlobal);
             if (nuevoMargen !== null && nuevoMargen.trim() !== "") {
                 const margenNum = parseFloat(nuevoMargen);
-                if (isNaN(margenNum) || margenNum < 0) return alert("Porcentaje inválido.");
-                try { await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum }); } catch (e) {}
+                if (isNaN(margenNum) || margenNum < 0) {
+                    alert("Ingrese un porcentaje numérico válido.");
+                    return;
+                }
+                try {
+                    await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
+                } catch (e) {
+                    alert("Error guardando configuraciones globales.");
+                }
             }
         });
     }
 
-    // --- AUTENTICACIÓN Y TURNOS DE CAJA ---
+    // ==========================================
+    // 2. AUTENTICACIÓN Y APERTURA DE TURNOS
+    // ==========================================
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
@@ -468,7 +227,7 @@ export function setupPOS(app) {
                     totalMercadoPago: 0,
                     estado: 'abierta'
                 });
-                if(fondoCajaInput) fondoCajaInput.value = '';
+                if (fondoCajaInput) fondoCajaInput.value = '';
                 btnAbrirCaja.disabled = false;
             } catch (e) {
                 console.error("Error al abrir caja:", e);
@@ -478,11 +237,13 @@ export function setupPOS(app) {
         });
     }
 
-    // --- CONTROL DE NAVEGACIÓN ---
+    // ==========================================
+    // 3. CARGA DE DATOS Y MATEMÁTICA AUTOMÁTICA
+    // ==========================================
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
-            if(pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaStock.style.display = 'block';
             procesarYRenderizar();
         });
@@ -504,7 +265,7 @@ export function setupPOS(app) {
     if (btnVolverMostrador) {
         btnVolverMostrador.addEventListener('click', () => {
             pantallaStock.style.display = 'none';
-            if(pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             procesarYRenderizar();
             if (buscadorPOS) buscadorPOS.focus();
@@ -513,13 +274,12 @@ export function setupPOS(app) {
 
     if (btnVolverMostradorPromos) {
         btnVolverMostradorPromos.addEventListener('click', () => {
-            if(pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             if (buscadorPOS) buscadorPOS.focus();
         });
     }
 
-    // --- OBTENCIÓN DE DATOS REAL-TIME ---
     const cargarDataYCostos = () => {
         onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
@@ -550,22 +310,18 @@ export function setupPOS(app) {
     };
 
     // ==========================================
-    // 3.5. IMPRESIÓN DE PROMOCIONES POR BLUETOOTH / USB
+    // 3.5. DESCARGA DE ETIQUETA PROMOCIONAL (50x30)
     // ==========================================
-    if (btnImprimirPromo) {
-        btnImprimirPromo.addEventListener('click', async () => {
-            if (!printer.isConnected()) {
-                alert("Por favor, conectá la impresora NIIMBOT usando el botón 'Bluetooth' o 'USB' arriba.");
-                return;
-            }
-
+    if (btnDescargarPromo) {
+        btnDescargarPromo.addEventListener('click', () => {
             const tipo = inputPromoTipo ? (inputPromoTipo.value || 'OFERTA') : 'OFERTA';
             const prod = selectPromoProd ? selectPromoProd.value : '';
             const frase = inputPromoFrase ? (inputPromoFrase.value || '') : '';
             
-            // Dibujar la promo dinámicamente en el canvas oculto
-            const canvas = document.getElementById('promo-canvas-print');
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const canvas = document.getElementById('promo-canvas-descarga');
+            canvas.width = 400;  // 50mm
+            canvas.height = 240; // 30mm
+            const ctx = canvas.getContext('2d');
             
             // Fondo blanco
             ctx.fillStyle = "white";
@@ -573,33 +329,28 @@ export function setupPOS(app) {
             
             // Borde grueso
             ctx.strokeStyle = "black";
-            ctx.lineWidth = 4;
-            ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+            ctx.lineWidth = 6;
+            ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
 
             // Textos centrados
             ctx.textAlign = "center";
             ctx.fillStyle = "black";
             
             ctx.font = "bold 60px sans-serif";
-            ctx.fillText(tipo.toUpperCase(), canvas.width / 2, 80);
+            ctx.fillText(tipo.toUpperCase(), canvas.width / 2, 85);
             
-            ctx.font = "bold 35px sans-serif";
-            ctx.fillText(prod, canvas.width / 2, 140);
+            ctx.font = "bold 32px sans-serif";
+            // Acorta nombre para que no desborde
+            ctx.fillText(prod.substring(0, 20), canvas.width / 2, 145);
             
-            ctx.font = "25px sans-serif";
-            ctx.fillText(frase, canvas.width / 2, 200);
+            ctx.font = "bold 24px sans-serif";
+            ctx.fillText(frase, canvas.width / 2, 205);
 
-            try {
-                btnImprimirPromo.disabled = true;
-                btnImprimirPromo.textContent = "Imprimiendo...";
-                await printer.printImage(canvas);
-                btnImprimirPromo.textContent = "🖨️ Imprimir Promo en NIIMBOT";
-                btnImprimirPromo.disabled = false;
-            } catch (err) {
-                alert("Fallo la impresión: " + err.message);
-                btnImprimirPromo.textContent = "🖨️ Imprimir Promo en NIIMBOT";
-                btnImprimirPromo.disabled = false;
-            }
+            // Forzar descarga de la imagen
+            const link = document.createElement('a');
+            link.download = `Promo-${tipo}-${prod.substring(0,10)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         });
     }
 
@@ -723,70 +474,81 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modal Código de Barras 1D y ENVÍO BLE/USB ---
+    // --- Modal Código de Barras 1D y GENERADOR DE IMAGEN (50x30) ---
     const abrirModalBarcode = (prod) => {
         if(barcodeTituloProducto) barcodeTituloProducto.textContent = prod.nombreTorta;
         
-        const canvasPrint = document.getElementById("niimbot-canvas-print");
-        const ctx = canvasPrint.getContext("2d", { willReadFrequently: true });
+        // Canvas maestro que el usuario va a descargar (50x30 mm = 400x240 px)
+        const canvasFinal = document.getElementById("barcode-canvas-descarga");
+        canvasFinal.width = 400;
+        canvasFinal.height = 240;
+        const ctx = canvasFinal.getContext("2d");
         
+        // Fondo blanco total
         ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, canvasPrint.width, canvasPrint.height);
+        ctx.fillRect(0, 0, canvasFinal.width, canvasFinal.height);
         
+        // Texto del producto, bien grande y arriba
         ctx.fillStyle = "black";
-        ctx.font = "bold 24px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(prod.nombreTorta, canvasPrint.width / 2, 35);
+        ctx.font = "bold 32px sans-serif";
+        // Recortamos el nombre si es muy largo para que no manche los bordes
+        ctx.fillText(prod.nombreTorta.substring(0, 20), canvasFinal.width / 2, 45); 
+
+        // Para dibujar el código de barras, usamos un canvas temporal
+        const tempCanvas = document.createElement("canvas");
         
         try {
-            JsBarcode(canvasPrint, prod.codigoBarras, {
+            JsBarcode(tempCanvas, prod.codigoBarras, {
                 format: "EAN13",
                 lineColor: "#000",
-                width: 2.5,
-                height: 120,
+                width: 3.5,     // Barras más gruesas
+                height: 120,    // Altura del código
                 displayValue: true, 
-                fontSize: 22,
-                margin: 10,
-                marginTop: 50 
+                fontSize: 26,
+                margin: 0
             });
-            if(modalBarcode) modalBarcode.classList.add('visible');
         } catch(e) {
-            JsBarcode(canvasPrint, prod.codigoBarras, {
+            // Rescate si el código era muy viejo y no respetaba EAN-13
+            JsBarcode(tempCanvas, prod.codigoBarras, {
                 format: "CODE128",
                 lineColor: "#000",
-                width: 2,
+                width: 3,
                 height: 120,
                 displayValue: true, 
-                fontSize: 20,
-                margin: 10,
-                marginTop: 50
+                fontSize: 24,
+                margin: 0
             });
-            if(modalBarcode) modalBarcode.classList.add('visible');
         }
+
+        // Calculamos el centro para pegar el tempCanvas en el canvasFinal
+        const xOffset = (canvasFinal.width - tempCanvas.width) / 2;
+        const yOffset = 65; // Lo pegamos a la altura 65, cerquita del texto (que está en 45)
+
+        // Dibujamos el código sobre nuestro fondo blanco
+        ctx.drawImage(tempCanvas, xOffset, yOffset);
+
+        // Guardamos el nombre del producto en el botón de descarga para el archivo PNG
+        if (btnDescargarBarcode) {
+            btnDescargarBarcode.dataset.nombre = prod.nombreTorta;
+        }
+
+        if(modalBarcode) modalBarcode.classList.add('visible');
     };
 
     if (btnCerrarBarcode) {
         btnCerrarBarcode.addEventListener('click', () => modalBarcode.classList.remove('visible'));
     }
 
-    if (btnImprimirBarcode) {
-        btnImprimirBarcode.addEventListener('click', async () => {
-            if (!printer.isConnected()) {
-                alert("Por favor, conectá la impresora NIIMBOT usando el botón Bluetooth o USB de la cabecera.");
-                return;
-            }
-            try {
-                btnImprimirBarcode.disabled = true;
-                btnImprimirBarcode.textContent = "Imprimiendo...";
-                const canvas = document.getElementById("niimbot-canvas-print");
-                await printer.printImage(canvas);
-                btnImprimirBarcode.textContent = "🖨️ Enviar a Impresora";
-                btnImprimirBarcode.disabled = false;
-            } catch (err) {
-                alert("Error al imprimir: " + err.message);
-                btnImprimirBarcode.textContent = "🖨️ Enviar a Impresora";
-                btnImprimirBarcode.disabled = false;
-            }
+    if (btnDescargarBarcode) {
+        btnDescargarBarcode.addEventListener('click', () => {
+            const canvas = document.getElementById("barcode-canvas-descarga");
+            const nombre = btnDescargarBarcode.dataset.nombre || 'etiqueta';
+            
+            const link = document.createElement('a');
+            link.download = `Etiqueta-${nombre}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         });
     }
 
