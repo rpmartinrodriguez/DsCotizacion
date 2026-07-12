@@ -6,6 +6,7 @@ import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gsta
 
 /* ===================================================================== */
 /* SERVICIO NIIMBOT PRINTER (Web Bluetooth BLE y Web Serial API USB)     */
+/* PROTOCOLO ESTRICTO V4 (Comandos de inicialización obligatorios)       */
 /* ===================================================================== */
 class NiimbotPrinter {
     constructor() {
@@ -14,7 +15,6 @@ class NiimbotPrinter {
         this.characteristic = null;
         this.port = null;
         this.connectionType = null; // 'ble' o 'usb'
-        // UUID principal de la Niimbot
         this.SERVICE_UUID = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
         this.onDisconnectCallback = null;
     }
@@ -33,7 +33,7 @@ class NiimbotPrinter {
             this.server = await this.device.gatt.connect();
             const service = await this.server.getPrimaryService(this.SERVICE_UUID);
             
-            // BUSCADOR AUTOMÁTICO DE CANAL DE ESCRITURA:
+            // Buscador automático de canal de escritura
             const characteristics = await service.getCharacteristics();
             for (let char of characteristics) {
                 if (char.properties.write || char.properties.writeWithoutResponse) {
@@ -43,7 +43,7 @@ class NiimbotPrinter {
             }
 
             if (!this.characteristic) {
-                throw new Error("No se encontró un canal de escritura compatible en esta impresora.");
+                throw new Error("No se encontró un canal de escritura compatible.");
             }
             
             this.connectionType = 'ble';
@@ -55,11 +55,10 @@ class NiimbotPrinter {
     }
 
     async connectUSB() {
-        if (!navigator.serial) throw new Error("Web Serial API (USB) no es compatible en este navegador (usá Chrome/Edge en PC).");
+        if (!navigator.serial) throw new Error("Web Serial API (USB) no es compatible en este navegador.");
         
         try {
             this.port = await navigator.serial.requestPort();
-            // Las térmicas suelen usar 115200 de baud rate por defecto
             await this.port.open({ baudRate: 115200 });
             this.connectionType = 'usb';
             return true;
@@ -88,7 +87,7 @@ class NiimbotPrinter {
         return (this.connectionType === 'ble' && this.characteristic) || (this.connectionType === 'usb' && this.port);
     }
 
-    // Calcula el Checksum (XOR estricto Protocolo V4)
+    // Calcula el Checksum matemático del Protocolo V4
     _calculateChecksum(type, cmd, data) {
         let cs = type ^ cmd ^ data.length;
         for (let i = 0; i < data.length; i++) cs ^= data[i];
@@ -114,36 +113,60 @@ class NiimbotPrinter {
         const packet = this._createPacket(type, cmd, data);
         
         if (this.connectionType === 'ble') {
-            // Fragmentar envío BLE (MTU seguro de 20 bytes)
-            const chunkSize = 20;
+            const chunkSize = 20; // MTU Estándar
             for (let i = 0; i < packet.length; i += chunkSize) {
                 const chunk = packet.slice(i, i + chunkSize);
-                await this.characteristic.writeValueWithoutResponse(chunk);
-                await new Promise(r => setTimeout(r, 20)); // Aumentado a 20ms para evitar saturación de buffer
+                if (this.characteristic.properties.write) {
+                    await this.characteristic.writeValue(chunk);
+                    await new Promise(r => setTimeout(r, 5)); // Pausa mínima segura
+                } else {
+                    await this.characteristic.writeValueWithoutResponse(chunk);
+                    await new Promise(r => setTimeout(r, 20)); // Pausa mayor si no hay confirmación
+                }
             }
         } else if (this.connectionType === 'usb') {
             const writer = this.port.writable.getWriter();
             await writer.write(packet);
             writer.releaseLock();
-            await new Promise(r => setTimeout(r, 20));
+            await new Promise(r => setTimeout(r, 10));
         }
     }
 
     async printImage(canvas) {
-        if (!this.isConnected()) throw new Error("Conectá la impresora primero (Bluetooth o USB).");
+        if (!this.isConnected()) throw new Error("Conectá la impresora primero.");
 
-        // willReadFrequently soluciona el warning de la consola en Chrome
+        // willReadFrequently elimina el warning de Google Chrome
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const width = canvas.width;   
         const height = canvas.height; 
         const imgData = ctx.getImageData(0, 0, width, height).data;
 
-        // Comandos de inicialización Niimbot (Protocolo V4 Completo)
-        await this._sendPacket(1, 0x01, [0x01]); // Iniciar tarea (1 copia)
-        await this._sendPacket(1, 0x13, [0x03]); // Densidad (1 a 5, 3 es medio)
-        await this._sendPacket(1, 0x2C, [0x01]); // Tipo papel: Etiqueta normal
-        await this._sendPacket(1, 0x03);         // Iniciar Página de Impresión
+        const highW = (width >> 8) & 0xFF;
+        const lowW = width & 0xFF;
+        const highH = (height >> 8) & 0xFF;
+        const lowH = height & 0xFF;
 
+        // --- SECUENCIA DE COMANDOS OBLIGATORIA (PROTOCOLO NIIMBOT V4) ---
+        // 1. Limpiar tareas anteriores que hayan quedado atascadas
+        await this._sendPacket(1, 0x02); 
+        await new Promise(r => setTimeout(r, 200));
+
+        // 2. Iniciar impresión: 1 Copia (Comando 0x01)
+        await this._sendPacket(1, 0x01, [0x00, 0x01]); 
+        
+        // 3. Tipo de Papel: Etiqueta con separación (Comando 0x2C)
+        await this._sendPacket(1, 0x2C, [0x01]); 
+        
+        // 4. Densidad térmica: Nivel 3 - Medio (Comando 0x21)
+        await this._sendPacket(1, 0x21, [0x03]); 
+        
+        // 5. Establecer Dimensiones de la Etiqueta 384x240 (Comando 0x15)
+        await this._sendPacket(1, 0x15, [highW, lowW, highH, lowH]); 
+        
+        // 6. Iniciar Página
+        await this._sendPacket(1, 0x03); 
+
+        // 7. Enviar datos de la imagen fila por fila
         for (let y = 0; y < height; y++) {
             const byteWidth = Math.ceil(width / 8); 
             const rowData = new Uint8Array(byteWidth);
@@ -154,7 +177,8 @@ class NiimbotPrinter {
                 const g = imgData[idx + 1];
                 const b = imgData[idx + 2];
                 const a = imgData[idx + 3];
-                // Blanco y negro (Umbral estricto para térmica)
+                
+                // Conversión a monocromo (Térmica solo imprime negro puro)
                 const isBlack = (r * 0.299 + g * 0.587 + b * 0.114) < 128 && a > 128;
                 
                 if (isBlack) {
@@ -162,16 +186,18 @@ class NiimbotPrinter {
                 }
             }
 
+            // Datos de Fila (Comando 0x85)
             const payload = new Uint8Array(rowData.length + 2);
-            payload[0] = (y >> 8) & 0xFF; // Fila High Byte
-            payload[1] = y & 0xFF;        // Fila Low Byte
+            payload[0] = (y >> 8) & 0xFF; 
+            payload[1] = y & 0xFF;        
             payload.set(rowData, 2);
 
             await this._sendPacket(2, 0x85, payload);
         }
 
-        await this._sendPacket(1, 0x04); // Fin de Página
-        await this._sendPacket(1, 0x02); // Comando de fin de impresión y avance
+        // 8. Fin de Página y Fin de Tarea
+        await this._sendPacket(1, 0x04); 
+        await this._sendPacket(1, 0x02); 
     }
 }
 
@@ -565,7 +591,7 @@ export function setupPOS(app) {
 
             try {
                 btnImprimirPromo.disabled = true;
-                btnImprimirPromo.textContent = "Enviando señal...";
+                btnImprimirPromo.textContent = "Imprimiendo...";
                 await printer.printImage(canvas);
                 btnImprimirPromo.textContent = "🖨️ Imprimir Promo en NIIMBOT";
                 btnImprimirPromo.disabled = false;
@@ -751,7 +777,7 @@ export function setupPOS(app) {
             }
             try {
                 btnImprimirBarcode.disabled = true;
-                btnImprimirBarcode.textContent = "Enviando datos...";
+                btnImprimirBarcode.textContent = "Imprimiendo...";
                 const canvas = document.getElementById("niimbot-canvas-print");
                 await printer.printImage(canvas);
                 btnImprimirBarcode.textContent = "🖨️ Enviar a Impresora";
