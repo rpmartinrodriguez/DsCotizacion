@@ -9,77 +9,37 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
     <style>
-        .caja-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .caja-estado {
-            padding: 0.2rem 0.8rem;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .estado-abierta { background-color: #dbeafe; color: #1e3a8a; border: 1px solid #bfdbfe; }
-        .estado-cerrada { background-color: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+        .main-container { max-width: 900px; margin: 0 auto; padding: 1rem; }
         
-        .caja-resumen {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-            padding: 1rem;
-            background: var(--secondary-bg);
-            border-radius: var(--radius-md);
-        }
-        .caja-resumen-item {
-            display: flex;
-            flex-direction: column;
-        }
-        .caja-resumen-item span:first-child {
-            font-size: 0.8rem;
-            color: var(--text-light);
-            text-transform: uppercase;
-        }
-        .caja-resumen-item span:last-child {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: var(--text-main);
-        }
+        .caja-header { cursor: pointer; transition: background-color 0.2s; }
+        .caja-header:hover { background-color: #f8fafc; }
         
-        .ticket-list {
-            margin-top: 1.5rem;
-            border-top: 2px dashed var(--border-color);
-            padding-top: 1rem;
-        }
-        .ticket-item {
-            background: white;
-            border: 1px solid var(--border-color);
-            padding: 1rem;
-            border-radius: var(--radius-md);
-            margin-bottom: 0.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .ticket-info h4 { margin: 0 0 0.2rem 0; font-size: 0.95rem; }
-        .ticket-info p { margin: 0; font-size: 0.8rem; color: var(--text-light); }
+        .caja-estado { font-size: 0.8rem; font-weight: bold; padding: 0.2rem 0.6rem; border-radius: 20px; }
+        .estado-abierta { background-color: #dcfce3; color: #15803d; }
+        .estado-cerrada { background-color: #f1f5f9; color: #475569; }
+
+        .caja-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .caja-resumen-item { display: flex; flex-direction: column; gap: 0.3rem; }
+        .caja-resumen-item span:first-child { font-size: 0.85rem; color: var(--text-light); }
+        .caja-resumen-item span:last-child { font-size: 1.2rem; font-weight: bold; color: var(--text-main); }
+
+        .ticket-list { border-top: 1px dashed var(--border-color); padding-top: 1.5rem; }
+        .ticket-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid #eee; }
+        .ticket-item:last-child { border-bottom: none; }
+        .ticket-info h4 { margin: 0 0 0.3rem 0; font-size: 0.95rem; }
+        .ticket-info p { margin: 0; font-size: 0.85rem; color: var(--text-light); }
         .ticket-monto { font-weight: bold; color: var(--primary-color); }
-        .metodo-pago-tag {
-            font-size: 0.75rem;
-            padding: 0.1rem 0.5rem;
-            border-radius: 4px;
-            background: #f1f5f9;
-            color: #475569;
-            margin-left: 0.5rem;
-        }
+        .metodo-pago-tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; background: #eee; border-radius: 4px; color: #666; margin-left: 0.5rem; }
+
+        .btn-facturado { transition: all 0.2s; }
+        .btn-facturado:hover { opacity: 0.8; }
+        .facturado-true { background-color: #dcfce3; border: 1px solid #22c55e; color: #15803d; }
+        .facturado-false { background-color: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; }
     </style>
 </head>
 <body>
     <div class="main-container">
+        <!-- HEADER -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
@@ -90,12 +50,12 @@
             <div class="header__spacer"></div>
         </header>
 
+        <!-- MENÚ DE NAVEGACIÓN -->
         <nav class="nav-menu" id="nav-menu">
             <div class="nav-menu__header">
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
                 <span class="nav-menu__title">Dulce App</span>
             </div>
-
             <div class="nav-category">
                 <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -107,7 +67,6 @@
                     <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
                 </div>
             </div>
-
             <div class="nav-category">
                 <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -118,7 +77,6 @@
                     <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
                 </div>
             </div>
-
             <div class="nav-category">
                 <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
@@ -127,24 +85,54 @@
                     <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
                 </div>
             </div>
-        </nav>        
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
             <h1 class="header__slogan">Historial de Cajas</h1>
-            
-            <section class="card" style="margin-bottom: 1.5rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="filtro-mes-cajas">Filtrar por Mes:</label>
-                    <select id="filtro-mes-cajas" style="max-width: 300px;">
-                    </select>
+
+            <!-- CALCULADORA DE FACTURACIÓN MP -->
+            <div class="card" style="margin-bottom: 1.5rem; background-color: #f0f9ff; border: 1px solid #bae6fd;">
+                <h2 class="card__title" style="color: #0369a1; margin-bottom: 1rem;">Calculadora de Facturación (MercadoPago)</h2>
+                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="flex-grow: 1;">
+                        <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Desde:</label>
+                        <input type="date" id="calc-desde" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+                    </div>
+                    <div style="flex-grow: 1;">
+                        <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Hasta:</label>
+                        <input type="date" id="calc-hasta" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+                    </div>
+                    <button id="btn-calcular-facturacion" class="btn-primary" style="background-color: #0ea5e9; border-color: #0ea5e9; padding: 0.5rem 1.5rem;">Calcular</button>
                 </div>
-            </section>
+                
+                <div id="resultado-facturacion" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #bae6fd; display: none;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="color: #334155;">Ingresos Totales (MP):</span>
+                        <strong id="res-total-mp" style="color: #334155;">$0.00</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="color: #15803d;">Ya Facturado:</span>
+                        <strong id="res-facturado-mp" style="color: #15803d;">$0.00</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 1.2rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #bae6fd;">
+                        <span style="color: #b91c1c; font-weight: bold;">Pendiente a Facturar:</span>
+                        <strong id="res-pendiente-mp" style="color: #b91c1c;">$0.00</strong>
+                    </div>
+                </div>
+            </div>
 
-            <section id="lista-cajas-container">
-                <p class="text-light" style="text-align: center; margin-top: 2rem;">Cargando historial de cajas...</p>
-            </section>
+            <!-- FILTRO DE MESES -->
+            <div class="buscador-container" style="margin-bottom: 1.5rem;">
+                <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
+                    <option value="todos">Cargando meses...</option>
+                </select>
+            </div>
 
+            <!-- CONTENEDOR DE CAJAS -->
+            <div id="lista-cajas-container">
+                <p class="text-light" style="text-align: center;">Cargando historial...</p>
+            </div>
         </main>
     </div>
 
@@ -152,12 +140,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupCajas } from './js/cajas.js';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupCajas(app);
-        } catch (error) { 
-            console.error("Error al inicializar Cajas:", error); 
-        }
+        const app = initializeApp(firebaseConfig);
+        setupCajas(app);
     </script>
     <script src="js/menu.js" defer></script>
 </body>
