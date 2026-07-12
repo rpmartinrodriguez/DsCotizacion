@@ -34,8 +34,6 @@ class NiimbotPrinter {
             const service = await this.server.getPrimaryService(this.SERVICE_UUID);
             
             // BUSCADOR AUTOMÁTICO DE CANAL DE ESCRITURA:
-            // En vez de adivinar el UUID, escaneamos todos los canales de la impresora
-            // y nos conectamos al primero que tenga permisos de escritura.
             const characteristics = await service.getCharacteristics();
             for (let char of characteristics) {
                 if (char.properties.write || char.properties.writeWithoutResponse) {
@@ -90,8 +88,9 @@ class NiimbotPrinter {
         return (this.connectionType === 'ble' && this.characteristic) || (this.connectionType === 'usb' && this.port);
     }
 
+    // Calcula el Checksum (XOR estricto Protocolo V4)
     _calculateChecksum(type, cmd, data) {
-        let cs = type ^ cmd;
+        let cs = type ^ cmd ^ data.length;
         for (let i = 0; i < data.length; i++) cs ^= data[i];
         return cs;
     }
@@ -120,28 +119,30 @@ class NiimbotPrinter {
             for (let i = 0; i < packet.length; i += chunkSize) {
                 const chunk = packet.slice(i, i + chunkSize);
                 await this.characteristic.writeValueWithoutResponse(chunk);
-                await new Promise(r => setTimeout(r, 10)); // Pausa para no saturar el buffer Bluetooth
+                await new Promise(r => setTimeout(r, 20)); // Aumentado a 20ms para evitar saturación de buffer
             }
         } else if (this.connectionType === 'usb') {
             const writer = this.port.writable.getWriter();
             await writer.write(packet);
             writer.releaseLock();
-            await new Promise(r => setTimeout(r, 10)); // Pausa para no saturar el puerto serie
+            await new Promise(r => setTimeout(r, 20));
         }
     }
 
     async printImage(canvas) {
         if (!this.isConnected()) throw new Error("Conectá la impresora primero (Bluetooth o USB).");
 
-        const ctx = canvas.getContext('2d');
+        // willReadFrequently soluciona el warning de la consola en Chrome
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const width = canvas.width;   
         const height = canvas.height; 
         const imgData = ctx.getImageData(0, 0, width, height).data;
 
-        // Comandos de inicialización Niimbot (Protocolo V4)
-        await this._sendPacket(1, 0x01); // Iniciar impresión
-        await this._sendPacket(1, 0x13, [0x01]); // Densidad 1 (media)
-        await this._sendPacket(1, 0x2C, [0x01]); // Tipo papel: Etiqueta
+        // Comandos de inicialización Niimbot (Protocolo V4 Completo)
+        await this._sendPacket(1, 0x01, [0x01]); // Iniciar tarea (1 copia)
+        await this._sendPacket(1, 0x13, [0x03]); // Densidad (1 a 5, 3 es medio)
+        await this._sendPacket(1, 0x2C, [0x01]); // Tipo papel: Etiqueta normal
+        await this._sendPacket(1, 0x03);         // Iniciar Página de Impresión
 
         for (let y = 0; y < height; y++) {
             const byteWidth = Math.ceil(width / 8); 
@@ -153,7 +154,7 @@ class NiimbotPrinter {
                 const g = imgData[idx + 1];
                 const b = imgData[idx + 2];
                 const a = imgData[idx + 3];
-                // Blanco y negro (Umbral estricto para impresión térmica)
+                // Blanco y negro (Umbral estricto para térmica)
                 const isBlack = (r * 0.299 + g * 0.587 + b * 0.114) < 128 && a > 128;
                 
                 if (isBlack) {
@@ -169,7 +170,8 @@ class NiimbotPrinter {
             await this._sendPacket(2, 0x85, payload);
         }
 
-        await this._sendPacket(1, 0x02); // Comando de avance/fin de impresión
+        await this._sendPacket(1, 0x04); // Fin de Página
+        await this._sendPacket(1, 0x02); // Comando de fin de impresión y avance
     }
 }
 
@@ -537,7 +539,7 @@ export function setupPOS(app) {
             
             // Dibujar la promo dinámicamente en el canvas oculto
             const canvas = document.getElementById('promo-canvas-print');
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             
             // Fondo blanco
             ctx.fillStyle = "white";
@@ -700,7 +702,7 @@ export function setupPOS(app) {
         if(barcodeTituloProducto) barcodeTituloProducto.textContent = prod.nombreTorta;
         
         const canvasPrint = document.getElementById("niimbot-canvas-print");
-        const ctx = canvasPrint.getContext("2d");
+        const ctx = canvasPrint.getContext("2d", { willReadFrequently: true });
         
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvasPrint.width, canvasPrint.height);
