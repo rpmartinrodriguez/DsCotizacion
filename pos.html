@@ -105,34 +105,14 @@
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        /* ============================================================== */
-        /* CONFIGURACIÓN ESTRICTA PARA IMPRESORA NIIMBOT 50x30mm          */
-        /* ============================================================== */
-        @media print {
-            @page { size: 50mm 30mm; margin: 0; }
-            
-            /* Ocultamos absolutamente TODA la web para evitar hojas en blanco */
-            .main-container, .modal-overlay { display: none !important; }
+        /* Estilos de Estado Bluetooth NIIMBOT */
+        .bt-status { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
+        .bt-status.disconnected { background: #fee2e2; color: #b91c1c; }
+        .bt-status.connected { background: #dcfce3; color: #15803d; }
 
-            /* Mostramos SOLO el área de impresión de código de barras */
-            body.imprimiendo-barcode #print-area-barcode {
-                display: flex !important; position: fixed; left: 0; top: 0; width: 50mm; height: 30mm;
-                flex-direction: column; justify-content: center; align-items: center; background: white; z-index: 99999;
-                padding: 1mm; box-sizing: border-box;
-            }
-            body.imprimiendo-barcode #print-area-barcode * { margin: 0; padding: 0; }
-            #barcode-titulo-impresion { font-size: 11px; font-weight: bold; max-height: 14px; overflow: hidden; margin-bottom: 2px; text-align: center; color: #000; font-family: sans-serif; }
-            
-            /* Mostramos SOLO el área de impresión de promociones */
-            body.imprimiendo-promo #print-area-promo {
-                display: flex !important; position: fixed; left: 0; top: 0; width: 50mm; height: 30mm;
-                flex-direction: column; justify-content: center; align-items: center; background: white; z-index: 99999;
-                text-align: center; font-family: sans-serif; padding: 2mm; box-sizing: border-box; border: 2px solid #000;
-            }
-            #print-area-promo * { margin: 0; padding: 0; line-height: 1.2; }
-            #print-promo-tipo { font-size: 20px; font-weight: 900; text-transform: uppercase; color: #000; }
-            #print-promo-prod { font-size: 13px; font-weight: bold; margin: 4px 0; color: #000; max-height: 16px; overflow: hidden; }
-            #print-promo-frase { font-size: 11px; font-weight: bold; color: #000; border-top: 1px solid #000; padding-top: 2px; width: 90%; }
+        /* Mantenemos bloqueado el print del sistema por si acaso */
+        @media print {
+            body { display: none !important; }
         }
     </style>
 </head>
@@ -186,7 +166,15 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
-            <h1 class="header__slogan">Ventas en Mostrador</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                <h1 class="header__slogan" style="margin: 0;">Ventas en Mostrador</h1>
+                
+                <!-- ESTADO Y CONEXIÓN BLUETOOTH NIIMBOT -->
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span id="bt-status-indicator" class="bt-status disconnected">🔴 NIIMBOT Desconectada</span>
+                    <button id="btn-conectar-niimbot" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Conectar BLE</button>
+                </div>
+            </div>
 
             <section id="pantalla-apertura" class="card" style="display: none; text-align: center; max-width: 500px; margin: 0 auto;">
                 <h2 class="card__title">Apertura de Caja</h2>
@@ -303,8 +291,8 @@
                     <label>Frase Corta Adicional</label>
                     <input type="text" id="promo-frase" placeholder="Ej: Válido por hoy" maxlength="25">
                 </div>
-                <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">La etiqueta está calibrada para salir perfecta en rollos NIIMBOT B1 de 50x30mm.</p>
-                <button id="btn-imprimir-promo" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">🖨️ Imprimir Etiqueta Promo</button>
+                <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">La etiqueta se imprimirá instantáneamente en tu NIIMBOT B1 vía Bluetooth.</p>
+                <button id="btn-imprimir-promo" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">🖨️ Imprimir Promo en NIIMBOT</button>
             </section>
 
         </main>
@@ -384,34 +372,29 @@
         </div>
     </div>
 
+    <!-- MODAL DE VISUALIZACIÓN E IMPRESIÓN BLE DE CÓDIGOS DE BARRAS -->
     <div id="modal-barcode" class="modal-overlay">
         <div class="modal-content card" style="max-width: 400px; text-align: center;">
-            <h2 class="card__title">Etiqueta de Producto</h2>
+            <h2 class="card__title">Etiqueta NIIMBOT B1</h2>
             
             <div style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
                 <h3 id="barcode-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
-                <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden;">
-                    <svg id="barcode-canvas-preview"></svg>
+                <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden; background: white;">
+                    <!-- El canvas que procesará el Bluetooth nativo -->
+                    <canvas id="niimbot-canvas-print" width="384" height="240" style="border: 1px dashed #ccc; width: 100%;"></canvas>
                 </div>
+                <p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666;">Se enviará por Bluetooth a la impresora</p>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
                 <button id="btn-cerrar-barcode" class="btn-secondary" style="width: 48%;">Volver</button>
-                <button id="btn-imprimir-barcode" class="btn-primary" style="width: 48%;">🖨️ Imprimir</button>
+                <button id="btn-imprimir-barcode" class="btn-primary" style="width: 48%;">🖨️ Enviar a NIIMBOT</button>
             </div>
         </div>
     </div>
 
-    <div id="print-area-barcode" style="display: none;">
-        <h3 id="barcode-titulo-impresion">Producto</h3>
-        <svg id="barcode-canvas-print"></svg>
-    </div>
-
-    <div id="print-area-promo" style="display: none;">
-        <h2 id="print-promo-tipo">2x1</h2>
-        <h3 id="print-promo-prod">Producto</h3>
-        <p id="print-promo-frase">Frase</p>
-    </div>
+    <!-- CANVAS OCULTO PARA PROCESAMIENTO DE PROMOS -->
+    <canvas id="promo-canvas-print" width="384" height="240" style="display: none;"></canvas>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
