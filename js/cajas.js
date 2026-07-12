@@ -100,21 +100,17 @@ export function setupCajas(app) {
         }
     };
 
-    // Escuchador robusto para la (i)
     document.addEventListener('click', (e) => {
         const icon = e.target.closest('.info-icon');
         if (icon) {
             const key = icon.getAttribute('data-info');
             const data = infoDiccionario[key];
-            
-            if (data) {
+            if (data && modalInfo) {
                 infoTitle.textContent = data.titulo;
                 infoDesc.textContent = data.desc;
                 infoSirve.textContent = data.sirve;
                 infoEj.textContent = data.ej;
                 infoDec.textContent = data.dec;
-                
-                // Usamos el sistema de clases nativo de tu App
                 modalInfo.classList.add('visible');
             }
         }
@@ -133,15 +129,15 @@ export function setupCajas(app) {
         tabBtnHistorial.addEventListener('click', () => {
             tabBtnHistorial.classList.add('active');
             tabBtnEstadisticas.classList.remove('active');
-            sectionHistorial.style.display = 'block';
-            sectionEstadisticas.style.display = 'none';
+            if (sectionHistorial) sectionHistorial.style.display = 'block';
+            if (sectionEstadisticas) sectionEstadisticas.style.display = 'none';
         });
 
         tabBtnEstadisticas.addEventListener('click', () => {
             tabBtnEstadisticas.classList.add('active');
             tabBtnHistorial.classList.remove('active');
-            sectionHistorial.style.display = 'none';
-            sectionEstadisticas.style.display = 'block';
+            if (sectionHistorial) sectionHistorial.style.display = 'none';
+            if (sectionEstadisticas) sectionEstadisticas.style.display = 'block';
 
             if(!statsYaCargadas) {
                 generarDashboard();
@@ -394,9 +390,6 @@ export function setupCajas(app) {
         }
     });
 
-    // ==========================================
-    // 4. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
-    // ==========================================
     if (btnCalcularFacturacion) {
         btnCalcularFacturacion.addEventListener('click', () => {
             const desdeStr = calcDesde.value;
@@ -485,7 +478,7 @@ export function setupCajas(app) {
             let labelsDiarios = Object.keys(ventasDiariasMap).slice(0, 15).reverse(); 
             let dataDiariaPlot = Object.values(ventasDiariasMap).slice(0, 15).reverse();
 
-            // Matemática de Dispersión
+            // Medidas estadísticas
             let media = 0, mediana = 0, max = 0, min = 0, rango = 0, varianza = 0, stdDev = 0;
             if(valoresDiarios.length > 0) {
                 max = Math.max(...valoresDiarios);
@@ -526,7 +519,7 @@ export function setupCajas(app) {
                 });
             });
 
-            // TOP PRODUCTOS (MODA)
+            // TOP PRODUCTOS
             let sortedByQty = Object.entries(conteoProductosQty).sort((a,b)=>b[1]-a[1]);
             
             const ulTop = document.getElementById('lista-top-productos');
@@ -565,7 +558,7 @@ export function setupCajas(app) {
                 ulTop.innerHTML = '<li>No hay ventas registradas.</li>';
             }
 
-            // Clasificación ABC
+            // ABC
             let sortedByPlata = Object.entries(conteoProductosPlata).sort((a,b)=>b[1]-a[1]);
             let sumPlata = 0;
             let listA = [], listB = [], listC = [];
@@ -587,8 +580,7 @@ export function setupCajas(app) {
             document.getElementById('abc-b-text').textContent = listB.slice(0,5).join(', ') + (listB.length > 5 ? '...' : '');
             document.getElementById('abc-c-text').textContent = listC.slice(0,5).join(', ') + (listC.length > 5 ? '...' : '');
 
-
-            // Crecimiento Clientes e Ingresos
+            // KPIs Estratégicos
             let crecClientesText = "-";
             let crecIngresosText = "-";
 
@@ -622,8 +614,7 @@ export function setupCajas(app) {
                 }
             }
 
-
-            // 3. Procesar Desperdicio
+            // 3. Desperdicio
             let totalDesperdicioQty = 0;
             auditArray.forEach(a => {
                 if(a.tipo === 'RESTA' && a.motivo && a.motivo.toLowerCase().includes('descarte')) {
@@ -635,26 +626,24 @@ export function setupCajas(app) {
                 porcentajeDesperdicio = (totalDesperdicioQty / (totalUnidadesVendidas + totalDesperdicioQty)) * 100;
             }
 
-            // Actualizar DOM KPIs Básicos
+            // Renderizar DOM
             document.getElementById('stat-media').textContent = formatMoneda(media);
             document.getElementById('stat-mediana').textContent = formatMoneda(mediana);
             document.getElementById('stat-desperdicio').textContent = porcentajeDesperdicio.toFixed(1) + '%';
             
-            // Dispersión
             document.getElementById('stat-max').textContent = formatMoneda(max);
             document.getElementById('stat-min').textContent = formatMoneda(min);
             document.getElementById('stat-rango').textContent = formatMoneda(rango);
             document.getElementById('stat-varianza').textContent = formatMoneda(varianza);
             document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
 
-            // KPIs Negocio
             let promedioMargenGlobal = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "Sin Datos";
             document.getElementById('stat-crecimiento-clientes').textContent = crecClientesText;
             document.getElementById('stat-crecimiento-ingresos').textContent = crecIngresosText;
             document.getElementById('stat-margen-promedio').textContent = promedioMargenGlobal;
             document.getElementById('stat-linea-rentable').textContent = mejorLinea;
 
-            // Gráficos
+            // Gráfico 1: Ventas Diarias
             const ctxLine = document.getElementById('chartLineVentas').getContext('2d');
             if(chartVentasInstancia) chartVentasInstancia.destroy();
             chartVentasInstancia = new Chart(ctxLine, {
@@ -672,18 +661,22 @@ export function setupCajas(app) {
                 }
             });
 
-            const ctxPie = document.getElementById('chartPieCategorias').getContext('2d');
-            if(chartCategoriasInstancia) chartCategoriasInstancia.destroy();
-            chartCategoriasInstancia = new Chart(ctxPie, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(conteoCategorias),
-                    datasets: [{
-                        data: Object.values(conteoCategorias),
-                        backgroundColor: ['#ec4899', '#8b5cf6', '#0ea5e9', '#f59e0b', '#10b981', '#f43f5e']
-                    }]
-                }
-            });
+            // FIX INTEGRAL: Verificamos si existe el canvas del gráfico circular antes de usarlo
+            const elPie = document.getElementById('chartPieCategorias');
+            if (elPie) {
+                const ctxPie = elPie.getContext('2d');
+                if(chartCategoriasInstancia) chartCategoriasInstancia.destroy();
+                chartCategoriasInstancia = new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(conteoCategorias),
+                        datasets: [{
+                            data: Object.values(conteoCategorias),
+                            backgroundColor: ['#ec4899', '#8b5cf6', '#0ea5e9', '#f59e0b', '#10b981', '#f43f5e']
+                        }]
+                    }
+                });
+            }
 
             document.getElementById('stats-loading').style.display = 'none';
             document.getElementById('stats-content').style.display = 'block';
