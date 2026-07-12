@@ -1,5 +1,5 @@
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where 
+    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, updateDoc, doc 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupCajas(app) {
@@ -9,9 +9,19 @@ export function setupCajas(app) {
 
     const listaCajasContainer = document.getElementById('lista-cajas-container');
     const filtroMesSelect = document.getElementById('filtro-mes-cajas');
+    
+    // Elementos de la Calculadora de Facturación
+    const btnCalcularFacturacion = document.getElementById('btn-calcular-facturacion');
+    const calcDesde = document.getElementById('calc-desde');
+    const calcHasta = document.getElementById('calc-hasta');
+    const resultadoFacturacion = document.getElementById('resultado-facturacion');
+    const resTotalMp = document.getElementById('res-total-mp');
+    const resFacturadoMp = document.getElementById('res-facturado-mp');
+    const resPendienteMp = document.getElementById('res-pendiente-mp');
 
     let todasLasCajas = [];
 
+    // Funciones Helper
     function formatMoneda(val) {
         return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -27,7 +37,7 @@ export function setupCajas(app) {
         const date = timestamp.toDate();
         const mes = (date.getMonth() + 1).toString().padStart(2, '0');
         const anio = date.getFullYear();
-        return `${anio}-${mes}`; // Ej: "2026-06"
+        return `${anio}-${mes}`; 
     }
 
     function nombreMes(mesAnio) {
@@ -63,6 +73,11 @@ export function setupCajas(app) {
             const mp = caja.totalMercadoPago || 0;
             const cajaFisica = fondo + efvo;
 
+            // Datos del tilde Facturado
+            const isFacturado = caja.facturadoMP === true;
+            const btnFacturadoClass = isFacturado ? 'facturado-true' : 'facturado-false';
+            const btnFacturadoText = isFacturado ? '✅ Facturado' : '❌ Marcar Facturado';
+
             const div = document.createElement('div');
             div.className = 'categoria-acordeon'; 
             div.style.marginBottom = '1.5rem';
@@ -90,12 +105,17 @@ export function setupCajas(app) {
                                 <span>${formatMoneda(fondo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas Efvo.</span>
+                                <span>Ventas Efvo. (Neto)</span>
                                 <span style="color: var(--success-color);">${formatMoneda(efvo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas MP</span>
-                                <span style="color: var(--success-color);">${formatMoneda(mp)}</span>
+                                <span>Ventas MP (Neta)</span>
+                                <div>
+                                    <span style="color: var(--success-color); display: block; margin-bottom: 0.3rem;">${formatMoneda(mp)}</span>
+                                    <button class="btn-facturado ${btnFacturadoClass}" data-id="${caja.id}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
+                                        ${btnFacturadoText}
+                                    </button>
+                                </div>
                             </div>
                             <div class="caja-resumen-item" style="border-left: 2px solid var(--border-color); padding-left: 1rem;">
                                 <span>Efectivo en Caja</span>
@@ -156,11 +176,12 @@ export function setupCajas(app) {
     filtroMesSelect.addEventListener('change', renderizarCajas);
 
     // ==========================================
-    // 4. INTERACCIÓN (ABRIR ACORDEÓN Y CARGAR TICKETS)
+    // 4. INTERACCIÓN (ACORDEÓN Y TICKETS FIREBASE FIX)
     // ==========================================
     async function cargarTicketsDeCaja(cajaId, container) {
         try {
-            const q = query(ventasCollection, where('cajaId', '==', cajaId), orderBy('fecha', 'desc'));
+            // FIX FIREBASE: Consulta limpia sin orderBy para evitar el error de índice.
+            const q = query(ventasCollection, where('cajaId', '==', cajaId));
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
@@ -168,19 +189,33 @@ export function setupCajas(app) {
                 return;
             }
 
+            let ventas = [];
+            querySnapshot.forEach(docSnap => ventas.push(docSnap.data()));
+
+            // Ordenamiento manual en Javascript
+            ventas.sort((a, b) => {
+                if (!a.fecha || !b.fecha) return 0;
+                return b.fecha.seconds - a.fecha.seconds;
+            });
+
             container.innerHTML = '';
-            querySnapshot.forEach(docSnap => {
-                const venta = docSnap.data();
-                
+            ventas.forEach(venta => {
                 const itemsTexto = (venta.items || [])
                     .map(item => `${item.cantidad}x ${item.nombre}`)
                     .join(', ');
+
+                let tagMP = '';
+                if (venta.metodoPago === 'Ambos') {
+                    tagMP = `<span class="metodo-pago-tag">Efvo: ${formatMoneda(venta.pagoEfectivo)} | MP: ${formatMoneda(venta.pagoMercadoPago)}</span>`;
+                } else {
+                    tagMP = `<span class="metodo-pago-tag">${venta.metodoPago}</span>`;
+                }
 
                 const ticketDiv = document.createElement('div');
                 ticketDiv.className = 'ticket-item';
                 ticketDiv.innerHTML = `
                     <div class="ticket-info">
-                        <h4>Hora: ${formatearFecha(venta.fecha).split(',')[1] || ''} <span class="metodo-pago-tag">${venta.metodoPago}</span></h4>
+                        <h4>Hora: ${formatearFecha(venta.fecha).split(',')[1] || ''} ${tagMP}</h4>
                         <p>${itemsTexto}</p>
                     </div>
                     <div class="ticket-monto">${formatMoneda(venta.total)}</div>
@@ -194,6 +229,23 @@ export function setupCajas(app) {
     }
 
     listaCajasContainer.addEventListener('click', async (e) => {
+        if (e.target.closest('.btn-facturado')) {
+            const btn = e.target.closest('.btn-facturado');
+            const cajaId = btn.dataset.id;
+            const estadoActual = btn.dataset.estado === 'true';
+
+            try {
+                btn.textContent = "..."; 
+                await updateDoc(doc(db, 'cajas', cajaId), {
+                    facturadoMP: !estadoActual
+                });
+            } catch (err) {
+                console.error("Error al cambiar estado de facturación:", err);
+                alert("Hubo un error de conexión.");
+            }
+            return; 
+        }
+
         const header = e.target.closest('.caja-header');
         if (!header) return;
 
@@ -218,4 +270,48 @@ export function setupCajas(app) {
             }
         }
     });
+
+    // ==========================================
+    // 5. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
+    // ==========================================
+    if (btnCalcularFacturacion) {
+        btnCalcularFacturacion.addEventListener('click', () => {
+            const desdeStr = calcDesde.value;
+            const hastaStr = calcHasta.value;
+
+            if (!desdeStr || !hastaStr) {
+                alert("Por favor, seleccioná la fecha 'Desde' y 'Hasta'.");
+                return;
+            }
+
+            const dInicio = new Date(`${desdeStr}T00:00:00`);
+            const dFin = new Date(`${hastaStr}T23:59:59`);
+
+            let acumuladoTotalMP = 0;
+            let acumuladoFacturadoMP = 0;
+
+            todasLasCajas.forEach(caja => {
+                if (caja.fechaApertura) {
+                    const dCaja = caja.fechaApertura.toDate();
+                    
+                    if (dCaja >= dInicio && dCaja <= dFin) {
+                        const mp = caja.totalMercadoPago || 0;
+                        acumuladoTotalMP += mp;
+                        
+                        if (caja.facturadoMP === true) {
+                            acumuladoFacturadoMP += mp;
+                        }
+                    }
+                }
+            });
+
+            const pendienteFacturar = acumuladoTotalMP - acumuladoFacturadoMP;
+
+            resTotalMp.textContent = formatMoneda(acumuladoTotalMP);
+            resFacturadoMp.textContent = formatMoneda(acumuladoFacturadoMP);
+            resPendienteMp.textContent = formatMoneda(pendienteFacturar);
+
+            resultadoFacturacion.style.display = 'block';
+        });
+    }
 }
