@@ -9,36 +9,15 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
     
+    <!-- Librería para Código de Barras -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 
     <style>
-        .pos-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-        }
-        @media (min-width: 992px) {
-            .pos-grid {
-                grid-template-columns: 2fr 1fr;
-            }
-        }
-        .producto-cantidad-input {
-            width: 70px;
-            text-align: center;
-        }
-        .cart-lista {
-            min-height: 200px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        .cart-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px dashed var(--border-color);
-        }
+        .pos-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 992px) { .pos-grid { grid-template-columns: 2fr 1fr; } }
+        .producto-cantidad-input { width: 70px; text-align: center; }
+        .cart-lista { min-height: 200px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px dashed var(--border-color); }
         .cart-item-info { flex-grow: 1; }
         .cart-item-info h4 { margin: 0 0 0.3rem 0; font-size: 0.95rem; }
         .cart-item-info .cantidad-control { display: flex; align-items: center; gap: 0.5rem; }
@@ -46,75 +25,31 @@
         .cart-item-precio-unit { font-size: 0.85rem; color: var(--text-light); }
         .cart-item-total { font-weight: bold; color: var(--primary-color); margin: 0 1rem; min-width: 70px; text-align: right; }
         
-        .payment-methods {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .btn-payment {
-            padding: 1.5rem;
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            background: white;
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: var(--text-light);
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .btn-payment.selected {
-            border-color: var(--primary-color);
-            background-color: var(--secondary-bg);
-            color: var(--primary-color);
-        }
+        .payment-methods { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+        .btn-payment { padding: 1.5rem; border: 2px solid var(--border-color); border-radius: 12px; background: white; font-size: 1.1rem; font-weight: bold; color: var(--text-light); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+        .btn-payment.selected { border-color: var(--primary-color); background-color: var(--secondary-bg); color: var(--primary-color); }
 
-        .historial-auditoria {
-            max-height: 150px;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            padding: 0.5rem;
-            background: #fafafa;
-            margin-top: 1rem;
-        }
-        .log-item {
-            font-size: 0.85rem;
-            padding: 0.4rem;
-            border-bottom: 1px solid #eee;
-        }
+        .historial-auditoria { max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; background: #fafafa; margin-top: 1rem; }
+        .log-item { font-size: 0.85rem; padding: 0.4rem; border-bottom: 1px solid #eee; }
         .log-item:last-child { border-bottom: none; }
         .log-tipo-sumar { color: var(--success-color); font-weight: bold; }
         .log-tipo-restar { color: var(--danger-color); font-weight: bold; }
-        .categoria-tag {
-            font-size: 0.75rem;
-            padding: 0.2rem 0.5rem;
-            background: var(--secondary-bg);
-            border-radius: 4px;
-            color: var(--text-light);
-        }
+        .categoria-tag { font-size: 0.75rem; padding: 0.2rem 0.5rem; background: var(--secondary-bg); border-radius: 4px; color: var(--text-light); }
         
+        /* Control visual estricto para el rol de administrador */
         .admin-only { display: none !important; }
         .admin-open .admin-only { display: inline-block !important; }
         table .admin-only { display: none; }
         .admin-open table .admin-only { display: table-cell !important; }
         .admin-open div.admin-only { display: block !important; }
 
-        .bt-status { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
-        .bt-status.disconnected { background: #fee2e2; color: #b91c1c; }
-        .bt-status.connected { background: #dcfce3; color: #15803d; }
-
-        @media print {
-            body { display: none !important; }
-        }
+        /* Estilo para que el canvas de descarga se vea prolijo en pantalla */
+        .canvas-preview { max-width: 100%; border: 1px dashed #ccc; border-radius: 4px; margin: 0 auto; display: block; }
     </style>
 </head>
 <body>
     <div class="main-container">
+        <!-- HEADER -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
@@ -125,6 +60,7 @@
             <div class="header__spacer"></div>
         </header>
 
+        <!-- MENÚ DE NAVEGACIÓN -->
         <nav class="nav-menu" id="nav-menu">
             <div class="nav-menu__header">
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
@@ -163,17 +99,11 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap;">
                 <h1 class="header__slogan" style="margin: 0;">Ventas en Mostrador</h1>
-                
-                <!-- ESTADO Y CONEXIÓN BLUETOOTH / USB NIIMBOT -->
-                <div style="display: flex; gap: 0.5rem; align-items: center;">
-                    <span id="bt-status-indicator" class="bt-status disconnected">🔴 Impresora Desconectada</span>
-                    <button id="btn-conectar-niimbot" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🔵 Bluetooth</button>
-                    <button id="btn-conectar-usb" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🔌 USB</button>
-                </div>
             </div>
 
+            <!-- PANTALLA 1: APERTURA DE CAJA -->
             <section id="pantalla-apertura" class="card" style="display: none; text-align: center; max-width: 500px; margin: 0 auto;">
                 <h2 class="card__title">Apertura de Caja</h2>
                 <p class="text-light" style="margin-bottom: 1.5rem;">
@@ -186,6 +116,7 @@
                 <button id="btn-abrir-caja" class="btn-primary">Abrir Caja y Comenzar Turno</button>
             </section>
 
+            <!-- PANTALLA 2: MOSTRADOR ACTIVO (POS) -->
             <section id="pantalla-pos" class="pos-grid" style="display: none;">
                 
                 <div class="card" style="margin-bottom: 0;">
@@ -238,6 +169,7 @@
                 </div>
             </section>
 
+            <!-- PANTALLA 3: ADMINISTRACIÓN DE STOCK Y BARRAS -->
             <section id="pantalla-stock-mostrador" class="card" style="display: none;">
                 <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                     <h2 class="card__title" style="margin: 0;">Inventario de Mostrador</h2>
@@ -271,9 +203,10 @@
                 </div>
             </section>
 
+            <!-- PANTALLA 4: ETIQUETAS PROMOCIONALES (DESCARGA) -->
             <section id="pantalla-promociones" class="card" style="display: none; max-width: 600px; margin: 0 auto;">
                 <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                    <h2 class="card__title" style="margin: 0;">Crear Etiqueta Promo</h2>
+                    <h2 class="card__title" style="margin: 0;">Generar Etiqueta Promo</h2>
                     <button id="btn-volver-mostrador-promos" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">🏪 Volver a Ventas</button>
                 </div>
                 
@@ -289,8 +222,12 @@
                     <label>Frase Corta Adicional</label>
                     <input type="text" id="promo-frase" placeholder="Ej: Válido por hoy" maxlength="25">
                 </div>
-                <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">La etiqueta se imprimirá instantáneamente en tu NIIMBOT B1.</p>
-                <button id="btn-imprimir-promo" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">🖨️ Imprimir Promo en NIIMBOT</button>
+                
+                <!-- Canvas oculto para armar la promo y descargarla -->
+                <canvas id="promo-canvas-descarga" style="display: none;"></canvas>
+
+                <p class="text-light" style="font-size: 0.8rem; margin-bottom: 1.5rem;">Se descargará una imagen de 50x30 lista para subir a la app de NIIMBOT.</p>
+                <button id="btn-descargar-promo" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">💾 Descargar Imagen Promo</button>
             </section>
 
         </main>
@@ -370,26 +307,24 @@
         </div>
     </div>
 
+    <!-- MODAL DE DESCARGA DE CÓDIGO DE BARRAS -->
     <div id="modal-barcode" class="modal-overlay">
-        <div class="modal-content card" style="max-width: 400px; text-align: center;">
-            <h2 class="card__title">Etiqueta de Producto</h2>
+        <div class="modal-content card" style="max-width: 450px; text-align: center;">
+            <h2 class="card__title">Etiqueta 50x30</h2>
             
             <div style="background: white; padding: 1.5rem; border-radius: 8px; display: inline-block; margin-bottom: 1.5rem; width: 100%;">
                 <h3 id="barcode-titulo-producto" style="margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #000;">Nombre del Producto</h3>
-                <div style="display: flex; justify-content: center; margin: 0 auto; overflow: hidden;">
-                    <canvas id="niimbot-canvas-print" width="384" height="240" style="border: 1px dashed #ccc; width: 100%;"></canvas>
-                </div>
+                
+                <!-- Este es el canvas maestro donde armamos la imagen perfecta -->
+                <canvas id="barcode-canvas-descarga" class="canvas-preview"></canvas>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
                 <button id="btn-cerrar-barcode" class="btn-secondary" style="width: 48%;">Volver</button>
-                <button id="btn-imprimir-barcode" class="btn-primary" style="width: 48%;">🖨️ Imprimir en NIIMBOT</button>
+                <button id="btn-descargar-barcode" class="btn-primary" style="width: 48%;">💾 Guardar Imagen</button>
             </div>
         </div>
     </div>
-
-    <!-- CANVAS OCULTO PARA PROCESAMIENTO DE PROMOS -->
-    <canvas id="promo-canvas-print" width="384" height="240" style="display: none;"></canvas>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
