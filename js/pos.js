@@ -4,11 +4,152 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
+/* ===================================================================== */
+/* SERVICIO NIIMBOT PRINTER (Web Bluetooth API - Protocolo V4 Simplificado)*/
+/* ===================================================================== */
+class NiimbotPrinter {
+    constructor() {
+        this.device = null;
+        this.server = null;
+        this.characteristic = null;
+        // UUIDs oficiales de NIIMBOT
+        this.SERVICE_UUID = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
+        this.CHAR_UUID = 'bef8d6c9-9c21-4c9e-baf4-610780220212';
+        this.onDisconnectCallback = null;
+    }
+
+    async connect() {
+        if (!navigator.bluetooth) {
+            throw new Error("Web Bluetooth no es compatible en este navegador. Usa Chrome o Edge en PC/Android.");
+        }
+        
+        try {
+            this.device = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'B1' }, { namePrefix: 'B2' }, { namePrefix: 'D11' }, { namePrefix: 'NIIMBOT' }],
+                optionalServices: [this.SERVICE_UUID]
+            });
+
+            this.device.addEventListener('gattserverdisconnected', () => {
+                if(this.onDisconnectCallback) this.onDisconnectCallback();
+                this.characteristic = null;
+            });
+
+            this.server = await this.device.gatt.connect();
+            const service = await this.server.getPrimaryService(this.SERVICE_UUID);
+            this.characteristic = await service.getCharacteristic(this.CHAR_UUID);
+            
+            return true;
+        } catch (error) {
+            console.error("Error de conexión Niimbot:", error);
+            throw error;
+        }
+    }
+
+    disconnect() {
+        if (this.device && this.device.gatt.connected) {
+            this.device.gatt.disconnect();
+        }
+    }
+
+    isConnected() {
+        return this.device && this.device.gatt.connected && this.characteristic;
+    }
+
+    // Calcula el Checksum (XOR de type, cmd y data)
+    _calculateChecksum(type, cmd, data) {
+        let cs = type ^ cmd;
+        for (let i = 0; i < data.length; i++) {
+            cs ^= data[i];
+        }
+        return cs;
+    }
+
+    // Arma el paquete con la cabecera 0x55 0x55
+    _createPacket(type, cmd, data = []) {
+        const payload = new Uint8Array(data);
+        const buffer = new Uint8Array(payload.length + 7);
+        buffer[0] = 0x55;
+        buffer[1] = 0x55;
+        buffer[2] = type;
+        buffer[3] = cmd;
+        buffer[4] = payload.length;
+        buffer.set(payload, 5);
+        buffer[buffer.length - 2] = this._calculateChecksum(type, cmd, payload);
+        buffer[buffer.length - 1] = 0xAA;
+        return buffer;
+    }
+
+    async _sendPacket(type, cmd, data = []) {
+        if (!this.isConnected()) throw new Error("Impresora desconectada");
+        const packet = this._createPacket(type, cmd, data);
+        
+        // Fragmentar envío BLE (MTU general de 20 bytes para compatibilidad extrema)
+        const chunkSize = 20;
+        for (let i = 0; i < packet.length; i += chunkSize) {
+            const chunk = packet.slice(i, i + chunkSize);
+            await this.characteristic.writeValueWithoutResponse(chunk);
+            // Pequeña pausa para evitar saturar el buffer BLE
+            await new Promise(r => setTimeout(r, 10)); 
+        }
+    }
+
+    // Procesa el Canvas y lo envía a la impresora línea por línea
+    async printImage(canvas) {
+        if (!this.isConnected()) throw new Error("Conectá la impresora primero.");
+
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;   // Para B1 50x30, solemos usar ~384 px de ancho
+        const height = canvas.height; // ~240 px de alto
+        const imgData = ctx.getImageData(0, 0, width, height).data;
+
+        // Comandos de inicialización Niimbot (Protocolo V4)
+        await this._sendPacket(1, 0x01); // Iniciar impresión
+        await this._sendPacket(1, 0x13, [0x01]); // Densidad 1 (media)
+        await this._sendPacket(1, 0x2C, [0x01]); // Tipo papel: Etiqueta
+
+        // La B1 imprime verticalmente, le enviamos fila por fila
+        // Transformar la imagen RGBA a mapa de bits Monocromo
+        for (let y = 0; y < height; y++) {
+            // Ancho en bytes (cada bit es 1 pixel negro)
+            const byteWidth = Math.ceil(width / 8); 
+            const rowData = new Uint8Array(byteWidth);
+
+            for (let x = 0; x < width; x++) {
+                const idx = (y * width + x) * 4;
+                const r = imgData[idx];
+                const g = imgData[idx + 1];
+                const b = imgData[idx + 2];
+                const a = imgData[idx + 3];
+                // Blanco y negro (Threshold)
+                const isBlack = (r * 0.299 + g * 0.587 + b * 0.114) < 128 && a > 128;
+                
+                if (isBlack) {
+                    rowData[Math.floor(x / 8)] |= (0x80 >> (x % 8));
+                }
+            }
+
+            // Paquete de datos de imagen: 0x85 es el comando de fila de imagen
+            // Acompañado del contador de fila y los datos
+            const payload = new Uint8Array(rowData.length + 2);
+            payload[0] = (y >> 8) & 0xFF; // Fila High Byte
+            payload[1] = y & 0xFF;        // Fila Low Byte
+            payload.set(rowData, 2);
+
+            await this._sendPacket(2, 0x85, payload);
+        }
+
+        await this._sendPacket(1, 0x02); // Comando de avance/fin de impresión
+    }
+}
+
+// Instancia global de la impresora
+const printer = new NiimbotPrinter();
+
 export function setupPOS(app) {
     const db = getFirestore(app);
     const auth = getAuth(app);
     
-    // --- Colecciones principales de la App ---
+    // Colecciones principales de la App
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const recetasCollection = collection(db, 'recetas'); 
@@ -21,7 +162,7 @@ export function setupPOS(app) {
     const pantallaStock = document.getElementById('pantalla-stock-mostrador');
     const pantallaPromociones = document.getElementById('pantalla-promociones');
 
-    // --- Referencias DOM: Caja y Mostrador ---
+    // --- Referencias DOM: Caja y Mostrador Vendedor ---
     const usuarioNombreEl = document.getElementById('usuario-activo-nombre');
     const fondoCajaInput = document.getElementById('fondo-caja-input');
     const btnAbrirCaja = document.getElementById('btn-abrir-caja');
@@ -32,7 +173,6 @@ export function setupPOS(app) {
     const posTotalMonto = document.getElementById('pos-total-monto');
     const btnCobrar = document.getElementById('btn-cobrar');
 
-    // Modales de Cobro y Cierre
     const modalCobro = document.getElementById('modal-cobro');
     const modalCobroTotal = document.getElementById('modal-cobro-total');
     const btnPaymentMethods = document.querySelectorAll('.btn-payment');
@@ -47,7 +187,7 @@ export function setupPOS(app) {
     const btnCancelarCierre = document.getElementById('btn-cancelar-cierre');
     const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
 
-    // --- Referencias DOM: Inventario ---
+    // --- Referencias DOM: Inventario y Reglas del Administrador ---
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const buscadorInventario = document.getElementById('buscador-inventario');
@@ -55,15 +195,18 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
-    // --- Referencias DOM: Promociones ---
+    // --- Referencias DOM: Promociones e Impresión Bluetooth ---
     const btnIrPromos = document.getElementById('btn-ir-promos');
     const btnVolverMostradorPromos = document.getElementById('btn-volver-mostrador-promos');
     const selectPromoProd = document.getElementById('promo-producto-select');
     const inputPromoTipo = document.getElementById('promo-tipo');
     const inputPromoFrase = document.getElementById('promo-frase');
     const btnImprimirPromo = document.getElementById('btn-imprimir-promo');
+    
+    const btnConectarNiimbot = document.getElementById('btn-conectar-niimbot');
+    const btStatusIndicator = document.getElementById('bt-status-indicator');
 
-    // Modales de Stock y Barras
+    // Modales de Stock y Código de Barras
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
@@ -78,7 +221,6 @@ export function setupPOS(app) {
 
     const modalBarcode = document.getElementById('modal-barcode');
     const barcodeTituloProducto = document.getElementById('barcode-titulo-producto');
-    const barcodeTituloImpresion = document.getElementById('barcode-titulo-impresion');
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
     const btnImprimirBarcode = document.getElementById('btn-imprimir-barcode');
 
@@ -86,14 +228,16 @@ export function setupPOS(app) {
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
+    
     let materiasPrimasMap = new Map(); 
     let recetasBrutas = []; 
     let productosDisponibles = []; 
+    
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
 
-    // Métodos Helpers
+    // Métodos Helpers para Formatos Comunes
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp) return '';
@@ -101,7 +245,34 @@ export function setupPOS(app) {
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
 
-    // --- CÁLCULO DE PRECIOS Y COSTOS ---
+    // --- LÓGICA DE BLUETOOTH UI ---
+    if (btnConectarNiimbot) {
+        btnConectarNiimbot.addEventListener('click', async () => {
+            if (printer.isConnected()) {
+                printer.disconnect();
+                return;
+            }
+            try {
+                btnConectarNiimbot.textContent = "Conectando...";
+                await printer.connect();
+                btStatusIndicator.className = "bt-status connected";
+                btStatusIndicator.textContent = "🟢 NIIMBOT B1 Conectada";
+                btnConectarNiimbot.textContent = "Desconectar";
+                
+                // Callback para cuando se apague o aleje
+                printer.onDisconnectCallback = () => {
+                    btStatusIndicator.className = "bt-status disconnected";
+                    btStatusIndicator.textContent = "🔴 NIIMBOT Desconectada";
+                    btnConectarNiimbot.textContent = "Conectar BLE";
+                };
+            } catch (error) {
+                alert("Error conectando a NIIMBOT: " + error.message);
+                btnConectarNiimbot.textContent = "Conectar BLE";
+            }
+        });
+    }
+
+    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base
     const obtenerCostoBase = (receta) => {
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
@@ -115,6 +286,7 @@ export function setupPOS(app) {
         return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
+    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final
     const calcularPrecioVenta = (prod) => {
         const costo = prod.costoBaseCalculado || 0;
         const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
@@ -122,7 +294,9 @@ export function setupPOS(app) {
         return costo * (1 + (margenAplicado / 100));
     };
 
-    // --- CONFIGURACIÓN GLOBAL ---
+    // ==========================================
+    // 1. CONFIGURACIÓN GLOBAL (MARGEN DE GANANCIAS)
+    // ==========================================
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
         if (docSnap.exists()) {
             margenGlobal = docSnap.data().margenGlobal || 0;
@@ -140,12 +314,15 @@ export function setupPOS(app) {
                 procesarYRenderizar();
                 return;
             }
+
             const pass = prompt("Ingrese la contraseña de Administrador:");
             if (pass === "Lautaro2026") {
                 document.body.classList.add('admin-open');
                 btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
                 procesarYRenderizar();
-            } else if (pass !== null) alert("Contraseña incorrecta.");
+            } else if (pass !== null) {
+                alert("Contraseña incorrecta de acceso.");
+            }
         });
     }
 
@@ -154,13 +331,22 @@ export function setupPOS(app) {
             const nuevoMargen = prompt("Defina el nuevo porcentaje de Margen de Ganancia Global (%):", margenGlobal);
             if (nuevoMargen !== null && nuevoMargen.trim() !== "") {
                 const margenNum = parseFloat(nuevoMargen);
-                if (isNaN(margenNum) || margenNum < 0) return alert("Porcentaje inválido.");
-                try { await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum }); } catch (e) {}
+                if (isNaN(margenNum) || margenNum < 0) {
+                    alert("Ingrese un porcentaje numérico válido.");
+                    return;
+                }
+                try {
+                    await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
+                } catch (e) {
+                    alert("Error guardando configuraciones globales.");
+                }
             }
         });
     }
 
-    // --- AUTENTICACIÓN Y TURNOS DE CAJA ---
+    // ==========================================
+    // 2. AUTENTICACIÓN Y APERTURA DE TURNOS
+    // ==========================================
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
@@ -222,11 +408,13 @@ export function setupPOS(app) {
         });
     }
 
-    // --- CONTROL DE NAVEGACIÓN ---
+    // ==========================================
+    // 3. CARGA DE DATOS Y MATEMÁTICA AUTOMÁTICA
+    // ==========================================
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
-            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if(pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaStock.style.display = 'block';
             procesarYRenderizar();
         });
@@ -236,9 +424,9 @@ export function setupPOS(app) {
         btnIrPromos.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
             pantallaStock.style.display = 'none';
-            if (pantallaPromociones) {
+            if(pantallaPromociones) {
                 pantallaPromociones.style.display = 'block';
-                if (selectPromoProd) {
+                if(selectPromoProd) {
                     selectPromoProd.innerHTML = productosDisponibles.map(p => `<option value="${p.nombreTorta}">${p.nombreTorta}</option>`).join('');
                 }
             }
@@ -248,7 +436,7 @@ export function setupPOS(app) {
     if (btnVolverMostrador) {
         btnVolverMostrador.addEventListener('click', () => {
             pantallaStock.style.display = 'none';
-            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if(pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             procesarYRenderizar();
             if (buscadorPOS) buscadorPOS.focus();
@@ -257,13 +445,12 @@ export function setupPOS(app) {
 
     if (btnVolverMostradorPromos) {
         btnVolverMostradorPromos.addEventListener('click', () => {
-            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if(pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             if (buscadorPOS) buscadorPOS.focus();
         });
     }
 
-    // --- OBTENCIÓN DE DATOS REAL-TIME ---
     const cargarDataYCostos = () => {
         onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
@@ -294,25 +481,56 @@ export function setupPOS(app) {
     };
 
     // ==========================================
-    // 3.5. IMPRESIÓN DE PROMOCIONES
+    // 3.5. IMPRESIÓN DE PROMOCIONES POR BLUETOOTH
     // ==========================================
     if (btnImprimirPromo) {
-        btnImprimirPromo.addEventListener('click', () => {
+        btnImprimirPromo.addEventListener('click', async () => {
+            if (!printer.isConnected()) {
+                alert("Por favor, conectá la impresora NIIMBOT usando el botón 'Conectar BLE' arriba.");
+                return;
+            }
+
             const tipo = inputPromoTipo ? (inputPromoTipo.value || 'OFERTA') : 'OFERTA';
             const prod = selectPromoProd ? selectPromoProd.value : '';
             const frase = inputPromoFrase ? (inputPromoFrase.value || '') : '';
             
-            const elTipo = document.getElementById('print-promo-tipo');
-            const elProd = document.getElementById('print-promo-prod');
-            const elFrase = document.getElementById('print-promo-frase');
-
-            if(elTipo) elTipo.textContent = tipo;
-            if(elProd) elProd.textContent = prod;
-            if(elFrase) elFrase.textContent = frase;
+            // Dibujar la promo dinámicamente en el canvas oculto
+            const canvas = document.getElementById('promo-canvas-print');
+            const ctx = canvas.getContext('2d');
             
-            document.body.classList.add('imprimiendo-promo');
-            window.print();
-            setTimeout(() => document.body.classList.remove('imprimiendo-promo'), 500);
+            // Fondo blanco
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Borde
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 4;
+            ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+
+            // Textos centrados
+            ctx.textAlign = "center";
+            ctx.fillStyle = "black";
+            
+            ctx.font = "bold 60px sans-serif";
+            ctx.fillText(tipo.toUpperCase(), canvas.width / 2, 80);
+            
+            ctx.font = "bold 35px sans-serif";
+            ctx.fillText(prod, canvas.width / 2, 140);
+            
+            ctx.font = "25px sans-serif";
+            ctx.fillText(frase, canvas.width / 2, 200);
+
+            try {
+                btnImprimirPromo.disabled = true;
+                btnImprimirPromo.textContent = "Enviando por BLE...";
+                await printer.printImage(canvas);
+                btnImprimirPromo.textContent = "🖨️ Imprimir Promo BLE";
+                btnImprimirPromo.disabled = false;
+            } catch (err) {
+                alert("Fallo la impresión: " + err.message);
+                btnImprimirPromo.textContent = "🖨️ Imprimir Promo BLE";
+                btnImprimirPromo.disabled = false;
+            }
         });
     }
 
@@ -387,15 +605,12 @@ export function setupPOS(app) {
                 if (prod) {
                     if (!prod.codigoBarras) {
                         // CREACIÓN MATEMÁTICA DEL EAN-13 REAL
-                        // 1. Tomamos los primeros 12 dígitos del Timestamp
                         let num12 = String(Date.now()).substring(0, 12); 
-                        // 2. Calculamos el dígito verificador real
                         let sum = 0;
                         for(let i = 0; i < 12; i++) {
                             sum += parseInt(num12[i]) * (i % 2 === 1 ? 3 : 1);
                         }
                         let checkDigit = (10 - (sum % 10)) % 10;
-                        // 3. Unimos los 12 dígitos con el verificador para formar los 13 finales
                         const nuevoCodigo = num12 + String(checkDigit); 
                         
                         try {
@@ -439,35 +654,50 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modal Código de Barras 1D ---
+    // --- Modal Código de Barras 1D y ENVÍO BLE ---
     const abrirModalBarcode = (prod) => {
         if(barcodeTituloProducto) barcodeTituloProducto.textContent = prod.nombreTorta;
-        if(barcodeTituloImpresion) barcodeTituloImpresion.textContent = prod.nombreTorta;
-
-        // Función de apoyo para dibujar el código de barras e intentar rescatarlo si está mal generado (errores previos)
-        const renderizarBarras = (selector, width, height, fontSize, margin) => {
-            try {
-                // Intentamos EAN13 primero (El estándar estricto que ahora guardamos)
-                JsBarcode(selector, prod.codigoBarras, {
-                    format: "EAN13",
-                    lineColor: "#000", width: width, height: height, displayValue: true, fontSize: fontSize, margin: margin
-                });
-            } catch(e) {
-                // RESCATE: Si falla porque es un código de pruebas viejo sin el dígito verificador real, usamos CODE128 (Flexible)
-                JsBarcode(selector, prod.codigoBarras, {
-                    format: "CODE128",
-                    lineColor: "#000", width: width, height: height, displayValue: true, fontSize: fontSize, margin: margin
-                });
-            }
-        };
-
+        
+        // Dibujamos el barcode en el canvas que se enviará a la impresora Niimbot
+        const canvasPrint = document.getElementById("niimbot-canvas-print");
+        
+        // Limpiar el canvas
+        const ctx = canvasPrint.getContext("2d");
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvasPrint.width, canvasPrint.height);
+        
+        // Dibujar el titulo en el canvas
+        ctx.fillStyle = "black";
+        ctx.font = "bold 24px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(prod.nombreTorta, canvasPrint.width / 2, 35);
+        
         try {
-            renderizarBarras("#barcode-canvas-preview", 1.5, 40, 14, 5);
-            renderizarBarras("#barcode-canvas-print", 1.5, 35, 12, 2);
+            // JsBarcode permite dibujar directamente sobre nuestro canvas
+            JsBarcode(canvasPrint, prod.codigoBarras, {
+                format: "EAN13",
+                lineColor: "#000",
+                width: 2.5,
+                height: 120,
+                displayValue: true, 
+                fontSize: 22,
+                margin: 10,
+                marginTop: 50 // Dejamos espacio arriba para el título
+            });
             if(modalBarcode) modalBarcode.classList.add('visible');
-        } catch(error) {
-            console.error("Error al generar código de barras:", error);
-            alert("Error crítico al dibujar el código de barras.");
+        } catch(e) {
+            // Si el código falla por no ser EAN13 válido (códigos viejos del sistema) lo dibujamos en CODE128
+            JsBarcode(canvasPrint, prod.codigoBarras, {
+                format: "CODE128",
+                lineColor: "#000",
+                width: 2,
+                height: 120,
+                displayValue: true, 
+                fontSize: 20,
+                margin: 10,
+                marginTop: 50
+            });
+            if(modalBarcode) modalBarcode.classList.add('visible');
         }
     };
 
@@ -476,12 +706,23 @@ export function setupPOS(app) {
     }
 
     if (btnImprimirBarcode) {
-        btnImprimirBarcode.addEventListener('click', () => {
-            document.body.classList.add('imprimiendo-barcode');
-            window.print();
-            setTimeout(() => {
-                document.body.classList.remove('imprimiendo-barcode');
-            }, 500);
+        btnImprimirBarcode.addEventListener('click', async () => {
+            if (!printer.isConnected()) {
+                alert("Por favor, conectá la impresora NIIMBOT usando el botón 'Conectar BLE' de la cabecera.");
+                return;
+            }
+            try {
+                btnImprimirBarcode.disabled = true;
+                btnImprimirBarcode.textContent = "Enviando por BLE...";
+                const canvas = document.getElementById("niimbot-canvas-print");
+                await printer.printImage(canvas);
+                btnImprimirBarcode.textContent = "🖨️ Enviar a Impresora";
+                btnImprimirBarcode.disabled = false;
+            } catch (err) {
+                alert("Error al imprimir: " + err.message);
+                btnImprimirBarcode.textContent = "🖨️ Enviar a Impresora";
+                btnImprimirBarcode.disabled = false;
+            }
         });
     }
 
