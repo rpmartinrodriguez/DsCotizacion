@@ -197,31 +197,25 @@
                             <div class="valor" id="stat-mediana">$0.00</div>
                             <div class="subtext">Valor central de ventas</div>
                         </div>
-                        <div class="dash-card">
-                            <h3>Nivel Desperdicio <span class="info-icon" data-info="desperdicio">i</span></h3>
-                            <div class="valor" id="stat-desperdicio" style="color: #eab308;">0%</div>
-                            <div class="subtext">Sobre volumen producido</div>
+                        <div class="dash-card" style="grid-column: span 2;">
+                            <h3 style="margin-bottom: 1rem;">Productos Estrella (Moda) <span class="info-icon" data-info="moda">i</span></h3>
+                            <ul class="list-top-productos" id="lista-top-productos"></ul>
+                            <ul class="list-top-productos" id="lista-resto-productos" style="display: none; margin-top: 0;"></ul>
+                            <button id="btn-ver-mas-productos" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; padding: 0.3rem; font-size: 0.8rem; border: none; background: #fdf2f8; color: #ec4899; cursor: pointer; display: none;">Ver detalle completo ⬇</button>
                         </div>
                     </div>
 
-                    <!-- Panel de Productos Estrella (Moda) -->
-                    <div class="card" style="margin-bottom: 1.5rem;">
-                        <h3 style="margin-top:0; margin-bottom: 1rem; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Productos Estrella (Moda) <span class="info-icon" data-info="moda">i</span></h3>
-                        <ul class="list-top-productos" id="lista-top-productos"></ul>
-                        <ul class="list-top-productos" id="lista-resto-productos" style="display: none; margin-top: 0;"></ul>
-                        <button id="btn-ver-mas-productos" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; padding: 0.3rem; font-size: 0.8rem; border: none; background: #fdf2f8; color: #ec4899; cursor: pointer; display: none;">Ver detalle completo ⬇</button>
-                    </div>
-
-                    <!-- Gráficos de Ventas y Categorías -->
                     <div class="charts-container">
                         <div class="chart-box">
                             <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Ventas Diarias <span class="info-icon" data-info="ventas_diarias">i</span></h3>
                             <canvas id="chartLineVentas" height="250"></canvas>
                         </div>
                         <div class="chart-box">
-                            <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Ventas por Categoría</h3>
-                            <!-- ACÁ ESTÁ EL LUGAR DONDE SE DIBUJA EL GRÁFICO CIRCULAR -->
-                            <canvas id="chartPieCategorias" height="250"></canvas>
+                            <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Desperdicio <span class="info-icon" data-info="desperdicio">i</span></h3>
+                            <div style="text-align: center; margin-top: 2rem;">
+                                <div id="stat-desperdicio" style="font-size: 3rem; font-weight: 900; color: #eab308;">0%</div>
+                                <p style="color: var(--text-light); font-size: 0.9rem;">Sobre el volumen producido</p>
+                            </div>
                         </div>
                     </div>
 
@@ -310,7 +304,8 @@
     </div>
 
     <!-- MODAL DE INFORMACIÓN GLOBAL (i) -->
-    <div id="modal-info" class="modal-overlay" style="display: none; z-index: 9999;">
+    <!-- FIX: Le quitamos el display none para que funcione con tu CSS global "visible" -->
+    <div id="modal-info" class="modal-overlay">
         <div class="modal-content card" style="max-width: 500px;">
             <h2 id="info-title" style="color: #ec4899; margin-top: 0; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Título</h2>
             
@@ -338,7 +333,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=7';
+        import { setupCajas } from './js/cajas.js?v=10';
         
         try {
             const app = initializeApp(firebaseConfig);
