@@ -27,28 +27,114 @@ export function setupCajas(app) {
     const sectionHistorial = document.getElementById('section-historial');
     const sectionEstadisticas = document.getElementById('section-estadisticas');
 
+    // Info Modal
+    const modalInfo = document.getElementById('modal-info');
+    const infoTitle = document.getElementById('info-title');
+    const infoDesc = document.getElementById('info-desc');
+    const infoSirve = document.getElementById('info-sirve');
+    const infoEj = document.getElementById('info-ej');
+    const infoDec = document.getElementById('info-dec');
+    const btnCerrarInfo = document.getElementById('btn-cerrar-info');
+
     let todasLasCajas = [];
     let statsYaCargadas = false;
     let chartVentasInstancia = null;
     let chartCategoriasInstancia = null;
 
+    // DICCIONARIO DE INFORMACIÓN PARA LOS ICONOS (i)
+    const infoDiccionario = {
+        "media": {
+            titulo: "Media (Promedio)",
+            desc: "Es el valor total de tus ventas dividido por la cantidad de días trabajados.",
+            sirve: "Para saber cuánto dinero entra en promedio por día a tu caja.",
+            ej: "Si el lunes vendés $10.000 y el martes $20.000, tu media es de $15.000 diarios.",
+            dec: "Si tu media es menor a tus costos fijos diarios, tenés que aumentar precios o hacer promociones para subir el volumen."
+        },
+        "mediana": {
+            titulo: "Mediana",
+            desc: "Si ordenamos todos tus días de ventas del peor al mejor, la mediana es el día que queda exactamente en el medio.",
+            sirve: "Es más real que el promedio. Evita que un día extraordinario (como el Día de la Madre) distorsione tu visión del negocio normal.",
+            ej: "Vendés: $2.000, $3.000 y un día de fiesta $50.000. El promedio da $18.000 (falso), pero la mediana te da $3.000 (la realidad de tu local).",
+            dec: "Si la mediana es mucho más baja que tu promedio, dependés demasiado de fechas especiales. Creá estrategias para los días flojos."
+        },
+        "moda": {
+            titulo: "Productos Estrella (Moda)",
+            desc: "Son los productos que más unidades venden. En estadística se le llama 'Moda' al valor que más se repite.",
+            sirve: "Para identificar cuáles son los artículos 'gancho' que atraen a la gente a tu local.",
+            ej: "Vendés 50 alfajores, 10 tortas y 5 cafés. Tu producto estrella es el Alfajor.",
+            dec: "Nunca te quedes sin stock de estos productos. Son ideales para hacer combos (ej: llevá el Alfajor estrella + un café)."
+        },
+        "desperdicio": {
+            titulo: "Nivel de Desperdicio",
+            desc: "Porcentaje de productos que tuviste que tirar a la basura sobre el total de lo que produjiste.",
+            sirve: "Mide qué tan eficiente es tu producción frente a la demanda real.",
+            ej: "Hacés 100 sándwiches, vendés 90 y tirás 10. Tu desperdicio es del 10%.",
+            dec: "Si supera el 5%, estás perdiendo plata. Ajustá tus recetas, hacé tandas más chicas o usá el sistema de Lotes (PEPS) para vender lo más viejo primero."
+        },
+        "abc": {
+            titulo: "Clasificación ABC de Inventario",
+            desc: "Agrupa tus productos en 3 categorías basándose en cuánta plata te dejan (Regla de Pareto).",
+            sirve: "Para no perder el tiempo controlando productos que no te dan ganancias.",
+            ej: "Clase A (Tus tortas caras), Clase B (Cafés y facturas), Clase C (Golosinas baratas).",
+            dec: "Clase A: Contá el stock todos los días. Clase C: Comprá mucho bulto y controlalo una vez por mes, no importa si sobra."
+        },
+        "estrategicos": {
+            titulo: "Indicadores Estratégicos (KPIs)",
+            desc: "Miden la salud general de tu negocio a nivel macro (Crecimiento y Márgenes).",
+            sirve: "Para saber si tu negocio se está estancando, creciendo o perdiendo rentabilidad.",
+            ej: "Si tu 'Crecimiento de Ingresos' sube, pero tu 'Crecimiento de Clientes' baja, significa que vendés más caro a menos gente.",
+            dec: "Analizá el Margen Promedio: si es bajo, tus costos de materia prima están comiéndose tu ganancia. Ajustá tu receta o cambiá de proveedor."
+        },
+        "dispersion": {
+            titulo: "Medidas de Dispersión",
+            desc: "Miden qué tan caóticas o estables son tus ventas usando Varianza y Desviación Estándar.",
+            sirve: "Para saber qué tan predecible es tu negocio.",
+            ej: "Un local estable vende $10.000 todos los días. Un local inestable vende $2.000 un lunes y $30.000 un viernes.",
+            dec: "Si la desviación es muy alta (número grande), tu negocio es riesgoso. Cuidá tu fondo de caja para sobrevivir a los días 'pobres'."
+        },
+        "ventas_diarias": {
+            titulo: "Gráfico de Ventas Diarias",
+            desc: "Muestra la facturación neta (Efectivo + MercadoPago) de los últimos 15 días en los que abriste la caja.",
+            sirve: "Visualizar rápidamente la tendencia del local.",
+            ej: "Vas a ver picos los fines de semana y valles los martes.",
+            dec: "Identificá los valles (días bajos) y colocá promociones agresivas esos días para estabilizar la curva."
+        }
+    };
+
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('info-icon')) {
+            const key = e.target.dataset.info;
+            const data = infoDiccionario[key];
+            if (data) {
+                infoTitle.textContent = data.titulo;
+                infoDesc.textContent = data.desc;
+                infoSirve.textContent = data.sirve;
+                infoEj.textContent = data.ej;
+                infoDec.textContent = data.dec;
+                modalInfo.style.display = 'flex';
+            }
+        }
+    });
+
+    btnCerrarInfo.addEventListener('click', () => {
+        modalInfo.style.display = 'none';
+    });
+
+
     // Funciones Helper
     function formatMoneda(val) {
         return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
-    
     function formatearFecha(timestamp) {
         if (!timestamp) return 'Fecha desconocida';
         const date = timestamp.toDate();
         return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
     }
-
     function formatearFechaCorta(timestamp) {
         if (!timestamp) return '';
         const date = timestamp.toDate();
         return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
     }
-
     function formatearMesAnio(timestamp) {
         if (!timestamp) return null;
         const date = timestamp.toDate();
@@ -56,37 +142,12 @@ export function setupCajas(app) {
         const anio = date.getFullYear();
         return `${anio}-${mes}`; 
     }
-
     function nombreMes(mesAnio) {
         const [anio, mes] = mesAnio.split('-');
         const fecha = new Date(anio, parseInt(mes) - 1, 1);
         const nombre = fecha.toLocaleDateString('es-AR', { month: 'long' });
         return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + anio;
     }
-
-    // ==========================================
-    // 1. GESTIÓN DE TABS
-    // ==========================================
-    tabBtnHistorial.addEventListener('click', () => {
-        tabBtnHistorial.classList.add('active');
-        tabBtnEstadisticas.classList.remove('active');
-        sectionHistorial.style.display = 'block';
-        sectionEstadisticas.style.display = 'none';
-    });
-
-    tabBtnEstadisticas.addEventListener('click', () => {
-        tabBtnEstadisticas.classList.add('active');
-        tabBtnHistorial.classList.remove('active');
-        sectionHistorial.style.display = 'none';
-        sectionEstadisticas.style.display = 'block';
-
-        if(!statsYaCargadas) {
-            generarDashboard();
-            statsYaCargadas = true;
-        }
-    });
-
-    document.getElementById('btn-cargar-stats').addEventListener('click', generarDashboard);
 
     // ==========================================
     // 2. RENDERIZAR LA LISTA DE CAJAS
@@ -349,7 +410,6 @@ export function setupCajas(app) {
         document.getElementById('stats-content').style.display = 'none';
 
         try {
-            // Descargar colecciones masivas
             const [ventasSnap, auditSnap, recetasSnap] = await Promise.all([
                 getDocs(collection(db, 'ventasMostrador')),
                 getDocs(collection(db, 'auditoriaMostrador')),
@@ -358,11 +418,12 @@ export function setupCajas(app) {
 
             let ventasArray = [];
             ventasSnap.forEach(v => ventasArray.push(v.data()));
+            // Ordenar ventas más antiguas a más nuevas para cálculos de crecimiento temporal
+            ventasArray.sort((a,b) => (a.fecha?.seconds || 0) - (b.fecha?.seconds || 0));
 
             let auditArray = [];
             auditSnap.forEach(a => auditArray.push(a.data()));
 
-            // Mapa para buscar Categorias y Márgenes fácilmente
             let recetasMap = new Map();
             let sumatoriaMargenes = 0;
             let qtyMargenes = 0;
@@ -375,7 +436,7 @@ export function setupCajas(app) {
                 }
             });
 
-            // 1. Procesar Ventas Diarias (Desde las Cajas para exactitud monetaria)
+            // 1. Procesar Ventas Diarias
             let ventasDiariasMap = {};
             todasLasCajas.forEach(c => {
                 if(c.fechaApertura) {
@@ -386,12 +447,11 @@ export function setupCajas(app) {
             });
 
             let valoresDiarios = Object.values(ventasDiariasMap);
-            let labelsDiarios = Object.keys(ventasDiariasMap).slice(0, 15).reverse(); // Ultimos 15
+            let labelsDiarios = Object.keys(ventasDiariasMap).slice(0, 15).reverse(); 
             let dataDiariaPlot = Object.values(ventasDiariasMap).slice(0, 15).reverse();
 
-            // Matemática Clásica
+            // Matemática de Dispersión
             let media = 0, mediana = 0, max = 0, min = 0, rango = 0, varianza = 0, stdDev = 0;
-
             if(valoresDiarios.length > 0) {
                 max = Math.max(...valoresDiarios);
                 min = Math.min(...valoresDiarios);
@@ -406,31 +466,130 @@ export function setupCajas(app) {
                 stdDev = Math.sqrt(varianza);
             }
 
-            // 2. Procesar Productos y Categorías
-            let conteoProductos = {};
+            // 2. Procesar Productos y Clasificación ABC (Basado en Plata Generada)
+            let conteoProductosQty = {};
+            let conteoProductosPlata = {};
+            let rentabilidadCategoria = {}; // Acumulado de ventas por categoría
             let conteoCategorias = {};
             let totalUnidadesVendidas = 0;
+            let totalPlataVendida = 0;
 
             ventasArray.forEach(v => {
                 (v.items || []).forEach(item => {
                     let qty = parseInt(item.cantidad) || 0;
+                    let montoTotalItem = qty * (parseFloat(item.precio) || 0);
+                    
                     totalUnidadesVendidas += qty;
-                    conteoProductos[item.nombre] = (conteoProductos[item.nombre] || 0) + qty;
+                    totalPlataVendida += montoTotalItem;
+
+                    conteoProductosQty[item.nombre] = (conteoProductosQty[item.nombre] || 0) + qty;
+                    conteoProductosPlata[item.nombre] = (conteoProductosPlata[item.nombre] || 0) + montoTotalItem;
                     
                     let cat = (recetasMap.get(item.nombre) || {categoria: 'Otros'}).categoria;
                     conteoCategorias[cat] = (conteoCategorias[cat] || 0) + qty;
+                    rentabilidadCategoria[cat] = (rentabilidadCategoria[cat] || 0) + montoTotalItem;
                 });
             });
 
-            // Moda (Producto Estrella)
-            let modaProducto = "-";
-            let modaMaxCount = 0;
-            for(let p in conteoProductos) {
-                if(conteoProductos[p] > modaMaxCount) {
-                    modaMaxCount = conteoProductos[p];
-                    modaProducto = p;
+            // TOP PRODUCTOS (MODA)
+            let sortedByQty = Object.entries(conteoProductosQty).sort((a,b)=>b[1]-a[1]);
+            
+            const ulTop = document.getElementById('lista-top-productos');
+            const ulResto = document.getElementById('lista-resto-productos');
+            const btnVerMas = document.getElementById('btn-ver-mas-productos');
+            
+            ulTop.innerHTML = '';
+            ulResto.innerHTML = '';
+            ulResto.style.display = 'none';
+
+            if(sortedByQty.length > 0) {
+                // Primeros 5
+                sortedByQty.slice(0, 5).forEach((p, idx) => {
+                    let participacion = ((p[1] / totalUnidadesVendidas) * 100).toFixed(1);
+                    ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1]} u. <small>(${participacion}%)</small></span></li>`;
+                });
+                
+                // Resto
+                if(sortedByQty.length > 5) {
+                    sortedByQty.slice(5).forEach((p, idx) => {
+                        let participacion = ((p[1] / totalUnidadesVendidas) * 100).toFixed(1);
+                        ulResto.innerHTML += `<li><span>#${idx+6} ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1]} u. <small>(${participacion}%)</small></span></li>`;
+                    });
+                    btnVerMas.style.display = 'block';
+                    btnVerMas.onclick = () => {
+                        if(ulResto.style.display === 'none') {
+                            ulResto.style.display = 'block';
+                            btnVerMas.innerHTML = 'Ocultar detalle ⬆';
+                        } else {
+                            ulResto.style.display = 'none';
+                            btnVerMas.innerHTML = 'Ver detalle completo ⬇';
+                        }
+                    };
+                } else {
+                    btnVerMas.style.display = 'none';
+                }
+            } else {
+                ulTop.innerHTML = '<li>No hay ventas registradas.</li>';
+            }
+
+            // Lógica Clasificación ABC
+            let sortedByPlata = Object.entries(conteoProductosPlata).sort((a,b)=>b[1]-a[1]);
+            let sumPlata = 0;
+            let listA = [], listB = [], listC = [];
+
+            sortedByPlata.forEach(p => {
+                sumPlata += p[1];
+                let porcentajeAcumulado = sumPlata / totalPlataVendida;
+                
+                if(porcentajeAcumulado <= 0.80) {
+                    listA.push(p[0]);
+                } else if(porcentajeAcumulado <= 0.95) {
+                    listB.push(p[0]);
+                } else {
+                    listC.push(p[0]);
+                }
+            });
+
+            document.getElementById('abc-a-text').textContent = listA.slice(0,5).join(', ') + (listA.length > 5 ? '...' : '');
+            document.getElementById('abc-b-text').textContent = listB.slice(0,5).join(', ') + (listB.length > 5 ? '...' : '');
+            document.getElementById('abc-c-text').textContent = listC.slice(0,5).join(', ') + (listC.length > 5 ? '...' : '');
+
+
+            // Lógica Crecimiento Clientes e Ingresos (Comparar primera mitad vs segunda mitad temporal de los datos)
+            let crecClientesText = "-";
+            let crecIngresosText = "-";
+
+            if (ventasArray.length > 10) {
+                let mitad = Math.floor(ventasArray.length / 2);
+                let primeraMitad = ventasArray.slice(0, mitad);
+                let segundaMitad = ventasArray.slice(mitad);
+
+                let clientesA = primeraMitad.length;
+                let clientesB = segundaMitad.length;
+                let varClientes = ((clientesB - clientesA) / clientesA) * 100;
+                crecClientesText = (varClientes > 0 ? '📈 +' : '📉 ') + varClientes.toFixed(1) + "%";
+                document.getElementById('stat-crecimiento-clientes').style.color = varClientes > 0 ? '#15803d' : '#b91c1c';
+
+                let ingresosA = primeraMitad.reduce((a,b)=>a+(b.total||0), 0);
+                let ingresosB = segundaMitad.reduce((a,b)=>a+(b.total||0), 0);
+                let varIngresos = ((ingresosB - ingresosA) / ingresosA) * 100;
+                crecIngresosText = (varIngresos > 0 ? '📈 +' : '📉 ') + varIngresos.toFixed(1) + "%";
+                document.getElementById('stat-crecimiento-ingresos').style.color = varIngresos > 0 ? '#15803d' : '#b91c1c';
+            } else {
+                crecClientesText = "Faltan datos";
+                crecIngresosText = "Faltan datos";
+            }
+
+            // Línea más rentable (La que más plata bruta dejó)
+            let mejorLinea = "-";
+            let maxLineaPlata = 0;
+            for(let cat in rentabilidadCategoria) {
+                if(rentabilidadCategoria[cat] > maxLineaPlata) {
+                    maxLineaPlata = rentabilidadCategoria[cat];
+                    mejorLinea = cat;
                 }
             }
+
 
             // 3. Procesar Desperdicio
             let totalDesperdicioQty = 0;
@@ -444,31 +603,24 @@ export function setupCajas(app) {
                 porcentajeDesperdicio = (totalDesperdicioQty / (totalUnidadesVendidas + totalDesperdicioQty)) * 100;
             }
 
-            // Actualizar DOM KPIs
+            // Actualizar DOM KPIs Básicos
             document.getElementById('stat-media').textContent = formatMoneda(media);
             document.getElementById('stat-mediana').textContent = formatMoneda(mediana);
-            document.getElementById('stat-moda').textContent = modaProducto;
             document.getElementById('stat-desperdicio').textContent = porcentajeDesperdicio.toFixed(1) + '%';
             
+            // Dispersión
             document.getElementById('stat-max').textContent = formatMoneda(max);
             document.getElementById('stat-min').textContent = formatMoneda(min);
             document.getElementById('stat-rango').textContent = formatMoneda(rango);
             document.getElementById('stat-varianza').textContent = formatMoneda(varianza);
             document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
 
-            // Mockup Advanced KPIs
-            let mayorMargenNom = "-";
-            let mayorMargenVal = 0;
-            recetasMap.forEach((val, key) => {
-                if(val.margen && val.margen > mayorMargenVal) {
-                    mayorMargenVal = val.margen;
-                    mayorMargenNom = key;
-                }
-            });
+            // KPIs Negocio
             let promedioMargenGlobal = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "Sin Datos";
-
-            document.getElementById('stat-mayor-ganancia').textContent = mayorMargenNom;
+            document.getElementById('stat-crecimiento-clientes').textContent = crecClientesText;
+            document.getElementById('stat-crecimiento-ingresos').textContent = crecIngresosText;
             document.getElementById('stat-margen-promedio').textContent = promedioMargenGlobal;
+            document.getElementById('stat-linea-rentable').textContent = mejorLinea;
 
             // DIBUJAR GRÁFICOS
             const ctxLine = document.getElementById('chartLineVentas').getContext('2d');
@@ -478,7 +630,7 @@ export function setupCajas(app) {
                 data: {
                     labels: labelsDiarios,
                     datasets: [{
-                        label: 'Venta Global ($)',
+                        label: 'Venta Global Neta ($)',
                         data: dataDiariaPlot,
                         borderColor: '#ec4899',
                         backgroundColor: 'rgba(236, 72, 153, 0.2)',
@@ -509,5 +661,4 @@ export function setupCajas(app) {
             document.getElementById('stats-loading').innerHTML = '<p style="color:red;">Error de conexión procesando los datos.</p>';
         }
     }
-
 }
