@@ -6,11 +6,13 @@ export function setupCajas(app) {
     const db = getFirestore(app);
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
+    const auditoriaCollection = collection(db, 'auditoriaMostrador');
+    const recetasCollection = collection(db, 'recetas');
 
+    // DOM Elements
     const listaCajasContainer = document.getElementById('lista-cajas-container');
     const filtroMesSelect = document.getElementById('filtro-mes-cajas');
     
-    // Elementos de la Calculadora de Facturación
     const btnCalcularFacturacion = document.getElementById('btn-calcular-facturacion');
     const calcDesde = document.getElementById('calc-desde');
     const calcHasta = document.getElementById('calc-hasta');
@@ -19,7 +21,16 @@ export function setupCajas(app) {
     const resFacturadoMp = document.getElementById('res-facturado-mp');
     const resPendienteMp = document.getElementById('res-pendiente-mp');
 
+    // Tabs
+    const tabBtnHistorial = document.getElementById('tab-btn-historial');
+    const tabBtnEstadisticas = document.getElementById('tab-btn-estadisticas');
+    const sectionHistorial = document.getElementById('section-historial');
+    const sectionEstadisticas = document.getElementById('section-estadisticas');
+
     let todasLasCajas = [];
+    let statsYaCargadas = false;
+    let chartVentasInstancia = null;
+    let chartCategoriasInstancia = null;
 
     // Funciones Helper
     function formatMoneda(val) {
@@ -30,6 +41,12 @@ export function setupCajas(app) {
         if (!timestamp) return 'Fecha desconocida';
         const date = timestamp.toDate();
         return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+    }
+
+    function formatearFechaCorta(timestamp) {
+        if (!timestamp) return '';
+        const date = timestamp.toDate();
+        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
     }
 
     function formatearMesAnio(timestamp) {
@@ -48,7 +65,31 @@ export function setupCajas(app) {
     }
 
     // ==========================================
-    // 1. RENDERIZAR LA LISTA DE CAJAS
+    // 1. GESTIÓN DE TABS
+    // ==========================================
+    tabBtnHistorial.addEventListener('click', () => {
+        tabBtnHistorial.classList.add('active');
+        tabBtnEstadisticas.classList.remove('active');
+        sectionHistorial.style.display = 'block';
+        sectionEstadisticas.style.display = 'none';
+    });
+
+    tabBtnEstadisticas.addEventListener('click', () => {
+        tabBtnEstadisticas.classList.add('active');
+        tabBtnHistorial.classList.remove('active');
+        sectionHistorial.style.display = 'none';
+        sectionEstadisticas.style.display = 'block';
+
+        if(!statsYaCargadas) {
+            generarDashboard();
+            statsYaCargadas = true;
+        }
+    });
+
+    document.getElementById('btn-cargar-stats').addEventListener('click', generarDashboard);
+
+    // ==========================================
+    // 2. RENDERIZAR LA LISTA DE CAJAS
     // ==========================================
     function renderizarCajas() {
         const mesFiltro = filtroMesSelect.value;
@@ -73,7 +114,6 @@ export function setupCajas(app) {
             const mp = caja.totalMercadoPago || 0;
             const cajaFisica = fondo + efvo;
 
-            // Datos del tilde Facturado
             const isFacturado = caja.facturadoMP === true;
             const btnFacturadoClass = isFacturado ? 'facturado-true' : 'facturado-false';
             const btnFacturadoText = isFacturado ? '✅ Facturado' : '❌ Marcar Facturado';
@@ -136,9 +176,6 @@ export function setupCajas(app) {
         });
     }
 
-    // ==========================================
-    // 2. ACTUALIZAR FILTROS DE MESES
-    // ==========================================
     function actualizarFiltros() {
         const mesesUnicos = new Set();
         todasLasCajas.forEach(caja => {
@@ -164,9 +201,6 @@ export function setupCajas(app) {
         }
     }
 
-    // ==========================================
-    // 3. CARGAR CAJAS AL INICIAR
-    // ==========================================
     onSnapshot(query(cajasCollection, orderBy('fechaApertura', 'desc')), (snapshot) => {
         todasLasCajas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         actualizarFiltros();
@@ -175,12 +209,8 @@ export function setupCajas(app) {
 
     filtroMesSelect.addEventListener('change', renderizarCajas);
 
-    // ==========================================
-    // 4. INTERACCIÓN (ACORDEÓN Y TICKETS FIREBASE FIX)
-    // ==========================================
     async function cargarTicketsDeCaja(cajaId, container) {
         try {
-            // FIX FIREBASE: Consulta limpia sin orderBy para evitar el error de índice.
             const q = query(ventasCollection, where('cajaId', '==', cajaId));
             const querySnapshot = await getDocs(q);
             
@@ -192,7 +222,6 @@ export function setupCajas(app) {
             let ventas = [];
             querySnapshot.forEach(docSnap => ventas.push(docSnap.data()));
 
-            // Ordenamiento manual en Javascript
             ventas.sort((a, b) => {
                 if (!a.fecha || !b.fecha) return 0;
                 return b.fecha.seconds - a.fecha.seconds;
@@ -271,9 +300,6 @@ export function setupCajas(app) {
         }
     });
 
-    // ==========================================
-    // 5. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
-    // ==========================================
     if (btnCalcularFacturacion) {
         btnCalcularFacturacion.addEventListener('click', () => {
             const desdeStr = calcDesde.value;
@@ -314,4 +340,174 @@ export function setupCajas(app) {
             resultadoFacturacion.style.display = 'block';
         });
     }
+
+    // ==========================================
+    // 6. MATEMÁTICA Y DASHBOARD ESTADÍSTICO
+    // ==========================================
+    async function generarDashboard() {
+        document.getElementById('stats-loading').style.display = 'block';
+        document.getElementById('stats-content').style.display = 'none';
+
+        try {
+            // Descargar colecciones masivas
+            const [ventasSnap, auditSnap, recetasSnap] = await Promise.all([
+                getDocs(collection(db, 'ventasMostrador')),
+                getDocs(collection(db, 'auditoriaMostrador')),
+                getDocs(collection(db, 'recetas'))
+            ]);
+
+            let ventasArray = [];
+            ventasSnap.forEach(v => ventasArray.push(v.data()));
+
+            let auditArray = [];
+            auditSnap.forEach(a => auditArray.push(a.data()));
+
+            // Mapa para buscar Categorias y Márgenes fácilmente
+            let recetasMap = new Map();
+            let sumatoriaMargenes = 0;
+            let qtyMargenes = 0;
+            recetasSnap.forEach(r => {
+                let rd = r.data();
+                recetasMap.set(rd.nombreTorta, { categoria: rd.categoria || 'Otros', margen: parseFloat(rd.margenIndividual) || null });
+                if(rd.margenIndividual) {
+                    sumatoriaMargenes += parseFloat(rd.margenIndividual);
+                    qtyMargenes++;
+                }
+            });
+
+            // 1. Procesar Ventas Diarias (Desde las Cajas para exactitud monetaria)
+            let ventasDiariasMap = {};
+            todasLasCajas.forEach(c => {
+                if(c.fechaApertura) {
+                    let dia = formatearFechaCorta(c.fechaApertura);
+                    let totalDia = (c.totalEfectivo || 0) + (c.totalMercadoPago || 0);
+                    ventasDiariasMap[dia] = (ventasDiariasMap[dia] || 0) + totalDia;
+                }
+            });
+
+            let valoresDiarios = Object.values(ventasDiariasMap);
+            let labelsDiarios = Object.keys(ventasDiariasMap).slice(0, 15).reverse(); // Ultimos 15
+            let dataDiariaPlot = Object.values(ventasDiariasMap).slice(0, 15).reverse();
+
+            // Matemática Clásica
+            let media = 0, mediana = 0, max = 0, min = 0, rango = 0, varianza = 0, stdDev = 0;
+
+            if(valoresDiarios.length > 0) {
+                max = Math.max(...valoresDiarios);
+                min = Math.min(...valoresDiarios);
+                rango = max - min;
+                media = valoresDiarios.reduce((a,b)=>a+b, 0) / valoresDiarios.length;
+                
+                let ordenados = [...valoresDiarios].sort((a,b)=>a-b);
+                let mid = Math.floor(ordenados.length/2);
+                mediana = ordenados.length % 2 !== 0 ? ordenados[mid] : (ordenados[mid-1]+ordenados[mid])/2;
+
+                varianza = valoresDiarios.reduce((a,b) => a + Math.pow(b - media, 2), 0) / valoresDiarios.length;
+                stdDev = Math.sqrt(varianza);
+            }
+
+            // 2. Procesar Productos y Categorías
+            let conteoProductos = {};
+            let conteoCategorias = {};
+            let totalUnidadesVendidas = 0;
+
+            ventasArray.forEach(v => {
+                (v.items || []).forEach(item => {
+                    let qty = parseInt(item.cantidad) || 0;
+                    totalUnidadesVendidas += qty;
+                    conteoProductos[item.nombre] = (conteoProductos[item.nombre] || 0) + qty;
+                    
+                    let cat = (recetasMap.get(item.nombre) || {categoria: 'Otros'}).categoria;
+                    conteoCategorias[cat] = (conteoCategorias[cat] || 0) + qty;
+                });
+            });
+
+            // Moda (Producto Estrella)
+            let modaProducto = "-";
+            let modaMaxCount = 0;
+            for(let p in conteoProductos) {
+                if(conteoProductos[p] > modaMaxCount) {
+                    modaMaxCount = conteoProductos[p];
+                    modaProducto = p;
+                }
+            }
+
+            // 3. Procesar Desperdicio
+            let totalDesperdicioQty = 0;
+            auditArray.forEach(a => {
+                if(a.tipo === 'RESTA' && a.motivo && a.motivo.toLowerCase().includes('descarte')) {
+                    totalDesperdicioQty += parseInt(a.cantidad) || 0;
+                }
+            });
+            let porcentajeDesperdicio = 0;
+            if((totalUnidadesVendidas + totalDesperdicioQty) > 0) {
+                porcentajeDesperdicio = (totalDesperdicioQty / (totalUnidadesVendidas + totalDesperdicioQty)) * 100;
+            }
+
+            // Actualizar DOM KPIs
+            document.getElementById('stat-media').textContent = formatMoneda(media);
+            document.getElementById('stat-mediana').textContent = formatMoneda(mediana);
+            document.getElementById('stat-moda').textContent = modaProducto;
+            document.getElementById('stat-desperdicio').textContent = porcentajeDesperdicio.toFixed(1) + '%';
+            
+            document.getElementById('stat-max').textContent = formatMoneda(max);
+            document.getElementById('stat-min').textContent = formatMoneda(min);
+            document.getElementById('stat-rango').textContent = formatMoneda(rango);
+            document.getElementById('stat-varianza').textContent = formatMoneda(varianza);
+            document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
+
+            // Mockup Advanced KPIs
+            let mayorMargenNom = "-";
+            let mayorMargenVal = 0;
+            recetasMap.forEach((val, key) => {
+                if(val.margen && val.margen > mayorMargenVal) {
+                    mayorMargenVal = val.margen;
+                    mayorMargenNom = key;
+                }
+            });
+            let promedioMargenGlobal = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "Sin Datos";
+
+            document.getElementById('stat-mayor-ganancia').textContent = mayorMargenNom;
+            document.getElementById('stat-margen-promedio').textContent = promedioMargenGlobal;
+
+            // DIBUJAR GRÁFICOS
+            const ctxLine = document.getElementById('chartLineVentas').getContext('2d');
+            if(chartVentasInstancia) chartVentasInstancia.destroy();
+            chartVentasInstancia = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: labelsDiarios,
+                    datasets: [{
+                        label: 'Venta Global ($)',
+                        data: dataDiariaPlot,
+                        borderColor: '#ec4899',
+                        backgroundColor: 'rgba(236, 72, 153, 0.2)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                }
+            });
+
+            const ctxPie = document.getElementById('chartPieCategorias').getContext('2d');
+            if(chartCategoriasInstancia) chartCategoriasInstancia.destroy();
+            chartCategoriasInstancia = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(conteoCategorias),
+                    datasets: [{
+                        data: Object.values(conteoCategorias),
+                        backgroundColor: ['#ec4899', '#8b5cf6', '#0ea5e9', '#f59e0b', '#10b981', '#f43f5e']
+                    }]
+                }
+            });
+
+            document.getElementById('stats-loading').style.display = 'none';
+            document.getElementById('stats-content').style.display = 'block';
+
+        } catch(error) {
+            console.error("Error calculando KPIs:", error);
+            document.getElementById('stats-loading').innerHTML = '<p style="color:red;">Error de conexión procesando los datos.</p>';
+        }
+    }
+
 }
