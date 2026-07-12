@@ -9,9 +9,9 @@ export function setupCajas(app) {
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
     const recetasCollection = collection(db, 'recetas');
 
-    // DOM Elements - Cajas y Calculadora
     const listaCajasContainer = document.getElementById('lista-cajas-container');
     const filtroMesSelect = document.getElementById('filtro-mes-cajas');
+    
     const btnCalcularFacturacion = document.getElementById('btn-calcular-facturacion');
     const calcDesde = document.getElementById('calc-desde');
     const calcHasta = document.getElementById('calc-hasta');
@@ -20,11 +20,18 @@ export function setupCajas(app) {
     const resFacturadoMp = document.getElementById('res-facturado-mp');
     const resPendienteMp = document.getElementById('res-pendiente-mp');
 
-    // Tabs
     const tabBtnHistorial = document.getElementById('tab-btn-historial');
     const tabBtnEstadisticas = document.getElementById('tab-btn-estadisticas');
     const sectionHistorial = document.getElementById('section-historial');
     const sectionEstadisticas = document.getElementById('section-estadisticas');
+
+    const modalInfo = document.getElementById('modal-info');
+    const infoTitle = document.getElementById('info-title');
+    const infoDesc = document.getElementById('info-desc');
+    const infoSirve = document.getElementById('info-sirve');
+    const infoEj = document.getElementById('info-ej');
+    const infoDec = document.getElementById('info-dec');
+    const btnCerrarInfo = document.getElementById('btn-cerrar-info');
 
     let todasLasCajas = [];
     let statsYaCargadas = false;
@@ -93,29 +100,29 @@ export function setupCajas(app) {
         }
     };
 
-    // Escuchador Global Seguro para los iconos (i)
+    // Escuchador robusto para la (i)
     document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('info-icon')) {
-            const key = e.target.getAttribute('data-info');
+        const icon = e.target.closest('.info-icon');
+        if (icon) {
+            const key = icon.getAttribute('data-info');
             const data = infoDiccionario[key];
             
             if (data) {
-                document.getElementById('info-title').textContent = data.titulo;
-                document.getElementById('info-desc').textContent = data.desc;
-                document.getElementById('info-sirve').textContent = data.sirve;
-                document.getElementById('info-ej').textContent = data.ej;
-                document.getElementById('info-dec').textContent = data.dec;
+                infoTitle.textContent = data.titulo;
+                infoDesc.textContent = data.desc;
+                infoSirve.textContent = data.sirve;
+                infoEj.textContent = data.ej;
+                infoDec.textContent = data.dec;
                 
-                document.getElementById('modal-info').style.display = 'flex';
+                // Usamos el sistema de clases nativo de tu App
+                modalInfo.classList.add('visible');
             }
         }
     });
 
-    // Cerrar Modal Info
-    const btnCerrarInfo = document.getElementById('btn-cerrar-info');
     if (btnCerrarInfo) {
         btnCerrarInfo.addEventListener('click', () => {
-            document.getElementById('modal-info').style.display = 'none';
+            modalInfo.classList.remove('visible');
         });
     }
 
@@ -148,7 +155,6 @@ export function setupCajas(app) {
         btnCargarStats.addEventListener('click', generarDashboard);
     }
 
-    // Funciones Helper de Formato
     function formatMoneda(val) {
         return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -345,7 +351,6 @@ export function setupCajas(app) {
         }
     }
 
-    // Interacción general (Botón facturado y acordeón)
     listaCajasContainer.addEventListener('click', async (e) => {
         if (e.target.closest('.btn-facturado')) {
             const btn = e.target.closest('.btn-facturado');
