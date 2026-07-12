@@ -15,13 +15,12 @@ export function setupPOS(app) {
     const materiasPrimasCollection = collection(db, 'materiasPrimas'); 
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
 
-    // --- Referencias DOM: Vistas de Pantalla ---
+    // --- Referencias DOM ---
     const pantallaApertura = document.getElementById('pantalla-apertura');
     const pantallaPOS = document.getElementById('pantalla-pos');
     const pantallaStock = document.getElementById('pantalla-stock-mostrador');
     const pantallaPromociones = document.getElementById('pantalla-promociones');
 
-    // --- Referencias DOM: Caja y Mostrador ---
     const usuarioNombreEl = document.getElementById('usuario-activo-nombre');
     const fondoCajaInput = document.getElementById('fondo-caja-input');
     const btnAbrirCaja = document.getElementById('btn-abrir-caja');
@@ -46,7 +45,6 @@ export function setupPOS(app) {
     const btnCancelarCierre = document.getElementById('btn-cancelar-cierre');
     const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
 
-    // --- Referencias DOM: Inventario y Reglas ---
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const buscadorInventario = document.getElementById('buscador-inventario');
@@ -54,7 +52,6 @@ export function setupPOS(app) {
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
-    // --- Referencias DOM: Promociones e Impresión ---
     const btnIrPromos = document.getElementById('btn-ir-promos');
     const btnVolverMostradorPromos = document.getElementById('btn-volver-mostrador-promos');
     const selectPromoProd = document.getElementById('promo-producto-select');
@@ -62,7 +59,7 @@ export function setupPOS(app) {
     const inputPromoFrase = document.getElementById('promo-frase');
     const btnDescargarPromo = document.getElementById('btn-descargar-promo');
 
-    // Modales de Stock y Barras
+    // Modales Stock / Lotes
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
@@ -70,13 +67,18 @@ export function setupPOS(app) {
     const modalProdStockActual = document.getElementById('modal-prod-stock-actual');
     const modalProdTipoMov = document.getElementById('modal-prod-tipo-movimiento');
     const modalProdCantMov = document.getElementById('modal-prod-cantidad-movimiento');
+    const loteFieldsContainer = document.getElementById('lote-fields-container');
+    const modalProdLoteElab = document.getElementById('modal-prod-lote-elab');
+    const modalProdLoteVto = document.getElementById('modal-prod-lote-vto');
     const modalProdMotivo = document.getElementById('modal-prod-motivo');
     const modalProdAuditoria = document.getElementById('modal-prod-auditoria-logs');
     const btnCancelarStock = document.getElementById('btn-cerrar-modal-stock');
     const btnGuardarStock = document.getElementById('btn-guardar-modal-stock');
 
+    // Modales Barras (con Fechas)
     const modalBarcode = document.getElementById('modal-barcode');
-    const barcodeTituloProducto = document.getElementById('barcode-titulo-producto');
+    const barcodeInputElab = document.getElementById('barcode-input-elab');
+    const barcodeInputVto = document.getElementById('barcode-input-vto');
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
     const btnDescargarBarcode = document.getElementById('btn-descargar-barcode');
 
@@ -84,24 +86,30 @@ export function setupPOS(app) {
     let currentUser = null;
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
-    
     let materiasPrimasMap = new Map(); 
     let recetasBrutas = []; 
     let productosDisponibles = []; 
-    
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
+    let currentBarcodeProduct = null; // Para redibujar etiqueta cuando cambian las fechas
 
-    // Métodos Helpers para Formatos Comunes
+    // Métodos Helpers
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp) return '';
         const d = timestamp.toDate();
         return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
     };
+    
+    // Devuelve fecha en formato YYYY-MM-DD
+    const dateToYMD = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
 
-    // FUNCIÓN MATEMÁTICA 1: Calcular Costo Base
     const obtenerCostoBase = (receta) => {
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
@@ -115,7 +123,6 @@ export function setupPOS(app) {
         return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
-    // FUNCIÓN MATEMÁTICA 2: Calcular el precio de venta final
     const calcularPrecioVenta = (prod) => {
         const costo = prod.costoBaseCalculado || 0;
         const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
@@ -123,9 +130,7 @@ export function setupPOS(app) {
         return costo * (1 + (margenAplicado / 100));
     };
 
-    // ==========================================
-    // 1. CONFIGURACIÓN GLOBAL (MARGEN DE GANANCIAS)
-    // ==========================================
+    // --- CONFIGURACIÓN GLOBAL ---
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
         if (docSnap.exists()) {
             margenGlobal = docSnap.data().margenGlobal || 0;
@@ -143,15 +148,12 @@ export function setupPOS(app) {
                 procesarYRenderizar();
                 return;
             }
-
             const pass = prompt("Ingrese la contraseña de Administrador:");
             if (pass === "Lautaro2026") {
                 document.body.classList.add('admin-open');
                 btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
                 procesarYRenderizar();
-            } else if (pass !== null) {
-                alert("Contraseña incorrecta de acceso.");
-            }
+            } else if (pass !== null) alert("Contraseña incorrecta de acceso.");
         });
     }
 
@@ -160,22 +162,13 @@ export function setupPOS(app) {
             const nuevoMargen = prompt("Defina el nuevo porcentaje de Margen de Ganancia Global (%):", margenGlobal);
             if (nuevoMargen !== null && nuevoMargen.trim() !== "") {
                 const margenNum = parseFloat(nuevoMargen);
-                if (isNaN(margenNum) || margenNum < 0) {
-                    alert("Ingrese un porcentaje numérico válido.");
-                    return;
-                }
-                try {
-                    await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum });
-                } catch (e) {
-                    alert("Error guardando configuraciones globales.");
-                }
+                if (isNaN(margenNum) || margenNum < 0) return alert("Ingrese un porcentaje numérico válido.");
+                try { await setDoc(doc(db, 'config', 'mostrador'), { margenGlobal: margenNum }); } catch (e) {}
             }
         });
     }
 
-    // ==========================================
-    // 2. AUTENTICACIÓN Y APERTURA DE TURNOS
-    // ==========================================
+    // --- AUTENTICACIÓN Y TURNOS DE CAJA ---
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
@@ -231,15 +224,12 @@ export function setupPOS(app) {
                 btnAbrirCaja.disabled = false;
             } catch (e) {
                 console.error("Error al abrir caja:", e);
-                alert("No se pudo iniciar el turno de caja.");
                 btnAbrirCaja.disabled = false;
             }
         });
     }
 
-    // ==========================================
-    // 3. CARGA DE DATOS Y MATEMÁTICA AUTOMÁTICA
-    // ==========================================
+    // --- CONTROL DE NAVEGACIÓN ---
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
@@ -319,27 +309,23 @@ export function setupPOS(app) {
             const frase = inputPromoFrase ? (inputPromoFrase.value || '') : '';
             
             const canvas = document.getElementById('promo-canvas-descarga');
-            canvas.width = 400;  // 50mm
-            canvas.height = 240; // 30mm
+            canvas.width = 400;  
+            canvas.height = 240; 
             const ctx = canvas.getContext('2d');
             
-            // Fondo blanco
             ctx.fillStyle = "white";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Borde grueso
             ctx.strokeStyle = "black";
             ctx.lineWidth = 6;
             ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
 
-            // Textos centrados
             ctx.textAlign = "center";
             ctx.fillStyle = "black";
             
             ctx.font = "bold 60px sans-serif";
             ctx.fillText(tipo.toUpperCase(), canvas.width / 2, 85);
             
-            // Autoajuste de letra para Promos
             let fontSize = 36;
             ctx.font = `bold ${fontSize}px sans-serif`;
             while (ctx.measureText(prod).width > 380 && fontSize > 16) {
@@ -351,7 +337,6 @@ export function setupPOS(app) {
             ctx.font = "bold 24px sans-serif";
             ctx.fillText(frase, canvas.width / 2, 205);
 
-            // Forzar descarga de la imagen
             const link = document.createElement('a');
             link.download = `Promo-${tipo}-${prod.substring(0,10)}.png`;
             link.href = canvas.toDataURL('image/png');
@@ -429,7 +414,6 @@ export function setupPOS(app) {
                 const prod = productosDisponibles.find(p => p.id === btnBarcode.dataset.id);
                 if (prod) {
                     if (!prod.codigoBarras) {
-                        // CREACIÓN MATEMÁTICA DEL EAN-13 REAL
                         let num12 = String(Date.now()).substring(0, 12); 
                         let sum = 0;
                         for(let i = 0; i < 12; i++) {
@@ -442,7 +426,7 @@ export function setupPOS(app) {
                             await updateDoc(doc(db, 'recetas', prod.id), { codigoBarras: nuevoCodigo });
                             prod.codigoBarras = nuevoCodigo; 
                         } catch(error) {
-                            console.error("Error al asignar código de barras en Firebase:", error);
+                            console.error("Error al asignar código de barras:", error);
                         }
                     }
                     abrirModalBarcode(prod);
@@ -479,91 +463,14 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modal Código de Barras 1D y GENERADOR DE IMAGEN (50x30) ---
-    const abrirModalBarcode = (prod) => {
-        // Ocultamos el título HTML de la ventana para que no se vea repetido
-        if(barcodeTituloProducto) barcodeTituloProducto.style.display = 'none';
-        
-        // Canvas maestro que el usuario va a descargar (50x30 mm = 400x240 px)
-        const canvasFinal = document.getElementById("barcode-canvas-descarga");
-        canvasFinal.width = 400;
-        canvasFinal.height = 240;
-        const ctx = canvasFinal.getContext("2d");
-        
-        // Fondo blanco total
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, canvasFinal.width, canvasFinal.height);
-        
-        // Texto del producto, ajustando el tamaño para que entre perfecto
-        ctx.fillStyle = "black";
-        ctx.textAlign = "center";
-        
-        let fontSize = 38;
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        
-        // Mientras el ancho del texto sea mayor al ancho disponible (380px para dejar margen), achicar letra
-        while (ctx.measureText(prod.nombreTorta).width > 380 && fontSize > 16) {
-            fontSize -= 2;
-            ctx.font = `bold ${fontSize}px sans-serif`;
-        }
-        
-        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 45); 
-
-        // Para dibujar el código de barras, usamos un canvas temporal
-        const tempCanvas = document.createElement("canvas");
-        
-        try {
-            JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "EAN13",
-                lineColor: "#000",
-                width: 3.5,     // Barras gruesas
-                height: 130,    // Altura del código, más grande
-                displayValue: true, 
-                fontSize: 26,
-                margin: 0
-            });
-        } catch(e) {
-            // Rescate si el código era muy viejo y no respetaba EAN-13
-            JsBarcode(tempCanvas, prod.codigoBarras, {
-                format: "CODE128",
-                lineColor: "#000",
-                width: 3,
-                height: 130,
-                displayValue: true, 
-                fontSize: 24,
-                margin: 0
-            });
-        }
-
-        // Calculamos el centro para pegar el código debajo del texto
-        const xOffset = (canvasFinal.width - tempCanvas.width) / 2;
-        const yOffset = 60; // Bien pegado al texto para no desaprovechar espacio
-
-        ctx.drawImage(tempCanvas, xOffset, yOffset);
-
-        // Guardamos el nombre del producto en el botón de descarga para el archivo PNG
-        if (btnDescargarBarcode) {
-            btnDescargarBarcode.dataset.nombre = prod.nombreTorta;
-        }
-
-        if(modalBarcode) modalBarcode.classList.add('visible');
-    };
-
-    if (btnCerrarBarcode) {
-        btnCerrarBarcode.addEventListener('click', () => {
-            if(modalBarcode) modalBarcode.classList.remove('visible');
-        });
-    }
-
-    if (btnDescargarBarcode) {
-        btnDescargarBarcode.addEventListener('click', () => {
-            const canvas = document.getElementById("barcode-canvas-descarga");
-            const nombre = btnDescargarBarcode.dataset.nombre || 'etiqueta';
-            
-            const link = document.createElement('a');
-            link.download = `Etiqueta-${nombre}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+    // --- Modales de Fechas en Lotes ---
+    if (modalProdTipoMov) {
+        modalProdTipoMov.addEventListener('change', (e) => {
+            if (e.target.value === 'SUMAR') {
+                loteFieldsContainer.style.display = 'flex';
+            } else {
+                loteFieldsContainer.style.display = 'none';
+            }
         });
     }
 
@@ -573,8 +480,20 @@ export function setupPOS(app) {
         modalProdNombre.value = prod.nombreTorta;
         if(modalProdGananciaIndiv) modalProdGananciaIndiv.value = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
         modalProdStockActual.textContent = prod.stockMostrador || '0';
+        
+        modalProdTipoMov.value = 'SUMAR';
+        loteFieldsContainer.style.display = 'flex'; // Sumar por defecto muestra lotes
         modalProdCantMov.value = '0';
         modalProdMotivo.value = '';
+        
+        // Fechas por defecto: Elaboración Hoy, Vto en 15 días
+        const hoy = new Date();
+        modalProdLoteElab.value = dateToYMD(hoy);
+        
+        const vto = new Date();
+        vto.setDate(vto.getDate() + 15);
+        modalProdLoteVto.value = dateToYMD(vto);
+
         modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Cargando historial...</p>';
 
         await cargarAuditoriaProducto(prod.id);
@@ -601,9 +520,15 @@ export function setupPOS(app) {
                 if (log.tipo === 'SUMA') tipoSpan = `<span class="log-tipo-sumar">[+${log.cantidad}]</span>`;
                 else if (log.tipo === 'RESTA') tipoSpan = `<span class="log-tipo-restar">[-${log.cantidad}]</span>`;
 
+                // Agregar info de lote si existe en el log
+                let infoLote = '';
+                if (log.loteVto) {
+                    infoLote = ` (Vto: ${log.loteVto})`;
+                }
+
                 logDiv.innerHTML = `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-                        <span>${tipoSpan} ${log.motivo || 'Ajuste de inventario'}</span>
+                        <span>${tipoSpan} ${log.motivo || 'Ajuste'}${infoLote}</span>
                         <span style="color: var(--text-light); font-size: 0.75rem;">${formatFecha(log.fecha)}</span>
                     </div>
                     <div style="color: var(--text-light); font-size: 0.75rem;">👤 ${log.usuario} | Stock resultante: ${log.stockResultante}</div>
@@ -627,6 +552,13 @@ export function setupPOS(app) {
             const tipoMov = modalProdTipoMov.value;
             const cantMov = parseInt(modalProdCantMov.value) || 0;
             const motivo = modalProdMotivo.value.trim();
+            const fElab = modalProdLoteElab.value;
+            const fVto = modalProdLoteVto.value;
+
+            if (cantMov <= 0) {
+                alert("Ingrese una cantidad válida a mover.");
+                return;
+            }
 
             btnGuardarStock.disabled = true;
             btnGuardarStock.textContent = 'Guardando...';
@@ -638,20 +570,49 @@ export function setupPOS(app) {
                     if (!sfDoc.exists()) throw "Producto no existe";
                     
                     let stockActual = sfDoc.data().stockMostrador || 0;
+                    let lotesActuales = sfDoc.data().lotes || [];
                     let nuevoStock = stockActual;
-                    let movimientoRegistrado = false;
 
-                    if (cantMov > 0) {
-                        if (tipoMov === 'SUMAR') {
-                            nuevoStock = stockActual + cantMov;
-                        } else {
-                            nuevoStock = stockActual - cantMov;
-                            if (nuevoStock < 0) nuevoStock = 0; 
+                    if (tipoMov === 'SUMAR') {
+                        // Creamos un lote nuevo
+                        nuevoStock = stockActual + cantMov;
+                        lotesActuales.push({
+                            idLote: Date.now().toString(),
+                            cantidad: cantMov,
+                            fechaElab: fElab,
+                            fechaVto: fVto
+                        });
+                    } else {
+                        // Lógica FIFO / PEPS (Quitar de los más viejos primero)
+                        nuevoStock = stockActual - cantMov;
+                        if (nuevoStock < 0) nuevoStock = 0;
+                        
+                        let qtyToDeduct = cantMov;
+                        // Ordenar por fechaVto (del más viejo al más nuevo)
+                        lotesActuales.sort((a, b) => new Date(a.fechaVto) - new Date(b.fechaVto));
+                        
+                        let nuevosLotesPostResta = [];
+                        for (let lote of lotesActuales) {
+                            if (qtyToDeduct > 0) {
+                                if (lote.cantidad <= qtyToDeduct) {
+                                    qtyToDeduct -= lote.cantidad;
+                                    // Lote consumido entero, no se pushea
+                                } else {
+                                    lote.cantidad -= qtyToDeduct;
+                                    qtyToDeduct = 0;
+                                    nuevosLotesPostResta.push(lote);
+                                }
+                            } else {
+                                nuevosLotesPostResta.push(lote);
+                            }
                         }
-                        movimientoRegistrado = true;
+                        lotesActuales = nuevosLotesPostResta;
                     }
 
-                    const updates = { stockMostrador: nuevoStock };
+                    const updates = { 
+                        stockMostrador: nuevoStock,
+                        lotes: lotesActuales
+                    };
                     
                     if (document.body.classList.contains('admin-open') && modalProdGananciaIndiv) {
                         const gananciaIndivRaw = modalProdGananciaIndiv.value.trim();
@@ -660,30 +621,132 @@ export function setupPOS(app) {
 
                     transaction.update(docRef, updates);
 
-                    if (movimientoRegistrado) {
-                        const auditRef = doc(auditoriaCollection); 
-                        transaction.set(auditRef, {
-                            productoId: id,
-                            productoNombre: nombre,
-                            tipo: tipoMov === 'SUMAR' ? 'SUMA' : 'RESTA',
-                            cantidad: cantMov,
-                            stockResultante: nuevoStock,
-                            motivo: motivo || (tipoMov === 'SUMAR' ? 'Ingreso manual' : 'Egreso manual'),
-                            usuario: userName,
-                            usuarioId: currentUser.uid,
-                            fecha: Timestamp.now()
-                        });
-                    }
+                    // Guardar Log
+                    const auditRef = doc(auditoriaCollection); 
+                    transaction.set(auditRef, {
+                        productoId: id,
+                        productoNombre: nombre,
+                        tipo: tipoMov,
+                        cantidad: cantMov,
+                        stockResultante: nuevoStock,
+                        motivo: motivo || (tipoMov === 'SUMAR' ? 'Ingreso Producción' : 'Egreso/Descarte'),
+                        loteElab: tipoMov === 'SUMAR' ? fElab : null,
+                        loteVto: tipoMov === 'SUMAR' ? fVto : null,
+                        usuario: userName,
+                        usuarioId: currentUser.uid,
+                        fecha: Timestamp.now()
+                    });
                 });
                 
                 modalStock.classList.remove('visible');
             } catch (error) {
-                console.error("Error al actualizar la ficha del producto:", error);
+                console.error("Error al actualizar stock/lotes:", error);
                 alert("Hubo un error al guardar los cambios.");
             }
 
             btnGuardarStock.disabled = false;
             btnGuardarStock.textContent = 'Guardar Cambios';
+        });
+    }
+
+    // --- Modal Código de Barras 1D y GENERADOR DE IMAGEN CON FECHAS (50x30) ---
+    const drawBarcodeCanvas = () => {
+        if(!currentBarcodeProduct) return;
+        const prod = currentBarcodeProduct;
+        
+        const canvasFinal = document.getElementById("barcode-canvas-descarga");
+        canvasFinal.width = 400;
+        canvasFinal.height = 240;
+        const ctx = canvasFinal.getContext("2d");
+        
+        // Fondo blanco total
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvasFinal.width, canvasFinal.height);
+        
+        // 1. Título Autoajustable
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        let fontSize = 38;
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        
+        while (ctx.measureText(prod.nombreTorta).width > 380 && fontSize > 16) {
+            fontSize -= 2;
+            ctx.font = `bold ${fontSize}px sans-serif`;
+        }
+        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 45); 
+
+        // 2. Código de Barras (Temporal)
+        const tempCanvas = document.createElement("canvas");
+        try {
+            JsBarcode(tempCanvas, prod.codigoBarras, {
+                format: "EAN13", lineColor: "#000", width: 3.5, height: 110, displayValue: true, fontSize: 26, margin: 0
+            });
+        } catch(e) {
+            JsBarcode(tempCanvas, prod.codigoBarras, {
+                format: "CODE128", lineColor: "#000", width: 3, height: 110, displayValue: true, fontSize: 24, margin: 0
+            });
+        }
+
+        // Pegar código de barras un poco más arriba si hay fechas
+        const xOffset = (canvasFinal.width - tempCanvas.width) / 2;
+        const yOffset = 60; 
+        ctx.drawImage(tempCanvas, xOffset, yOffset);
+
+        // 3. Dibujar Fechas (Elab y Vto) abajo del todo
+        const eVal = barcodeInputElab.value;
+        const vVal = barcodeInputVto.value;
+
+        if (eVal || vVal) {
+            ctx.font = "bold 20px sans-serif";
+            let dateText = "";
+            
+            if(eVal) {
+                const [y,m,d] = eVal.split('-');
+                dateText += `Elab: ${d}/${m}/${y.substring(2)}`;
+            }
+            if(vVal) {
+                const [y,m,d] = vVal.split('-');
+                dateText += (dateText ? ' - ' : '') + `Vto: ${d}/${m}/${y.substring(2)}`;
+            }
+            
+            ctx.fillText(dateText, canvasFinal.width / 2, 225);
+        }
+    };
+
+    const abrirModalBarcode = (prod) => {
+        currentBarcodeProduct = prod;
+
+        // Reset Fechas a las de hoy y +15
+        const hoy = new Date();
+        barcodeInputElab.value = dateToYMD(hoy);
+        const vto = new Date();
+        vto.setDate(vto.getDate() + 15);
+        barcodeInputVto.value = dateToYMD(vto);
+
+        drawBarcodeCanvas();
+
+        if (btnDescargarBarcode) btnDescargarBarcode.dataset.nombre = prod.nombreTorta;
+        if(modalBarcode) modalBarcode.classList.add('visible');
+    };
+
+    // Redibujar si el usuario cambia las fechas en el modal
+    if (barcodeInputElab) barcodeInputElab.addEventListener('change', drawBarcodeCanvas);
+    if (barcodeInputVto) barcodeInputVto.addEventListener('change', drawBarcodeCanvas);
+
+    if (btnCerrarBarcode) {
+        btnCerrarBarcode.addEventListener('click', () => {
+            if(modalBarcode) modalBarcode.classList.remove('visible');
+        });
+    }
+
+    if (btnDescargarBarcode) {
+        btnDescargarBarcode.addEventListener('click', () => {
+            const canvas = document.getElementById("barcode-canvas-descarga");
+            const nombre = btnDescargarBarcode.dataset.nombre || 'etiqueta';
+            const link = document.createElement('a');
+            link.download = `Etiqueta-${nombre}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         });
     }
 
@@ -763,23 +826,17 @@ export function setupPOS(app) {
 
     document.addEventListener('keydown', (e) => {
         if (pantallaPOS && pantallaPOS.style.display === 'none') return;
-        
         if (e.key.length > 1 && e.key !== 'Enter') return;
 
         const currentTime = Date.now();
-        if (currentTime - lastKeyTime > 50) {
-            scanBuffer = '';
-        }
+        if (currentTime - lastKeyTime > 50) scanBuffer = '';
         lastKeyTime = currentTime;
 
         if (e.key === 'Enter' || e.keyCode === 13) {
             if (scanBuffer.length >= 8) { 
                 e.preventDefault();
                 const codigoEscaneado = scanBuffer.trim();
-                
-                const productoEncontrado = productosDisponibles.find(p => 
-                    p.codigoBarras && String(p.codigoBarras) === codigoEscaneado
-                );
+                const productoEncontrado = productosDisponibles.find(p => p.codigoBarras && String(p.codigoBarras) === codigoEscaneado);
                 
                 if (productoEncontrado) {
                     agregarProductoAlCarrito(productoEncontrado, 1);
@@ -886,7 +943,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // 6. PROCESAMIENTO DE TRANSACCIONES Y CIERRES
+    // 6. PROCESAMIENTO DE TRANSACCIONES PEPS Y CIERRES
     // ==========================================
     if (btnCobrar) {
         btnCobrar.addEventListener('click', () => {
@@ -928,11 +985,35 @@ export function setupPOS(app) {
                         const sfDoc = await transaction.get(docRef);
                         if (!sfDoc.exists()) throw "El producto no existe.";
                         
-                        const stockActual = sfDoc.data().stockMostrador || 0;
+                        let stockActual = sfDoc.data().stockMostrador || 0;
+                        let lotesActuales = sfDoc.data().lotes || [];
                         let nuevoStock = stockActual - item.cantidad;
                         if (nuevoStock < 0) nuevoStock = 0;
                         
-                        transaction.update(docRef, { stockMostrador: nuevoStock });
+                        // Sistema PEPS: Descontar primero de los lotes más viejos
+                        let qtyToDeduct = item.cantidad;
+                        lotesActuales.sort((a, b) => new Date(a.fechaVto) - new Date(b.fechaVto));
+                        
+                        let nuevosLotesPostResta = [];
+                        for (let lote of lotesActuales) {
+                            if (qtyToDeduct > 0) {
+                                if (lote.cantidad <= qtyToDeduct) {
+                                    qtyToDeduct -= lote.cantidad;
+                                    // Lote vacío se desecha
+                                } else {
+                                    lote.cantidad -= qtyToDeduct;
+                                    qtyToDeduct = 0;
+                                    nuevosLotesPostResta.push(lote);
+                                }
+                            } else {
+                                nuevosLotesPostResta.push(lote);
+                            }
+                        }
+                        
+                        transaction.update(docRef, { 
+                            stockMostrador: nuevoStock,
+                            lotes: nuevosLotesPostResta 
+                        });
 
                         const auditRef = doc(auditoriaCollection);
                         transaction.set(auditRef, {
@@ -941,7 +1022,7 @@ export function setupPOS(app) {
                             tipo: 'RESTA',
                             cantidad: item.cantidad,
                             stockResultante: nuevoStock,
-                            motivo: `Venta Mostrador (${metodoPagoSeleccionado})`,
+                            motivo: `Venta (${metodoPagoSeleccionado})`,
                             usuario: userName,
                             usuarioId: currentUser.uid,
                             fecha: Timestamp.now()
