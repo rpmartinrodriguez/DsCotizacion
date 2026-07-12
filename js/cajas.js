@@ -101,6 +101,36 @@ export function setupCajas(app) {
         }
     };
 
+    // ==========================================
+    // 1. GESTIÓN DE TABS (PESTAÑAS)
+    // ==========================================
+    if (tabBtnHistorial && tabBtnEstadisticas) {
+        tabBtnHistorial.addEventListener('click', () => {
+            tabBtnHistorial.classList.add('active');
+            tabBtnEstadisticas.classList.remove('active');
+            sectionHistorial.style.display = 'block';
+            sectionEstadisticas.style.display = 'none';
+        });
+
+        tabBtnEstadisticas.addEventListener('click', () => {
+            tabBtnEstadisticas.classList.add('active');
+            tabBtnHistorial.classList.remove('active');
+            sectionHistorial.style.display = 'none';
+            sectionEstadisticas.style.display = 'block';
+
+            if(!statsYaCargadas) {
+                generarDashboard();
+                statsYaCargadas = true;
+            }
+        });
+    }
+
+    const btnCargarStats = document.getElementById('btn-cargar-stats');
+    if (btnCargarStats) {
+        btnCargarStats.addEventListener('click', generarDashboard);
+    }
+
+    // Modal Info Events
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('info-icon')) {
             const key = e.target.dataset.info;
@@ -116,10 +146,11 @@ export function setupCajas(app) {
         }
     });
 
-    btnCerrarInfo.addEventListener('click', () => {
-        modalInfo.style.display = 'none';
-    });
-
+    if (btnCerrarInfo) {
+        btnCerrarInfo.addEventListener('click', () => {
+            modalInfo.style.display = 'none';
+        });
+    }
 
     // Funciones Helper
     function formatMoneda(val) {
@@ -361,6 +392,9 @@ export function setupCajas(app) {
         }
     });
 
+    // ==========================================
+    // 5. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
+    // ==========================================
     if (btnCalcularFacturacion) {
         btnCalcularFacturacion.addEventListener('click', () => {
             const desdeStr = calcDesde.value;
@@ -418,7 +452,6 @@ export function setupCajas(app) {
 
             let ventasArray = [];
             ventasSnap.forEach(v => ventasArray.push(v.data()));
-            // Ordenar ventas más antiguas a más nuevas para cálculos de crecimiento temporal
             ventasArray.sort((a,b) => (a.fecha?.seconds || 0) - (b.fecha?.seconds || 0));
 
             let auditArray = [];
@@ -466,10 +499,10 @@ export function setupCajas(app) {
                 stdDev = Math.sqrt(varianza);
             }
 
-            // 2. Procesar Productos y Clasificación ABC (Basado en Plata Generada)
+            // 2. Procesar Productos y Clasificación ABC
             let conteoProductosQty = {};
             let conteoProductosPlata = {};
-            let rentabilidadCategoria = {}; // Acumulado de ventas por categoría
+            let rentabilidadCategoria = {};
             let conteoCategorias = {};
             let totalUnidadesVendidas = 0;
             let totalPlataVendida = 0;
@@ -503,13 +536,11 @@ export function setupCajas(app) {
             ulResto.style.display = 'none';
 
             if(sortedByQty.length > 0) {
-                // Primeros 5
                 sortedByQty.slice(0, 5).forEach((p, idx) => {
                     let participacion = ((p[1] / totalUnidadesVendidas) * 100).toFixed(1);
                     ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1]} u. <small>(${participacion}%)</small></span></li>`;
                 });
                 
-                // Resto
                 if(sortedByQty.length > 5) {
                     sortedByQty.slice(5).forEach((p, idx) => {
                         let participacion = ((p[1] / totalUnidadesVendidas) * 100).toFixed(1);
@@ -532,7 +563,7 @@ export function setupCajas(app) {
                 ulTop.innerHTML = '<li>No hay ventas registradas.</li>';
             }
 
-            // Lógica Clasificación ABC
+            // Clasificación ABC
             let sortedByPlata = Object.entries(conteoProductosPlata).sort((a,b)=>b[1]-a[1]);
             let sumPlata = 0;
             let listA = [], listB = [], listC = [];
@@ -555,7 +586,7 @@ export function setupCajas(app) {
             document.getElementById('abc-c-text').textContent = listC.slice(0,5).join(', ') + (listC.length > 5 ? '...' : '');
 
 
-            // Lógica Crecimiento Clientes e Ingresos (Comparar primera mitad vs segunda mitad temporal de los datos)
+            // Crecimiento Clientes e Ingresos
             let crecClientesText = "-";
             let crecIngresosText = "-";
 
@@ -580,7 +611,6 @@ export function setupCajas(app) {
                 crecIngresosText = "Faltan datos";
             }
 
-            // Línea más rentable (La que más plata bruta dejó)
             let mejorLinea = "-";
             let maxLineaPlata = 0;
             for(let cat in rentabilidadCategoria) {
@@ -603,26 +633,24 @@ export function setupCajas(app) {
                 porcentajeDesperdicio = (totalDesperdicioQty / (totalUnidadesVendidas + totalDesperdicioQty)) * 100;
             }
 
-            // Actualizar DOM KPIs Básicos
+            // Actualizar DOM KPIs
             document.getElementById('stat-media').textContent = formatMoneda(media);
             document.getElementById('stat-mediana').textContent = formatMoneda(mediana);
             document.getElementById('stat-desperdicio').textContent = porcentajeDesperdicio.toFixed(1) + '%';
             
-            // Dispersión
             document.getElementById('stat-max').textContent = formatMoneda(max);
             document.getElementById('stat-min').textContent = formatMoneda(min);
             document.getElementById('stat-rango').textContent = formatMoneda(rango);
             document.getElementById('stat-varianza').textContent = formatMoneda(varianza);
             document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
 
-            // KPIs Negocio
             let promedioMargenGlobal = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "Sin Datos";
             document.getElementById('stat-crecimiento-clientes').textContent = crecClientesText;
             document.getElementById('stat-crecimiento-ingresos').textContent = crecIngresosText;
             document.getElementById('stat-margen-promedio').textContent = promedioMargenGlobal;
             document.getElementById('stat-linea-rentable').textContent = mejorLinea;
 
-            // DIBUJAR GRÁFICOS
+            // Gráficos
             const ctxLine = document.getElementById('chartLineVentas').getContext('2d');
             if(chartVentasInstancia) chartVentasInstancia.destroy();
             chartVentasInstancia = new Chart(ctxLine, {
