@@ -9,10 +9,9 @@ export function setupCajas(app) {
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
     const recetasCollection = collection(db, 'recetas');
 
-    // DOM Elements
+    // DOM Elements - Cajas y Calculadora
     const listaCajasContainer = document.getElementById('lista-cajas-container');
     const filtroMesSelect = document.getElementById('filtro-mes-cajas');
-    
     const btnCalcularFacturacion = document.getElementById('btn-calcular-facturacion');
     const calcDesde = document.getElementById('calc-desde');
     const calcHasta = document.getElementById('calc-hasta');
@@ -27,21 +26,14 @@ export function setupCajas(app) {
     const sectionHistorial = document.getElementById('section-historial');
     const sectionEstadisticas = document.getElementById('section-estadisticas');
 
-    // Info Modal
-    const modalInfo = document.getElementById('modal-info');
-    const infoTitle = document.getElementById('info-title');
-    const infoDesc = document.getElementById('info-desc');
-    const infoSirve = document.getElementById('info-sirve');
-    const infoEj = document.getElementById('info-ej');
-    const infoDec = document.getElementById('info-dec');
-    const btnCerrarInfo = document.getElementById('btn-cerrar-info');
-
     let todasLasCajas = [];
     let statsYaCargadas = false;
     let chartVentasInstancia = null;
     let chartCategoriasInstancia = null;
 
-    // DICCIONARIO DE INFORMACIÓN PARA LOS ICONOS (i)
+    // ==========================================
+    // 1. DICCIONARIO Y MODAL DE INFORMACIÓN (i)
+    // ==========================================
     const infoDiccionario = {
         "media": {
             titulo: "Media (Promedio)",
@@ -101,8 +93,34 @@ export function setupCajas(app) {
         }
     };
 
+    // Escuchador Global Seguro para los iconos (i)
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('info-icon')) {
+            const key = e.target.getAttribute('data-info');
+            const data = infoDiccionario[key];
+            
+            if (data) {
+                document.getElementById('info-title').textContent = data.titulo;
+                document.getElementById('info-desc').textContent = data.desc;
+                document.getElementById('info-sirve').textContent = data.sirve;
+                document.getElementById('info-ej').textContent = data.ej;
+                document.getElementById('info-dec').textContent = data.dec;
+                
+                document.getElementById('modal-info').style.display = 'flex';
+            }
+        }
+    });
+
+    // Cerrar Modal Info
+    const btnCerrarInfo = document.getElementById('btn-cerrar-info');
+    if (btnCerrarInfo) {
+        btnCerrarInfo.addEventListener('click', () => {
+            document.getElementById('modal-info').style.display = 'none';
+        });
+    }
+
     // ==========================================
-    // 1. GESTIÓN DE TABS (PESTAÑAS)
+    // 2. GESTIÓN DE TABS (PESTAÑAS)
     // ==========================================
     if (tabBtnHistorial && tabBtnEstadisticas) {
         tabBtnHistorial.addEventListener('click', () => {
@@ -130,29 +148,7 @@ export function setupCajas(app) {
         btnCargarStats.addEventListener('click', generarDashboard);
     }
 
-    // Modal Info Events
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('info-icon')) {
-            const key = e.target.dataset.info;
-            const data = infoDiccionario[key];
-            if (data) {
-                infoTitle.textContent = data.titulo;
-                infoDesc.textContent = data.desc;
-                infoSirve.textContent = data.sirve;
-                infoEj.textContent = data.ej;
-                infoDec.textContent = data.dec;
-                modalInfo.style.display = 'flex';
-            }
-        }
-    });
-
-    if (btnCerrarInfo) {
-        btnCerrarInfo.addEventListener('click', () => {
-            modalInfo.style.display = 'none';
-        });
-    }
-
-    // Funciones Helper
+    // Funciones Helper de Formato
     function formatMoneda(val) {
         return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -181,7 +177,7 @@ export function setupCajas(app) {
     }
 
     // ==========================================
-    // 2. RENDERIZAR LA LISTA DE CAJAS
+    // 3. RENDERIZAR LA LISTA DE CAJAS
     // ==========================================
     function renderizarCajas() {
         const mesFiltro = filtroMesSelect.value;
@@ -349,6 +345,7 @@ export function setupCajas(app) {
         }
     }
 
+    // Interacción general (Botón facturado y acordeón)
     listaCajasContainer.addEventListener('click', async (e) => {
         if (e.target.closest('.btn-facturado')) {
             const btn = e.target.closest('.btn-facturado');
@@ -393,7 +390,7 @@ export function setupCajas(app) {
     });
 
     // ==========================================
-    // 5. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
+    // 4. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
     // ==========================================
     if (btnCalcularFacturacion) {
         btnCalcularFacturacion.addEventListener('click', () => {
@@ -437,7 +434,7 @@ export function setupCajas(app) {
     }
 
     // ==========================================
-    // 6. MATEMÁTICA Y DASHBOARD ESTADÍSTICO
+    // 5. MATEMÁTICA Y DASHBOARD ESTADÍSTICO
     // ==========================================
     async function generarDashboard() {
         document.getElementById('stats-loading').style.display = 'block';
@@ -633,17 +630,19 @@ export function setupCajas(app) {
                 porcentajeDesperdicio = (totalDesperdicioQty / (totalUnidadesVendidas + totalDesperdicioQty)) * 100;
             }
 
-            // Actualizar DOM KPIs
+            // Actualizar DOM KPIs Básicos
             document.getElementById('stat-media').textContent = formatMoneda(media);
             document.getElementById('stat-mediana').textContent = formatMoneda(mediana);
             document.getElementById('stat-desperdicio').textContent = porcentajeDesperdicio.toFixed(1) + '%';
             
+            // Dispersión
             document.getElementById('stat-max').textContent = formatMoneda(max);
             document.getElementById('stat-min').textContent = formatMoneda(min);
             document.getElementById('stat-rango').textContent = formatMoneda(rango);
             document.getElementById('stat-varianza').textContent = formatMoneda(varianza);
             document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
 
+            // KPIs Negocio
             let promedioMargenGlobal = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "Sin Datos";
             document.getElementById('stat-crecimiento-clientes').textContent = crecClientesText;
             document.getElementById('stat-crecimiento-ingresos').textContent = crecIngresosText;
