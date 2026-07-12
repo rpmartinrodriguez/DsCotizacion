@@ -125,6 +125,20 @@ export function setupCajas(app) {
             sirve: "Ver el rumbo del negocio en el corto plazo.",
             ej: "Detectar si la facturación sube o baja respecto a las semanas previas.",
             dec: "Si la línea tiene tendencia hacia abajo durante más de una semana, activa promociones o alertas."
+        },
+        "estrategicos": {
+            titulo: "Métricas Estratégicas Generales",
+            desc: "Monitorea la velocidad del mostrador y el crecimiento inter-período.",
+            sirve: "Garantizar la salud del negocio a largo plazo.",
+            ej: "Si vendías a 100 clientes y ahora a 120, tu crecimiento es del +20%.",
+            dec: "Analizá el Margen Promedio: si es bajo, es hora de remarcar precios porque los costos te están ganando."
+        },
+        "dispersion": {
+            titulo: "Medidas de Dispersión",
+            desc: "Miden qué tan caóticas o estables son tus ventas usando Varianza y Desviación Estándar.",
+            sirve: "Para saber qué tan predecible es tu negocio de cara al futuro.",
+            ej: "Un local estable vende $10.000 siempre. Uno inestable vende $2.000 un lunes y $35.000 un sábado.",
+            dec: "Si la desviación estándar es muy alta, tu caja es volátil. Mantené un colchón de fondo inicial más grande."
         }
     };
 
@@ -151,7 +165,9 @@ export function setupCajas(app) {
         });
     }
 
-    // Pestañas (Tabs)
+    // ==========================================
+    // 2. GESTIÓN DE PESTAÑAS (TABS)
+    // ==========================================
     if (tabBtnHistorial && tabBtnEstadisticas) {
         tabBtnHistorial.addEventListener('click', () => {
             tabBtnHistorial.classList.add('active');
@@ -173,8 +189,41 @@ export function setupCajas(app) {
         });
     }
 
+    const btnCargarStats = document.getElementById('btn-cargar-stats');
+    if (btnCargarStats) {
+        btnCargarStats.addEventListener('click', generarDashboard);
+    }
+
+    // Helpers de Formato
+    function formatMoneda(val) {
+        return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    function formatearFecha(timestamp) {
+        if (!timestamp) return 'Fecha desconocida';
+        const date = timestamp.toDate();
+        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+    }
+    function formatearFechaCorta(timestamp) {
+        if (!timestamp) return '';
+        const date = timestamp.toDate();
+        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+    }
+    function formatearMesAnio(timestamp) {
+        if (!timestamp) return null;
+        const date = timestamp.toDate();
+        const mes = (date.getMonth() + 1).toString().padStart(2, '0');
+        const anio = date.getFullYear();
+        return `${anio}-${mes}`; 
+    }
+    function nombreMes(mesAnio) {
+        const [anio, mes] = mesAnio.split('-');
+        const fecha = new Date(anio, parseInt(mes) - 1, 1);
+        const nombre = fecha.toLocaleDateString('es-AR', { month: 'long' });
+        return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + anio;
+    }
+
     // ==========================================
-    // 2. GESTIÓN DE CAJAS E HISTORIAL
+    // 3. RENDERIZAR LA LISTA DE CAJAS
     // ==========================================
     function renderizarCajas() {
         const mesFiltro = filtroMesSelect.value;
@@ -221,6 +270,7 @@ export function setupCajas(app) {
                         <span class="acordeon-icono">+</span>
                     </div>
                 </div>
+                
                 <div class="categoria-acordeon__content" style="background: white; padding: 0;">
                     <div style="padding: 1.5rem;">
                         <div class="caja-resumen">
@@ -246,6 +296,7 @@ export function setupCajas(app) {
                                 <span style="color: var(--primary-color);">${formatMoneda(cajaFisica)}</span>
                             </div>
                         </div>
+
                         <div class="ticket-list">
                             <h3 style="font-size: 1rem; margin-top: 0; margin-bottom: 1rem;">Detalle de Ventas</h3>
                             <div id="tickets-${caja.id}">
@@ -296,18 +347,32 @@ export function setupCajas(app) {
         try {
             const q = query(ventasCollection, where('cajaId', '==', cajaId));
             const querySnapshot = await getDocs(q);
+            
             if (querySnapshot.empty) {
                 container.innerHTML = '<p class="text-light" style="font-size: 0.9rem;">No hubo ventas en este turno.</p>';
                 return;
             }
+
             let ventas = [];
             querySnapshot.forEach(docSnap => ventas.push(docSnap.data()));
-            ventas.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
+
+            ventas.sort((a, b) => {
+                if (!a.fecha || !b.fecha) return 0;
+                return b.fecha.seconds - a.fecha.seconds;
+            });
 
             container.innerHTML = '';
             ventas.forEach(venta => {
-                const itemsTexto = (venta.items || []).map(item => `${item.cantidad}x ${item.nombre}`).join(', ');
-                let tagMP = venta.metodoPago === 'Ambos' ? `<span class="metodo-pago-tag">Efvo: ${formatMoneda(venta.pagoEfectivo)} | MP: ${formatMoneda(venta.pagoMercadoPago)}</span>` : `<span class="metodo-pago-tag">${venta.metodoPago}</span>`;
+                const itemsTexto = (venta.items || [])
+                    .map(item => `${item.cantidad}x ${item.nombre}`)
+                    .join(', ');
+
+                let tagMP = '';
+                if (venta.metodoPago === 'Ambos') {
+                    tagMP = `<span class="metodo-pago-tag">Efvo: ${formatMoneda(venta.pagoEfectivo)} | MP: ${formatMoneda(venta.pagoMercadoPago)}</span>`;
+                } else {
+                    tagMP = `<span class="metodo-pago-tag">${venta.metodoPago}</span>`;
+                }
 
                 const ticketDiv = document.createElement('div');
                 ticketDiv.className = 'ticket-item';
@@ -321,7 +386,8 @@ export function setupCajas(app) {
                 container.appendChild(ticketDiv);
             });
         } catch (error) {
-            console.error(error);
+            console.error("Error al cargar tickets:", error);
+            container.innerHTML = '<p style="color: var(--danger-color); font-size: 0.9rem;">Error al cargar las ventas.</p>';
         }
     }
 
@@ -330,21 +396,29 @@ export function setupCajas(app) {
             const btn = e.target.closest('.btn-facturado');
             const cajaId = btn.dataset.id;
             const estadoActual = btn.dataset.estado === 'true';
+
             try {
-                btn.textContent = "...";
-                await updateDoc(doc(db, 'cajas', cajaId), { facturadoMP: !estadoActual });
-            } catch (err) { console.error(err); }
-            return;
+                btn.textContent = "..."; 
+                await updateDoc(doc(db, 'cajas', cajaId), {
+                    facturadoMP: !estadoActual
+                });
+            } catch (err) {
+                console.error("Error al cambiar estado de facturación:", err);
+                alert("Hubo un error de conexión.");
+            }
+            return; 
         }
 
         const header = e.target.closest('.caja-header');
         if (!header) return;
+
         const acordeon = header.parentElement;
         const cajaId = header.dataset.id;
         const ticketsContainer = document.getElementById(`tickets-${cajaId}`);
         const icono = header.querySelector('.acordeon-icono');
-        const estaActivo = acordeon.classList.contains('active');
 
+        const estaActivo = acordeon.classList.contains('active');
+        
         document.querySelectorAll('.categoria-acordeon').forEach(el => {
             el.classList.remove('active');
             el.querySelector('.acordeon-icono').textContent = '+';
@@ -353,40 +427,66 @@ export function setupCajas(app) {
         if (!estaActivo) {
             acordeon.classList.add('active');
             icono.textContent = '-';
+            
             if (ticketsContainer.innerHTML.includes('Cargando')) {
                 await cargarTicketsDeCaja(cajaId, ticketsContainer);
             }
         }
     });
 
+    // ==========================================
+    // 4. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
+    // ==========================================
     if (btnCalcularFacturacion) {
         btnCalcularFacturacion.addEventListener('click', () => {
-            const desdeStr = calcDesde.value; const hastaStr = calcHasta.value;
-            if (!desdeStr || !hastaStr) return;
-            const dInicio = new Date(`${desdeStr}T00:00:00`); const dFin = new Date(`${hastaStr}T23:59:59`);
-            let totalMP = 0, factMP = 0;
+            const desdeStr = calcDesde.value;
+            const hastaStr = calcHasta.value;
+
+            if (!desdeStr || !hastaStr) {
+                alert("Por favor, seleccioná la fecha 'Desde' y 'Hasta'.");
+                return;
+            }
+
+            const dInicio = new Date(`${desdeStr}T00:00:00`);
+            const dFin = new Date(`${hastaStr}T23:59:59`);
+
+            let acumuladoTotalMP = 0;
+            let acumuladoFacturadoMP = 0;
+
             todasLasCajas.forEach(caja => {
                 if (caja.fechaApertura) {
                     const dCaja = caja.fechaApertura.toDate();
+                    
                     if (dCaja >= dInicio && dCaja <= dFin) {
-                        totalMP += (caja.totalMercadoPago || 0);
-                        if (caja.facturadoMP === true) factMP += (caja.totalMercadoPago || 0);
+                        const mp = caja.totalMercadoPago || 0;
+                        acumuladoTotalMP += mp;
+                        
+                        if (caja.facturadoMP === true) {
+                            acumuladoFacturadoMP += mp;
+                        }
                     }
                 }
             });
-            resTotalMp.textContent = formatMoneda(totalMP);
-            resFacturadoMp.textContent = formatMoneda(factMP);
-            resPendienteMp.textContent = formatMoneda(totalMP - factMP);
+
+            const pendienteFacturar = acumuladoTotalMP - acumuladoFacturadoMP;
+
+            resTotalMp.textContent = formatMoneda(acumuladoTotalMP);
+            resFacturadoMp.textContent = formatMoneda(acumuladoFacturadoMP);
+            resPendienteMp.textContent = formatMoneda(pendienteFacturar);
+
             resultadoFacturacion.style.display = 'block';
         });
     }
 
     // ==========================================
-    // 3. MATEMÁTICA MASIVA DE BI (BUSINESS INTELLIGENCE)
+    // 5. MATEMÁTICA Y DASHBOARD ESTADÍSTICO DE BI
     // ==========================================
     async function generarDashboard() {
-        document.getElementById('stats-loading').style.display = 'block';
-        document.getElementById('stats-content').style.display = 'none';
+        const statsLoading = document.getElementById('stats-loading');
+        const statsContent = document.getElementById('stats-content');
+        
+        if (statsLoading) statsLoading.style.display = 'block';
+        if (statsContent) statsContent.style.display = 'none';
 
         try {
             const [ventasSnap, auditSnap, recetasSnap] = await Promise.all([
@@ -402,21 +502,27 @@ export function setupCajas(app) {
             let auditArray = [];
             auditSnap.forEach(a => auditArray.push(a.data()));
 
-            // Armar diccionario de recetas, categorías y costo unitario
+            // Mapa para buscar Categorias y Costos de Recetas
             let recetasMap = new Map();
-            let sumatoriaMargenes = 0, qtyMargenes = 0;
+            let sumatoriaMargenes = 0;
+            let qtyMargenes = 0;
             recetasSnap.forEach(r => {
                 let rd = r.data();
-                let costoUnitario = parseFloat(rd.costoPorcion) || parseFloat(rd.costoTotal / rd.porcionesReceta) || 0;
+                let costoUnit = parseFloat(rd.costoPorcion) || (parseFloat(rd.costoTotal) / parseFloat(rd.porcionesReceta)) || 0;
+                
                 recetasMap.set(rd.nombreTorta, { 
                     categoria: rd.categoria || 'Otros', 
                     margen: parseFloat(rd.margenIndividual) || 0,
-                    costoUnitario: costoUnitario
+                    costoUnitario: costoUnit
                 });
-                if(rd.margenIndividual) { sumatoriaMargenes += parseFloat(rd.margenIndividual); qtyMargenes++; }
+                
+                if(rd.margenIndividual) {
+                    sumatoriaMargenes += parseFloat(rd.margenIndividual);
+                    qtyMargenes++;
+                }
             });
 
-            // A. Horas Pico (Matriz Temporal)
+            // A. Procesar Distribución Horaria (Horas Pico)
             let horasDistribucion = Array(24).fill(0);
             ventasArray.forEach(v => {
                 if(v.fecha) {
@@ -424,52 +530,75 @@ export function setupCajas(app) {
                     horasDistribucion[hora] += (v.total || 0);
                 }
             });
-            let labelsHoras = [], dataHorasPlot = [];
-            for(let h=9; h<=21; h++) { labelsHoras.push(`${h}:00 hs`); dataHorasPlot.push(horasDistribucion[h]); }
 
-            // B. Ventas Diarias (Desde las cajas)
+            let labelsHoras = [], dataHorasPlot = [];
+            for(let h=9; h<=21; h++) {
+                labelsHoras.push(`${h}:00 hs`);
+                dataHorasPlot.push(horasDistribucion[h]);
+            }
+
+            // B. Procesar Ventas Diarias (Desde Cajas) y Demanda por día de semana
             let ventasDiariasMap = {};
-            let turnosPorDiaSemana = Array(7).fill(0).map(() => ({ total: 0, items: {} }));
+            let diasSemanaConteo = Array(7).fill(0);
 
             todasLasCajas.forEach(c => {
                 if(c.fechaApertura) {
                     let diaCorta = formatearFechaCorta(c.fechaApertura);
+                    let diaSemana = c.fechaApertura.toDate().getDay();
                     let totalDia = (c.totalEfectivo || 0) + (c.totalMercadoPago || 0);
+                    
                     ventasDiariasMap[diaCorta] = (ventasDiariasMap[diaCorta] || 0) + totalDia;
+                    diasSemanaConteo[diaSemana]++;
                 }
             });
 
             let valoresDiarios = Object.values(ventasDiariasMap);
-            let labelsDiarios = Object.keys(ventasDiariasMap).slice(0, 15).reverse();
+            let labelsDiarios = Object.keys(ventasDiariasMap).slice(0, 15).reverse(); 
             let dataDiariaPlot = Object.values(ventasDiariasMap).slice(0, 15).reverse();
 
-            let media = 0, mediana = 0, max = 0, min = 0, rango = 0;
+            // Matemática de Dispersión
+            let media = 0, mediana = 0, max = 0, min = 0, rango = 0, varianza = 0, stdDev = 0;
             if(valoresDiarios.length > 0) {
-                max = Math.max(...valoresDiarios); min = Math.min(...valoresDiarios); rango = max - min;
+                max = Math.max(...valoresDiarios);
+                min = Math.min(...valoresDiarios);
+                rango = max - min;
                 media = valoresDiarios.reduce((a,b)=>a+b, 0) / valoresDiarios.length;
-                let ord = [...valoresDiarios].sort((a,b)=>a-b);
-                let m = Math.floor(ord.length/2);
-                mediana = ord.length % 2 !== 0 ? ord[m] : (ord[m-1]+ord[m])/2;
+                
+                let ordenados = [...valoresDiarios].sort((a,b)=>a-b);
+                let mid = Math.floor(ordenados.length/2);
+                mediana = ordenados.length % 2 !== 0 ? ordenados[mid] : (ordenados[mid-1]+ordenados[mid])/2;
+
+                varianza = valoresDiarios.reduce((a,b) => a + Math.pow(b - media, 2), 0) / valoresDiarios.length;
+                stdDev = Math.sqrt(varianza);
             }
 
-            // C. Ticket Promedio Exacto
-            let ticketPromedio = ventasArray.length > 0 ? (ventasArray.reduce((acc, v) => acc + (v.total || 0), 0) / ventasArray.length) : 0;
+            // C. Ticket Promedio
+            let ticketPromedio = 0;
+            let totalDineroTickets = ventasArray.reduce((acc, v) => acc + (v.total || 0), 0);
+            if(ventasArray.length > 0) {
+                ticketPromedio = totalDineroTickets / ventasArray.length;
+            }
 
-            // D. Finanzas Avanzadas: Margen Neto por Producto e Inyección de Matriz
-            let dataProductos = {}; 
+            // D. Productos, Finanzas Netas y Pronóstico
+            let dataProductos = {};
+            let rentabilidadCategoria = {};
             let totalUnidadesVendidas = 0;
             let totalPlataVendida = 0;
-            let acumuladoDiasRetencion = 0, qtyTicketsConLote = 0;
+            
+            // Vida Útil
+            let acumuladoDiasRetencion = 0;
+            let qtyTicketsConLote = 0;
 
-            // Agrupar ventas para Pronóstico Óptimo según día de la semana (0=Domingo, 6=Sábado)
-            let diasSemanaConteo = Array(7).fill(0);
+            // Pronóstico (Array de objetos para los 7 días de la semana)
             let demandaPorDiaSemana = Array(7).fill(0).map(() => ({}));
 
             ventasArray.forEach(v => {
                 let dSemana = v.fecha ? v.fecha.toDate().getDay() : null;
+
                 (v.items || []).forEach(item => {
                     let qty = parseInt(item.cantidad) || 0;
                     let bruto = qty * (parseFloat(item.precio) || 0);
+                    
                     totalUnidadesVendidas += qty;
                     totalPlataVendida += bruto;
 
@@ -482,201 +611,266 @@ export function setupCajas(app) {
                     let infoReceta = recetasMap.get(item.nombre);
                     if (infoReceta) {
                         dataProductos[item.nombre].costoTotalMatPrima += (infoReceta.costoUnitario * qty);
+                        rentabilidadCategoria[infoReceta.categoria] = (rentabilidadCategoria[infoReceta.categoria] || 0) + bruto;
+                    } else {
+                        rentabilidadCategoria['Otros'] = (rentabilidadCategoria['Otros'] || 0) + bruto;
                     }
 
-                    // Pronóstico por día de la semana
                     if (dSemana !== null) {
                         demandaPorDiaSemana[dSemana][item.nombre] = (demandaPorDiaSemana[dSemana][item.nombre] || 0) + qty;
                     }
                 });
 
-                // Días de retención (PEPS / Vida útil en vitrina)
+                // Calcular PEPS (Vida Útil)
                 if (v.fecha && v.loteFechaElaboracion) {
                     let fVenta = v.fecha.toDate();
+                    // Firebase a veces guarda la fecha del lote directo como string
                     let fElab = new Date(v.loteFechaElaboracion); 
-                    let diferenciaTiempo = fVenta.getTime() - fElab.getTime();
-                    let diasRetencion = diferenciaTiempo / (1000 * 60 * 60 * 24);
-                    if (diasRetencion >= 0 && diasRetencion < 15) { 
-                        acumuladoDiasRetencion += diasRetencion;
-                        qtyTicketsConLote++;
+                    if (!isNaN(fElab.getTime())) {
+                        let diferenciaTiempo = fVenta.getTime() - fElab.getTime();
+                        let diasRetencion = diferenciaTiempo / (1000 * 60 * 60 * 24);
+                        if (diasRetencion >= 0 && diasRetencion < 15) { 
+                            acumuladoDiasRetencion += diasRetencion;
+                            qtyTicketsConLote++;
+                        }
                     }
                 }
             });
 
-            // Contar cuántas veces apareció cada día de la semana en las cajas para promediar la demanda
-            todasLasCajas.forEach(c => {
-                if (c.fechaApertura) diasSemanaConteo[c.fechaApertura.toDate().getDay()]++;
-            });
-
-            // Inyectar Tabla Financiera de Margen Neto por Producto
+            // RENDER TABLA MARGEN NETO POR PRODUCTO
             const tbodyMargen = document.querySelector('#tabla-margen-productos tbody');
-            tbodyMargen.innerHTML = '';
-            let sortedByPlataABC = Object.entries(dataProductos).sort((a,b) => b[1].bruto - a[1].bruto);
+            if (tbodyMargen) {
+                tbodyMargen.innerHTML = '';
+                let sortedByPlataABC = Object.entries(dataProductos).sort((a,b) => b[1].bruto - a[1].bruto);
 
-            sortedByPlataABC.forEach(([nombre, p]) => {
-                let util = p.bruto - p.costoTotalMatPrima;
-                let porcMargen = p.bruto > 0 ? (util / p.bruto) * 100 : 0;
-                tbodyMargen.innerHTML += `
-                    <tr>
-                        <td><strong>${nombre}</strong></td>
-                        <td>${p.qty} u.</td>
-                        <td>${formatMoneda(p.bruto)}</td>
-                        <td style="color:#64748b;">${formatMoneda(p.costoTotalMatPrima)}</td>
-                        <td style="color:#15803d; font-weight:bold;">${formatMoneda(util)}</td>
-                        <td><span style="background:#dcfce3; color:#15803d; padding:2px 6px; border-radius:4px; font-weight:bold;">${porcMargen.toFixed(1)}%</span></td>
-                    </tr>
-                `;
-            });
-
-            // E. Volumen de Producción Óptimo (Pronóstico Breve) para MAÑANA
-            let mananaSemanaIndex = (new Date().getDay() + 1) % 7; 
-            const diasNombres = ["Domingos", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábados"];
-            document.getElementById('txt-dia-semana').textContent = `Pronóstico predictivo optimizado para mañana (${diasNombres[mananaSemanaIndex]}):`;
-
-            const tbodyOptima = document.querySelector('#tabla-produccion-optima tbody');
-            tbodyOptima.innerHTML = '';
-
-            let demandaMananaHistorial = demandaPorDiaSemana[mananaSemanaIndex];
-            let divisorDia = diasSemanaConteo[mananaSemanaIndex] || 1;
-
-            let arrSugeridos = Object.entries(demandaMananaHistorial || {}).sort((a,b) => b[1] - a[1]);
-            if (arrSugeridos.length > 0) {
-                arrSugeridos.slice(0, 5).forEach(([nombre, qtyAcumulada]) => {
-                    let promedioVendidoEseDia = qtyAcumulada / divisorDia;
-                    // Sugerencia óptima: Promedio + 15% de colchón de seguridad para no perder venta bruta
-                    let sugerenciaOptima = Math.ceil(promedioVendidoEseDia * 1.15);
-                    tbodyOptima.innerHTML += `
+                sortedByPlataABC.forEach(([nombre, p]) => {
+                    let util = p.bruto - p.costoTotalMatPrima;
+                    let porcMargen = p.bruto > 0 ? (util / p.bruto) * 100 : 0;
+                    tbodyMargen.innerHTML += `
                         <tr>
                             <td><strong>${nombre}</strong></td>
-                            <td>${promedioVendidoEseDia.toFixed(1)} unidades</td>
-                            <td><span style="background:#fef08a; color:#854d0e; padding:4px 10px; border-radius:6px; font-weight:900; border:1px dashed #ca8a04;">Preparar ${sugerenciaOptima} unidades</span></td>
+                            <td>${p.qty} u.</td>
+                            <td>${formatMoneda(p.bruto)}</td>
+                            <td style="color:#64748b;">${formatMoneda(p.costoTotalMatPrima)}</td>
+                            <td style="color:#15803d; font-weight:bold;">${formatMoneda(util)}</td>
+                            <td><span style="background:#dcfce3; color:#15803d; padding:2px 6px; border-radius:4px; font-weight:bold;">${porcMargen.toFixed(1)}%</span></td>
                         </tr>
                     `;
                 });
-            } else {
-                tbodyOptima.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Faltan registros históricos para este día de la semana.</td></tr>`;
             }
 
-            // F. Render de Top Productos (Moda)
-            let sortedByQty = Object.entries(dataProductos).sort((a,b)=>b[1].qty-a[1].qty);
-            ulTop.innerHTML = ''; ulResto.innerHTML = ''; ulResto.style.display = 'none';
-            if(sortedByQty.length > 0) {
-                sortedByQty.slice(0, 5).forEach((p, idx) => {
-                    let part = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
-                    ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${part}%)</small></span></li>`;
-                });
-                if(sortedByQty.length > 5) {
-                    sortedByQty.slice(5).forEach((p, idx) => {
-                        let part = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
-                        ulResto.innerHTML += `<li><span>#${idx+6} ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${part}%)</small></span></li>`;
+            // RENDER TABLA PRODUCCIÓN ÓPTIMA
+            const tbodyOptima = document.querySelector('#tabla-produccion-optima tbody');
+            if (tbodyOptima) {
+                tbodyOptima.innerHTML = '';
+                let mananaSemanaIndex = (new Date().getDay() + 1) % 7; 
+                const diasNombres = ["Domingos", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábados"];
+                
+                const txtDia = document.getElementById('txt-dia-semana');
+                if(txtDia) txtDia.textContent = `Pronóstico predictivo optimizado para mañana (${diasNombres[mananaSemanaIndex]}):`;
+
+                let demandaMananaHistorial = demandaPorDiaSemana[mananaSemanaIndex];
+                let divisorDia = diasSemanaConteo[mananaSemanaIndex] || 1;
+
+                let arrSugeridos = Object.entries(demandaMananaHistorial || {}).sort((a,b) => b[1] - a[1]);
+                if (arrSugeridos.length > 0) {
+                    arrSugeridos.slice(0, 5).forEach(([nombre, qtyAcumulada]) => {
+                        let promedioVendidoEseDia = qtyAcumulada / divisorDia;
+                        let sugerenciaOptima = Math.ceil(promedioVendidoEseDia * 1.15); // +15% de seguridad
+                        tbodyOptima.innerHTML += `
+                            <tr>
+                                <td><strong>${nombre}</strong></td>
+                                <td>${promedioVendidoEseDia.toFixed(1)} unidades</td>
+                                <td><span style="background:#fef08a; color:#854d0e; padding:4px 10px; border-radius:6px; font-weight:900; border:1px dashed #ca8a04;">Preparar ${sugerenciaOptima} unidades</span></td>
+                            </tr>
+                        `;
                     });
-                    btnVerMas.style.display = 'block';
-                    btnVerMas.onclick = () => {
-                        ulResto.style.display = ulResto.style.display === 'none' ? 'block' : 'none';
-                        btnVerMas.innerHTML = ulResto.style.display === 'block' ? 'Ocultar detalle ⬆' : 'Ver detalle completo ⬇';
-                    };
-                } else { btnVerMas.style.display = 'none'; }
+                } else {
+                    tbodyOptima.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#94a3b8;">Faltan registros históricos para este día de la semana.</td></tr>`;
+                }
             }
 
-            // G. Pareto ABC
-            let sumPlata = 0, listA = [], listB = [], listC = [];
-            sortedByPlataABC.forEach(p => {
+            // TOP PRODUCTOS (MODA)
+            let sortedByQty = Object.entries(dataProductos).sort((a,b)=>b[1].qty-a[1].qty);
+            const ulTop = document.getElementById('lista-top-productos');
+            const ulResto = document.getElementById('lista-resto-productos');
+            const btnVerMas = document.getElementById('btn-ver-mas-productos');
+            
+            if (ulTop && ulResto && btnVerMas) {
+                ulTop.innerHTML = '';
+                ulResto.innerHTML = '';
+                ulResto.style.display = 'none';
+
+                if(sortedByQty.length > 0) {
+                    sortedByQty.slice(0, 5).forEach((p, idx) => {
+                        let participacion = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
+                        ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
+                    });
+                    
+                    if(sortedByQty.length > 5) {
+                        sortedByQty.slice(5).forEach((p, idx) => {
+                            let participacion = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
+                            ulResto.innerHTML += `<li><span>#${idx+6} ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
+                        });
+                        btnVerMas.style.display = 'block';
+                        btnVerMas.onclick = () => {
+                            if(ulResto.style.display === 'none') {
+                                ulResto.style.display = 'block';
+                                btnVerMas.innerHTML = 'Ocultar detalle ⬆';
+                            } else {
+                                ulResto.style.display = 'none';
+                                btnVerMas.innerHTML = 'Ver detalle completo ⬇';
+                            }
+                        };
+                    } else {
+                        btnVerMas.style.display = 'none';
+                    }
+                } else {
+                    ulTop.innerHTML = '<li>Sin registros de ventas.</li>';
+                }
+            }
+
+            // Clasificación ABC
+            let sortedByPlata = Object.entries(dataProductos).sort((a,b)=>b[1].bruto-a[1].bruto);
+            let sumPlata = 0;
+            let listA = [], listB = [], listC = [];
+
+            sortedByPlata.forEach(p => {
                 sumPlata += p[1].bruto;
-                let porcAcum = sumPlata / totalPlataVendida;
-                if(porcAcum <= 0.80) listA.push(p[0]);
-                else if(porcAcum <= 0.95) listB.push(p[0]);
-                else listC.push(p[0]);
-            });
-            document.getElementById('abc-a-text').innerHTML = `<span style="color:#15803d; font-weight:bold;">${listA.slice(0,3).join(', ')}...</span>`;
-            document.getElementById('abc-b-text').innerHTML = `<span style="color:#p59e0b; font-weight:bold;">${listB.slice(0,3).join(', ')}...</span>`;
-            document.getElementById('abc-c-text').innerHTML = `<span style="color:#b91c1c; font-weight:bold;">${listC.slice(0,3).join(', ')}...</span>`;
-
-            // H. Crecimientos y Tiempos de Retención
-            let crecClientesText = "Faltan datos", crecIngresosText = "Faltan datos";
-            if (ventasArray.length > 10) {
-                let mit = Math.floor(ventasArray.length / 2);
-                let vA = ventasArray.slice(0, mit), vB = ventasArray.slice(mit);
-                let varCli = ((vB.length - vA.length) / vA.length) * 100;
-                let ingA = vA.reduce((acc,b)=>acc+(b.total||0),0), ingB = vB.reduce((acc,b)=>acc+(b.total||0),0);
-                let varIng = ingA > 0 ? (((ingB - ingA) / ingA) * 100) : 0;
-
-                crecClientesText = (varCli > 0 ? '📈 +' : '📉 ') + varCli.toFixed(1) + "%";
-                document.getElementById('stat-crecimiento-clientes').style.color = varCli > 0 ? '#15803d' : '#b91c1c';
-                crecIngresosText = (varIng > 0 ? '📈 +' : '📉 ') + varIng.toFixed(1) + "%";
-                document.getElementById('stat-crecimiento-ingresos').style.color = varIng > 0 ? '#15803d' : '#b91c1c';
-            }
-
-            let mejorLinea = "-"; let maxLineaPlata = 0;
-            for(let cat in rentabilidadCategoria) {
-                if(rentabilidadCategoria[cat] > maxLineaPlata) { maxLineaPlata = rentabilidadCategoria[cat]; mejorLinea = cat; }
-            }
-
-            // Desperdicios, Retención y Rotación
-            let totalDesperdicioQty = 0;
-            auditArray.forEach(a => {
-                if(a.tipo === 'RESTA' && a.motivo && a.motivo.toLowerCase().includes('descarte')) totalDesperdicioQty += parseInt(a.cantidad) || 0;
-            });
-            let porcDesperdicio = totalUnidadesVendidas > 0 ? (totalDesperdicioQty / (totalUnidadesVendidas + totalDesperdicioQty)) * 100 : 0;
-            let vidaUtilPromedio = qtyTicketsConLote > 0 ? (acumuladoDiasRetencion / qtyTicketsConLote) : 0;
-            let indiceRotacion = totalUnidadesVendidas > 0 ? (totalUnidadesVendidas / (valoresDiarios.length || 1)).toFixed(1) + " piezas/día" : "0 piezas/día";
-
-            // Inyecciones en el DOM Finales
-            document.getElementById('stat-media').textContent = formatMoneda(media);
-            document.getElementById('stat-mediana').textContent = formatMoneda(mediana);
-            document.getElementById('stat-ticket-promedio').textContent = formatMoneda(ticketPromedio);
-            document.getElementById('stat-vida-util').textContent = vidaUtilPromedio > 0 ? `${vidaUtilPromedio.toFixed(1)} días` : "1.1 días (PEPS)";
-            document.getElementById('stat-desperdicio').textContent = porcDesperdicio.toFixed(1) + '%';
-            document.getElementById('stat-max').textContent = formatMoneda(max);
-            document.getElementById('stat-min').textContent = formatMoneda(min);
-            document.getElementById('stat-rango').textContent = formatMoneda(rango);
-            document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
-            document.getElementById('stat-crecimiento-clientes').textContent = crecClientesText;
-            document.getElementById('stat-crecimiento-ingresos').textContent = crecIngresosText;
-            document.getElementById('stat-rotacion-inventario').textContent = indiceRotacion;
-            document.getElementById('stat-margen-promedio').textContent = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "55%";
-            document.getElementById('stat-linea-rentable').textContent = mejorLinea;
-
-            // Render Gráfico Lineal (Evolución de Ventas)
-            const ctxLine = document.getElementById('chartLineVentas').getContext('2d');
-            if(chartVentasInstancia) chartVentasInstancia.destroy();
-            chartVentasInstancia = new Chart(ctxLine, {
-                type: 'line',
-                data: {
-                    labels: labelsDiarios,
-                    datasets: [{
-                        label: 'Ventas de Turno ($)',
-                        data: dataDiariaPlot,
-                        borderColor: '#ec4899',
-                        backgroundColor: 'rgba(236, 72, 153, 0.15)',
-                        fill: true,
-                        tension: 0.35
-                    }]
+                let porcentajeAcumulado = sumPlata / totalPlataVendida;
+                
+                if(porcentajeAcumulado <= 0.80) {
+                    listA.push(p[0]);
+                } else if(porcentajeAcumulado <= 0.95) {
+                    listB.push(p[0]);
+                } else {
+                    listC.push(p[0]);
                 }
             });
 
-            // Render Gráfico de Barras (Horas Pico de Venta)
-            const ctxBar = document.getElementById('chartBarHoras').getContext('2d');
-            if(chartBarHorasInstancia) chartBarHorasInstancia.destroy();
-            chartBarHorasInstancia = new Chart(ctxBar, {
-                type: 'bar',
-                data: {
-                    labels: labelsHoras,
-                    datasets: [{
-                        label: 'Facturación ($)',
-                        data: dataHorasPlot,
-                        backgroundColor: '#0ea5e9',
-                        borderRadius: 6
-                    }]
-                },
-                options: { plugins: { legend: { display: false } } }
-            });
+            if (document.getElementById('abc-a-text')) {
+                document.getElementById('abc-a-text').textContent = listA.slice(0,4).join(', ') + (listA.length > 4 ? '...' : ' (Foco Alto)');
+                document.getElementById('abc-b-text').textContent = listB.slice(0,4).join(', ') + (listB.length > 4 ? '...' : ' (Foco Medio)');
+                document.getElementById('abc-c-text').textContent = listC.slice(0,4).join(', ') + (listC.length > 4 ? '...' : ' (Saldos)');
+            }
 
-            document.getElementById('stats-loading').style.display = 'none';
-            document.getElementById('stats-content').style.display = 'block';
+            // Crecimiento Clientes e Ingresos
+            let crecClientesText = "Faltan datos";
+            let crecIngresosText = "Faltan datos";
+
+            if (ventasArray.length > 10) {
+                let mitad = Math.floor(ventasArray.length / 2);
+                let primeraMitad = ventasArray.slice(0, mitad);
+                let segundaMitad = ventasArray.slice(mitad);
+
+                let clientesA = primeraMitad.length;
+                let clientesB = segundaMitad.length;
+                let varClientes = ((clientesB - clientesA) / clientesA) * 100;
+                crecClientesText = (varClientes > 0 ? '📈 +' : '📉 ') + varClientes.toFixed(1) + "%";
+                if(document.getElementById('stat-crecimiento-clientes')) document.getElementById('stat-crecimiento-clientes').style.color = varClientes > 0 ? '#15803d' : '#b91c1c';
+
+                let ingresosA = primeraMitad.reduce((acc,b)=>acc+(b.total||0), 0);
+                let ingresosB = segundaMitad.reduce((acc,b)=>acc+(b.total||0), 0);
+                
+                let varIngresos = ingresosA > 0 ? (((ingresosB - ingresosA) / ingresosA) * 100) : 0;
+                
+                crecIngresosText = (varIngresos > 0 ? '📈 +' : '📉 ') + varIngresos.toFixed(1) + "%";
+                if(document.getElementById('stat-crecimiento-ingresos')) document.getElementById('stat-crecimiento-ingresos').style.color = varIngresos > 0 ? '#15803d' : '#b91c1c';
+            }
+
+            let mejorLinea = "-";
+            let maxLineaPlata = 0;
+            for(let cat in rentabilidadCategoria) {
+                if(rentabilidadCategoria[cat] > maxLineaPlata) {
+                    maxLineaPlata = rentabilidadCategoria[cat];
+                    mejorLinea = cat;
+                }
+            }
+
+            // Desperdicio
+            let totalDesperdicioQty = 0;
+            auditArray.forEach(a => {
+                if(a.tipo === 'RESTA' && a.motivo && a.motivo.toLowerCase().includes('descarte')) {
+                    totalDesperdicioQty += parseInt(a.cantidad) || 0;
+                }
+            });
+            let porcentajeDesperdicio = 0;
+            if((totalUnidadesVendidas + totalDesperdicioQty) > 0) {
+                porcentajeDesperdicio = (totalDesperdicioQty / (totalUnidadesVendidas + totalDesperdicioQty)) * 100;
+            }
+
+            let vidaUtilPromedio = qtyTicketsConLote > 0 ? (acumuladoDiasRetencion / qtyTicketsConLote) : 0;
+            let indiceRotacion = totalUnidadesVendidas > 0 ? (totalUnidadesVendidas / (valoresDiarios.length || 1)).toFixed(1) + " piezas/día" : "Baja";
+
+            // Actualizar DOM
+            if(document.getElementById('stat-media')) document.getElementById('stat-media').textContent = formatMoneda(media);
+            if(document.getElementById('stat-mediana')) document.getElementById('stat-mediana').textContent = formatMoneda(mediana);
+            if(document.getElementById('stat-ticket-promedio')) document.getElementById('stat-ticket-promedio').textContent = formatMoneda(ticketPromedio);
+            if(document.getElementById('stat-vida-util')) document.getElementById('stat-vida-util').textContent = vidaUtilPromedio > 0 ? `${vidaUtilPromedio.toFixed(1)} días` : "S/Datos PEPS";
+            if(document.getElementById('stat-desperdicio')) document.getElementById('stat-desperdicio').textContent = porcentajeDesperdicio.toFixed(1) + '%';
+            
+            if(document.getElementById('stat-max')) document.getElementById('stat-max').textContent = formatMoneda(max);
+            if(document.getElementById('stat-min')) document.getElementById('stat-min').textContent = formatMoneda(min);
+            if(document.getElementById('stat-rango')) document.getElementById('stat-rango').textContent = formatMoneda(rango);
+            if(document.getElementById('stat-varianza')) document.getElementById('stat-varianza').textContent = Math.round(varianza).toLocaleString('es-AR');
+            if(document.getElementById('stat-stddev')) document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
+
+            let promedioMargenGlobal = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "Sin Datos";
+            if(document.getElementById('stat-crecimiento-clientes')) document.getElementById('stat-crecimiento-clientes').textContent = crecClientesText;
+            if(document.getElementById('stat-crecimiento-ingresos')) document.getElementById('stat-crecimiento-ingresos').textContent = crecIngresosText;
+            if(document.getElementById('stat-rotacion-inventario')) document.getElementById('stat-rotacion-inventario').textContent = indiceRotacion;
+            if(document.getElementById('stat-margen-promedio')) document.getElementById('stat-margen-promedio').textContent = promedioMargenGlobal;
+            if(document.getElementById('stat-linea-rentable')) document.getElementById('stat-linea-rentable').textContent = mejorLinea;
+
+            // Render Gráfico Lineal (Ventas Diarias)
+            const elLine = document.getElementById('chartLineVentas');
+            if (elLine) {
+                const ctxLine = elLine.getContext('2d');
+                if(chartVentasInstancia) chartVentasInstancia.destroy();
+                chartVentasInstancia = new Chart(ctxLine, {
+                    type: 'line',
+                    data: {
+                        labels: labelsDiarios,
+                        datasets: [{
+                            label: 'Facturación ($)',
+                            data: dataDiariaPlot,
+                            borderColor: '#ec4899',
+                            backgroundColor: 'rgba(236, 72, 153, 0.2)',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    }
+                });
+            }
+
+            // Render Gráfico de Barras (Horas Pico)
+            const elBar = document.getElementById('chartBarHoras');
+            if (elBar) {
+                const ctxBar = elBar.getContext('2d');
+                if(chartBarHorasInstancia) chartBarHorasInstancia.destroy();
+                chartBarHorasInstancia = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: labelsHoras,
+                        datasets: [{
+                            label: 'Ventas Acumuladas ($)',
+                            data: dataHorasPlot,
+                            backgroundColor: '#0ea5e9',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            if (statsLoading) statsLoading.style.display = 'none';
+            if (statsContent) statsContent.style.display = 'block';
 
         } catch(error) {
-            console.error("Error crítico de compilación en Dashboard BI:", error);
-            document.getElementById('stats-loading').innerHTML = '<p style="color:red; font-weight:bold;">Error analizando registros.</p>';
+            console.error("Error calculando KPIs:", error);
+            if (statsLoading) statsLoading.innerHTML = '<p style="color:red;">Error de conexión procesando los datos.</p>';
         }
     }
 }
