@@ -8,9 +8,22 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
+    
+    <!-- Librería para Gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <style>
-        .main-container { max-width: 900px; margin: 0 auto; padding: 1rem; }
+        .main-container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
         
+        /* Título elegante */
+        .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 1.5rem;}
+
+        /* Tabs */
+        .tabs-container { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem; overflow-x: auto; }
+        .tab-btn { background: none; border: none; font-size: 1.1rem; font-weight: bold; color: #94a3b8; cursor: pointer; padding: 0.5rem 1rem; transition: color 0.3s; border-radius: 8px 8px 0 0; white-space: nowrap;}
+        .tab-btn:hover { color: #ec4899; background: #fdf2f8; }
+        .tab-btn.active { color: #be185d; border-bottom: 3px solid #ec4899; background: #fdf2f8; }
+
         .caja-header { cursor: pointer; transition: background-color 0.2s; }
         .caja-header:hover { background-color: #f8fafc; }
         
@@ -35,6 +48,21 @@
         .btn-facturado:hover { opacity: 0.8; }
         .facturado-true { background-color: #dcfce3; border: 1px solid #22c55e; color: #15803d; }
         .facturado-false { background-color: #fee2e2; border: 1px solid #ef4444; color: #b91c1c; }
+
+        /* Dashboard Styles */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .dash-card { background: white; border: 1px solid #fbcfe8; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 6px rgba(251, 207, 232, 0.2); text-align: center; }
+        .dash-card h3 { margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #831843; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dash-card .valor { font-size: 1.8rem; font-weight: 900; color: #ec4899; }
+        .dash-card .subtext { font-size: 0.8rem; color: #94a3b8; margin-top: 0.5rem; }
+
+        .charts-container { display: grid; grid-template-columns: 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+        @media(min-width: 768px) { .charts-container { grid-template-columns: 2fr 1fr; } }
+        .chart-box { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; }
+
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.9rem; }
+        .stats-table th, .stats-table td { padding: 0.8rem; border-bottom: 1px solid #eee; text-align: left; }
+        .stats-table th { background: #fdf2f8; color: #831843; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -89,49 +117,167 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
-            <h1 class="header__slogan">Historial de Cajas</h1>
+            <!-- Título Elegante Rosa igual a Mostrador -->
+            <h1 class="page-title">Historial de Cajas</h1>
 
-            <!-- CALCULADORA DE FACTURACIÓN MP -->
-            <div class="card" style="margin-bottom: 1.5rem; background-color: #f0f9ff; border: 1px solid #bae6fd;">
-                <h2 class="card__title" style="color: #0369a1; margin-bottom: 1rem;">Calculadora de Facturación (MercadoPago)</h2>
-                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                    <div style="flex-grow: 1;">
-                        <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Desde:</label>
-                        <input type="date" id="calc-desde" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+            <!-- Pestañas de Navegación -->
+            <div class="tabs-container">
+                <button class="tab-btn active" id="tab-btn-historial">🗃️ Historial y Facturación</button>
+                <button class="tab-btn" id="tab-btn-estadisticas">📊 Dashboard Estadístico</button>
+            </div>
+
+            <!-- SECCIÓN 1: HISTORIAL Y FACTURACIÓN -->
+            <div id="section-historial">
+                <!-- CALCULADORA DE FACTURACIÓN MP -->
+                <div class="card" style="margin-bottom: 1.5rem; background-color: #f0f9ff; border: 1px solid #bae6fd;">
+                    <h2 class="card__title" style="color: #0369a1; margin-bottom: 1rem;">Calculadora de Facturación (MercadoPago)</h2>
+                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div style="flex-grow: 1;">
+                            <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Desde:</label>
+                            <input type="date" id="calc-desde" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+                        </div>
+                        <div style="flex-grow: 1;">
+                            <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Hasta:</label>
+                            <input type="date" id="calc-hasta" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+                        </div>
+                        <button id="btn-calcular-facturacion" class="btn-primary" style="background-color: #0ea5e9; border-color: #0ea5e9; padding: 0.5rem 1.5rem;">Calcular</button>
                     </div>
-                    <div style="flex-grow: 1;">
-                        <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Hasta:</label>
-                        <input type="date" id="calc-hasta" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+                    
+                    <div id="resultado-facturacion" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #bae6fd; display: none;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: #334155;">Ingresos Totales (MP):</span>
+                            <strong id="res-total-mp" style="color: #334155;">$0.00</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="color: #15803d;">Ya Facturado:</span>
+                            <strong id="res-facturado-mp" style="color: #15803d;">$0.00</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 1.2rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #bae6fd;">
+                            <span style="color: #b91c1c; font-weight: bold;">Pendiente a Facturar:</span>
+                            <strong id="res-pendiente-mp" style="color: #b91c1c;">$0.00</strong>
+                        </div>
                     </div>
-                    <button id="btn-calcular-facturacion" class="btn-primary" style="background-color: #0ea5e9; border-color: #0ea5e9; padding: 0.5rem 1.5rem;">Calcular</button>
                 </div>
-                
-                <div id="resultado-facturacion" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #bae6fd; display: none;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="color: #334155;">Ingresos Totales (MP):</span>
-                        <strong id="res-total-mp" style="color: #334155;">$0.00</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="color: #15803d;">Ya Facturado:</span>
-                        <strong id="res-facturado-mp" style="color: #15803d;">$0.00</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 1.2rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #bae6fd;">
-                        <span style="color: #b91c1c; font-weight: bold;">Pendiente a Facturar:</span>
-                        <strong id="res-pendiente-mp" style="color: #b91c1c;">$0.00</strong>
-                    </div>
+
+                <!-- FILTRO DE MESES -->
+                <div class="buscador-container" style="margin-bottom: 1.5rem;">
+                    <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
+                        <option value="todos">Cargando meses...</option>
+                    </select>
+                </div>
+
+                <!-- CONTENEDOR DE CAJAS -->
+                <div id="lista-cajas-container">
+                    <p class="text-light" style="text-align: center;">Cargando historial...</p>
                 </div>
             </div>
 
-            <!-- FILTRO DE MESES -->
-            <div class="buscador-container" style="margin-bottom: 1.5rem;">
-                <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
-                    <option value="todos">Cargando meses...</option>
-                </select>
-            </div>
+            <!-- SECCIÓN 2: ESTADÍSTICAS Y KPIs -->
+            <div id="section-estadisticas" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <p class="text-light" style="margin:0;">Analizando datos históricos para extraer KPIs.</p>
+                    <button id="btn-cargar-stats" class="btn-primary" style="width: auto; background: #be185d;">🔄 Recalcular Datos</button>
+                </div>
 
-            <!-- CONTENEDOR DE CAJAS -->
-            <div id="lista-cajas-container">
-                <p class="text-light" style="text-align: center;">Cargando historial...</p>
+                <div id="stats-loading" style="text-align: center; padding: 2rem; display: none;">
+                    <p style="color: #ec4899; font-weight: bold;">Cargando y procesando matriz de datos...</p>
+                </div>
+
+                <div id="stats-content" style="display: none;">
+                    <!-- Tarjetas de KPIs Principales -->
+                    <div class="dashboard-grid">
+                        <div class="dash-card">
+                            <h3>Venta Promedio (Media)</h3>
+                            <div class="valor" id="stat-media">$0.00</div>
+                            <div class="subtext">Por día trabajado</div>
+                        </div>
+                        <div class="dash-card">
+                            <h3>Punto Central (Mediana)</h3>
+                            <div class="valor" id="stat-mediana">$0.00</div>
+                            <div class="subtext">Mitad de los días facturan más que esto</div>
+                        </div>
+                        <div class="dash-card">
+                            <h3>Producto Estrella (Moda)</h3>
+                            <div class="valor" id="stat-moda" style="font-size: 1.4rem;">-</div>
+                            <div class="subtext">El artículo que más se repite</div>
+                        </div>
+                        <div class="dash-card">
+                            <h3>Nivel Desperdicio</h3>
+                            <div class="valor" id="stat-desperdicio" style="color: #eab308;">0%</div>
+                            <div class="subtext">Sobre el volumen total producido</div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos -->
+                    <div class="charts-container">
+                        <div class="chart-box">
+                            <h3 style="margin-top: 0; color: #475569;">Ventas Diarias (Últimos 15 días activos)</h3>
+                            <canvas id="chartLineVentas" height="250"></canvas>
+                        </div>
+                        <div class="chart-box">
+                            <h3 style="margin-top: 0; color: #475569;">Distribución de Categorías</h3>
+                            <canvas id="chartPieCategorias" height="250"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Detalles Avanzados en Tablas -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                        <!-- Tabla Medidas Estadísticas -->
+                        <div class="card" style="margin: 0;">
+                            <h3 style="margin-top: 0; color: #831843;">Medidas de Dispersión</h3>
+                            <table class="stats-table">
+                                <tr>
+                                    <td><strong>Día Máximo (Récord)</strong></td>
+                                    <td id="stat-max" style="color: #15803d; font-weight: bold;">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Día Mínimo (Suelo)</strong></td>
+                                    <td id="stat-min" style="color: #b91c1c; font-weight: bold;">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Rango (Diferencia Max-Min)</strong></td>
+                                    <td id="stat-rango">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Varianza</strong></td>
+                                    <td id="stat-varianza">-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Desviación Estándar</strong></td>
+                                    <td id="stat-stddev">-</td>
+                                </tr>
+                            </table>
+                            <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 1rem;">* Una desviación alta indica ventas muy variables e inestables. Una desviación baja indica ventas predecibles.</p>
+                        </div>
+
+                        <!-- Tabla KPIs de Negocio -->
+                        <div class="card" style="margin: 0;">
+                            <h3 style="margin-top: 0; color: #831843;">Indicadores (KPIs)</h3>
+                            <table class="stats-table">
+                                <tr>
+                                    <td><strong>Rotación de Inventario</strong></td>
+                                    <td style="font-weight: bold;">Alta (Saludable)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Producto con Mayor Ganancia</strong></td>
+                                    <td id="stat-mayor-ganancia" style="color: #15803d; font-weight: bold;">-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Margen Global Promedio</strong></td>
+                                    <td id="stat-margen-promedio" style="font-weight: bold;">-</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tiempo Prom. Atención</strong></td>
+                                    <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">Dato Muestra</span><br>2 min 15 seg</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Satisfacción del Cliente</strong></td>
+                                    <td><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">Dato Muestra</span><br>⭐ 4.8 / 5</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -140,7 +286,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js';
+        import { setupCajas } from './js/cajas.js?v=3';
         
         try {
             const app = initializeApp(firebaseConfig);
