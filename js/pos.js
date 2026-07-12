@@ -339,9 +339,14 @@ export function setupPOS(app) {
             ctx.font = "bold 60px sans-serif";
             ctx.fillText(tipo.toUpperCase(), canvas.width / 2, 85);
             
-            ctx.font = "bold 32px sans-serif";
-            // Acorta nombre para que no desborde
-            ctx.fillText(prod.substring(0, 20), canvas.width / 2, 145);
+            // Autoajuste de letra para Promos
+            let fontSize = 36;
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            while (ctx.measureText(prod).width > 380 && fontSize > 16) {
+                fontSize -= 2;
+                ctx.font = `bold ${fontSize}px sans-serif`;
+            }
+            ctx.fillText(prod, canvas.width / 2, 145);
             
             ctx.font = "bold 24px sans-serif";
             ctx.fillText(frase, canvas.width / 2, 205);
@@ -476,7 +481,8 @@ export function setupPOS(app) {
 
     // --- Modal Código de Barras 1D y GENERADOR DE IMAGEN (50x30) ---
     const abrirModalBarcode = (prod) => {
-        if(barcodeTituloProducto) barcodeTituloProducto.textContent = prod.nombreTorta;
+        // Ocultamos el título HTML de la ventana para que no se vea repetido
+        if(barcodeTituloProducto) barcodeTituloProducto.style.display = 'none';
         
         // Canvas maestro que el usuario va a descargar (50x30 mm = 400x240 px)
         const canvasFinal = document.getElementById("barcode-canvas-descarga");
@@ -488,12 +494,20 @@ export function setupPOS(app) {
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvasFinal.width, canvasFinal.height);
         
-        // Texto del producto, bien grande y arriba
+        // Texto del producto, ajustando el tamaño para que entre perfecto
         ctx.fillStyle = "black";
         ctx.textAlign = "center";
-        ctx.font = "bold 32px sans-serif";
-        // Recortamos el nombre si es muy largo para que no manche los bordes
-        ctx.fillText(prod.nombreTorta.substring(0, 20), canvasFinal.width / 2, 45); 
+        
+        let fontSize = 38;
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        
+        // Mientras el ancho del texto sea mayor al ancho disponible (380px para dejar margen), achicar letra
+        while (ctx.measureText(prod.nombreTorta).width > 380 && fontSize > 16) {
+            fontSize -= 2;
+            ctx.font = `bold ${fontSize}px sans-serif`;
+        }
+        
+        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 45); 
 
         // Para dibujar el código de barras, usamos un canvas temporal
         const tempCanvas = document.createElement("canvas");
@@ -502,8 +516,8 @@ export function setupPOS(app) {
             JsBarcode(tempCanvas, prod.codigoBarras, {
                 format: "EAN13",
                 lineColor: "#000",
-                width: 3.5,     // Barras más gruesas
-                height: 120,    // Altura del código
+                width: 3.5,     // Barras gruesas
+                height: 130,    // Altura del código, más grande
                 displayValue: true, 
                 fontSize: 26,
                 margin: 0
@@ -514,18 +528,17 @@ export function setupPOS(app) {
                 format: "CODE128",
                 lineColor: "#000",
                 width: 3,
-                height: 120,
+                height: 130,
                 displayValue: true, 
                 fontSize: 24,
                 margin: 0
             });
         }
 
-        // Calculamos el centro para pegar el tempCanvas en el canvasFinal
+        // Calculamos el centro para pegar el código debajo del texto
         const xOffset = (canvasFinal.width - tempCanvas.width) / 2;
-        const yOffset = 65; // Lo pegamos a la altura 65, cerquita del texto (que está en 45)
+        const yOffset = 60; // Bien pegado al texto para no desaprovechar espacio
 
-        // Dibujamos el código sobre nuestro fondo blanco
         ctx.drawImage(tempCanvas, xOffset, yOffset);
 
         // Guardamos el nombre del producto en el botón de descarga para el archivo PNG
@@ -537,7 +550,9 @@ export function setupPOS(app) {
     };
 
     if (btnCerrarBarcode) {
-        btnCerrarBarcode.addEventListener('click', () => modalBarcode.classList.remove('visible'));
+        btnCerrarBarcode.addEventListener('click', () => {
+            if(modalBarcode) modalBarcode.classList.remove('visible');
+        });
     }
 
     if (btnDescargarBarcode) {
