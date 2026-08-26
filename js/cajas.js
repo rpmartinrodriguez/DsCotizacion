@@ -33,6 +33,11 @@ export function setupCajas(app) {
     const infoDec = document.getElementById('info-dec');
     const btnCerrarInfo = document.getElementById('btn-cerrar-info');
 
+    // Referencias al Modal de Resumen de Productos
+    const modalResumen = document.getElementById('modal-resumen-productos');
+    const ulResumenProductos = document.getElementById('ul-resumen-productos');
+    const btnCerrarResumen = document.getElementById('btn-cerrar-resumen');
+
     let todasLasCajas = [];
     let statsYaCargadas = false;
     let chartVentasInstancia = null;
@@ -142,7 +147,6 @@ export function setupCajas(app) {
         }
     };
 
-    // Escuchador global de clics para la info (i)
     document.addEventListener('click', (e) => {
         const icon = e.target.closest('.info-icon');
         if (icon) {
@@ -162,6 +166,12 @@ export function setupCajas(app) {
     if (btnCerrarInfo) {
         btnCerrarInfo.addEventListener('click', () => {
             modalInfo.classList.remove('visible');
+        });
+    }
+
+    if (btnCerrarResumen && modalResumen) {
+        btnCerrarResumen.addEventListener('click', () => {
+            modalResumen.classList.remove('visible');
         });
     }
 
@@ -275,15 +285,15 @@ export function setupCajas(app) {
                     <div style="padding: 1.5rem;">
                         <div class="caja-resumen">
                             <div class="caja-resumen-item">
-                                <span>Fondo Inicial</span>
+                                <span>Cambio Inicial</span>
                                 <span>${formatMoneda(fondo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas Efvo. (Neto)</span>
+                                <span>Ventas Efvo.</span>
                                 <span style="color: var(--success-color);">${formatMoneda(efvo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas MP (Neta)</span>
+                                <span>Ventas MP</span>
                                 <div>
                                     <span style="color: var(--success-color); display: block; margin-bottom: 0.3rem;">${formatMoneda(mp)}</span>
                                     <button class="btn-facturado ${btnFacturadoClass}" data-id="${caja.id}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
@@ -292,13 +302,16 @@ export function setupCajas(app) {
                                 </div>
                             </div>
                             <div class="caja-resumen-item" style="border-left: 2px solid var(--border-color); padding-left: 1rem;">
-                                <span>Efectivo en Caja</span>
+                                <span>Efectivo Físico</span>
                                 <span style="color: var(--primary-color);">${formatMoneda(cajaFisica)}</span>
                             </div>
                         </div>
 
                         <div class="ticket-list">
-                            <h3 style="font-size: 1rem; margin-top: 0; margin-bottom: 1rem;">Detalle de Ventas</h3>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                                <h3 style="font-size: 1rem; margin: 0;">Detalle de Ventas</h3>
+                                <button class="btn-resumen-productos btn-secondary" data-id="${caja.id}" style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.85rem; border-color: #0ea5e9; color: #0ea5e9;">📊 Ver Resumen de Productos</button>
+                            </div>
                             <div id="tickets-${caja.id}">
                                 <p class="text-light" style="font-size: 0.9rem;">Cargando tickets...</p>
                             </div>
@@ -391,7 +404,59 @@ export function setupCajas(app) {
         }
     }
 
+    // Nuevo: Función para agrupar y mostrar los productos de un turno
+    async function mostrarResumenProductos(cajaId) {
+        if (!ulResumenProductos || !modalResumen) return;
+
+        modalResumen.classList.add('visible');
+        ulResumenProductos.innerHTML = '<p class="text-light" style="text-align: center; padding: 2rem;">Calculando resumen...</p>';
+
+        try {
+            const q = query(ventasCollection, where('cajaId', '==', cajaId));
+            const querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+                ulResumenProductos.innerHTML = '<p class="text-light" style="text-align: center; padding: 2rem;">No hay productos vendidos en este turno.</p>';
+                return;
+            }
+
+            // Agrupador de cantidades
+            let conteoProductos = {};
+            
+            querySnapshot.forEach(docSnap => {
+                const venta = docSnap.data();
+                (venta.items || []).forEach(item => {
+                    const cant = parseInt(item.cantidad) || 0;
+                    if (!conteoProductos[item.nombre]) {
+                        conteoProductos[item.nombre] = 0;
+                    }
+                    conteoProductos[item.nombre] += cant;
+                });
+            });
+
+            // Convertir objeto en array y ordenar de mayor a menor cantidad
+            let arrProductos = Object.entries(conteoProductos)
+                .map(([nombre, cantidad]) => ({ nombre, cantidad }))
+                .sort((a, b) => b.cantidad - a.cantidad);
+
+            ulResumenProductos.innerHTML = '';
+            arrProductos.forEach((prod, idx) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span><strong>#${idx + 1}</strong> ${prod.nombre}</span>
+                    <span style="color:#0ea5e9; font-weight:bold;">${prod.cantidad} u.</span>
+                `;
+                ulResumenProductos.appendChild(li);
+            });
+
+        } catch (error) {
+            console.error("Error al generar resumen:", error);
+            ulResumenProductos.innerHTML = '<p style="color: var(--danger-color); text-align: center;">Error al calcular el resumen.</p>';
+        }
+    }
+
     listaCajasContainer.addEventListener('click', async (e) => {
+        // Intercepta el botón de facturado
         if (e.target.closest('.btn-facturado')) {
             const btn = e.target.closest('.btn-facturado');
             const cajaId = btn.dataset.id;
@@ -409,6 +474,15 @@ export function setupCajas(app) {
             return; 
         }
 
+        // Intercepta el botón de Resumen de Productos
+        if (e.target.closest('.btn-resumen-productos')) {
+            const btn = e.target.closest('.btn-resumen-productos');
+            const cajaId = btn.dataset.id;
+            mostrarResumenProductos(cajaId);
+            return;
+        }
+
+        // Intercepta el acordeón general
         const header = e.target.closest('.caja-header');
         if (!header) return;
 
@@ -624,7 +698,6 @@ export function setupCajas(app) {
                 // Calcular PEPS (Vida Útil)
                 if (v.fecha && v.loteFechaElaboracion) {
                     let fVenta = v.fecha.toDate();
-                    // Firebase a veces guarda la fecha del lote directo como string
                     let fElab = new Date(v.loteFechaElaboracion); 
                     if (!isNaN(fElab.getTime())) {
                         let diferenciaTiempo = fVenta.getTime() - fElab.getTime();
