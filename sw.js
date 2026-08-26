@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-app-dinamico-v1.1';
+const CACHE_NAME = 'dulce-app-dinamico-v1.2';
 
 // Recursos básicos iniciales (se guardan al instalar, pero luego se actualizan solos)
 const ASSETS_TO_CACHE = [
