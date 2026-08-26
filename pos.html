@@ -54,6 +54,14 @@
         .admin-open div.admin-only { display: block !important; }
 
         .canvas-preview { max-width: 100%; border: 1px dashed #ccc; border-radius: 4px; margin: 0 auto; display: block; }
+        
+        /* Estilos para lista de tickets (Auditoría Cierre) */
+        .ticket-revision-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid #e2e8f0; background: #fff; }
+        .ticket-revision-item:nth-child(even) { background: #f8fafc; }
+        .ticket-revision-info { flex-grow: 1; }
+        .ticket-tag-metodo { font-size: 0.75rem; font-weight: bold; padding: 0.2rem 0.5rem; border-radius: 4px; margin-left: 0.5rem; }
+        .tag-efectivo { background: #dcfce3; color: #15803d; }
+        .tag-mp { background: #e0f2fe; color: #0369a1; }
     </style>
 </head>
 <body>
@@ -109,20 +117,46 @@
 
         <main>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <!-- Título Elegante Rosa -->
                 <h1 style="margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900;">Mostrador</h1>
             </div>
 
-            <!-- PANTALLA 1: APERTURA DE CAJA -->
+            <!-- PANTALLA 1: APERTURA DE CAJA (ACTUALIZADA CON TURNOS) -->
             <section id="pantalla-apertura" class="card" style="display: none; text-align: center; max-width: 500px; margin: 0 auto;">
-                <h2 class="card__title">Apertura de Caja</h2>
+                <h2 class="card__title">Apertura de Turno</h2>
                 <p class="text-light" style="margin-bottom: 1.5rem;">
                     Usuario activo: <strong id="usuario-activo-nombre">Cargando...</strong>
                 </p>
-                <div class="form-group" style="text-align: left; margin-bottom: 1.5rem;">
-                    <label for="fondo-caja-input">Fondo de Caja Inicial ($)</label>
-                    <input type="number" id="fondo-caja-input" placeholder="Ej: 5000" min="0" step="100">
+                
+                <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                    <label style="color: var(--primary-color); font-weight: bold;">Cajero / Responsable</label>
+                    <input type="text" id="apertura-nombre-cajero" placeholder="Ej: Juan Pérez">
                 </div>
+
+                <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
+                    <label style="color: var(--primary-color); font-weight: bold;">Turno</label>
+                    <select id="apertura-turno-select" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem;">
+                        <option value="Mañana">Mañana (Apertura local)</option>
+                        <option value="Tarde">Tarde (Cambio de turno)</option>
+                    </select>
+                </div>
+
+                <!-- Panel Oculto: Detector de Saldo Anterior -->
+                <div id="panel-herencia-saldo" style="display: none; background: #fffbeb; padding: 1rem; border: 1px solid #fde68a; border-radius: 8px; margin-bottom: 1rem; text-align: left;">
+                    <p style="margin-top: 0; margin-bottom: 0.5rem; color: #b45309; font-size: 0.95rem;">
+                        <strong>⚠️ Saldo de caja anterior:</strong> <span id="saldo-anterior-detectado" style="font-size: 1.1rem; font-weight: 900;">$0.00</span>
+                    </p>
+                    <label style="font-size: 0.85rem; color: #92400e; font-weight: bold;">¿El dueño retiró esta plata de la caja?</label>
+                    <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
+                        <label style="cursor: pointer; font-size: 0.9rem; color: #92400e;"><input type="radio" name="retiro_dinero" value="si" checked> Sí, la caja quedó vacía</label>
+                        <label style="cursor: pointer; font-size: 0.9rem; color: #92400e;"><input type="radio" name="retiro_dinero" value="no"> No, la plata quedó adentro</label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="text-align: left; margin-bottom: 1.5rem;">
+                    <label style="color: var(--primary-color); font-weight: bold;">Cambio en caja ($) <small style="color: #64748b; font-weight: normal;">(Fondo Inicial)</small></label>
+                    <input type="number" id="fondo-caja-input" placeholder="Ej: 5000" min="0" step="10">
+                </div>
+
                 <button id="btn-abrir-caja" class="btn-primary">Abrir Caja y Comenzar Turno</button>
             </section>
 
@@ -293,24 +327,75 @@
         </div>
     </div>
 
-    <!-- MODAL: CIERRE DE CAJA -->
+    <!-- MODAL: CIERRE DE CAJA (ACTUALIZADO PRE-CIERRE CIEGO) -->
     <div id="modal-cierre" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title">Cierre de Caja Diario</h2>
-            <div class="calculo-resumen" style="margin-top: 1.5rem;">
-                <div class="calculo-fila"><span>Fondo Inicial:</span><span id="cierre-fondo">$0.00</span></div>
-                <div class="calculo-fila"><span>+ Ventas Efectivo:</span><span id="cierre-efectivo" style="color: var(--success-color); font-weight: bold;">$0.00</span></div>
-                <div class="calculo-fila"><span>Ventas MercadoPago:</span><span id="cierre-mp" style="color: var(--success-color); font-weight: bold;">$0.00</span></div>
-                <hr class="calculo-divisor" style="margin: 1rem 0;">
-                <div class="calculo-fila costo-produccion"><span>Efectivo Total Esperado:</span><span id="cierre-total-caja" style="color: var(--primary-color); font-weight: bold;">$0.00</span></div>
+        <div class="modal-content card" style="max-width: 450px;">
+            <h2 class="card__title">Resumen de Turno</h2>
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="color: var(--primary-color); font-weight: bold;">Responsable del Cierre</label>
+                <input type="text" id="cierre-nombre-cajero" placeholder="Ej: Tu nombre">
             </div>
-            <div class="modal-actions" style="justify-content: space-between; margin-top: 2rem;">
+
+            <div class="calculo-resumen" style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;">
+                <div class="calculo-fila"><span>Cambio Inicial:</span><span id="cierre-fondo">$0.00</span></div>
+                <div class="calculo-fila"><span>+ Ventas Efectivo:</span><span id="cierre-efectivo" style="color: var(--success-color); font-weight: bold;">$0.00</span></div>
+                <hr class="calculo-divisor" style="margin: 0.8rem 0;">
+                <div class="calculo-fila costo-produccion"><span style="font-size: 1.1rem; color: #831843;">Efectivo a Rendir:</span><span id="cierre-total-caja" style="color: #be185d; font-weight: 900; font-size: 1.3rem;">$0.00</span></div>
+                
+                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #cbd5e1;">
+                    <div class="calculo-fila"><span>Transferencias/MP:</span><span id="cierre-mp" style="color: #0284c7; font-weight: bold;">$0.00</span></div>
+                </div>
+            </div>
+            
+            <button id="btn-revisar-tickets" class="btn-secondary" style="width: 100%; margin-top: 1rem; padding: 0.8rem; font-weight: bold; border-color: #64748b; color: #64748b;">📄 Revisar y Editar Movimientos</button>
+
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
                 <button id="btn-cancelar-cierre" class="btn-secondary" style="width: 48%;">Volver</button>
-                <button id="btn-confirmar-cierre" class="btn-primary" style="width: 48%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">Cerrar Turno</button>
+                <button id="btn-confirmar-cierre" class="btn-primary" style="width: 48%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border:none;">Confirmar Cierre</button>
             </div>
         </div>
     </div>
 
+    <!-- MODAL: AUDITORÍA DE TICKETS (NUEVO) -->
+    <div id="modal-revision-tickets" class="modal-overlay" style="z-index: 1500;">
+        <div class="modal-content card" style="max-width: 600px;">
+            <h2 class="card__title" style="margin-bottom: 0.5rem;">Auditoría de Movimientos</h2>
+            <p class="text-light" style="font-size:0.9rem; margin-top: 0; margin-bottom: 1rem;">Revisá los tickets del turno. Requiere clave de Admin para editar.</p>
+            
+            <div id="lista-tickets-revision" style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <p class="text-light" style="text-align: center; padding: 2rem;">Cargando tickets...</p>
+            </div>
+
+            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
+                <button id="btn-cerrar-revision" class="btn-primary" style="width: auto;">Listo, volver al cierre</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR MÉTODO DE PAGO (NUEVO) -->
+    <div id="modal-editar-ticket" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content card" style="max-width: 350px;">
+            <h2 class="card__title" style="color: #eab308;">Corregir Ticket</h2>
+            <p class="text-light" style="font-size: 0.85rem;">Monto: <strong id="editar-ticket-monto-label">$0.00</strong></p>
+            <input type="hidden" id="edit-ticket-id">
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="font-weight: bold; color: var(--text-main);">Método Real Cobrado</label>
+                <select id="edit-ticket-metodo" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; margin-top: 0.5rem;">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="MercadoPago">MercadoPago</option>
+                </select>
+            </div>
+            
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
+                <button id="btn-cancelar-edit-ticket" class="btn-secondary" style="width: 48%;">Cancelar</button>
+                <button id="btn-guardar-edit-ticket" class="btn-primary" style="width: 48%; background: #eab308; border: none;">Guardar Arreglo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALES VIEJOS DE STOCK Y BARRAS (SIN CAMBIOS) -->
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
             <h2 class="card__title">Ajustar Ficha de Producto</h2>
@@ -362,7 +447,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE DESCARGA DE CÓDIGO DE BARRAS -->
     <div id="modal-barcode" class="modal-overlay">
         <div class="modal-content card" style="max-width: 450px; text-align: center;">
             <h2 class="card__title">Etiqueta 50x30</h2>
@@ -378,10 +462,11 @@
         </div>
     </div>
 
+    <!-- SCRIPT VERSIONADO PARA EVITAR CACHÉ -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPOS } from './js/pos.js';
+        import { setupPOS } from './js/pos.js?v=20';
         try {
             const app = initializeApp(firebaseConfig);
             setupPOS(app);
