@@ -22,13 +22,13 @@ export function setupPOS(app) {
 
     const usuarioNombreEl = document.getElementById('usuario-activo-nombre');
     
-    // Nuevos campos de Apertura
     const aperturaNombreCajero = document.getElementById('apertura-nombre-cajero');
     const aperturaTurnoSelect = document.getElementById('apertura-turno-select');
     const panelHerencia = document.getElementById('panel-herencia-saldo');
     const saldoAnteriorDetectado = document.getElementById('saldo-anterior-detectado');
     const fondoCajaInput = document.getElementById('fondo-caja-input');
     const btnAbrirCaja = document.getElementById('btn-abrir-caja');
+    const radiosRetiro = document.querySelectorAll('input[name="retiro_dinero"]');
     
     const btnIniciarCierre = document.getElementById('btn-iniciar-cierre');
     const listaProductosPOS = document.getElementById('lista-productos-pos');
@@ -61,7 +61,6 @@ export function setupPOS(app) {
     const btnConfirmarCierre = document.getElementById('btn-confirmar-cierre');
     const btnRevisarTickets = document.getElementById('btn-revisar-tickets');
 
-    // Modales de Revisión y Edición
     const modalRevision = document.getElementById('modal-revision-tickets');
     const listaTicketsRevision = document.getElementById('lista-tickets-revision');
     const btnCerrarRevision = document.getElementById('btn-cerrar-revision');
@@ -86,7 +85,6 @@ export function setupPOS(app) {
     const inputPromoFrase = document.getElementById('promo-frase');
     const btnDescargarPromo = document.getElementById('btn-descargar-promo');
 
-    // Modales Stock / Barras
     const modalStock = document.getElementById('modal-stock-detalle');
     const modalProdId = document.getElementById('modal-prod-id');
     const modalProdNombre = document.getElementById('modal-prod-nombre');
@@ -117,9 +115,8 @@ export function setupPOS(app) {
     let margenGlobal = 0; 
     let currentBarcodeProduct = null;
     let totalVentaActual = 0;
-    let saldoTurnoAnteriorDetectado = 0; // Para heredar saldo
+    let saldoTurnoAnteriorDetectado = 0; 
 
-    // Helpers
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const formatFecha = (timestamp) => {
         if (!timestamp || !timestamp.toDate) return '';
@@ -133,7 +130,6 @@ export function setupPOS(app) {
         return `${y}-${m}-${d}`;
     };
 
-    // Cascada Precios
     const obtenerCostoBase = (receta) => {
         if (receta.costoPorcion && receta.costoPorcion > 0) return receta.costoPorcion;
         let costoTotal = 0;
@@ -156,7 +152,6 @@ export function setupPOS(app) {
         return Math.round(precioCrudo / 10) * 10;
     };
 
-    // --- CONFIG GLOBAL ---
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
         if (docSnap.exists()) {
             margenGlobal = docSnap.data().margenGlobal || 0;
@@ -194,7 +189,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- AUTENTICACIÓN ---
     onAuthStateChanged(auth, user => {
         if (user) {
             currentUser = user;
@@ -233,12 +227,12 @@ export function setupPOS(app) {
                 if (pantallaStock) pantallaStock.style.display = 'none';
                 if (pantallaPromociones) pantallaPromociones.style.display = 'none';
                 if (pantallaApertura) pantallaApertura.style.display = 'block';
-                buscarSaldoTurnoAnterior(); // Nuevo: Buscar plata que haya quedado
+                buscarSaldoTurnoAnterior(); 
             }
         });
     };
 
-    // --- LÓGICA APERTURA Y TURNOS ---
+    // --- LÓGICA APERTURA Y TURNOS (CON BLOQUEO INTELIGENTE) ---
     const buscarSaldoTurnoAnterior = async () => {
         try {
             const qLast = query(cajasCollection, orderBy('fechaApertura', 'desc'), limit(1));
@@ -246,7 +240,6 @@ export function setupPOS(app) {
             if (!querySnap.empty) {
                 const ultimaCaja = querySnap.docs[0].data();
                 if (ultimaCaja.estado === 'cerrada') {
-                    // El dinero físico que quedó es Fondo Inicial + Ventas en Efectivo
                     saldoTurnoAnteriorDetectado = (ultimaCaja.fondoInicial || 0) + (ultimaCaja.totalEfectivo || 0);
                 } else {
                     saldoTurnoAnteriorDetectado = 0;
@@ -254,6 +247,27 @@ export function setupPOS(app) {
             }
         } catch (err) { console.error("Error buscando saldo anterior", err); }
     };
+
+    const actualizarEstadoFondoInput = () => {
+        const retiroPlata = document.querySelector('input[name="retiro_dinero"]:checked')?.value;
+        if (aperturaTurnoSelect.value === 'Tarde' && saldoTurnoAnteriorDetectado > 0 && retiroPlata === 'no') {
+            // Se bloquea el campo y se fuerza el saldo heredado
+            fondoCajaInput.value = saldoTurnoAnteriorDetectado;
+            fondoCajaInput.disabled = true;
+            fondoCajaInput.style.backgroundColor = '#f1f5f9';
+        } else {
+            // Se libera el campo para carga manual
+            fondoCajaInput.disabled = false;
+            fondoCajaInput.style.backgroundColor = '#ffffff';
+            if (fondoCajaInput.value == saldoTurnoAnteriorDetectado) {
+                fondoCajaInput.value = '';
+            }
+        }
+    };
+
+    if (radiosRetiro.length > 0) {
+        radiosRetiro.forEach(radio => radio.addEventListener('change', actualizarEstadoFondoInput));
+    }
 
     if (aperturaTurnoSelect) {
         aperturaTurnoSelect.addEventListener('change', () => {
@@ -263,26 +277,32 @@ export function setupPOS(app) {
             } else {
                 panelHerencia.style.display = 'none';
             }
+            actualizarEstadoFondoInput();
         });
     }
 
     if (btnAbrirCaja) {
         btnAbrirCaja.addEventListener('click', async () => {
-            const nombreIngresado = aperturaNombreCajero.value.trim() || userName;
+            const nombreIngresado = aperturaNombreCajero.value;
+            if (!nombreIngresado) {
+                alert("Por favor, seleccione quién abre la caja.");
+                return;
+            }
+
             const turno = aperturaTurnoSelect.value;
             let fondoTipeado = parseFloat(fondoCajaInput.value) || 0;
             
-            // Si es turno tarde y el dueño NO retiró el dinero, el saldo anterior se hereda
+            // Garantía de seguridad extra
             let retiroPlata = document.querySelector('input[name="retiro_dinero"]:checked')?.value || 'si';
             if (turno === 'Tarde' && retiroPlata === 'no' && panelHerencia.style.display === 'block') {
-                fondoTipeado += saldoTurnoAnteriorDetectado;
+                fondoTipeado = saldoTurnoAnteriorDetectado;
             }
 
             try {
                 btnAbrirCaja.disabled = true;
                 await addDoc(cajasCollection, {
                     usuarioId: currentUser.uid,
-                    usuarioNombre: nombreIngresado, // Guardamos quién abrió
+                    usuarioNombre: nombreIngresado,
                     turno: turno,
                     fechaApertura: Timestamp.now(),
                     fondoInicial: fondoTipeado,
@@ -291,7 +311,11 @@ export function setupPOS(app) {
                     estado: 'abierta'
                 });
                 
-                if (fondoCajaInput) fondoCajaInput.value = '';
+                if (fondoCajaInput) {
+                    fondoCajaInput.value = '';
+                    fondoCajaInput.disabled = false;
+                    fondoCajaInput.style.backgroundColor = '#ffffff';
+                }
                 if (aperturaNombreCajero) aperturaNombreCajero.value = '';
                 btnAbrirCaja.disabled = false;
             } catch (e) {
@@ -301,7 +325,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- NAVEGACIÓN ---
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
@@ -374,9 +397,6 @@ export function setupPOS(app) {
         }
     };
 
-    // ==========================================
-    // CAJA REGISTRADORA / MOSTRADOR
-    // ==========================================
     const renderizarProductosPOS = (productos) => {
         if (!listaProductosPOS) return;
         listaProductosPOS.innerHTML = '';
@@ -560,9 +580,6 @@ export function setupPOS(app) {
         });
     }
 
-    // ==========================================
-    // COBRO DE VENTA
-    // ==========================================
     const calcularVuelto = () => {
         if (!metodoPagoSeleccionado) return;
         let mp = parseFloat(inputCobroMP.value) || 0;
@@ -703,7 +720,6 @@ export function setupPOS(app) {
                     items: itemsParaGuardar, vendedor: cajaActiva.usuarioNombre || userName
                 });
 
-                // Actualizar saldos de caja en tiempo real
                 cajaActiva.totalEfectivo = (cajaActiva.totalEfectivo || 0) + efectivoReal;
                 cajaActiva.totalMercadoPago = (cajaActiva.totalMercadoPago || 0) + mpReal;
                 await updateDoc(doc(db, 'cajas', cajaActiva.id), {
@@ -724,9 +740,7 @@ export function setupPOS(app) {
         });
     }
 
-    // ==========================================
-    // PRE-CIERRE, REVISIÓN Y CIERRE DEFINITIVO
-    // ==========================================
+    // --- Cierre y Revisión ---
     if (btnIniciarCierre) {
         btnIniciarCierre.addEventListener('click', () => {
             if (!cajaActiva) return;
@@ -738,7 +752,11 @@ export function setupPOS(app) {
             if (cierreEfectivo) cierreEfectivo.textContent = formatMoneda(efvo);
             if (cierreMP) cierreMP.textContent = formatMoneda(mp);
             if (cierreTotalCaja) cierreTotalCaja.textContent = formatMoneda(fondo + efvo);
-            if (cierreNombreCajero) cierreNombreCajero.value = cajaActiva.usuarioNombre || '';
+            
+            // Sugiere a quien cerró
+            if (cierreNombreCajero) {
+                cierreNombreCajero.value = cajaActiva.usuarioNombre === 'Ceci' || cajaActiva.usuarioNombre === 'Eve' ? cajaActiva.usuarioNombre : '';
+            }
 
             if (modalCierre) modalCierre.classList.add('visible');
         });
@@ -748,7 +766,6 @@ export function setupPOS(app) {
         if (modalCierre) modalCierre.classList.remove('visible');
     });
 
-    // --- REVISIÓN Y EDICIÓN DE TICKETS ---
     if (btnRevisarTickets) {
         btnRevisarTickets.addEventListener('click', async () => {
             if (!cajaActiva) return;
@@ -798,14 +815,12 @@ export function setupPOS(app) {
     if (btnCerrarRevision) {
         btnCerrarRevision.addEventListener('click', () => {
             modalRevision.classList.remove('visible');
-            // Refrescar los números del pre-cierre por si editaron algo
             if (cierreEfectivo) cierreEfectivo.textContent = formatMoneda(cajaActiva.totalEfectivo || 0);
             if (cierreMP) cierreMP.textContent = formatMoneda(cajaActiva.totalMercadoPago || 0);
             if (cierreTotalCaja) cierreTotalCaja.textContent = formatMoneda((cajaActiva.fondoInicial || 0) + (cajaActiva.totalEfectivo || 0));
         });
     }
 
-    // Proceso de edición blindada
     if (listaTicketsRevision) {
         listaTicketsRevision.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-editar-ticket-auditoria');
@@ -817,7 +832,6 @@ export function setupPOS(app) {
                 return;
             }
 
-            // Si es correcto, abrimos el modal de edición
             editTicketId.value = btn.dataset.id;
             editarTicketMontoLabel.textContent = formatMoneda(parseFloat(btn.dataset.total));
             editTicketMetodo.value = btn.dataset.metodo === 'Ambos' ? 'Efectivo' : btn.dataset.metodo;
@@ -857,14 +871,12 @@ export function setupPOS(app) {
                         difEfectivo = -monto; difMP = monto;
                     }
 
-                    // Actualizar el Ticket
                     transaction.update(ticketRef, { 
                         metodoPago: nuevoMetodo, 
                         pagoEfectivo: nuevoMetodo === 'Efectivo' ? monto : 0,
                         pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? monto : 0
                     });
 
-                    // Actualizar la Caja Activa
                     const cajaRef = doc(db, 'cajas', cajaActiva.id);
                     const nuevaCajaEfvo = (cajaActiva.totalEfectivo || 0) + difEfectivo;
                     const nuevaCajaMP = (cajaActiva.totalMercadoPago || 0) + difMP;
@@ -874,14 +886,12 @@ export function setupPOS(app) {
                         totalMercadoPago: nuevaCajaMP
                     });
 
-                    // Sincronizar variable local
                     cajaActiva.totalEfectivo = nuevaCajaEfvo;
                     cajaActiva.totalMercadoPago = nuevaCajaMP;
                 });
 
                 alert("Ticket corregido con éxito.");
                 modalEditarTicket.classList.remove('visible');
-                // Disparar click en "Revisar" para recargar la lista
                 btnRevisarTickets.click();
 
             } catch (err) {
@@ -894,11 +904,14 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Cierre Final ---
     if (btnConfirmarCierre) {
         btnConfirmarCierre.addEventListener('click', async () => {
             if (!cajaActiva) return;
-            const quienCierra = cierreNombreCajero.value.trim() || userName;
+            const quienCierra = cierreNombreCajero.value;
+            if (!quienCierra) {
+                alert("Por favor, seleccione quién cierra la caja.");
+                return;
+            }
 
             btnConfirmarCierre.disabled = true;
             btnConfirmarCierre.textContent = 'Cerrando...';
@@ -922,8 +935,306 @@ export function setupPOS(app) {
         });
     }
 
-    // ... Resto de la lógica (Descarga de Promo, Inventario, Etiquetas) se mantiene intacta ...
-    
-    // (Funciones como renderizarInventario, buscadorInventario, tablaInventario.click, abrirModalStock, etc.
-    // ya están incluidas arriba y funcionan igual de bien.)
+    // --- Modales Stock y Códigos de Barras ---
+    const drawBarcodeCanvas = () => {
+        if(!currentBarcodeProduct) return;
+        const prod = currentBarcodeProduct;
+        
+        const canvasFinal = document.getElementById("barcode-canvas-descarga");
+        canvasFinal.width = 400;
+        canvasFinal.height = 240;
+        const ctx = canvasFinal.getContext("2d");
+        
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, canvasFinal.width, canvasFinal.height);
+        ctx.fillStyle = "black";
+        ctx.textAlign = "center";
+        
+        let fontSize = 28;
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        while (ctx.measureText(prod.nombreTorta).width > 360 && fontSize > 14) {
+            fontSize -= 2;
+            ctx.font = `bold ${fontSize}px sans-serif`;
+        }
+        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 45); 
+
+        const tempCanvas = document.createElement("canvas");
+        try {
+            JsBarcode(tempCanvas, prod.codigoBarras, { format: "EAN13", lineColor: "#000", width: 3, height: 120, displayValue: true, fontSize: 24, margin: 10 });
+        } catch(e) {
+            JsBarcode(tempCanvas, prod.codigoBarras, { format: "CODE128", lineColor: "#000", width: 2.5, height: 120, displayValue: true, fontSize: 22, margin: 10 });
+        }
+
+        ctx.drawImage(tempCanvas, (canvasFinal.width - tempCanvas.width) / 2, 60);
+    };
+
+    const abrirModalBarcode = (prod) => {
+        currentBarcodeProduct = prod;
+        drawBarcodeCanvas();
+        if (btnDescargarBarcode) btnDescargarBarcode.dataset.nombre = prod.nombreTorta;
+        if (modalBarcode) modalBarcode.classList.add('visible');
+    };
+
+    if (btnCerrarBarcode) {
+        btnCerrarBarcode.addEventListener('click', () => {
+            if(modalBarcode) modalBarcode.classList.remove('visible');
+        });
+    }
+
+    if (btnDescargarBarcode) {
+        btnDescargarBarcode.addEventListener('click', () => {
+            const canvas = document.getElementById("barcode-canvas-descarga");
+            const link = document.createElement('a');
+            link.download = `Etiqueta-${btnDescargarBarcode.dataset.nombre || 'etiqueta'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    if (btnDescargarPromo) {
+        btnDescargarPromo.addEventListener('click', () => {
+            const tipo = inputPromoTipo ? (inputPromoTipo.value || 'OFERTA') : 'OFERTA';
+            const prod = selectPromoProd ? selectPromoProd.value : '';
+            const frase = inputPromoFrase ? (inputPromoFrase.value || '') : '';
+            
+            const canvas = document.getElementById('promo-canvas-descarga');
+            canvas.width = 400;  canvas.height = 240; 
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "black"; ctx.lineWidth = 6; ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+            ctx.textAlign = "center"; ctx.fillStyle = "black";
+            
+            ctx.font = "bold 60px sans-serif"; ctx.fillText(tipo.toUpperCase(), canvas.width / 2, 85);
+            let fontSize = 36; ctx.font = `bold ${fontSize}px sans-serif`;
+            while (ctx.measureText(prod).width > 380 && fontSize > 16) { fontSize -= 2; ctx.font = `bold ${fontSize}px sans-serif`; }
+            ctx.fillText(prod, canvas.width / 2, 145);
+            ctx.font = "bold 24px sans-serif"; ctx.fillText(frase, canvas.width / 2, 205);
+
+            const link = document.createElement('a');
+            link.download = `Promo-${tipo}-${prod.substring(0,10)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    }
+
+    const renderizarInventario = (productos) => {
+        if (!tablaInventario) return;
+        tablaInventario.innerHTML = '';
+        if (productos.length === 0) {
+            tablaInventario.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem;">No hay recetas dadas de alta en el sistema.</td></tr>';
+            return;
+        }
+
+        productos.forEach(prod => {
+            const costo = prod.costoBaseCalculado || 0;
+            const stock = prod.stockMostrador || 0;
+            const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
+            const margenMostrado = tieneMargenIndiv ? parseFloat(prod.margenIndividual) : margenGlobal;
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td data-label="Categoría"><span class="categoria-tag">${prod.categoria || 'Sin Categoría'}</span></td>
+                <td data-label="Producto"><strong>${prod.nombreTorta}</strong></td>
+                <td data-label="Costo Base">${formatMoneda(costo)}</td>
+                <td class="admin-only" data-label="% Ganancia">${margenMostrado}% <small style="color:var(--text-light);">${tieneMargenIndiv ? '(Indiv)' : '(Global)'}</small></td>
+                <td data-label="Precio Venta" style="font-weight: bold; color: var(--primary-color);">${formatMoneda(calcularPrecioVenta(prod))}</td>
+                <td data-label="Stock" style="text-align: center; color: ${stock > 0 ? 'var(--text-main)' : 'var(--danger-color)'}"><strong>${stock}</strong> u.</td>
+                <td data-label="Acciones" style="text-align: center;">
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                        <button class="btn-primary btn-editar-prod" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;">📝 Stock</button>
+                        <button class="btn-secondary btn-ver-barcode" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;">🖨️ Barras</button>
+                        <button class="btn-secondary btn-editar-margen admin-only" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem; border-color: #6366f1; color: #6366f1;">⚙️ %</button>
+                    </div>
+                </td>
+            `;
+            tablaInventario.appendChild(tr);
+        });
+    };
+
+    if (buscadorInventario) {
+        buscadorInventario.addEventListener('input', (e) => {
+            const termino = e.target.value.toLowerCase();
+            renderizarInventario(productosDisponibles.filter(p => 
+                (p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino)) || 
+                (p.categoria && p.categoria.toLowerCase().includes(termino))
+            ));
+        });
+    }
+
+    if (tablaInventario) {
+        tablaInventario.addEventListener('click', async (e) => {
+            const btnStock = e.target.closest('.btn-editar-prod');
+            if (btnStock) {
+                const prod = productosDisponibles.find(p => p.id === btnStock.dataset.id);
+                if (prod) abrirModalStock(prod);
+                return;
+            }
+
+            const btnBarcode = e.target.closest('.btn-ver-barcode');
+            if (btnBarcode) {
+                const prod = productosDisponibles.find(p => p.id === btnBarcode.dataset.id);
+                if (prod) {
+                    if (!prod.codigoBarras) {
+                        let num12 = String(Date.now()).substring(0, 12); let sum = 0;
+                        for(let i = 0; i < 12; i++) sum += parseInt(num12[i]) * (i % 2 === 1 ? 3 : 1);
+                        const nuevoCodigo = num12 + String((10 - (sum % 10)) % 10); 
+                        try { await updateDoc(doc(db, 'recetas', prod.id), { codigoBarras: nuevoCodigo }); prod.codigoBarras = nuevoCodigo; } catch(err) {}
+                    }
+                    abrirModalBarcode(prod);
+                }
+                return;
+            }
+
+            const btnMargen = e.target.closest('.btn-editar-margen');
+            if (btnMargen) {
+                const prod = productosDisponibles.find(p => p.id === btnMargen.dataset.id);
+                if (prod) {
+                    const actual = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
+                    const nuevo = prompt(`Ingrese el % de ganancia para "${prod.nombreTorta}"\n(Deje vacío para usar el % Global):`, actual);
+                    if (nuevo !== null) {
+                        try {
+                            const docRef = doc(db, 'recetas', prod.id);
+                            if (nuevo.trim() === '') await updateDoc(docRef, { margenIndividual: null });
+                            else {
+                                const val = parseFloat(nuevo);
+                                if (!isNaN(val) && val >= 0) await updateDoc(docRef, { margenIndividual: val });
+                                else alert("Número inválido.");
+                            }
+                        } catch (err) { alert("Error al actualizar."); }
+                    }
+                }
+            }
+        });
+    }
+
+    if (modalProdTipoMov) {
+        modalProdTipoMov.addEventListener('change', (e) => {
+            if (loteFieldsContainer) loteFieldsContainer.style.display = e.target.value === 'SUMAR' ? 'flex' : 'none';
+        });
+    }
+
+    const abrirModalStock = async (prod) => {
+        if (modalProdId) modalProdId.value = prod.id;
+        if (modalProdNombre) modalProdNombre.value = prod.nombreTorta;
+        if (modalProdGananciaIndiv) modalProdGananciaIndiv.value = prod.margenIndividual !== undefined && prod.margenIndividual !== null ? prod.margenIndividual : '';
+        if (modalProdStockActual) modalProdStockActual.textContent = prod.stockMostrador || '0';
+        
+        if (modalProdTipoMov) modalProdTipoMov.value = 'SUMAR';
+        if (loteFieldsContainer) loteFieldsContainer.style.display = 'flex'; 
+        if (modalProdCantMov) modalProdCantMov.value = '0';
+        if (modalProdMotivo) modalProdMotivo.value = '';
+        
+        const hoy = new Date(); if (modalProdLoteElab) modalProdLoteElab.value = dateToYMD(hoy);
+        const vto = new Date(); vto.setDate(vto.getDate() + 15);
+        if (modalProdLoteVto) modalProdLoteVto.value = dateToYMD(vto);
+
+        if (modalProdAuditoria) modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Cargando historial...</p>';
+        await cargarAuditoriaProducto(prod.id);
+        if (modalStock) modalStock.classList.add('visible');
+    };
+
+    const cargarAuditoriaProducto = async (productoId) => {
+        try {
+            const q = query(auditoriaCollection, where('productoId', '==', productoId));
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                if (modalProdAuditoria) modalProdAuditoria.innerHTML = '<p class="text-light" style="font-size: 0.85rem; text-align: center;">Sin movimientos registrados.</p>';
+                return;
+            }
+
+            let logs = [];
+            querySnapshot.forEach(d => logs.push(d.data()));
+            logs.sort((a, b) => (b.fecha?.seconds || 0) - (a.fecha?.seconds || 0));
+
+            if (modalProdAuditoria) modalProdAuditoria.innerHTML = '';
+            logs.forEach(log => {
+                const logDiv = document.createElement('div');
+                logDiv.className = 'log-item';
+                let tipoSpan = log.tipo === 'SUMA' ? `<span class="log-tipo-sumar">[+${log.cantidad}]</span>` : `<span class="log-tipo-restar">[-${log.cantidad}]</span>`;
+                let infoLote = log.loteVto ? ` (Vto: ${log.loteVto})` : '';
+
+                logDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
+                        <span>${tipoSpan} ${log.motivo || 'Ajuste'}${infoLote}</span>
+                        <span style="color: var(--text-light); font-size: 0.75rem;">${formatFecha(log.fecha)}</span>
+                    </div>
+                    <div style="color: var(--text-light); font-size: 0.75rem;">👤 ${log.usuario} | Stock resultante: ${log.stockResultante}</div>
+                `;
+                if (modalProdAuditoria) modalProdAuditoria.appendChild(logDiv);
+            });
+        } catch (error) {
+            if (modalProdAuditoria) modalProdAuditoria.innerHTML = '<p class="text-light" style="text-align:center;">Error al cargar historial.</p>';
+        }
+    };
+
+    if (btnCancelarStock) btnCancelarStock.addEventListener('click', () => modalStock.classList.remove('visible'));
+
+    if (btnGuardarStock) {
+        btnGuardarStock.addEventListener('click', async () => {
+            const id = modalProdId ? modalProdId.value : null;
+            const nombre = modalProdNombre ? modalProdNombre.value : 'Producto';
+            const tipoMov = modalProdTipoMov ? modalProdTipoMov.value : 'SUMAR';
+            const cantMov = modalProdCantMov ? parseInt(modalProdCantMov.value) : 0;
+            const motivo = modalProdMotivo ? modalProdMotivo.value.trim() : '';
+
+            if (!id || isNaN(cantMov) || cantMov <= 0) return alert("Ingrese una cantidad válida a mover.");
+
+            btnGuardarStock.disabled = true; btnGuardarStock.textContent = 'Guardando...';
+
+            try {
+                const docRef = doc(db, 'recetas', id);
+                await runTransaction(db, async (transaction) => {
+                    const sfDoc = await transaction.get(docRef);
+                    if (!sfDoc.exists()) throw "Producto no existe";
+                    
+                    let stockActual = sfDoc.data().stockMostrador || 0;
+                    let lotesActuales = sfDoc.data().lotes || [];
+                    let nuevoStock = stockActual;
+
+                    if (tipoMov === 'SUMAR') {
+                        nuevoStock = stockActual + cantMov;
+                        lotesActuales.push({
+                            idLote: Date.now().toString(), cantidad: cantMov,
+                            fechaElab: modalProdLoteElab ? modalProdLoteElab.value : null,
+                            fechaVto: modalProdLoteVto ? modalProdLoteVto.value : null
+                        });
+                    } else {
+                        nuevoStock = stockActual - cantMov;
+                        if (nuevoStock < 0) nuevoStock = 0;
+                        
+                        let qtyToDeduct = cantMov;
+                        lotesActuales.sort((a, b) => new Date(a.fechaVto) - new Date(b.fechaVto));
+                        
+                        let nuevosLotesPostResta = [];
+                        for (let lote of lotesActuales) {
+                            if (qtyToDeduct > 0) {
+                                if (lote.cantidad <= qtyToDeduct) { qtyToDeduct -= lote.cantidad; } 
+                                else { lote.cantidad -= qtyToDeduct; qtyToDeduct = 0; nuevosLotesPostResta.push(lote); }
+                            } else { nuevosLotesPostResta.push(lote); }
+                        }
+                        lotesActuales = nuevosLotesPostResta;
+                    }
+
+                    const updates = { stockMostrador: nuevoStock, lotes: lotesActuales };
+                    if (document.body.classList.contains('admin-open') && modalProdGananciaIndiv) {
+                        const val = modalProdGananciaIndiv.value.trim();
+                        updates.margenIndividual = val === "" ? null : parseFloat(val);
+                    }
+
+                    transaction.update(docRef, updates);
+
+                    transaction.set(doc(auditoriaCollection), {
+                        productoId: id, productoNombre: nombre, tipo: tipoMov, cantidad: cantMov, stockResultante: nuevoStock,
+                        motivo: motivo || (tipoMov === 'SUMAR' ? 'Ingreso Producción' : 'Egreso/Descarte'),
+                        usuario: userName, usuarioId: currentUser.uid, fecha: Timestamp.now()
+                    });
+                });
+                
+                if (modalStock) modalStock.classList.remove('visible');
+            } catch (error) { alert("Hubo un error al guardar los cambios."); }
+
+            btnGuardarStock.disabled = false; btnGuardarStock.textContent = 'Guardar Cambios';
+        });
+    }
 }
