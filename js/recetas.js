@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    setDoc, getDocs, deleteDoc, addDoc, updateDoc
+    setDoc, deleteDoc, addDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { addToCart, updateCartIcon } from './cart.js';
 
@@ -62,12 +62,9 @@ export function setupRecetas(app) {
     // 3. LÓGICA DE GESTIÓN DE CATEGORÍAS
     // ==================================================================
 
-    // Escuchar cambios en la colección de categorías
     onSnapshot(query(categoriasCollection, orderBy("nombre")), (snapshot) => {
         const categorias = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // A. Actualizar el select del modal de recetas
-        // Guardamos la selección actual si existe para no perderla al actualizar
         const seleccionActual = categoriaSelect.value;
         
         categoriaSelect.innerHTML = '<option value="" disabled selected>Selecciona una categoría...</option>';
@@ -82,7 +79,6 @@ export function setupRecetas(app) {
             categoriaSelect.value = seleccionActual;
         }
 
-        // B. Actualizar la lista visual de gestión de categorías
         listaCategoriasContainer.innerHTML = '';
         if (categorias.length === 0) {
             listaCategoriasContainer.innerHTML = '<p>Aún no has creado categorías.</p>';
@@ -98,7 +94,6 @@ export function setupRecetas(app) {
             });
         }
 
-        // Listeners para borrar categorías
         document.querySelectorAll('.btn-delete-cat').forEach(button => {
             button.addEventListener('click', async (e) => {
                 const id = e.currentTarget.dataset.id;
@@ -113,7 +108,6 @@ export function setupRecetas(app) {
         });
     });
 
-    // Listener para crear nueva categoría
     formCategoria.addEventListener('submit', async (e) => {
         e.preventDefault();
         const nombreCategoria = inputNuevaCategoria.value.trim();
@@ -129,35 +123,10 @@ export function setupRecetas(app) {
     });
 
     // ==================================================================
-    // 4. GESTIÓN DE RECETAS (CRUD)
+    // 4. GESTIÓN DE RECETAS Y COSTOS (EL EFECTO CASCADA)
     // ==================================================================
 
-    // Cargar materias primas para el autocompletado
-    const cargarMateriasPrimas = async () => {
-        btnCrearReceta.disabled = true;
-        btnCrearReceta.textContent = 'Cargando...';
-        try {
-            const snapshot = await getDocs(query(materiasPrimasCollection, orderBy('nombre')));
-            materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            ingredientesDatalist.innerHTML = '';
-            materiasPrimasDisponibles.forEach(mp => {
-                // Solo mostramos materias primas que tengan lotes cargados (opcional, pero recomendado)
-                if (mp.lotes && mp.lotes.length > 0) {
-                    const option = document.createElement('option');
-                    option.value = mp.nombre;
-                    ingredientesDatalist.appendChild(option);
-                }
-            });
-        } catch (error) {
-            console.error("Error al cargar materias primas:", error);
-        } finally {
-            btnCrearReceta.disabled = false;
-            btnCrearReceta.textContent = 'Crear Nueva Receta';
-        }
-    };
-
-    // Función auxiliar: Calcular costo total de una receta (para uso interno)
+    // Función auxiliar: Calcular costo total de una receta dinámicamente
     const calcularCostoTotalReceta = (recetaData) => {
         let costoTotal = 0;
         if (!recetaData.ingredientes || recetaData.ingredientes.length === 0) return 0;
@@ -167,14 +136,12 @@ export function setupRecetas(app) {
             const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === ing.idMateriaPrima);
             
             if (materiaPrima && materiaPrima.lotes && materiaPrima.lotes.length > 0) {
-                // Usamos el costo del último lote comprado para el cálculo
+                // Usamos el costo del último lote comprado (El más actual)
                 const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
                 const ultimoLote = lotesOrdenados[0];
                 
-                // Intentamos obtener el costo unitario. Si no existe la propiedad, la calculamos.
                 let costoUnitarioMP = ultimoLote.costoUnitario;
                 
-                // Validación extra por si costoUnitario es undefined
                 if (typeof costoUnitarioMP !== 'number') {
                     if (ultimoLote.cantidadComprada > 0) {
                         costoUnitarioMP = ultimoLote.precioCompra / ultimoLote.cantidadComprada;
@@ -189,7 +156,26 @@ export function setupRecetas(app) {
         return costoTotal;
     };
 
-    // Abrir modal para crear o editar
+    // Escuchador en TIEMPO REAL del Stock General (Actualiza ingredientes al instante)
+    onSnapshot(query(materiasPrimasCollection, orderBy('nombre')), (snapshot) => {
+        materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Actualizamos la lista desplegable del buscador
+        ingredientesDatalist.innerHTML = '';
+        materiasPrimasDisponibles.forEach(mp => {
+            if (mp.lotes && mp.lotes.length > 0) {
+                const option = document.createElement('option');
+                option.value = mp.nombre;
+                ingredientesDatalist.appendChild(option);
+            }
+        });
+
+        // Si ya hay recetas cargadas, las re-renderizamos para que actualicen sus precios
+        if (todasLasRecetas.length > 0) {
+            mostrarRecetas(todasLasRecetas);
+        }
+    });
+
     const openModal = (receta = null) => {
         if (receta && receta.data) {
             editandoId = receta.id;
@@ -212,7 +198,6 @@ export function setupRecetas(app) {
 
     const closeModal = () => modal.classList.remove('visible');
 
-    // Renderizar lista de ingredientes dentro del modal
     const renderizarIngredientesEnReceta = () => {
         ingredientesEnRecetaContainer.innerHTML = '';
         if (ingredientesRecetaActual.length === 0) {
@@ -232,7 +217,6 @@ export function setupRecetas(app) {
         ingredientesEnRecetaContainer.appendChild(ul);
     };
 
-    // Añadir ingrediente a la receta temporal
     const anadirIngrediente = () => {
         const nombreIngrediente = ingredienteInput.value;
         const cantidad = parseFloat(cantidadIngredienteInput.value);
@@ -243,10 +227,9 @@ export function setupRecetas(app) {
         }
         const materiaPrima = materiasPrimasDisponibles.find(mp => mp.nombre === nombreIngrediente);
         if (!materiaPrima) {
-            alert('Ingrediente no encontrado. Por favor, selecciónalo de la lista o verifica el nombre.');
+            alert('Ingrediente no encontrado. Verifica el nombre.');
             return;
         }
-        // Verificar si ya existe para no duplicar
         if (ingredientesRecetaActual.some(ing => ing.idMateriaPrima === materiaPrima.id)) {
             alert('Este ingrediente ya está en la receta.');
             return;
@@ -262,24 +245,32 @@ export function setupRecetas(app) {
         cantidadIngredienteInput.value = '';
     };
 
-    // Guardar receta en Firebase
+    // Al guardar, ahora inyectamos el Costo Exacto en la Base de Datos
     const guardarReceta = async () => {
         const nombreTorta = recetaNombreInput.value.trim();
         const categoria = categoriaSelect.value;
         const rendimiento = parseInt(rendimientoInput.value, 10);
 
         if (!nombreTorta || !categoria || !rendimiento || isNaN(rendimiento) || rendimiento <= 0 || ingredientesRecetaActual.length === 0) {
-            alert('Por favor, completa el nombre, selecciona una categoría, un rendimiento válido y añade al menos un ingrediente.');
+            alert('Por favor, completa todos los campos y añade al menos un ingrediente.');
             return;
         }
         
+        // Calculamos el costo en base a los ingredientes justo antes de guardar
+        const recetaDataTemp = { ingredientes: ingredientesRecetaActual };
+        const costoTotalCalculado = calcularCostoTotalReceta(recetaDataTemp);
+        const costoPorcionCalculado = costoTotalCalculado / rendimiento;
+
         const id = editandoId || doc(collection(db, 'recetas')).id;
         const recetaData = { 
             nombreTorta, 
             categoria, 
             rendimiento, 
-            ingredientes: ingredientesRecetaActual 
+            ingredientes: ingredientesRecetaActual,
+            costoTotal: costoTotalCalculado, // GUARDAMOS EL COSTO REAL
+            costoPorcion: costoPorcionCalculado // GUARDAMOS COSTO POR PORCIÓN
         };
+        
         try {
             await setDoc(doc(db, 'recetas', id), recetaData);
             alert(editandoId ? '¡Receta actualizada con éxito!' : '¡Receta creada con éxito!');
@@ -290,12 +281,11 @@ export function setupRecetas(app) {
         }
     };
     
-    // Mostrar lista de recetas agrupadas por categoría
+    // Mostrar lista de recetas con los COSTOS EN VIVO
     const mostrarRecetas = (recetas) => {
         listaRecetasContainer.innerHTML = '';
         const recetasPorCategoria = {};
 
-        // Agrupamos por categoría
         recetas.forEach(receta => {
             const categoria = receta.data.categoria || 'Sin Categoría';
             if (!recetasPorCategoria[categoria]) {
@@ -309,18 +299,26 @@ export function setupRecetas(app) {
             return;
         }
 
-        // Ordenamos y renderizamos
         Object.keys(recetasPorCategoria).sort().forEach(categoria => {
             const listaDeRecetas = recetasPorCategoria[categoria];
             if (listaDeRecetas && listaDeRecetas.length > 0) {
                 const acordeonItem = document.createElement('div');
                 acordeonItem.className = 'categoria-acordeon';
                 
-                const contenidoHtml = listaDeRecetas.map(receta => `
+                const contenidoHtml = listaDeRecetas.map(receta => {
+                    // Calculamos el costo en tiempo real para mostrarlo en pantalla
+                    const costoTotalActual = calcularCostoTotalReceta(receta.data);
+                    const rendimiento = parseFloat(receta.data.rendimiento) || 1;
+                    const costoPorcionActual = costoTotalActual / rendimiento;
+
+                    return `
                     <div class="receta-card">
                         <div class="receta-card__info">
                             <h3>${receta.data.nombreTorta}</h3>
-                            <p>${receta.data.ingredientes.length} ingrediente(s) - Rinde: ${receta.data.rendimiento || 'N/A'} u.</p>
+                            <p>${receta.data.ingredientes.length} ingrediente(s) - Rinde: ${rendimiento} u.</p>
+                            <p style="color:#15803d; font-weight:bold; margin-top:0.3rem; font-size:0.9rem;">
+                                Costo Lote: $${costoTotalActual.toLocaleString('es-AR', {minimumFractionDigits: 2})} | Costo c/u: $${costoPorcionActual.toLocaleString('es-AR', {minimumFractionDigits: 2})}
+                            </p>
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
@@ -329,7 +327,7 @@ export function setupRecetas(app) {
                             <a href="presupuesto.html?recetaId=${receta.id}" class="btn-primary">Presupuestar</a>
                         </div>
                     </div>
-                `).join('');
+                `}).join('');
                 
                 acordeonItem.innerHTML = `
                     <button class="categoria-acordeon__header">
@@ -353,24 +351,16 @@ export function setupRecetas(app) {
             porcionesCostoEstimado.textContent = "$0.00";
             return;
         }
-        
         const total = costoUnitarioCalculado * cantidad;
         porcionesCostoEstimado.textContent = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
     const abrirModalPorciones = (receta) => {
         recetaSeleccionadaParaCarrito = receta;
-        
-        // 1. Calcular costo total de la receta en base al stock actual
         const costoTotalReceta = calcularCostoTotalReceta(receta.data);
-        
-        // 2. Obtener rendimiento declarado
         const rendimiento = parseFloat(receta.data.rendimiento) || 1;
-        
-        // 3. Calcular costo unitario
         costoUnitarioCalculado = costoTotalReceta / rendimiento;
         
-        // 4. Preparar UI
         porcionesRecetaNombre.textContent = receta.data.nombreTorta;
         porcionesRendimientoTotal.textContent = rendimiento;
         inputCantidadPorciones.value = 1; 
@@ -381,15 +371,12 @@ export function setupRecetas(app) {
 
     const confirmarAnadirAlCarrito = () => {
         if (!recetaSeleccionadaParaCarrito) return;
-
         const cantidad = parseFloat(inputCantidadPorciones.value);
         if (isNaN(cantidad) || cantidad <= 0) {
             alert("Ingresa una cantidad válida.");
             return;
         }
-
         const precioFinal = costoUnitarioCalculado * cantidad;
-
         const item = {
             id: recetaSeleccionadaParaCarrito.id, 
             name: `${recetaSeleccionadaParaCarrito.data.nombreTorta} (${cantidad} u.)`, 
@@ -397,7 +384,6 @@ export function setupRecetas(app) {
             type: 'receta_fraccionada',
             cantidadPorciones: cantidad
         };
-
         addToCart(item);
         modalPorciones.classList.remove('visible');
     };
@@ -410,22 +396,18 @@ export function setupRecetas(app) {
     // 6. LISTENERS Y PUNTO DE ENTRADA
     // ==================================================================
 
-    // Listener Principal de Recetas
     onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
         todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         mostrarRecetas(todasLasRecetas);
     });
 
-    // Listener de la lista principal (Delegación de eventos)
     listaRecetasContainer.addEventListener('click', (e) => {
-        // Acordeón
         const header = e.target.closest('.categoria-acordeon__header');
         if (header) {
             header.parentElement.classList.toggle('active');
             return;
         }
         
-        // Editar
         const targetEditar = e.target.closest('.btn-editar-receta');
         if (targetEditar) {
             const id = targetEditar.dataset.id;
@@ -434,20 +416,16 @@ export function setupRecetas(app) {
             return;
         }
         
-        // Borrar
         const targetBorrar = e.target.closest('.btn-borrar-receta');
         if (targetBorrar) {
             const id = targetBorrar.dataset.id;
             const recetaParaBorrar = todasLasRecetas.find(r => r.id === id);
             if (recetaParaBorrar && confirm(`¿Estás seguro de que quieres borrar la receta "${recetaParaBorrar.data.nombreTorta}"? Esta acción no se puede deshacer.`)) {
-                deleteDoc(doc(db, 'recetas', id)).then(() => {
-                    // OK
-                }).catch(err => console.error(err));
+                deleteDoc(doc(db, 'recetas', id)).then(() => {}).catch(err => console.error(err));
             }
             return;
         }
         
-        // Añadir al Carrito
         const targetAnadir = e.target.closest('.btn-anadir-cotizacion');
         if(targetAnadir) {
             const id = targetAnadir.dataset.id;
@@ -459,7 +437,6 @@ export function setupRecetas(app) {
         }
     });
 
-    // Listeners del modal de ingredientes
     ingredientesEnRecetaContainer.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-quitar-ingrediente')) {
             const index = parseInt(e.target.dataset.index, 10);
@@ -468,13 +445,10 @@ export function setupRecetas(app) {
         }
     });
     
-    // Listeners de botones del modal
     btnCrearReceta.addEventListener('click', () => openModal(null));
     btnCancelarReceta.addEventListener('click', closeModal);
     btnGuardarReceta.addEventListener('click', guardarReceta);
     btnAnadirIngrediente.addEventListener('click', anadirIngrediente);
     
-    // Inicialización
-    cargarMateriasPrimas();
     updateCartIcon();
 }
