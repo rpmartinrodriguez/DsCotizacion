@@ -104,7 +104,7 @@ export function setupPOS(app) {
     let margenGlobal = 0; 
     let currentBarcodeProduct = null;
 
-    let totalVentaActual = 0; // Se actualiza al tocar Cobrar
+    let totalVentaActual = 0;
 
     // Métodos Helpers
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -121,7 +121,14 @@ export function setupPOS(app) {
         return `${y}-${m}-${d}`;
     };
 
+    // EFECTO CASCADA: Toma el costo directo de la receta (con Plan B de seguridad)
     const obtenerCostoBase = (receta) => {
+        // PRIORIDAD 1: Leemos el costo porción exacto guardado por recetas.js
+        if (receta.costoPorcion && receta.costoPorcion > 0) {
+            return receta.costoPorcion;
+        }
+
+        // PRIORIDAD 2 (Plan B de rescate): Cálculo en tiempo real por si es una receta muy vieja que no se actualizó
         let costoTotal = 0;
         if (!receta.ingredientes) return 0;
         receta.ingredientes.forEach(ing => {
@@ -134,11 +141,17 @@ export function setupPOS(app) {
         return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
     };
 
+    // EFECTO CASCADA: Cálculo del precio final con Redondeo Inteligente
     const calcularPrecioVenta = (prod) => {
         const costo = prod.costoBaseCalculado || 0;
         const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
+        
+        // Aplica el margen del Stock 2 (Individual) o el General
         const margenAplicado = tieneMargenIndiv ? parseFloat(prod.margenIndividual) : margenGlobal;
-        return costo * (1 + (margenAplicado / 100));
+        const precioCrudo = costo * (1 + (margenAplicado / 100));
+        
+        // Redondeo Comercial: Redondea a la decena más cercana para evitar monedas chicas (ej: 1432 -> 1430)
+        return Math.round(precioCrudo / 10) * 10;
     };
 
     // --- CONFIGURACIÓN GLOBAL ---
@@ -293,11 +306,9 @@ export function setupPOS(app) {
             procesarYRenderizar();
         });
 
-        // Ordenamos las tortas solo en javascript para evitar fallos de indice en base de datos
         onSnapshot(collection(db, 'recetas'), (snapshot) => {
             let tempArr = [];
             snapshot.forEach(doc => tempArr.push({ id: doc.id, ...doc.data() }));
-            // Ordenar alfabéticamente local
             tempArr.sort((a,b) => (a.nombreTorta || "").localeCompare(b.nombreTorta || ""));
             recetasBrutas = tempArr;
             procesarYRenderizar();
@@ -484,7 +495,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modales de Fechas en Lotes ---
     if (modalProdTipoMov) {
         modalProdTipoMov.addEventListener('change', (e) => {
             if (e.target.value === 'SUMAR') {
@@ -495,7 +505,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modal Ajuste de Stock ---
     const abrirModalStock = async (prod) => {
         if (modalProdId) modalProdId.value = prod.id;
         if (modalProdNombre) modalProdNombre.value = prod.nombreTorta;
@@ -601,7 +610,6 @@ export function setupPOS(app) {
                     let nuevoStock = stockActual;
 
                     if (tipoMov === 'SUMAR') {
-                        // Creamos un lote nuevo
                         nuevoStock = stockActual + cantMov;
                         lotesActuales.push({
                             idLote: Date.now().toString(),
@@ -610,12 +618,10 @@ export function setupPOS(app) {
                             fechaVto: fVto
                         });
                     } else {
-                        // Lógica FIFO / PEPS (Quitar de los más viejos primero)
                         nuevoStock = stockActual - cantMov;
                         if (nuevoStock < 0) nuevoStock = 0;
                         
                         let qtyToDeduct = cantMov;
-                        // Ordenar por fechaVto (del más viejo al más nuevo)
                         lotesActuales.sort((a, b) => new Date(a.fechaVto) - new Date(b.fechaVto));
                         
                         let nuevosLotesPostResta = [];
@@ -623,7 +629,6 @@ export function setupPOS(app) {
                             if (qtyToDeduct > 0) {
                                 if (lote.cantidad <= qtyToDeduct) {
                                     qtyToDeduct -= lote.cantidad;
-                                    // Lote consumido entero
                                 } else {
                                     lote.cantidad -= qtyToDeduct;
                                     qtyToDeduct = 0;
@@ -648,7 +653,6 @@ export function setupPOS(app) {
 
                     transaction.update(docRef, updates);
 
-                    // Guardar Log de Auditoria
                     const auditRef = doc(auditoriaCollection); 
                     transaction.set(auditRef, {
                         productoId: id,
@@ -676,7 +680,7 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modal Código de Barras 1D y GENERADOR DE IMAGEN (50x30) ---
+    // --- Modal Código de Barras ---
     const drawBarcodeCanvas = () => {
         if(!currentBarcodeProduct) return;
         const prod = currentBarcodeProduct;
@@ -952,7 +956,6 @@ export function setupPOS(app) {
             esValido = efvo >= totalVentaActual;
         } else if (metodoPagoSeleccionado === 'Ambos') {
             vuelto = (mp + efvo) - totalVentaActual;
-            // Para "Ambos", el cobro en MP no puede superar el total (el vuelto sale de la caja de efectivo)
             esValido = (mp + efvo) >= totalVentaActual && mp <= totalVentaActual; 
         }
 
@@ -984,7 +987,6 @@ export function setupPOS(app) {
             btnPaymentMethods.forEach(b => b.classList.remove('selected'));
             btnConfirmarVenta.disabled = true;
             
-            // Ocultar e inicializar los cajones interactivos
             if (paymentDetailsContainer) paymentDetailsContainer.style.display = 'none';
             if (fieldMP) fieldMP.style.display = 'none';
             if (fieldEfectivo) fieldEfectivo.style.display = 'none';
@@ -1030,7 +1032,6 @@ export function setupPOS(app) {
         btnConfirmarVenta.addEventListener('click', async () => {
             if (!metodoPagoSeleccionado || carritoActual.length === 0 || !cajaActiva) return;
 
-            // Determinar cuánto dinero neto ingresa a cada método (descontando vuelto)
             let mpReal = 0;
             let efectivoReal = 0;
 
@@ -1063,7 +1064,6 @@ export function setupPOS(app) {
                         let nuevoStock = stockActual - item.cantidad;
                         if (nuevoStock < 0) nuevoStock = 0;
                         
-                        // Sistema PEPS: Descontar primero de los lotes más viejos
                         let qtyToDeduct = item.cantidad;
                         lotesActuales.sort((a, b) => new Date(a.fechaVto) - new Date(b.fechaVto));
                         
@@ -1102,7 +1102,6 @@ export function setupPOS(app) {
                     });
                 }
 
-                // Guardar la venta con el detalle de cuánto en cada método
                 await addDoc(ventasCollection, {
                     cajaId: cajaActiva.id,
                     fecha: Timestamp.now(),
@@ -1114,7 +1113,6 @@ export function setupPOS(app) {
                     vendedor: userName
                 });
 
-                // Actualizar la caja neteando el vuelto
                 const cajaRef = doc(db, 'cajas', cajaActiva.id);
                 const actualizacionCaja = {
                     totalEfectivo: (cajaActiva.totalEfectivo || 0) + efectivoReal,
