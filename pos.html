@@ -12,7 +12,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 
     <style>
-        /* Modificación para que la pantalla de Mostrador sea más abarcativa/ancha */
         .main-container { max-width: 1400px !important; padding: 1rem 2%; }
 
         .pos-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
@@ -28,13 +27,11 @@
         .cart-item-precio-unit { font-size: 0.85rem; color: var(--text-light); }
         .cart-item-total { font-weight: bold; color: var(--primary-color); margin: 0 1rem; min-width: 70px; text-align: right; }
         
-        /* Modal de Cobro y Métodos de Pago Mejorados */
         .payment-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .btn-payment { position: relative; padding: 1.2rem 1rem; border: 2px solid var(--border-color); border-radius: 12px; background: white; font-size: 1rem; font-weight: bold; color: var(--text-light); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .btn-payment:hover { border-color: #cbd5e1; }
         .btn-payment.selected { border-color: var(--primary-color); background-color: #fff0f5; color: var(--primary-color); box-shadow: 0 4px 10px rgba(255, 150, 197, 0.2); }
         
-        /* Palomita de Selección */
         .check-icon { display: none; position: absolute; top: -10px; right: -10px; background-color: var(--primary-color); color: white; border-radius: 50%; width: 28px; height: 28px; line-height: 28px; text-align: center; font-size: 16px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .btn-payment.selected .check-icon { display: block; }
 
@@ -55,7 +52,6 @@
 
         .canvas-preview { max-width: 100%; border: 1px dashed #ccc; border-radius: 4px; margin: 0 auto; display: block; }
         
-        /* Estilos para lista de tickets (Auditoría Cierre) */
         .ticket-revision-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem; border-bottom: 1px solid #e2e8f0; background: #fff; }
         .ticket-revision-item:nth-child(even) { background: #f8fafc; }
         .ticket-revision-info { flex-grow: 1; }
@@ -120,16 +116,17 @@
                 <h1 style="margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900;">Mostrador</h1>
             </div>
 
-            <!-- PANTALLA 1: APERTURA DE CAJA (ACTUALIZADA CON TURNOS) -->
+            <!-- PANTALLA 1: APERTURA DE CAJA -->
             <section id="pantalla-apertura" class="card" style="display: none; text-align: center; max-width: 500px; margin: 0 auto;">
                 <h2 class="card__title">Apertura de Turno</h2>
-                <p class="text-light" style="margin-bottom: 1.5rem;">
-                    Usuario activo: <strong id="usuario-activo-nombre">Cargando...</strong>
-                </p>
                 
                 <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
                     <label style="color: var(--primary-color); font-weight: bold;">Cajero / Responsable</label>
-                    <input type="text" id="apertura-nombre-cajero" placeholder="Ej: Juan Pérez">
+                    <select id="apertura-nombre-cajero" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem;">
+                        <option value="" disabled selected>Seleccione quién abre la caja...</option>
+                        <option value="Ceci">Ceci</option>
+                        <option value="Eve">Eve</option>
+                    </select>
                 </div>
 
                 <div class="form-group" style="text-align: left; margin-bottom: 1rem;">
@@ -140,7 +137,6 @@
                     </select>
                 </div>
 
-                <!-- Panel Oculto: Detector de Saldo Anterior -->
                 <div id="panel-herencia-saldo" style="display: none; background: #fffbeb; padding: 1rem; border: 1px solid #fde68a; border-radius: 8px; margin-bottom: 1rem; text-align: left;">
                     <p style="margin-top: 0; margin-bottom: 0.5rem; color: #b45309; font-size: 0.95rem;">
                         <strong>⚠️ Saldo de caja anterior:</strong> <span id="saldo-anterior-detectado" style="font-size: 1.1rem; font-weight: 900;">$0.00</span>
@@ -327,14 +323,18 @@
         </div>
     </div>
 
-    <!-- MODAL: CIERRE DE CAJA (ACTUALIZADO PRE-CIERRE CIEGO) -->
+    <!-- MODAL: CIERRE DE CAJA -->
     <div id="modal-cierre" class="modal-overlay">
         <div class="modal-content card" style="max-width: 450px;">
             <h2 class="card__title">Resumen de Turno</h2>
             
             <div class="form-group" style="margin-top: 1rem;">
                 <label style="color: var(--primary-color); font-weight: bold;">Responsable del Cierre</label>
-                <input type="text" id="cierre-nombre-cajero" placeholder="Ej: Tu nombre">
+                <select id="cierre-nombre-cajero" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem;">
+                    <option value="" disabled selected>Seleccione quién cierra la caja...</option>
+                    <option value="Ceci">Ceci</option>
+                    <option value="Eve">Eve</option>
+                </select>
             </div>
 
             <div class="calculo-resumen" style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;">
@@ -357,7 +357,7 @@
         </div>
     </div>
 
-    <!-- MODAL: AUDITORÍA DE TICKETS (NUEVO) -->
+    <!-- MODAL: AUDITORÍA DE TICKETS -->
     <div id="modal-revision-tickets" class="modal-overlay" style="z-index: 1500;">
         <div class="modal-content card" style="max-width: 600px;">
             <h2 class="card__title" style="margin-bottom: 0.5rem;">Auditoría de Movimientos</h2>
@@ -373,7 +373,7 @@
         </div>
     </div>
 
-    <!-- MODAL: EDITAR MÉTODO DE PAGO (NUEVO) -->
+    <!-- MODAL: EDITAR MÉTODO DE PAGO -->
     <div id="modal-editar-ticket" class="modal-overlay" style="z-index: 2000;">
         <div class="modal-content card" style="max-width: 350px;">
             <h2 class="card__title" style="color: #eab308;">Corregir Ticket</h2>
@@ -395,7 +395,7 @@
         </div>
     </div>
 
-    <!-- MODALES VIEJOS DE STOCK Y BARRAS (SIN CAMBIOS) -->
+    <!-- MODALES VIEJOS DE STOCK Y BARRAS -->
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
             <h2 class="card__title">Ajustar Ficha de Producto</h2>
@@ -466,7 +466,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPOS } from './js/pos.js?v=20';
+        import { setupPOS } from './js/pos.js?v=21';
         try {
             const app = initializeApp(firebaseConfig);
             setupPOS(app);
