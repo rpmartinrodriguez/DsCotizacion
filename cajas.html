@@ -55,7 +55,7 @@
         .info-icon { display: inline-flex; justify-content: center; align-items: center; width: 18px; height: 18px; background: #ec4899; color: white; border-radius: 50%; font-size: 11px; font-weight: bold; font-family: serif; font-style: italic; cursor: pointer; }
         
         .list-top-productos { list-style: none; padding: 0; margin: 0; text-align: left; }
-        .list-top-productos li { padding: 0.4rem 0; border-bottom: 1px dashed #eee; font-size: 0.9rem; display: flex; justify-content: space-between;}
+        .list-top-productos li { padding: 0.6rem 0; border-bottom: 1px dashed #eee; font-size: 0.95rem; display: flex; justify-content: space-between;}
     </style>
 </head>
 <body>
@@ -375,11 +375,27 @@
         </div>
     </div>
 
+    <!-- MODAL DE RESUMEN DE PRODUCTOS -->
+    <div id="modal-resumen-productos" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content card" style="max-width: 500px;">
+            <h2 class="card__title" style="color: #0ea5e9; margin-top: 0; border-bottom: 2px solid #bae6fd; padding-bottom: 0.5rem;">Resumen de Artículos</h2>
+            <p class="text-light" style="font-size: 0.9rem; margin-bottom: 1rem;">Ranking de productos más vendidos en el turno (agrupados por cantidad).</p>
+            
+            <ul class="list-top-productos" id="ul-resumen-productos" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                <!-- Aquí se inyectan los productos -->
+            </ul>
+            
+            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
+                <button id="btn-cerrar-resumen" class="btn-primary" style="width: auto;">Listo</button>
+            </div>
+        </div>
+    </div>
+
     <!-- SCRIPTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=12';
+        import { setupCajas } from './js/cajas.js?v=13';
         
         try {
             const app = initializeApp(firebaseConfig);
