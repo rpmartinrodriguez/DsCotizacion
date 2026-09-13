@@ -1,7 +1,7 @@
 // ==========================================
 // CAMBIAR ESTE NÚMERO CADA VEZ QUE HAGAS UNA ACTUALIZACIÓN GRANDE
 // ==========================================
-const CACHE_NAME = 'dulce-app-dinamico-v2.0'; 
+const CACHE_NAME = 'dulce-app-dinamico-v2.01'; 
 
 // Recursos básicos iniciales
 const ASSETS_TO_CACHE = [
