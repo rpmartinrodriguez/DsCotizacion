@@ -10,9 +10,9 @@
     <meta name="theme-color" content="#ff96c5">
 
     <!-- ========================================== -->
-    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
+    <!-- ETIQUETAS ACTUALIZADAS PARA PWA (IOS/ANDROID) -->
     <!-- ========================================== -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Dulce App">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -101,8 +101,43 @@
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DE NAVEGACIÓN DINÁMICO (Inyectado por menu.js) -->
-        <nav class="nav-menu" id="nav-menu"></nav>
+        <!-- MENÚ DE NAVEGACIÓN -->
+        <nav class="nav-menu" id="nav-menu">
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Dulce App</span>
+            </div>
+            <div class="nav-category">
+                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
+                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
+                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
+                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
+                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
+                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
+                </div>
+            </div>
+            <div class="nav-category">
+                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
+                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
+                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
+                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
+                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
+                    <a href="usuarios.html" class="nav-menu__link"><span>🛡️</span> Permisos y Usuarios</a>
+                </div>
+            </div>
+            <div class="nav-category">
+                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
+                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
+                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+                </div>
+            </div>
+        </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
