@@ -2,7 +2,7 @@ import {
     getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { 
-    getFirestore, doc, getDoc, setDoc, collection, getDocs, limit 
+    getFirestore, doc, getDoc, setDoc, collection, getDocs, limit, query 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupLogin(app) {
