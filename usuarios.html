@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios - Dulce App</title>
+    <link rel="stylesheet" href="css/style.css">
+    <meta name="theme-color" content="#ff96c5">
+    <style>
+        .main-container { max-width: 1000px; margin: 0 auto; padding: 1rem; }
+        .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 1px;}
+        
+        .user-status { padding: 0.3rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
+        .status-activo { background-color: #dcfce3; color: #15803d; }
+        .status-inactivo { background-color: #fee2e2; color: #b91c1c; }
+        
+        .user-role { padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #475569;}
+        .role-master { background-color: #fef08a; color: #854d0e; }
+
+        .permisos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;}
+        .permiso-item { display: flex; align-items: center; gap: 0.5rem; }
+        .permiso-item input[type="checkbox"] { width: 1.2rem; height: 1.2rem; accent-color: #ec4899; cursor: pointer;}
+        .permiso-item label { font-size: 0.95rem; cursor: pointer; color: #334155; font-weight: 500;}
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- HEADER -->
+        <header class="header">
+            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="header__logo-link">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+            </a>
+            <div class="header__spacer"></div>
+        </header>
+
+        <!-- MENÚ DE NAVEGACIÓN -->
+        <nav class="nav-menu" id="nav-menu">
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
+                <span class="nav-menu__title">Dulce App</span>
+            </div>
+            <div class="nav-category">
+                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
+                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
+                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
+                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
+                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
+                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
+                </div>
+            </div>
+            <div class="nav-category">
+                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
+                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
+                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
+                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
+                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
+                    <a href="usuarios.html" class="nav-menu__link active"><span>🛡️</span> Permisos y Usuarios</a>
+                </div>
+            </div>
+            <div class="nav-category">
+                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
+                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
+                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+                </div>
+            </div>
+        </nav>
+        <div class="nav-menu__overlay" id="nav-overlay"></div>
+
+        <main>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                <h1 class="page-title">Gestión de Usuarios</h1>
+                <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Administrá quién tiene acceso a cada módulo de la aplicación.</p>
+            </div>
+
+            <div class="card">
+                <div style="overflow-x: auto;">
+                    <table class="table-clean">
+                        <thead>
+                            <tr>
+                                <th>Nombre / Empleado</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th style="text-align: center;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-usuarios">
+                            <tr><td colspan="5" style="text-align: center; padding: 2rem;">Cargando usuarios...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: EDITAR USUARIO Y PERMISOS -->
+    <div id="modal-usuario" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 550px;">
+            <h2 class="card__title" style="color: #ec4899; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Editar Permisos</h2>
+            
+            <input type="hidden" id="edit-user-id">
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Nombre del Empleado</label>
+                    <input type="text" id="edit-user-nombre" placeholder="Ej: Ceci, Eve">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Estado de la Cuenta</label>
+                    <select id="edit-user-estado" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <option value="activo">🟢 Activo (Permitir Ingreso)</option>
+                        <option value="inactivo">🔴 Inactivo (Bloquear Ingreso)</option>
+                    </select>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #831843; font-size: 1.1rem;">Asignar Módulos (Permisos)</h3>
+            <p style="font-size: 0.85rem; color: #64748b; margin-top: 0;">Tildá las secciones que este usuario podrá ver y usar en su menú.</p>
+            
+            <div class="permisos-grid">
+                <div class="permiso-item">
+                    <input type="checkbox" id="perm-mostrador">
+                    <label for="perm-mostrador">🏪 Mostrador (Caja)</label>
+                </div>
+                <div class="permiso-item">
+                    <input type="checkbox" id="perm-stock">
+                    <label for="perm-stock">📦 Stock y Compras</label>
+                </div>
+                <div class="permiso-item">
+                    <input type="checkbox" id="perm-recetas">
+                    <label for="perm-recetas">🍰 Recetas y Precios</label>
+                </div>
+                <div class="permiso-item">
+                    <input type="checkbox" id="perm-cajas">
+                    <label for="perm-cajas">🗃️ Historial de Cajas</label>
+                </div>
+                <div class="permiso-item">
+                    <input type="checkbox" id="perm-finanzas">
+                    <label for="perm-finanzas">💰 Rentabilidad y Finanzas</label>
+                </div>
+                <div class="permiso-item">
+                    <input type="checkbox" id="perm-configuracion">
+                    <label for="perm-configuracion">🛡️ Panel de Usuarios (Admin)</label>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 2rem;">
+                <button id="btn-cancelar-usuario" class="btn-secondary" style="width: 48%;">Cancelar</button>
+                <button id="btn-guardar-usuario" class="btn-primary" style="width: 48%;">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        import { setupUsuarios } from './js/usuarios.js?v=1';
+        
+        try {
+            const app = initializeApp(firebaseConfig);
+            setupUsuarios(app);
+        } catch(e) { console.error("Error:", e); }
+    </script>
+    <script src="js/menu.js" defer></script>
+</body>
+</html>
