@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
     const navMenu = document.getElementById('nav-menu');
-    const menuToggleBtn = document.getElementById('menu-toggle-btn');
     const navOverlay = document.getElementById('nav-overlay');
 
     // 1. Leer los permisos del usuario activo
@@ -19,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const userName = localStorage.getItem('userName') || 'Usuario';
 
-    // 2. Construir el menú dinámico si el elemento existe
+    // 2. Construir el menú dinámico
     if (navMenu && !window.location.href.includes('login.html')) {
         let menuHTML = `
             <div class="nav-menu__header" style="text-align: center; padding: 1.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -96,59 +95,59 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         `;
 
-        // Inyectar todo el menú limpio en el HTML
+        // Inyectar el HTML
         navMenu.innerHTML = menuHTML;
 
-        // Marcar el link activo según dónde estamos
+        // Marcar el link activo
         const currentPath = window.location.pathname.split('/').pop() || 'index.html';
         const allLinks = navMenu.querySelectorAll('.nav-menu__link');
         allLinks.forEach(link => {
-            if (link.getAttribute('href') === currentPath) {
-                link.classList.add('active');
-            }
+            if (link.getAttribute('href') === currentPath) link.classList.add('active');
         });
+    }
 
-        // Reasignar eventos a los acordeones
-        const categoryBtns = navMenu.querySelectorAll('.nav-category-btn');
-        categoryBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const category = btn.parentElement;
-                const content = category.querySelector('.nav-category-content');
-                const icon = btn.querySelector('.nav-icon');
-                
-                category.classList.toggle('active');
-                if (category.classList.contains('active')) {
-                    content.style.display = 'block';
-                    icon.textContent = '-';
-                } else {
-                    content.style.display = 'none';
-                    icon.textContent = '+';
-                }
-            });
-        });
-
-        // Evento para Cerrar Sesión
-        const btnLogout = document.getElementById('btn-logout');
-        if (btnLogout) {
-            btnLogout.addEventListener('click', () => {
-                if(confirm('¿Estás seguro de que querés cerrar sesión?')) {
-                    localStorage.clear();
-                    window.location.href = 'login.html?logout=true';
-                }
-            });
+    // 3. CONTROL DE CLICS GENERAL (Antibalas)
+    document.addEventListener('click', (e) => {
+        // A. Botón Hamburguesa en móviles (Abrir menú)
+        if (e.target.closest('#menu-toggle-btn')) {
+            if (navMenu) navMenu.classList.add('active');
+            if (navOverlay) navOverlay.classList.add('active');
+            return;
         }
-    }
 
-    // Lógica para abrir/cerrar el menú en celulares
-    if (menuToggleBtn && navMenu && navOverlay) {
-        menuToggleBtn.addEventListener('click', () => {
-            navMenu.classList.add('active');
-            navOverlay.classList.add('active');
-        });
+        // B. Clic en el fondo oscuro en móviles (Cerrar menú)
+        if (e.target.closest('#nav-overlay')) {
+            if (navMenu) navMenu.classList.remove('active');
+            if (navOverlay) navOverlay.classList.remove('active');
+            return;
+        }
 
-        navOverlay.addEventListener('click', () => {
-            navMenu.classList.remove('active');
-            navOverlay.classList.remove('active');
-        });
-    }
+        // C. Acordeones (Desplegar/Ocultar categorías)
+        const catBtn = e.target.closest('.nav-category-btn');
+        if (catBtn) {
+            const category = catBtn.parentElement;
+            const content = category.querySelector('.nav-category-content');
+            const icon = catBtn.querySelector('.nav-icon');
+            
+            category.classList.toggle('active');
+            if (category.classList.contains('active')) {
+                content.style.display = 'block';
+                if(icon) icon.textContent = '-';
+            } else {
+                content.style.display = 'none';
+                if(icon) icon.textContent = '+';
+            }
+            return;
+        }
+
+        // D. Botón de Cerrar Sesión
+        const btnLogout = e.target.closest('#btn-logout');
+        if (btnLogout) {
+            if(confirm('¿Estás seguro de que querés cerrar sesión?')) {
+                localStorage.clear();
+                window.location.href = 'login.html?logout=true';
+            }
+            return;
+        }
+    });
 });
