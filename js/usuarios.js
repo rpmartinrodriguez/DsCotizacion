@@ -1,22 +1,34 @@
 import { 
-    getFirestore, collection, onSnapshot, doc, updateDoc, query, orderBy 
+    getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, query, orderBy 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { 
+    getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut 
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 
-export function setupUsuarios(app) {
+export function setupUsuarios(app, firebaseConfig) {
     const db = getFirestore(app);
     const auth = getAuth(app);
     const usuariosCollection = collection(db, 'usuarios');
 
+    // App Secundaria (Para crear usuarios sin expulsar al Administrador)
+    const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+    const secondaryAuth = getAuth(secondaryApp);
+
     const tablaUsuarios = document.getElementById('tabla-usuarios');
     const modalUsuario = document.getElementById('modal-usuario');
+    const modalTitulo = document.getElementById('modal-titulo');
     const btnCancelar = document.getElementById('btn-cancelar-usuario');
     const btnGuardar = document.getElementById('btn-guardar-usuario');
+    const btnNuevoUsuario = document.getElementById('btn-nuevo-usuario');
 
     // Campos del Modal
     const editId = document.getElementById('edit-user-id');
     const editNombre = document.getElementById('edit-user-nombre');
     const editEstado = document.getElementById('edit-user-estado');
+    const camposCreacion = document.getElementById('campos-creacion');
+    const editEmail = document.getElementById('edit-user-email');
+    const editPass = document.getElementById('edit-user-pass');
     
     // Checkboxes de permisos
     const permMostrador = document.getElementById('perm-mostrador');
@@ -27,6 +39,7 @@ export function setupUsuarios(app) {
     const permConfig = document.getElementById('perm-configuracion');
 
     let todosLosUsuarios = [];
+    let isCreateMode = false;
 
     // --- BARRERA DE SEGURIDAD PARA LA PÁGINA ---
     onAuthStateChanged(auth, user => {
@@ -35,12 +48,11 @@ export function setupUsuarios(app) {
             return;
         }
 
-        // Verificamos en el LocalStorage si tiene el permiso "configuracion" (Admin)
         try {
             const permisosLocal = JSON.parse(localStorage.getItem('userPermisos') || '{}');
             if (permisosLocal.configuracion !== true) {
                 alert("Acceso denegado. No tenés permisos de Administrador para ver esta página.");
-                window.location.href = 'pos.html'; // Lo echamos al mostrador
+                window.location.href = 'pos.html'; 
             }
         } catch (e) {
             window.location.href = 'pos.html';
@@ -82,6 +94,33 @@ export function setupUsuarios(app) {
         });
     }
 
+    // --- ABRIR MODAL PARA NUEVO USUARIO ---
+    if (btnNuevoUsuario) {
+        btnNuevoUsuario.addEventListener('click', () => {
+            isCreateMode = true;
+            modalTitulo.textContent = "Crear Nuevo Empleado";
+            camposCreacion.style.display = 'block';
+            
+            editId.value = '';
+            editNombre.value = '';
+            editEmail.value = '';
+            editPass.value = '';
+            editEstado.value = 'activo';
+            editEstado.disabled = false;
+            permConfig.disabled = false;
+
+            // Limpiar permisos por defecto (solo caja)
+            permMostrador.checked = true;
+            permStock.checked = false;
+            permRecetas.checked = false;
+            permCajas.checked = false;
+            permFinanzas.checked = false;
+            permConfig.checked = false;
+
+            modalUsuario.classList.add('visible');
+        });
+    }
+
     // --- ABRIR MODAL PARA EDITAR ---
     if (tablaUsuarios) {
         tablaUsuarios.addEventListener('click', (e) => {
@@ -91,11 +130,14 @@ export function setupUsuarios(app) {
             const user = todosLosUsuarios.find(u => u.id === btn.dataset.id);
             if (!user) return;
 
+            isCreateMode = false;
+            modalTitulo.textContent = "Editar Permisos";
+            camposCreacion.style.display = 'none';
+
             editId.value = user.id;
             editNombre.value = user.nombre || '';
             editEstado.value = user.estado || 'inactivo';
 
-            // Cargar checkboxes
             const p = user.permisos || {};
             permMostrador.checked = p.mostrador === true;
             permStock.checked = p.stock === true;
@@ -104,11 +146,9 @@ export function setupUsuarios(app) {
             permFinanzas.checked = p.finanzas === true;
             permConfig.checked = p.configuracion === true;
 
-            // Protección contra suicidio digital: 
-            // Si te estás editando a vos mismo (el Master), no te dejamos quitarte el permiso de Admin
             if (user.rol === 'master') {
                 permConfig.disabled = true;
-                editEstado.disabled = true; // No te podés auto-desactivar
+                editEstado.disabled = true;
             } else {
                 permConfig.disabled = false;
                 editEstado.disabled = false;
@@ -122,45 +162,77 @@ export function setupUsuarios(app) {
         btnCancelar.addEventListener('click', () => modalUsuario.classList.remove('visible'));
     }
 
-    // --- GUARDAR CAMBIOS ---
+    // --- GUARDAR O CREAR ---
     if (btnGuardar) {
         btnGuardar.addEventListener('click', async () => {
-            const id = editId.value;
-            if (!id) return;
+            const nombreIngresado = editNombre.value.trim();
+            const emailIngresado = editEmail.value.trim();
+            const passIngresada = editPass.value;
+
+            if (!nombreIngresado) return alert("Tenés que ponerle un nombre al usuario.");
 
             btnGuardar.disabled = true;
-            btnGuardar.textContent = 'Guardando...';
+            btnGuardar.textContent = isCreateMode ? 'Creando cuenta...' : 'Guardando...';
+
+            const permisosAsignados = {
+                mostrador: permMostrador.checked,
+                stock: permStock.checked,
+                recetas: permRecetas.checked,
+                cajas: permCajas.checked,
+                finanzas: permFinanzas.checked,
+                configuracion: permConfig.disabled ? true : permConfig.checked
+            };
 
             try {
-                const userRef = doc(db, 'usuarios', id);
-                
-                // Si estaba disabled (porque es el master), forzamos a que siga siendo true y activo
-                const esConfigChecked = permConfig.disabled ? true : permConfig.checked;
-                const estadoFinal = editEstado.disabled ? 'activo' : editEstado.value;
-
-                await updateDoc(userRef, {
-                    nombre: editNombre.value.trim(),
-                    estado: estadoFinal,
-                    permisos: {
-                        mostrador: permMostrador.checked,
-                        stock: permStock.checked,
-                        recetas: permRecetas.checked,
-                        cajas: permCajas.checked,
-                        finanzas: permFinanzas.checked,
-                        configuracion: esConfigChecked
+                if (isCreateMode) {
+                    if (!emailIngresado || passIngresada.length < 6) {
+                        btnGuardar.disabled = false;
+                        btnGuardar.textContent = 'Guardar Cambios';
+                        return alert("El email es obligatorio y la clave debe tener al menos 6 letras.");
                     }
-                });
 
-                modalUsuario.classList.remove('visible');
-                
-                // Si el admin se editó su propio nombre, actualizamos el localStorage
-                if (id === auth.currentUser.uid) {
-                    localStorage.setItem('userName', editNombre.value.trim());
+                    // 1. Crear el usuario en Firebase Auth sin expulsar al Admin
+                    const userCred = await createUserWithEmailAndPassword(secondaryAuth, emailIngresado, passIngresada);
+                    const newUid = userCred.user.uid;
+
+                    // 2. Desloguear a la app secundaria
+                    await signOut(secondaryAuth);
+
+                    // 3. Crear su perfil en Firestore
+                    await setDoc(doc(db, 'usuarios', newUid), {
+                        email: emailIngresado,
+                        nombre: nombreIngresado,
+                        estado: editEstado.value,
+                        rol: 'empleado',
+                        fechaCreacion: new Date(),
+                        permisos: permisosAsignados
+                    });
+                    
+                    alert(`El usuario ${nombreIngresado} fue creado exitosamente.`);
+                } else {
+                    // MODO EDICIÓN
+                    const id = editId.value;
+                    const estadoFinal = editEstado.disabled ? 'activo' : editEstado.value;
+
+                    await updateDoc(doc(db, 'usuarios', id), {
+                        nombre: nombreIngresado,
+                        estado: estadoFinal,
+                        permisos: permisosAsignados
+                    });
+
+                    if (id === auth.currentUser.uid) {
+                        localStorage.setItem('userName', nombreIngresado);
+                    }
                 }
 
+                modalUsuario.classList.remove('visible');
             } catch (error) {
-                console.error("Error al actualizar usuario:", error);
-                alert("Hubo un error al guardar los permisos.");
+                console.error("Error:", error);
+                if (error.code === 'auth/email-already-in-use') {
+                    alert("Ese correo electrónico ya está registrado.");
+                } else {
+                    alert("Hubo un error al procesar el usuario.");
+                }
             }
 
             btnGuardar.disabled = false;
