@@ -1,6 +1,9 @@
-const CACHE_NAME = 'dulce-app-dinamico-v1.2';
+// ==========================================
+// CAMBIAR ESTE NÚMERO CADA VEZ QUE HAGAS UNA ACTUALIZACIÓN GRANDE
+// ==========================================
+const CACHE_NAME = 'dulce-app-dinamico-v2.0'; 
 
-// Recursos básicos iniciales (se guardan al instalar, pero luego se actualizan solos)
+// Recursos básicos iniciales
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -15,38 +18,42 @@ const ASSETS_TO_CACHE = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-        .then((cache) => cache.addAll(ASSETS_TO_CACHE))
+        .then((cache) => {
+            console.log('[Service Worker] Instalando nueva versión:', CACHE_NAME);
+            return cache.addAll(ASSETS_TO_CACHE);
+        })
         .then(() => {
-            // Esto obliga al Service Worker nuevo a instalarse inmediatamente
-            // sin esperar a que el usuario cierre la pestaña de la app.
+            // Obliga al Service Worker nuevo a instalarse inmediatamente
             return self.skipWaiting(); 
         })
     );
 });
 
 // ==========================================
-// 2. ACTIVACIÓN (Limpieza y toma de control)
+// 2. ACTIVACIÓN (Limpieza DESTRUCTIVA del caché viejo)
 // ==========================================
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cache) => {
-                    // Borramos cachés viejos si alguna vez cambiamos el nombre
+                    // Si el nombre del caché no coincide con nuestra versión actual (v2.0)... ¡Lo borramos!
                     if (cache !== CACHE_NAME) {
+                        console.log('[Service Worker] Borrando caché viejo:', cache);
                         return caches.delete(cache);
                     }
                 })
             );
         }).then(() => {
-            // Esto obliga al Service Worker a tomar el control de la página abierta YA MISMO.
+            console.log('[Service Worker] Tomando el control de la app');
+            // Obliga al Service Worker a tomar el control YA MISMO.
             return self.clients.claim();
         })
     );
 });
 
 // ==========================================
-// 3. ESTRATEGIA: NETWORK FIRST (Primero la red)
+// 3. ESTRATEGIA: NETWORK FIRST (Siempre trae lo más nuevo si hay internet)
 // ==========================================
 self.addEventListener('fetch', (event) => {
     // Ignoramos peticiones que no sean GET (como las de Firebase u otras APIs)
@@ -67,7 +74,7 @@ self.addEventListener('fetch', (event) => {
             })
             .catch(() => {
                 // Si falla la red (Ej: Estamos sin internet / Modo avión)...
-                // Recién acá buscamos el archivo de repuesto que tenemos en el caché.
+                // Buscamos el archivo de repuesto que tenemos en el caché.
                 return caches.match(event.request);
             })
     );
