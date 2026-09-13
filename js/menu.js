@@ -1,12 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
     const navMenu = document.getElementById('nav-menu');
-    const navOverlay = document.getElementById('nav-overlay');
-
-    // 1. Leer los permisos del usuario activo
+    
+    // 1. Leer permisos
     const permisosJSON = localStorage.getItem('userPermisos');
     let permisos = {};
     
-    // Si no hay permisos y no estamos en la página de login, lo echamos al login
     if (!permisosJSON && !window.location.href.includes('login.html')) {
         window.location.href = 'login.html';
         return;
@@ -18,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     const userName = localStorage.getItem('userName') || 'Usuario';
 
-    // 2. Construir el menú dinámico
+    // 2. Construir menú dinámicamente SIN forzar el "display: block"
     if (navMenu && !window.location.href.includes('login.html')) {
         let menuHTML = `
             <div class="nav-menu__header" style="text-align: center; padding: 1.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -28,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         `;
 
-        // CATEGORÍA 1: Panel Principal
+        // CATEGORÍA 1
         let linksPrincipal = '';
         if (permisos.mostrador) linksPrincipal += `<a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>`;
         if (permisos.finanzas)  linksPrincipal += `<a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>`;
@@ -39,15 +37,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (linksPrincipal !== '') {
             menuHTML += `
-            <div class="nav-category active">
-                <button class="nav-category-btn">Panel Principal <span class="nav-icon">-</span></button>
-                <div class="nav-category-content" style="display: block;">
+            <div class="nav-category">
+                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
                     ${linksPrincipal}
                 </div>
             </div>`;
         }
 
-        // CATEGORÍA 2: Gestión y Finanzas
+        // CATEGORÍA 2
         let linksGestion = '';
         if (permisos.cajas) linksGestion += `<a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>`;
         if (permisos.finanzas) linksGestion += `<a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>`;
@@ -58,15 +56,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (linksGestion !== '') {
             menuHTML += `
-            <div class="nav-category active">
-                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">-</span></button>
-                <div class="nav-category-content" style="display: block;">
+            <div class="nav-category">
+                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
                     ${linksGestion}
                 </div>
             </div>`;
         }
 
-        // CATEGORÍA 3: Clientes y Agenda
+        // CATEGORÍA 3
         let linksClientes = '';
         if (permisos.mostrador) {
             linksClientes += `
@@ -78,15 +76,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (linksClientes !== '') {
             menuHTML += `
-            <div class="nav-category active">
-                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">-</span></button>
-                <div class="nav-category-content" style="display: block;">
+            <div class="nav-category">
+                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
                     ${linksClientes}
                 </div>
             </div>`;
         }
 
-        // BOTÓN DE CERRAR SESIÓN
+        // BOTÓN CERRAR SESIÓN
         menuHTML += `
             <div style="padding: 1.5rem 1rem; margin-top: 1rem;">
                 <button id="btn-logout" style="width: 100%; padding: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; transition: all 0.3s;">
@@ -95,59 +93,76 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         `;
 
-        // Inyectar el HTML
         navMenu.innerHTML = menuHTML;
 
-        // Marcar el link activo
+        // Auto-desplegar la pestaña donde el usuario está parado
         const currentPath = window.location.pathname.split('/').pop() || 'index.html';
         const allLinks = navMenu.querySelectorAll('.nav-menu__link');
+        
         allLinks.forEach(link => {
-            if (link.getAttribute('href') === currentPath) link.classList.add('active');
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active');
+                
+                // Abre el acordeón padre
+                const parentCategory = link.closest('.nav-category');
+                if (parentCategory) {
+                    parentCategory.classList.add('active');
+                    const icon = parentCategory.querySelector('.nav-icon');
+                    if (icon) icon.textContent = '-';
+                    const content = parentCategory.querySelector('.nav-category-content');
+                    if (content) content.style.display = 'block';
+                }
+            }
         });
     }
+});
 
-    // 3. CONTROL DE CLICS GENERAL (Antibalas)
-    document.addEventListener('click', (e) => {
-        // A. Botón Hamburguesa en móviles (Abrir menú)
-        if (e.target.closest('#menu-toggle-btn')) {
-            if (navMenu) navMenu.classList.add('active');
-            if (navOverlay) navOverlay.classList.add('active');
-            return;
-        }
+// 3. EVENTOS (Botones, Overlay y Acordeones) blindados a nivel documento
+document.addEventListener('click', (e) => {
+    
+    // A. Botón tres rayitas (Menú Celular)
+    if (e.target.closest('#menu-toggle-btn')) {
+        const navMenu = document.getElementById('nav-menu');
+        const navOverlay = document.getElementById('nav-overlay');
+        if (navMenu) navMenu.classList.add('active');
+        if (navOverlay) navOverlay.classList.add('active');
+        return;
+    }
 
-        // B. Clic en el fondo oscuro en móviles (Cerrar menú)
-        if (e.target.closest('#nav-overlay')) {
-            if (navMenu) navMenu.classList.remove('active');
-            if (navOverlay) navOverlay.classList.remove('active');
-            return;
-        }
+    // B. Tocar fondo oscuro para cerrar menú
+    if (e.target.closest('#nav-overlay')) {
+        const navMenu = document.getElementById('nav-menu');
+        const navOverlay = document.getElementById('nav-overlay');
+        if (navMenu) navMenu.classList.remove('active');
+        if (navOverlay) navOverlay.classList.remove('active');
+        return;
+    }
 
-        // C. Acordeones (Desplegar/Ocultar categorías)
-        const catBtn = e.target.closest('.nav-category-btn');
-        if (catBtn) {
-            const category = catBtn.parentElement;
-            const content = category.querySelector('.nav-category-content');
-            const icon = catBtn.querySelector('.nav-icon');
-            
-            category.classList.toggle('active');
-            if (category.classList.contains('active')) {
-                content.style.display = 'block';
-                if(icon) icon.textContent = '-';
-            } else {
-                content.style.display = 'none';
-                if(icon) icon.textContent = '+';
-            }
-            return;
+    // C. Abrir/Cerrar las categorías del menú (El acordeón)
+    const catBtn = e.target.closest('.nav-category-btn');
+    if (catBtn) {
+        const category = catBtn.parentElement;
+        const content = category.querySelector('.nav-category-content');
+        const icon = catBtn.querySelector('.nav-icon');
+        
+        category.classList.toggle('active');
+        if (category.classList.contains('active')) {
+            if (content) content.style.display = 'block';
+            if (icon) icon.textContent = '-';
+        } else {
+            if (content) content.style.display = 'none';
+            if (icon) icon.textContent = '+';
         }
+        return;
+    }
 
-        // D. Botón de Cerrar Sesión
-        const btnLogout = e.target.closest('#btn-logout');
-        if (btnLogout) {
-            if(confirm('¿Estás seguro de que querés cerrar sesión?')) {
-                localStorage.clear();
-                window.location.href = 'login.html?logout=true';
-            }
-            return;
+    // D. Botón de Cerrar Sesión
+    const btnLogout = e.target.closest('#btn-logout');
+    if (btnLogout) {
+        if(confirm('¿Estás seguro de que querés cerrar sesión?')) {
+            localStorage.clear();
+            window.location.href = 'login.html?logout=true';
         }
-    });
+        return;
+    }
 });
