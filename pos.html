@@ -2,12 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mostrador - Dulce App</title>
+    
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
+
+    <!-- ========================================== -->
+    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
+    <!-- ========================================== -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <!-- ========================================== -->
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
 
@@ -92,43 +101,8 @@
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DE NAVEGACIÓN -->
-        <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
-                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
-                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
-                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
-                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
-                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
-                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-                    <a href="usuarios.html" class="nav-menu__link"><span>🛡️</span> Permisos y Usuarios</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
-                </div>
-            </div>
-        </nav>
+        <!-- MENÚ DE NAVEGACIÓN DINÁMICO (Inyectado por menu.js) -->
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -320,7 +294,7 @@
                     <label style="color: #15803d; font-weight: bold;">Efectivo recibido en billetes ($)</label>
                     <input type="number" id="input-cobro-efectivo" class="payment-input" placeholder="Ej: 5000" min="0" step="10">
                     
-                    <!-- NUEVO: Billetera Rápida -->
+                    <!-- Billetera Rápida -->
                     <div class="quick-money-grid" id="quick-money-container">
                         <button class="btn-quick-money" data-val="exacto">Exacto</button>
                         <button class="btn-quick-money" data-val="5000">$5.000</button>
@@ -414,7 +388,7 @@
         </div>
     </div>
 
-    <!-- MODALES VIEJOS DE STOCK Y BARRAS -->
+    <!-- MODALES DE STOCK Y BARRAS -->
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
             <h2 class="card__title">Ajustar Ficha de Producto</h2>
@@ -481,7 +455,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT VERSIONADO PARA EVITAR CACHÉ -->
+    <!-- SCRIPTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
