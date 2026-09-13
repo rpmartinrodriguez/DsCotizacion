@@ -2,12 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mi Cotización - Dulce App</title>
+    
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <meta name="theme-color" content="#ff96c5">
+
+    <!-- ========================================== -->
+    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
+    <!-- ========================================== -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <!-- ========================================== -->
 </head>
 <body>
     <div class="main-container">
@@ -30,26 +39,9 @@
         </header>
 
         <!-- ====================================================== -->
-        <!-- MENÚ DE NAVEGACIÓN                                     -->
+        <!-- MENÚ DE NAVEGACIÓN DINÁMICO                            -->
         <!-- ====================================================== -->
-        <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
-            <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-            <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
-            <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-            <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-            <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-            <!-- Esta página es el carrito activo -->
-            <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
-            <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-            <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial</a>
-            <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-            <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
-        </nav>
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -180,14 +172,13 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        // IMPORTANTE: Cargamos el script 'cotizacion-actual.js' actualizado
         import { setupCotizacion } from './js/cotizacion-actual.js';
         try {
             const app = initializeApp(firebaseConfig);
             setupCotizacion(app);
         } catch (error) { console.error(error); }
     </script>
-    <script src="js/menu.js?v=5" defer></script>
+    <script src="js/menu.js?v=11" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
