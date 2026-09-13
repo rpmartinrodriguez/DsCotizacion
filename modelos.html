@@ -2,72 +2,77 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Links 3D - Cotizador</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión de Links 3D - Dulce App</title>
+    
     <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff96c5">
+
+    <!-- ========================================== -->
+    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
+    <!-- ========================================== -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <!-- ========================================== -->
 </head>
 <body>
 
-    <header class="header">
-        <button class="header__menu-icon" id="menu-toggle">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
-        <a href="index.html" class="header__logo-link">
-            <img src="assets/logo.png" alt="Logo" class="header__logo">
-        </a>
-        <div class="header__spacer"></div>
-    </header>
-
-    <div class="nav-menu__overlay" id="menu-overlay"></div>
-    <nav class="nav-menu" id="nav-menu">
-        <div class="nav-menu__header">
-            <span class="nav-menu__title">Menú Principal</span>
-        </div>
-        <a href="index.html" class="nav-menu__link"><span>🏠</span> Dashboard</a>
-        <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-        <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Recetas</a>
-        <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuestos</a>
-        <a href="modelos.html" class="nav-menu__link active"><span>🎨</span> Modelos 3D</a>
-    </nav>
-
     <div class="main-container">
-        <h1 class="header__slogan">Gestión de Links 3D</h1>
+        <!-- HEADER -->
+        <header class="header">
+            <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
+                <span></span><span></span><span></span>
+            </button>
+            <a href="index.html" class="header__logo-link">
+                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+            </a>
+            <div class="header__spacer"></div>
+        </header>
 
-        <div class="card">
-            <h2 class="card__title">Asociar Link 3D a una Receta</h2>
-            <form id="form-modelo" class="form-modern">
-                <div class="form-group">
-                    <label for="receta-nombre">Nombre de la Receta</label>
-                    <input type="text" id="receta-nombre" class="form-control" placeholder="Escribe para buscar una receta..." required list="lista-recetas-existentes">
-                    <datalist id="lista-recetas-existentes"></datalist>
-                </div>
-                <div class="form-group">
-                    <label for="modelo-url">URL completa del visor 3D</label>
-                    <input type="url" id="modelo-url" class="form-control" placeholder="https://tu-catalogo.netlify.app/public/..." required>
-                </div>
-                <button type="submit" class="btn-primary">Guardar Link</button>
-            </form>
-        </div>
+        <!-- MENÚ DINÁMICO (Inyectado por menu.js) -->
+        <nav class="nav-menu" id="nav-menu"></nav>        
+        <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <div class="card">
-            <h2 class="card__title">Links Guardados</h2>
-            <div id="lista-modelos-container">
-                <p>Cargando links...</p>
+        <main>
+            <h1 class="header__slogan">Gestión de Links 3D</h1>
+
+            <div class="card">
+                <h2 class="card__title">Asociar Link 3D a una Receta</h2>
+                <form id="form-modelo" class="form-modern">
+                    <div class="form-group">
+                        <label for="receta-nombre">Nombre de la Receta</label>
+                        <input type="text" id="receta-nombre" class="form-control" placeholder="Escribe para buscar una receta..." required list="lista-recetas-existentes">
+                        <datalist id="lista-recetas-existentes"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelo-url">URL completa del visor 3D</label>
+                        <input type="url" id="modelo-url" class="form-control" placeholder="https://tu-catalogo.netlify.app/public/..." required>
+                    </div>
+                    <button type="submit" class="btn-primary">Guardar Link</button>
+                </form>
             </div>
-        </div>
+
+            <div class="card">
+                <h2 class="card__title">Links Guardados</h2>
+                <div id="lista-modelos-container">
+                    <p>Cargando links...</p>
+                </div>
+            </div>
+        </main>
     </div>
 
+    <!-- SCRIPTS -->
     <script type="module" src="js/modelos.js"></script>
+    <script src="js/menu.js?v=11" defer></script>
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const menuToggle = document.getElementById('menu-toggle');
-            const menuOverlay = document.getElementById('menu-overlay');
-            const toggleMenu = () => document.body.classList.toggle('menu-open');
-            menuToggle.addEventListener('click', toggleMenu);
-            menuOverlay.addEventListener('click', toggleMenu);
-        });
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
     </script>
 </body>
 </html>
