@@ -2,7 +2,7 @@ import {
     getFirestore, collection, onSnapshot, query, where, doc, 
     addDoc, updateDoc, Timestamp, runTransaction, getDocs, setDoc, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -189,14 +189,25 @@ export function setupPOS(app) {
         });
     }
 
+    // --- AUTENTICACIÓN Y BLOQUEO DE SEGURIDAD ---
     onAuthStateChanged(auth, user => {
         if (user) {
+            // Si el usuario es "Anónimo" (fantasma de la versión vieja), lo echamos al login
+            if (user.isAnonymous) {
+                signOut(auth).then(() => {
+                    window.location.href = 'login.html';
+                });
+                return;
+            }
+
+            // Si es un usuario real, lo dejamos pasar
             currentUser = user;
-            userName = user.displayName || user.email || `Vendedor ${user.uid.substring(0,4)}`;
+            userName = localStorage.getItem('userName') || user.email.split('@')[0];
             if (usuarioNombreEl) usuarioNombreEl.textContent = userName;
             verificarCajaAbierta();
         } else {
-            signInAnonymously(auth);
+            // Si no hay nadie logueado, lo pateamos a la pantalla de login
+            window.location.href = 'login.html';
         }
     });
 
@@ -251,12 +262,10 @@ export function setupPOS(app) {
     const actualizarEstadoFondoInput = () => {
         const retiroPlata = document.querySelector('input[name="retiro_dinero"]:checked')?.value;
         if (aperturaTurnoSelect.value === 'Tarde' && saldoTurnoAnteriorDetectado > 0 && retiroPlata === 'no') {
-            // Se bloquea el campo y se fuerza el saldo heredado
             fondoCajaInput.value = saldoTurnoAnteriorDetectado;
             fondoCajaInput.disabled = true;
             fondoCajaInput.style.backgroundColor = '#f1f5f9';
         } else {
-            // Se libera el campo para carga manual
             fondoCajaInput.disabled = false;
             fondoCajaInput.style.backgroundColor = '#ffffff';
             if (fondoCajaInput.value == saldoTurnoAnteriorDetectado) {
@@ -292,7 +301,6 @@ export function setupPOS(app) {
             const turno = aperturaTurnoSelect.value;
             let fondoTipeado = parseFloat(fondoCajaInput.value) || 0;
             
-            // Garantía de seguridad extra
             let retiroPlata = document.querySelector('input[name="retiro_dinero"]:checked')?.value || 'si';
             if (turno === 'Tarde' && retiroPlata === 'no' && panelHerencia.style.display === 'block') {
                 fondoTipeado = saldoTurnoAnteriorDetectado;
@@ -740,7 +748,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Cierre y Revisión ---
     if (btnIniciarCierre) {
         btnIniciarCierre.addEventListener('click', () => {
             if (!cajaActiva) return;
@@ -753,7 +760,6 @@ export function setupPOS(app) {
             if (cierreMP) cierreMP.textContent = formatMoneda(mp);
             if (cierreTotalCaja) cierreTotalCaja.textContent = formatMoneda(fondo + efvo);
             
-            // Sugiere a quien cerró
             if (cierreNombreCajero) {
                 cierreNombreCajero.value = cajaActiva.usuarioNombre === 'Ceci' || cajaActiva.usuarioNombre === 'Eve' ? cajaActiva.usuarioNombre : '';
             }
@@ -935,7 +941,6 @@ export function setupPOS(app) {
         });
     }
 
-    // --- Modales Stock y Códigos de Barras ---
     const drawBarcodeCanvas = () => {
         if(!currentBarcodeProduct) return;
         const prod = currentBarcodeProduct;
