@@ -50,11 +50,10 @@ export function setupPOS(app) {
     const inputCobroEfectivo = document.getElementById('input-cobro-efectivo');
     const vueltoContainer = document.getElementById('vuelto-container');
     const modalVueltoTotal = document.getElementById('modal-vuelto-total');
-    const btnsQuickMoney = document.querySelectorAll('.btn-quick-money'); // Billetera rápida
+    const btnsQuickMoney = document.querySelectorAll('.btn-quick-money'); 
     
     const modalCierre = document.getElementById('modal-cierre');
     const cierreNombreCajero = document.getElementById('cierre-nombre-cajero');
-    const cierreCiegoInput = document.getElementById('cierre-ciego-input');
     const cierreFondo = document.getElementById('cierre-fondo');
     const cierreEfectivo = document.getElementById('cierre-efectivo');
     const cierreMP = document.getElementById('cierre-mp');
@@ -792,7 +791,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // CIERRE CIEGO (EMPLEADOS) VS MASTER
+    // CIERRE DE CAJA PARA TODOS (CON RESUMEN)
     // ==========================================
     if (btnIniciarCierre) {
         btnIniciarCierre.addEventListener('click', () => {
@@ -802,18 +801,15 @@ export function setupPOS(app) {
                 cierreNombreCajero.value = cajaActiva.usuarioNombre === 'Ceci' || cajaActiva.usuarioNombre === 'Eve' ? cajaActiva.usuarioNombre : '';
             }
 
-            if (userRol === 'master') {
-                const fondo = cajaActiva.fondoInicial || 0;
-                const efvo = cajaActiva.totalEfectivo || 0;
-                const mp = cajaActiva.totalMercadoPago || 0;
+            // Calculamos siempre para mostrar el resumen a todos (empleados o admin)
+            const fondo = cajaActiva.fondoInicial || 0;
+            const efvo = cajaActiva.totalEfectivo || 0;
+            const mp = cajaActiva.totalMercadoPago || 0;
 
-                if (cierreFondo) cierreFondo.textContent = formatMoneda(fondo);
-                if (cierreEfectivo) cierreEfectivo.textContent = formatMoneda(efvo);
-                if (cierreMP) cierreMP.textContent = formatMoneda(mp);
-                if (cierreTotalCaja) cierreTotalCaja.textContent = formatMoneda(fondo + efvo);
-            } else {
-                if (cierreCiegoInput) cierreCiegoInput.value = ''; // Limpiar el input para que cuente
-            }
+            if (cierreFondo) cierreFondo.textContent = formatMoneda(fondo);
+            if (cierreEfectivo) cierreEfectivo.textContent = formatMoneda(efvo);
+            if (cierreMP) cierreMP.textContent = formatMoneda(mp);
+            if (cierreTotalCaja) cierreTotalCaja.textContent = formatMoneda(fondo + efvo);
 
             if (modalCierre) modalCierre.classList.add('visible');
         });
@@ -838,18 +834,6 @@ export function setupPOS(app) {
                 cerradaPor: quienCierra
             };
 
-            // Lógica de Descuadre para Empleados
-            if (userRol !== 'master') {
-                let plataFisicaDeclarada = parseFloat(cierreCiegoInput.value);
-                if (isNaN(plataFisicaDeclarada)) {
-                    return alert("Por favor, ingresá la plata física total que contaste en el cajón.");
-                }
-                
-                const cajaTeorica = (cajaActiva.fondoInicial || 0) + (cajaActiva.totalEfectivo || 0);
-                cierreData.cierreCiegoEfectivo = plataFisicaDeclarada;
-                cierreData.descuadre = plataFisicaDeclarada - cajaTeorica; // Negativo = Faltante
-            }
-
             btnConfirmarCierre.disabled = true;
             btnConfirmarCierre.textContent = 'Cerrando...';
 
@@ -869,7 +853,7 @@ export function setupPOS(app) {
     }
 
     // ==========================================
-    // AUDITORÍA Y EDICIÓN DE TICKETS (ADMIN)
+    // AUDITORÍA Y EDICIÓN DE TICKETS
     // ==========================================
     if (btnRevisarTickets) {
         btnRevisarTickets.addEventListener('click', async () => {
