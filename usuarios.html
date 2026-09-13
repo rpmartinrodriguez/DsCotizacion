@@ -2,10 +2,22 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gestión de Usuarios - Dulce App</title>
+    
     <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff96c5">
+
+    <!-- ========================================== -->
+    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
+    <!-- ========================================== -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <!-- ========================================== -->
+
     <style>
         .main-container { max-width: 1000px; margin: 0 auto; padding: 1rem; }
         .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;}
@@ -36,10 +48,8 @@
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DE NAVEGACIÓN -->
-        <nav class="nav-menu" id="nav-menu">
-            <!-- El menú dinámico se carga desde menu.js -->
-        </nav>
+        <!-- MENÚ DE NAVEGACIÓN DINÁMICO (Inyectado por menu.js) -->
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
@@ -154,6 +164,11 @@
             setupUsuarios(app, firebaseConfig);
         } catch(e) { console.error("Error:", e); }
     </script>
-    <script src="js/menu.js?v=3" defer></script>
+    <script src="js/menu.js?v=11" defer></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+        }
+    </script>
 </body>
 </html>
