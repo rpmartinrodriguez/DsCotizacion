@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#ff96c5">
     <style>
         .main-container { max-width: 1000px; margin: 0 auto; padding: 1rem; }
-        .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 1px;}
+        .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;}
         
         .user-status { padding: 0.3rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
         .status-activo { background-color: #dcfce3; color: #15803d; }
@@ -38,47 +38,17 @@
 
         <!-- MENÚ DE NAVEGACIÓN -->
         <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
-                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
-                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
-                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
-                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
-                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
-                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-                    <a href="usuarios.html" class="nav-menu__link active"><span>🛡️</span> Permisos y Usuarios</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
-                </div>
-            </div>
+            <!-- El menú dinámico se carga desde menu.js -->
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <h1 class="page-title">Gestión de Usuarios</h1>
-                <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Administrá quién tiene acceso a cada módulo de la aplicación.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1 class="page-title">Gestión de Usuarios</h1>
+                    <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Administrá quién tiene acceso a cada módulo de la aplicación.</p>
+                </div>
+                <button id="btn-nuevo-usuario" class="btn-primary" style="width: auto; background: #0ea5e9; border-color: #0ea5e9;">➕ Nuevo Empleado</button>
             </div>
 
             <div class="card">
@@ -102,13 +72,25 @@
         </main>
     </div>
 
-    <!-- MODAL: EDITAR USUARIO Y PERMISOS -->
+    <!-- MODAL: CREAR/EDITAR USUARIO Y PERMISOS -->
     <div id="modal-usuario" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
-            <h2 class="card__title" style="color: #ec4899; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Editar Permisos</h2>
+            <h2 id="modal-titulo" class="card__title" style="color: #ec4899; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Editar Permisos</h2>
             
             <input type="hidden" id="edit-user-id">
             
+            <!-- Campos exclusivos para creación -->
+            <div id="campos-creacion" style="display: none; gap: 1rem; margin-top: 1rem; background: #f0f9ff; padding: 1rem; border-radius: 8px; border: 1px solid #bae6fd;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <label style="color: #0369a1;">Email de acceso</label>
+                    <input type="email" id="edit-user-email" placeholder="ejemplo@correo.com">
+                </div>
+                <div class="form-group" style="flex: 1; margin: 0; margin-top: 0.5rem;">
+                    <label style="color: #0369a1;">Contraseña provisoria</label>
+                    <input type="text" id="edit-user-pass" placeholder="Mínimo 6 caracteres">
+                </div>
+            </div>
+
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <div class="form-group" style="flex: 1;">
                     <label>Nombre del Empleado</label>
@@ -164,13 +146,14 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupUsuarios } from './js/usuarios.js?v=1';
+        import { setupUsuarios } from './js/usuarios.js?v=2';
         
         try {
             const app = initializeApp(firebaseConfig);
-            setupUsuarios(app);
+            // Le pasamos la config al JS para que pueda crear la app secundaria invisible
+            setupUsuarios(app, firebaseConfig);
         } catch(e) { console.error("Error:", e); }
     </script>
-    <script src="js/menu.js?v=999" defer></script>
+    <script src="js/menu.js?v=3" defer></script>
 </body>
 </html>
