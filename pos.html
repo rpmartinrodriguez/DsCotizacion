@@ -17,6 +17,35 @@
         .pos-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
         @media (min-width: 992px) { .pos-grid { grid-template-columns: 2.2fr 1fr; } }
         
+        /* ========================================== */
+        /* NUEVO UX/UI: Tarjetas Táctiles y Billetera */
+        /* ========================================== */
+        .productos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .producto-card { background: white; border: 2px solid #e2e8f0; border-radius: 12px; padding: 1rem 0.5rem; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; justify-content: space-between; align-items: center; min-height: 120px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .producto-card:hover { border-color: #ec4899; box-shadow: 0 4px 10px rgba(236,72,153,0.15); transform: translateY(-2px); }
+        .producto-card:active { transform: scale(0.96); }
+        .producto-card.sin-stock { opacity: 0.5; cursor: not-allowed; border-color: #fca5a5; background: #fef2f2; }
+        .producto-card.sin-stock:hover { transform: none; border-color: #fca5a5; box-shadow: none; }
+        .prod-nombre { font-weight: bold; font-size: 0.9rem; margin-bottom: 0.5rem; color: #334155; line-height: 1.2; }
+        .prod-precio { font-size: 1.15rem; font-weight: 900; color: #be185d; }
+        .prod-stock { font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 0.2rem 0.5rem; border-radius: 20px; display: inline-block; margin-top: 0.5rem; }
+
+        .quick-money-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-top: 0.5rem; }
+        .btn-quick-money { background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; padding: 0.6rem; border-radius: 6px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 0.9rem;}
+        .btn-quick-money:hover { background: #0ea5e9; color: white; }
+
+        /* Ocultamiento para empleados vs admin */
+        .master-only { display: none !important; }
+        .rol-master .master-only { display: inline-flex !important; }
+        .rol-master div.master-only { display: block !important; }
+        .rol-master button.master-only { display: inline-block !important; }
+
+        #vista-cierre-empleado { display: none; }
+        #vista-cierre-master { display: none; }
+        .rol-empleado #vista-cierre-empleado { display: block; }
+        .rol-master #vista-cierre-master { display: block; }
+        /* ========================================== */
+
         .producto-cantidad-input { width: 70px; text-align: center; }
         .cart-lista { min-height: 250px; max-height: 500px; overflow-y: auto; padding-right: 5px; }
         .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px dashed var(--border-color); }
@@ -27,7 +56,7 @@
         .cart-item-precio-unit { font-size: 0.85rem; color: var(--text-light); }
         .cart-item-total { font-weight: bold; color: var(--primary-color); margin: 0 1rem; min-width: 70px; text-align: right; }
         
-        .payment-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .payment-methods { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
         .btn-payment { position: relative; padding: 1.2rem 1rem; border: 2px solid var(--border-color); border-radius: 12px; background: white; font-size: 1rem; font-weight: bold; color: var(--text-light); cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .btn-payment:hover { border-color: #cbd5e1; }
         .btn-payment.selected { border-color: var(--primary-color); background-color: #fff0f5; color: var(--primary-color); box-shadow: 0 4px 10px rgba(255, 150, 197, 0.2); }
@@ -35,7 +64,7 @@
         .check-icon { display: none; position: absolute; top: -10px; right: -10px; background-color: var(--primary-color); color: white; border-radius: 50%; width: 28px; height: 28px; line-height: 28px; text-align: center; font-size: 16px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .btn-payment.selected .check-icon { display: block; }
 
-        .payment-input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1.2rem; margin-top: 0.3rem; }
+        .payment-input { width: 100%; padding: 0.8rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1.2rem; margin-top: 0.3rem; box-sizing: border-box;}
 
         .historial-auditoria { max-height: 150px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 0.5rem; background: #fafafa; margin-top: 1rem; }
         .log-item { font-size: 0.85rem; padding: 0.4rem; border-bottom: 1px solid #eee; }
@@ -60,7 +89,7 @@
         .tag-mp { background: #e0f2fe; color: #0369a1; }
     </style>
 </head>
-<body>
+<body class="rol-empleado">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -73,42 +102,9 @@
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DE NAVEGACIÓN -->
+        <!-- MENÚ DE NAVEGACIÓN DINÁMICO -->
         <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <div class="nav-category">
-    <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
-    <div class="nav-category-content">
-        <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
-        <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-        <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
-        <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-        <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-        <!-- AGREGÁ ESTA LÍNEA 👇 -->
-        <a href="usuarios.html" class="nav-menu__link"><span>🛡️</span> Permisos y Usuarios</a>
-    </div>
-</div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
-                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
-                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
-                </div>
-            </div>
+            <!-- Lo inyecta menu.js -->
         </nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
@@ -157,15 +153,17 @@
                 <button id="btn-abrir-caja" class="btn-primary">Abrir Caja y Comenzar Turno</button>
             </section>
 
-            <!-- PANTALLA 2: MOSTRADOR ACTIVO (POS) -->
+            <!-- PANTALLA 2: MOSTRADOR ACTIVO (POS TÁCTIL) -->
             <section id="pantalla-pos" class="pos-grid" style="display: none;">
                 
                 <div class="card" style="margin-bottom: 0;">
                     <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                        <h2 class="card__title" style="margin: 0;">Productos</h2>
+                        <h2 class="card__title" style="margin: 0;">Vitrina</h2>
                         <div style="display: flex; gap: 0.5rem;">
-                            <button id="btn-ir-stock" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
-                            <button id="btn-ir-promos" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem; border-color: #f59e0b; color: #f59e0b;">🏷️ Promos</button>
+                            <!-- Botones restringidos para la empleada (master-only) -->
+                            <button id="btn-ir-stock" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
+                            <button id="btn-ir-promos" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #f59e0b; color: #f59e0b;">🏷️ Promos</button>
+                            
                             <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">Cerrar Caja</button>
                         </div>
                     </div>
@@ -174,19 +172,9 @@
                         <input type="search" id="buscador-pos" placeholder="🔍 Escanear código de barras o buscar..." style="flex-grow: 1; font-size: 1.1rem; padding: 0.8rem;">
                     </div>
 
-                    <div style="overflow-x: auto; margin-top: 1rem;">
-                        <table class="table-clean">
-                            <thead>
-                                <tr>
-                                    <th>Producto</th>
-                                    <th>Stock</th>
-                                    <th>Precio</th>
-                                    <th style="width: 120px; text-align: center;">Cantidad</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lista-productos-pos">
-                                </tbody>
-                        </table>
+                    <!-- NUEVO GRID TÁCTIL EN LUGAR DE LA TABLA -->
+                    <div id="grid-productos-pos" class="productos-grid">
+                        <!-- Las tarjetas se inyectan desde JS -->
                     </div>
                 </div>
 
@@ -207,7 +195,7 @@
                 </div>
             </section>
 
-            <!-- PANTALLA 3: ADMINISTRACIÓN DE STOCK Y BARRAS -->
+            <!-- PANTALLA 3: ADMINISTRACIÓN DE STOCK Y BARRAS (SE MANTIENE INTACTA) -->
             <section id="pantalla-stock-mostrador" class="card" style="display: none;">
                 <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                     <h2 class="card__title" style="margin: 0;">Inventario y Lotes</h2>
@@ -241,7 +229,7 @@
                 </div>
             </section>
 
-            <!-- PANTALLA 4: ETIQUETAS PROMOCIONALES (DESCARGA) -->
+            <!-- PANTALLA 4: ETIQUETAS PROMOCIONALES (SE MANTIENE INTACTA) -->
             <section id="pantalla-promociones" class="card" style="display: none; max-width: 600px; margin: 0 auto;">
                 <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                     <h2 class="card__title" style="margin: 0;">Generar Etiqueta Promo</h2>
@@ -270,7 +258,7 @@
         </main>
     </div>
 
-    <!-- MODAL: COBRO CON NUEVO SISTEMA INTELIGENTE -->
+    <!-- MODAL: COBRO CON NUEVO SISTEMA INTELIGENTE (BILLETERA) -->
     <div id="modal-cobro" class="modal-overlay">
         <div class="modal-content card" style="max-width: 600px;">
             <h2 class="card__title" style="text-align: center; color: #ec4899; font-size: 1.8rem;">Confirmar Venta</h2>
@@ -308,13 +296,20 @@
                 <div id="field-efectivo" class="form-group" style="display: none; margin-bottom: 1rem;">
                     <label style="color: #15803d; font-weight: bold;">Efectivo recibido en billetes ($)</label>
                     <input type="number" id="input-cobro-efectivo" class="payment-input" placeholder="Ej: 5000" min="0" step="10">
+                    
+                    <!-- NUEVO: Billetera Rápida -->
+                    <div class="quick-money-grid" id="quick-money-container">
+                        <button class="btn-quick-money" data-val="exacto">Exacto</button>
+                        <button class="btn-quick-money" data-val="5000">$5.000</button>
+                        <button class="btn-quick-money" data-val="10000">$10.000</button>
+                        <button class="btn-quick-money" data-val="20000">$20.000</button>
+                    </div>
                 </div>
                 
-                <div id="vuelto-container" style="display: none; text-align: right; margin-top: 1rem; border-top: 1px dashed #94a3b8; padding-top: 1rem;">
-                    <span style="font-size: 1.2rem; color: #475569;">Vuelto a entregar al cliente:</span>
-                    <span id="modal-vuelto-total" style="font-size: 1.8rem; font-weight: 900; color: var(--success-color); display: block;">$0.00</span>
+                <div id="vuelto-container" style="display: none; text-align: center; margin-top: 1rem; border-top: 1px dashed #94a3b8; padding-top: 1rem;">
+                    <span style="font-size: 1rem; color: #475569; display:block; margin-bottom: 0.3rem;">Dar Vuelto:</span>
+                    <span id="modal-vuelto-total" style="font-size: 2.2rem; font-weight: 900; color: var(--success-color); display: block;">$0.00</span>
                 </div>
-
             </div>
 
             <div class="modal-actions" style="justify-content: space-between;">
@@ -324,10 +319,10 @@
         </div>
     </div>
 
-    <!-- MODAL: CIERRE DE CAJA -->
+    <!-- MODAL: CIERRE DE CAJA (CIEGO VS MASTER) -->
     <div id="modal-cierre" class="modal-overlay">
         <div class="modal-content card" style="max-width: 450px;">
-            <h2 class="card__title">Resumen de Turno</h2>
+            <h2 class="card__title">Cierre de Turno</h2>
             
             <div class="form-group" style="margin-top: 1rem;">
                 <label style="color: var(--primary-color); font-weight: bold;">Responsable del Cierre</label>
@@ -338,18 +333,26 @@
                 </select>
             </div>
 
-            <div class="calculo-resumen" style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;">
+            <!-- VISTA EMPLEADO: Cierre Ciego -->
+            <div id="vista-cierre-empleado" style="margin-top: 1.5rem; background: #fdf2f8; padding: 1.5rem; border-radius: 8px; border: 1px solid #fbcfe8; text-align: center;">
+                <label style="color: #831843; font-weight: bold; font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">Contá los billetes en la caja</label>
+                <p style="font-size: 0.85rem; color: #be185d; margin-top: 0; margin-bottom: 1rem;">Ingresá el total exacto físico que hay en el cajón.</p>
+                <input type="number" id="cierre-ciego-input" class="payment-input" placeholder="$0" style="font-size: 2rem; text-align: center; font-weight: bold; color: #831843;">
+            </div>
+
+            <!-- VISTA MASTER: Desglose Original -->
+            <div id="vista-cierre-master" class="calculo-resumen" style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px;">
                 <div class="calculo-fila"><span>Cambio Inicial:</span><span id="cierre-fondo">$0.00</span></div>
                 <div class="calculo-fila"><span>+ Ventas Efectivo:</span><span id="cierre-efectivo" style="color: var(--success-color); font-weight: bold;">$0.00</span></div>
                 <hr class="calculo-divisor" style="margin: 0.8rem 0;">
-                <div class="calculo-fila costo-produccion"><span style="font-size: 1.1rem; color: #831843;">Efectivo a Rendir:</span><span id="cierre-total-caja" style="color: #be185d; font-weight: 900; font-size: 1.3rem;">$0.00</span></div>
+                <div class="calculo-fila costo-produccion"><span style="font-size: 1.1rem; color: #831843;">Sistema Espera:</span><span id="cierre-total-caja" style="color: #be185d; font-weight: 900; font-size: 1.3rem;">$0.00</span></div>
                 
                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #cbd5e1;">
                     <div class="calculo-fila"><span>Transferencias/MP:</span><span id="cierre-mp" style="color: #0284c7; font-weight: bold;">$0.00</span></div>
                 </div>
             </div>
             
-            <button id="btn-revisar-tickets" class="btn-secondary" style="width: 100%; margin-top: 1rem; padding: 0.8rem; font-weight: bold; border-color: #64748b; color: #64748b;">📄 Revisar y Editar Movimientos</button>
+            <button id="btn-revisar-tickets" class="btn-secondary master-only" style="width: 100%; margin-top: 1rem; padding: 0.8rem; font-weight: bold; border-color: #64748b; color: #64748b;">📄 Revisar Movimientos</button>
 
             <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
                 <button id="btn-cancelar-cierre" class="btn-secondary" style="width: 48%;">Volver</button>
@@ -358,7 +361,7 @@
         </div>
     </div>
 
-    <!-- MODAL: AUDITORÍA DE TICKETS -->
+    <!-- MODAL: AUDITORÍA DE TICKETS (SE MANTIENE INTACTO) -->
     <div id="modal-revision-tickets" class="modal-overlay" style="z-index: 1500;">
         <div class="modal-content card" style="max-width: 600px;">
             <h2 class="card__title" style="margin-bottom: 0.5rem;">Auditoría de Movimientos</h2>
@@ -374,7 +377,7 @@
         </div>
     </div>
 
-    <!-- MODAL: EDITAR MÉTODO DE PAGO -->
+    <!-- MODAL: EDITAR MÉTODO DE PAGO (SE MANTIENE INTACTO) -->
     <div id="modal-editar-ticket" class="modal-overlay" style="z-index: 2000;">
         <div class="modal-content card" style="max-width: 350px;">
             <h2 class="card__title" style="color: #eab308;">Corregir Ticket</h2>
@@ -396,7 +399,7 @@
         </div>
     </div>
 
-    <!-- MODALES VIEJOS DE STOCK Y BARRAS -->
+    <!-- MODALES VIEJOS DE STOCK Y BARRAS (SE MANTIENEN INTACTOS) -->
     <div id="modal-stock-detalle" class="modal-overlay">
         <div class="modal-content card" style="max-width: 550px;">
             <h2 class="card__title">Ajustar Ficha de Producto</h2>
@@ -467,7 +470,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPOS } from './js/pos.js?v=21';
+        // ASEGURATE QUE ESTE ARCHIVO JS SEA EL NUEVO QUE TE PASÉ EN LA RESPUESTA ANTERIOR
+        import { setupPOS } from './js/pos.js?v=99';
         try {
             const app = initializeApp(firebaseConfig);
             setupPOS(app);
@@ -475,6 +479,6 @@
             console.error("Error al inicializar Mostrador:", error); 
         }
     </script>
-    <script src="js/menu.js?v=5" defer></script>
+    <script src="js/menu.js?v=11" defer></script>
 </body>
 </html>
