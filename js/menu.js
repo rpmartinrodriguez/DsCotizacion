@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { permisos = JSON.parse(permisosJSON); } catch(e) {}
     }
 
-    // Mapa: ¿Qué permiso se necesita para ver cada página?
+    // Mapa Estricto: ¿Qué permiso se necesita para ver cada página?
     const rutaPermiso = {
         'pos.html': 'mostrador',
         'index.html': 'finanzas',
@@ -34,37 +34,62 @@ document.addEventListener('DOMContentLoaded', () => {
         'modelos.html': 'mostrador'
     };
 
+    // Obtenemos la página exacta en la que está parado el usuario
+    let currentPath = window.location.pathname.split('/').pop();
+    if (currentPath === '' || currentPath === '/') currentPath = 'index.html'; 
+
     if (!window.location.href.includes('login.html')) {
         
-        // A. Ocultar los enlaces a los que el usuario no tiene permiso
+        // --- 1. EXPULSIÓN DE SEGURIDAD ACTIVA ---
+        // Si intenta entrar a una URL que no tiene permitida, lo pateamos.
+        let tienePermisoPagina = false;
+        
+        if (currentPath === 'presupuesto.html') {
+            tienePermisoPagina = permisos.mostrador || permisos.recetas;
+        } else if (rutaPermiso[currentPath]) {
+            tienePermisoPagina = permisos[rutaPermiso[currentPath]] === true;
+        } else {
+            tienePermisoPagina = true; // Por defecto a páginas sin restricción
+        }
+
+        if (!tienePermisoPagina) {
+            alert("Acceso denegado: No tenés permiso de Administrador para ver esta sección.");
+            window.location.href = 'pos.html'; // Lo mandamos a la caja directo
+            return;
+        }
+
+        // --- 2. OCULTAR BOTONES DEL MENÚ ---
         document.querySelectorAll('.nav-menu__link').forEach(link => {
-            const href = link.getAttribute('href');
-            let tienePermiso = false;
+            const hrefOriginal = link.getAttribute('href');
+            if (!hrefOriginal) return;
+
+            // Limpiamos el link (le sacamos el ./ o rutas raras) para comparar exacto
+            const hrefLimpiado = hrefOriginal.split('/').pop(); 
             
-            // Regla especial: Presupuesto lo puede ver quien tenga Mostrador O Recetas
-            if (href === 'presupuesto.html') {
-                tienePermiso = permisos.mostrador || permisos.recetas;
-            } else if (rutaPermiso[href]) {
-                tienePermiso = permisos[rutaPermiso[href]];
+            let tienePermisoBtn = false;
+            
+            if (hrefLimpiado === 'presupuesto.html') {
+                tienePermisoBtn = permisos.mostrador || permisos.recetas;
+            } else if (rutaPermiso[hrefLimpiado]) {
+                tienePermisoBtn = permisos[rutaPermiso[hrefLimpiado]] === true;
             } else {
-                tienePermiso = true; // Por defecto, si no está en la lista, lo muestra
+                tienePermisoBtn = true;
             }
 
-            if (!tienePermiso) {
-                link.style.display = 'none'; // Lo ocultamos de la vista
+            if (!tienePermisoBtn) {
+                link.style.display = 'none'; // Chau botón
             }
         });
 
-        // B. Ocultar las categorías que se quedaron sin botones visibles
+        // --- 3. OCULTAR CATEGORÍAS VACÍAS ---
         document.querySelectorAll('.nav-category').forEach(cat => {
-            // Buscamos cuántos enlaces quedaron visibles adentro de esta categoría
             const linksVisibles = Array.from(cat.querySelectorAll('.nav-menu__link')).filter(l => l.style.display !== 'none');
             if (linksVisibles.length === 0) {
-                cat.style.display = 'none'; // Si no hay nada, ocultamos el título de la categoría
+                cat.style.display = 'none'; // Si no le quedó ni un botón, ocultamos el título (Ej: Gestión y Finanzas)
             }
         });
 
-        // C. Mostrar el nombre del usuario y el botón de Cerrar Sesión
+        // --- 4. MOSTRAR NOMBRE Y BOTÓN DE CERRAR SESIÓN ---
         const navMenu = document.getElementById('nav-menu');
         const userName = localStorage.getItem('userName') || 'Usuario';
         
@@ -73,7 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
             titleEl.innerHTML = `Dulce App<br><span style="font-size:0.8rem; color:#fbcfe8; font-weight:normal;">👤 ${userName}</span>`;
         }
 
-        if (navMenu) {
+        // Evitar duplicar el botón de logout
+        if (navMenu && !document.getElementById('btn-logout')) {
             const logoutDiv = document.createElement('div');
             logoutDiv.style.padding = '1.5rem 1rem';
             logoutDiv.style.marginTop = '1rem';
@@ -93,9 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     // ==========================================
-    // 1. ABRIR Y CERRAR EL MENÚ LATERAL (TU CÓDIGO ORIGINAL INTACTO)
+    // 1. ABRIR Y CERRAR EL MENÚ LATERAL (TU CÓDIGO INTACTO)
     // ==========================================
     const menuBtn = document.getElementById('menu-toggle-btn');
     const overlay = document.getElementById('nav-overlay');
@@ -117,12 +142,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentCategory = btn.parentElement;
             const isActive = currentCategory.classList.contains('active');
             
-            // Cerrar todas las demás categorías para mantener ordenado
             document.querySelectorAll('.nav-category').forEach(cat => {
                 cat.classList.remove('active');
             });
             
-            // Si la que tocamos no estaba abierta, la abrimos
             if (!isActive) {
                 currentCategory.classList.add('active');
             }
@@ -132,14 +155,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==========================================
     // 3. AUTO-SELECCIONAR PÁGINA ACTUAL
     // ==========================================
-    let currentPath = window.location.pathname.split('/').pop();
-    if (currentPath === '') currentPath = 'index.html'; 
-
-    const activeLink = document.querySelector(`.nav-menu__link[href="${currentPath}"]`);
+    const activeLink = document.querySelector(`.nav-menu__link[href="${currentPath}"]`) || document.querySelector(`.nav-menu__link[href="./${currentPath}"]`);
     
     if (activeLink) {
         activeLink.classList.add('active');
-        
         const parentCategory = activeLink.closest('.nav-category');
         if (parentCategory) {
             parentCategory.classList.add('active');
