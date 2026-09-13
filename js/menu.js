@@ -1,126 +1,129 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const navMenu = document.getElementById('nav-menu');
+    const menuToggleBtn = document.getElementById('menu-toggle-btn');
+    const navOverlay = document.getElementById('nav-overlay');
 
     // ==========================================
-    // 0. SEGURIDAD DE HIERRO (BLANCO O NEGRO)
+    // 1. INYECCIÓN DINÁMICA DEL MENÚ
+    // Si el HTML no tiene el menú escrito, lo inyectamos con JS
     // ==========================================
-    const userRol = localStorage.getItem('userRol'); // Lee si es 'master' o 'empleado'
-    const userName = localStorage.getItem('userName') || 'Usuario';
-    
-    // Si no está logueado y no está en la página de login, lo echa a patadas.
-    if (!userRol && !window.location.href.includes('login.html')) {
-        window.location.href = 'login.html';
-        return;
-    }
-
-    // Obtenemos la página exacta en la que está parado el usuario
-    let currentPath = window.location.pathname.split('/').pop();
-    if (currentPath === '' || currentPath === '/') currentPath = 'index.html'; 
-
-    if (!window.location.href.includes('login.html')) {
+    if (navMenu && navMenu.innerHTML.trim() === '') {
+        const userRol = localStorage.getItem('userRol') || 'empleado';
         
-        // --- 1. EXPULSIÓN INMEDIATA ---
-        // Si NO es master, SOLO puede estar en pos.html
-        if (userRol !== 'master') {
-            if (currentPath !== 'pos.html') {
-                alert("Acceso denegado: Tu perfil de empleado solo tiene acceso a la Caja.");
-                window.location.href = 'pos.html'; // Lo mandamos a la caja directo
-                return; // Corta la ejecución de todo lo demás
-            }
-        }
+        navMenu.innerHTML = `
+            <div class="nav-menu__header">
+                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;" onerror="this.style.display='none'">
+                <span class="nav-menu__title">Dulce App</span>
+            </div>
 
-        // --- 2. DESTRUCCIÓN VISUAL DE BOTONES PROHIBIDOS ---
-        document.querySelectorAll('.nav-menu__link').forEach(link => {
-            const hrefOriginal = link.getAttribute('href');
-            if (!hrefOriginal) return;
+            <div class="nav-category">
+                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
+                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
+                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
+                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
+                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
+                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
+                </div>
+            </div>
 
-            const hrefLimpiado = hrefOriginal.split('/').pop(); 
-            
-            // Si es empleado, ocultamos CUALQUIER botón que no sea el Mostrador
-            if (userRol !== 'master' && hrefLimpiado !== 'pos.html') {
-                link.style.display = 'none';
-            }
-        });
+            <div class="nav-category">
+                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
+                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
+                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
+                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
+                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
+                    ${userRol === 'master' ? `<a href="usuarios.html" class="nav-menu__link"><span>🛡️</span> Permisos y Usuarios</a>` : ''}
+                </div>
+            </div>
 
-        // --- 3. OCULTAR CATEGORÍAS VACÍAS ---
-        document.querySelectorAll('.nav-category').forEach(cat => {
-            const linksVisibles = Array.from(cat.querySelectorAll('.nav-menu__link')).filter(l => l.style.display !== 'none');
-            if (linksVisibles.length === 0) {
-                cat.style.display = 'none'; // Desaparece la categoría entera (Ej: "Gestión y Finanzas")
-            }
-        });
+            <div class="nav-category">
+                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
+                <div class="nav-category-content">
+                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
+                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
+                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+                </div>
+            </div>
 
-        // --- 4. MOSTRAR NOMBRE, ROL Y BOTÓN DE CERRAR SESIÓN ---
-        const navMenu = document.getElementById('nav-menu');
-        
-        const titleEl = document.querySelector('.nav-menu__title');
-        if (titleEl) {
-            const etiquetaRol = userRol === 'master' ? '👑 Admin' : '👤 Caja';
-            titleEl.innerHTML = `Dulce App<br><span style="font-size:0.8rem; color:#fbcfe8; font-weight:normal;">${userName} (${etiquetaRol})</span>`;
-        }
-
-        if (navMenu && !document.getElementById('btn-logout')) {
-            const logoutDiv = document.createElement('div');
-            logoutDiv.style.padding = '1.5rem 1rem';
-            logoutDiv.style.marginTop = '1rem';
-            logoutDiv.innerHTML = `
-                <button id="btn-logout" style="width: 100%; padding: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.5rem; transition: background 0.2s;">
-                    <span>🚪</span> Cerrar Sesión
-                </button>
-            `;
-            navMenu.appendChild(logoutDiv);
-
-            document.getElementById('btn-logout').addEventListener('click', () => {
-                if(confirm('¿Estás seguro de que querés cerrar sesión?')) {
-                    localStorage.clear();
-                    window.location.href = 'login.html?logout=true';
-                }
-            });
-        }
+            <div style="padding: 1rem; border-top: 1px solid #e2e8f0; margin-top: 1rem;">
+                <button id="btn-cerrar-sesion-menu" class="btn-secondary" style="width: 100%; color: #dc2626; border-color: #fca5a5; background: #fef2f2;">Cerrar Sesión</button>
+            </div>
+        `;
     }
 
     // ==========================================
-    // 1. ABRIR Y CERRAR EL MENÚ LATERAL (TU CÓDIGO INTACTO)
+    // 2. LÓGICA DE ABRIR/CERRAR EL MENÚ LATERAL
     // ==========================================
-    const menuBtn = document.getElementById('menu-toggle-btn');
-    const overlay = document.getElementById('nav-overlay');
-    
-    const toggleMenu = () => {
-        document.body.classList.toggle('menu-open');
-    };
+    if (menuToggleBtn) {
+        menuToggleBtn.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            if (navOverlay) navOverlay.classList.toggle('active');
+        });
+    }
 
-    if (menuBtn) menuBtn.addEventListener('click', toggleMenu);
-    if (overlay) overlay.addEventListener('click', toggleMenu);
+    if (navOverlay) {
+        navOverlay.addEventListener('click', () => {
+            navMenu.classList.remove('active');
+            navOverlay.classList.remove('active');
+        });
+    }
 
     // ==========================================
-    // 2. LÓGICA DE CATEGORÍAS DESPLEGABLES (ACORDEÓN)
+    // 3. LÓGICA DEL ACORDEÓN (Desplegables)
     // ==========================================
     const categoryBtns = document.querySelectorAll('.nav-category-btn');
-    
     categoryBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            const currentCategory = btn.parentElement;
-            const isActive = currentCategory.classList.contains('active');
+            const content = btn.nextElementSibling;
+            const icon = btn.querySelector('.nav-icon');
             
-            document.querySelectorAll('.nav-category').forEach(cat => {
-                cat.classList.remove('active');
-            });
-            
-            if (!isActive) {
-                currentCategory.classList.add('active');
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.textContent = '+';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.textContent = '-';
             }
         });
     });
 
     // ==========================================
-    // 3. AUTO-SELECCIONAR PÁGINA ACTUAL
+    // 4. MARCAR PÁGINA ACTUAL Y ABRIR SU ACORDEÓN
     // ==========================================
-    const activeLink = document.querySelector(`.nav-menu__link[href="${currentPath}"]`) || document.querySelector(`.nav-menu__link[href="./${currentPath}"]`);
+    const currentPath = window.location.pathname.split('/').pop() || 'index.html';
+    const links = document.querySelectorAll('.nav-menu__link');
     
-    if (activeLink) {
-        activeLink.classList.add('active');
-        const parentCategory = activeLink.closest('.nav-category');
-        if (parentCategory) {
-            parentCategory.classList.add('active');
+    links.forEach(link => {
+        const href = link.getAttribute('href');
+        // Usamos includes() por si el href tiene parámetros como ?v=1
+        if (href && currentPath.includes(href.split('?')[0])) {
+            link.classList.add('active');
+            
+            // Desplegamos automáticamente la categoría donde estamos parados
+            const parentContent = link.closest('.nav-category-content');
+            if (parentContent) {
+                parentContent.style.maxHeight = parentContent.scrollHeight + "px";
+                const parentBtn = parentContent.previousElementSibling;
+                if (parentBtn) {
+                    const icon = parentBtn.querySelector('.nav-icon');
+                    if (icon) icon.textContent = '-';
+                }
+            }
         }
+    });
+
+    // ==========================================
+    // 5. CERRAR SESIÓN
+    // ==========================================
+    const btnCerrarSesion = document.getElementById('btn-cerrar-sesion-menu');
+    if (btnCerrarSesion) {
+        btnCerrarSesion.addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        });
     }
 });
