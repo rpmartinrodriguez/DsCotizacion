@@ -1,9 +1,5 @@
-import { 
-    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut
-} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { 
-    getFirestore, doc, getDoc, setDoc, collection, getDocs, limit, query 
-} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, limit, query } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupLogin(app) {
     const auth = getAuth(app);
@@ -14,25 +10,17 @@ export function setupLogin(app) {
     const passwordInput = document.getElementById('password');
     const btnSubmit = document.getElementById('btn-submit');
     const errorMessage = document.getElementById('error-message');
-    
-    // Modo Registro vs Modo Login
     const registroContainer = document.getElementById('registro-container');
     const btnRegistrar = document.getElementById('btn-registrar');
     let isRegisterMode = false;
 
-    // Habilitar el botón de registro por si necesitan crear cuentas
     registroContainer.style.display = 'block';
 
     btnRegistrar.addEventListener('click', (e) => {
         e.preventDefault();
         isRegisterMode = !isRegisterMode;
-        if (isRegisterMode) {
-            btnSubmit.textContent = 'Crear Cuenta Nueva';
-            btnRegistrar.textContent = 'Ya tengo cuenta, ingresar';
-        } else {
-            btnSubmit.textContent = 'Ingresar al Sistema';
-            btnRegistrar.textContent = 'Crear cuenta nueva';
-        }
+        btnSubmit.textContent = isRegisterMode ? 'Crear Cuenta Nueva' : 'Ingresar al Sistema';
+        btnRegistrar.textContent = isRegisterMode ? 'Ya tengo cuenta, ingresar' : 'Crear cuenta nueva';
         errorMessage.style.display = 'none';
     });
 
@@ -45,131 +33,88 @@ export function setupLogin(app) {
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        if (!email || !password) {
-            showError("Por favor, completa todos los campos.");
-            return;
-        }
+        if (!emailInput.value || !passwordInput.value) return showError("Completa todos los campos.");
 
         btnSubmit.disabled = true;
         btnSubmit.textContent = 'Procesando...';
         errorMessage.style.display = 'none';
 
         try {
-            let userCredential;
-
             if (isRegisterMode) {
-                // 1. CREAR CUENTA NUEVA
-                userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const userCredential = await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
                 await procesarNuevoUsuario(userCredential.user);
             } else {
-                // 2. INGRESAR (LOGIN)
-                userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const userCredential = await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
                 await verificarAccesoUsuario(userCredential.user);
             }
-            
         } catch (error) {
-            console.error("Error de Autenticación:", error);
-            let msg = "Error al ingresar. Verificá tus datos.";
+            let msg = "Error al ingresar.";
             if (error.code === 'auth/wrong-password') msg = "Contraseña incorrecta.";
-            if (error.code === 'auth/user-not-found') msg = "No existe una cuenta con este correo.";
-            if (error.code === 'auth/email-already-in-use') msg = "Este correo ya está registrado.";
-            if (error.code === 'auth/weak-password') msg = "La contraseña debe tener al menos 6 caracteres.";
+            if (error.code === 'auth/user-not-found') msg = "Usuario no encontrado.";
+            if (error.code === 'auth/email-already-in-use') msg = "Correo ya registrado.";
             showError(msg);
         }
     });
 
-    // Función para manejar la base de datos cuando se registra un usuario
     async function procesarNuevoUsuario(user) {
         try {
-            // Verificamos si la colección de usuarios está vacía
-            const usuariosSnapshot = await getDocs(query(collection(db, 'usuarios'), limit(1)));
-            const isFirstUser = usuariosSnapshot.empty;
+            const isFirstUser = (await getDocs(query(collection(db, 'usuarios'), limit(1)))).empty;
 
-            // Si es el primer usuario, le damos permisos totales (Master Admin)
-            // Si no, lo creamos como "Cajero" pero Inactivo, para que el Admin lo habilite
             const nuevoPerfil = {
                 email: user.email,
-                nombre: user.email.split('@')[0], // Nombre temporal
+                nombre: user.email.split('@')[0],
                 estado: isFirstUser ? 'activo' : 'inactivo',
                 rol: isFirstUser ? 'master' : 'empleado',
                 fechaCreacion: new Date(),
-                // PERMISOS GRANULARES
                 permisos: {
-                    mostrador: isFirstUser,      // Caja
-                    recetas: isFirstUser,        // Ver recetas
-                    stock: isFirstUser,          // Módulo de stock
-                    cajas: isFirstUser,          // Historial de cajas
-                    finanzas: isFirstUser,       // Indicadores y rentabilidad
-                    configuracion: isFirstUser   // Crear/Editar Usuarios (Panel Admin)
+                    mostrador: isFirstUser, indicadores: isFirstUser, recetas: isFirstUser, stock: isFirstUser,
+                    presupuestos: isFirstUser, precios: isFirstUser, cajas: isFirstUser, finanzas: isFirstUser,
+                    historial: isFirstUser, compras: isFirstUser, compras_lista: isFirstUser, clientes: isFirstUser,
+                    agenda: isFirstUser, modelos: isFirstUser, configuracion: isFirstUser
                 }
             };
 
             await setDoc(doc(db, 'usuarios', user.uid), nuevoPerfil);
 
             if (isFirstUser) {
-                // ¡CLAVE! Guardar datos en local ANTES de redirigir para que el menú patovica lo deje pasar
                 localStorage.setItem('userPermisos', JSON.stringify(nuevoPerfil.permisos));
                 localStorage.setItem('userName', nuevoPerfil.nombre);
                 localStorage.setItem('userRol', nuevoPerfil.rol);
-
-                alert("¡Bienvenido! Al ser el primer usuario, se te han asignado permisos de Administrador Maestro.");
-                window.location.href = 'index.html'; // Lo mandamos al dashboard
+                window.location.href = 'index.html';
             } else {
-                alert("Cuenta creada con éxito. Tu usuario está inactivo. Pedile al Administrador que te habilite y asigne tus permisos.");
-                await signOut(auth); // Lo deslogueamos porque está inactivo
+                alert("Cuenta creada. Pedile al Admin que te habilite y asigne permisos.");
+                await signOut(auth);
                 window.location.reload();
             }
-
-        } catch (error) {
-            console.error("Error al crear perfil en base de datos:", error);
-            showError("La cuenta se creó, pero hubo un error al asignar los permisos.");
-        }
+        } catch (error) { showError("Error al crear la cuenta en la base."); }
     }
 
-    // Función para verificar si el usuario que ingresa tiene permiso de entrar
     async function verificarAccesoUsuario(user) {
         try {
-            const docRef = doc(db, 'usuarios', user.uid);
-            const docSnap = await getDoc(docRef);
-
-            if (!docSnap.exists()) {
-                // Raro que pase, pero por si un usuario se borró de la DB pero no de Auth
-                await procesarNuevoUsuario(user);
-                return;
-            }
+            const docSnap = await getDoc(doc(db, 'usuarios', user.uid));
+            if (!docSnap.exists()) return await procesarNuevoUsuario(user);
 
             const perfil = docSnap.data();
-
             if (perfil.estado !== 'activo') {
                 await signOut(auth);
-                showError("Tu cuenta está inactiva o bloqueada. Contactá al Administrador.");
-                return;
+                return showError("Tu cuenta está bloqueada.");
             }
 
-            // ¡CLAVE! Guardamos los permisos en la sesión local (localStorage) para que el Menú Patovica los lea
             localStorage.setItem('userPermisos', JSON.stringify(perfil.permisos || {}));
             localStorage.setItem('userName', perfil.nombre || user.email);
             localStorage.setItem('userRol', perfil.rol);
 
-            // REDIRECCIÓN INTELIGENTE (Dependiendo de lo que tenga permitido)
-            if (perfil.rol === 'master') {
-                window.location.href = 'index.html'; // El dueño va al Dashboard
-            } else {
+            if (perfil.rol === 'master') window.location.href = 'index.html';
+            else {
                 const p = perfil.permisos || {};
                 if (p.mostrador) window.location.href = 'pos.html';
                 else if (p.stock) window.location.href = 'stock.html';
                 else if (p.recetas) window.location.href = 'recetas.html';
                 else if (p.finanzas) window.location.href = 'index.html';
-                else if (p.cajas) window.location.href = 'cajas.html';
-                else window.location.href = 'pos.html'; // Fallback
+                else window.location.href = 'login.html'; // Si no tiene NADA, se queda afuera
             }
-
         } catch (error) {
-            console.error("Error al verificar perfil:", error);
-            showError("Hubo un error al verificar tus permisos. Reintentá.");
+            showError("Hubo un error. Reintentá.");
             await signOut(auth);
         }
     }
