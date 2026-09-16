@@ -1,5 +1,5 @@
 import { 
-    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut
+    getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { 
     getFirestore, doc, getDoc, setDoc, collection, getDocs, limit, query 
@@ -110,8 +110,13 @@ export function setupLogin(app) {
             await setDoc(doc(db, 'usuarios', user.uid), nuevoPerfil);
 
             if (isFirstUser) {
+                // ¡CLAVE! Guardar datos en local ANTES de redirigir para que el menú patovica lo deje pasar
+                localStorage.setItem('userPermisos', JSON.stringify(nuevoPerfil.permisos));
+                localStorage.setItem('userName', nuevoPerfil.nombre);
+                localStorage.setItem('userRol', nuevoPerfil.rol);
+
                 alert("¡Bienvenido! Al ser el primer usuario, se te han asignado permisos de Administrador Maestro.");
-                window.location.href = 'pos.html'; // Lo mandamos al mostrador
+                window.location.href = 'index.html'; // Lo mandamos al dashboard
             } else {
                 alert("Cuenta creada con éxito. Tu usuario está inactivo. Pedile al Administrador que te habilite y asigne tus permisos.");
                 await signOut(auth); // Lo deslogueamos porque está inactivo
@@ -144,17 +149,22 @@ export function setupLogin(app) {
                 return;
             }
 
-            // Guardamos los permisos en la sesión local (localStorage) para que el Menú los lea rápido
-            localStorage.setItem('userPermisos', JSON.stringify(perfil.permisos));
+            // ¡CLAVE! Guardamos los permisos en la sesión local (localStorage) para que el Menú Patovica los lea
+            localStorage.setItem('userPermisos', JSON.stringify(perfil.permisos || {}));
             localStorage.setItem('userName', perfil.nombre || user.email);
             localStorage.setItem('userRol', perfil.rol);
 
-            // Login exitoso -> Redirigir a la app
-            // Si tiene permiso de mostrador, va al mostrador, sino al dashboard de finanzas u otro.
-            if (perfil.permisos.mostrador) {
-                window.location.href = 'pos.html';
+            // REDIRECCIÓN INTELIGENTE (Dependiendo de lo que tenga permitido)
+            if (perfil.rol === 'master') {
+                window.location.href = 'index.html'; // El dueño va al Dashboard
             } else {
-                window.location.href = 'index.html';
+                const p = perfil.permisos || {};
+                if (p.mostrador) window.location.href = 'pos.html';
+                else if (p.stock) window.location.href = 'stock.html';
+                else if (p.recetas) window.location.href = 'recetas.html';
+                else if (p.finanzas) window.location.href = 'index.html';
+                else if (p.cajas) window.location.href = 'cajas.html';
+                else window.location.href = 'pos.html'; // Fallback
             }
 
         } catch (error) {
