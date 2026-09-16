@@ -5,7 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebas
 export async function setupUsuarios(app, firebaseConfig) {
     const db = getFirestore(app);
     
-    // Lista exacta de los 15 permisos, coincidiendo con los IDs del HTML (ej: perm-mostrador)
+    // Lista exacta de los 15 permisos, coincidiendo con los IDs del HTML
     const listaPermisos = [
         'mostrador', 'indicadores', 'recetas', 'stock', 'presupuestos', 
         'precios', 'cajas', 'finanzas', 'historial', 'compras', 
@@ -19,12 +19,14 @@ export async function setupUsuarios(app, firebaseConfig) {
     const btnCancelar = document.getElementById('btn-cancelar-usuario');
 
     let modoEdicion = true;
+    let memoriaUsuarios = {}; // <-- NUEVO: Guardamos los usuarios acá para no romper el HTML
 
     async function cargarUsuarios() {
         tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Cargando usuarios...</td></tr>';
         try {
             const snap = await getDocs(collection(db, 'usuarios'));
             tabla.innerHTML = '';
+            memoriaUsuarios = {}; // Limpiamos la memoria
             
             if (snap.empty) {
                 tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No hay usuarios registrados.</td></tr>';
@@ -35,7 +37,9 @@ export async function setupUsuarios(app, firebaseConfig) {
                 const u = docSnap.data();
                 const id = docSnap.id;
                 
-                // Formateo visual del rol y estado
+                // Guardamos el usuario en nuestra memoria segura usando su ID
+                memoriaUsuarios[id] = u; 
+                
                 const rolClass = u.rol === 'master' ? 'role-master' : '';
                 const estadoClass = u.estado === 'activo' ? 'status-activo' : 'status-inactivo';
                 const estadoTexto = u.estado === 'activo' ? 'Activo' : 'Inactivo';
@@ -47,17 +51,17 @@ export async function setupUsuarios(app, firebaseConfig) {
                         <td><span class="user-role ${rolClass}">${u.rol.toUpperCase()}</span></td>
                         <td><span class="user-status ${estadoClass}">${estadoTexto}</span></td>
                         <td style="text-align: center;">
-                            <button class="btn-secondary btn-editar" data-id="${id}" data-user='${JSON.stringify(u)}'>✏️ Editar</button>
+                            <button class="btn-secondary btn-editar" data-id="${id}">✏️ Editar</button>
                         </td>
                     </tr>`;
             });
 
-            // Asignar eventos a los botones de editar recién generados
+            // Asignar eventos a los botones de forma segura
             document.querySelectorAll('.btn-editar').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.target.getAttribute('data-id');
-                    const u = JSON.parse(e.target.getAttribute('data-user'));
-                    abrirModalEdicion(id, u);
+                btn.addEventListener('click', () => {
+                    const id = btn.getAttribute('data-id'); // Obtenemos el ID directamente del botón
+                    const usuarioSeleccionado = memoriaUsuarios[id]; // Buscamos sus datos en la memoria
+                    abrirModalEdicion(id, usuarioSeleccionado);
                 });
             });
         } catch(error) { 
@@ -75,11 +79,10 @@ export async function setupUsuarios(app, firebaseConfig) {
         document.getElementById('edit-user-nombre').value = u.nombre || '';
         document.getElementById('edit-user-estado').value = u.estado || 'activo';
 
-        // Tildar o destildar las casillas según los permisos guardados en la base de datos
+        // Tildar o destildar las casillas según los permisos guardados
         listaPermisos.forEach(p => {
             const checkbox = document.getElementById(`perm-${p}`);
             if (checkbox) {
-                // Si el permiso existe en la DB y es true, lo marcamos. Si no, desmarcado.
                 checkbox.checked = (u.permisos && u.permisos[p] === true) ? true : false;
             }
         });
@@ -92,7 +95,6 @@ export async function setupUsuarios(app, firebaseConfig) {
         document.getElementById('modal-titulo').textContent = 'Crear Nuevo Empleado';
         document.getElementById('campos-creacion').style.display = 'flex';
         
-        // Limpiar campos
         document.getElementById('edit-user-id').value = '';
         document.getElementById('edit-user-email').value = '';
         document.getElementById('edit-user-pass').value = '';
@@ -153,14 +155,12 @@ export async function setupUsuarios(app, firebaseConfig) {
                     throw new Error("La contraseña debe tener al menos 6 caracteres.");
                 }
 
-                // Truco: Inicializamos una app secundaria de Firebase para registrar al usuario 
-                // sin desloguear al administrador actual de la app principal.
+                // App secundaria para registrar al usuario sin desloguearte a vos (el Admin)
                 const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
                 const secondaryAuth = getAuth(secondaryApp);
                 
                 const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
                 
-                // Guardar el perfil en Firestore con el UID recién creado
                 await setDoc(doc(db, 'usuarios', userCred.user.uid), {
                     email: email, 
                     nombre: nombre, 
@@ -170,18 +170,15 @@ export async function setupUsuarios(app, firebaseConfig) {
                     permisos: permisosGuardar
                 });
                 
-                // Cerrar sesión en la app secundaria para limpiar
                 await signOut(secondaryAuth);
                 alert("Empleado creado con éxito.");
             }
             
             modal.classList.remove('active');
-            cargarUsuarios(); // Recargar la tabla
+            cargarUsuarios(); // Recargar la tabla para mostrar los cambios
             
         } catch(error) {
             console.error("Error al guardar usuario:", error);
-            
-            // Mensajes de error amigables
             if (error.code === 'auth/email-already-in-use') {
                 alert("El correo electrónico ya está registrado en el sistema.");
             } else {
@@ -193,6 +190,6 @@ export async function setupUsuarios(app, firebaseConfig) {
         }
     });
 
-    // Cargar la lista automáticamente al iniciar el script
+    // Cargar la lista automáticamente al abrir la página
     cargarUsuarios();
 }
