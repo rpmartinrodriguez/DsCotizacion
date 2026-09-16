@@ -3,118 +3,108 @@ function inicializarMenu() {
     const menuToggleBtn = document.getElementById('menu-toggle-btn') || document.getElementById('menu-toggle');
     const navOverlay = document.getElementById('nav-overlay') || document.getElementById('menu-overlay');
 
-    // ==========================================
-    // 1. LEER ROL Y PERMISOS DEL USUARIO
-    // ==========================================
     const userRol = localStorage.getItem('userRol') || 'empleado';
     
-    // Permisos por defecto (todo bloqueado)
-    let permisos = {
-        mostrador: false, stock: false, recetas: false,
-        cajas: false, finanzas: false, configuracion: false
+    // Todos bloqueados por defecto
+    let p = {
+        mostrador: false, indicadores: false, recetas: false, stock: false, 
+        presupuestos: false, precios: false, cajas: false, finanzas: false, 
+        historial: false, compras: false, compras_lista: false, clientes: false, 
+        agenda: false, modelos: false, configuracion: false
     };
 
     if (userRol === 'master') {
-        // Si es el dueño, habilitamos todo a la fuerza
-        for(let key in permisos) permisos[key] = true;
+        for(let key in p) p[key] = true;
     } else {
-        // Si es empleado, leemos qué le tildó el admin
         try {
             const guardados = JSON.parse(localStorage.getItem('userPermisos'));
-            if (guardados) permisos = { ...permisos, ...guardados };
-        } catch(e) { console.error("Error leyendo permisos", e); }
+            if (guardados) p = { ...p, ...guardados };
+        } catch(e) {}
     }
 
     // ==========================================
-    // 2. SEGURIDAD EXTREMA: PROTEGER RUTAS
+    // EL PATOVICA: RUTAS BLOQUEADAS
     // ==========================================
     const currentPath = window.location.pathname.split('/').pop() || 'index.html';
     
-    // Diccionario de qué permiso se necesita para cada pantalla
     const rutasProtegidas = {
-        'pos.html': permisos.mostrador,
-        'agenda.html': permisos.mostrador,
-        'clientes.html': permisos.mostrador,
-        'cotizacion-actual.html': permisos.mostrador,
-        'stock.html': permisos.stock,
-        'compras.html': permisos.stock,
-        'compras-lista.html': permisos.stock,
-        'recetas.html': permisos.recetas,
-        'precios.html': permisos.recetas,
-        'cajas.html': permisos.cajas,
-        'index.html': permisos.finanzas, // Dashboard principal
-        'finanzas.html': permisos.finanzas,
-        'presupuesto.html': permisos.mostrador || permisos.finanzas,
-        'historial.html': permisos.finanzas || permisos.mostrador,
-        'usuarios.html': permisos.configuracion || userRol === 'master',
-        'modelos.html': permisos.mostrador || permisos.recetas
+        'pos.html': p.mostrador,
+        'index.html': p.indicadores,
+        'recetas.html': p.recetas,
+        'stock.html': p.stock,
+        'presupuesto.html': p.presupuestos,
+        'cotizacion-actual.html': p.presupuestos || p.mostrador,
+        'precios.html': p.precios,
+        'cajas.html': p.cajas,
+        'finanzas.html': p.finanzas,
+        'historial.html': p.historial,
+        'compras.html': p.compras,
+        'compras-lista.html': p.compras_lista,
+        'clientes.html': p.clientes,
+        'agenda.html': p.agenda,
+        'modelos.html': p.modelos,
+        'usuarios.html': p.configuracion || userRol === 'master'
     };
 
-    // Si la ruta actual está en la lista negra para este usuario, lo echamos.
+    // ¿Trató de entrar por URL a algo prohibido? ¡Afuera!
     if (rutasProtegidas[currentPath] === false) {
-        alert("🔒 Acceso Denegado: No tenés permisos para ver esta sección.");
-        // Lo mandamos a la pantalla que sí tenga permitida
-        if (permisos.mostrador) window.location.href = 'pos.html';
-        else if (permisos.stock) window.location.href = 'stock.html';
+        alert("🔒 Acceso Denegado: Tu perfil no tiene permisos para ver esta pantalla.");
+        if (p.mostrador) window.location.href = 'pos.html';
+        else if (p.stock) window.location.href = 'stock.html';
         else window.location.href = 'login.html';
-        return; // Detenemos todo el script acá
+        return; 
     }
 
     if (!navMenu) return;
 
     // ==========================================
-    // 3. INYECTAR EL MENÚ DINÁMICO FILTRADO
+    // DIBUJAR MENÚ SEGÚN PERMISOS
     // ==========================================
     if (navMenu.innerHTML.trim() === '') {
-        
         let htmlMenu = `
             <div class="nav-menu__header">
                 <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;" onerror="this.style.display='none'">
                 <span class="nav-menu__title">Dulce App</span>
-            </div>
-        `;
+            </div>`;
 
-        // CATEGORÍA 1: PANEL PRINCIPAL
-        if (permisos.mostrador || permisos.finanzas || permisos.recetas || permisos.stock) {
-            htmlMenu += `
-            <div class="nav-category">
+        // 1. Panel Principal
+        if (p.mostrador || p.indicadores || p.recetas || p.stock || p.presupuestos || p.precios) {
+            htmlMenu += `<div class="nav-category">
                 <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
-                    ${permisos.mostrador ? `<a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>` : ''}
-                    ${permisos.finanzas ? `<a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>` : ''}
-                    ${permisos.recetas ? `<a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>` : ''}
-                    ${permisos.stock ? `<a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>` : ''}
-                    ${permisos.mostrador || permisos.finanzas ? `<a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuestos</a>` : ''}
-                    ${permisos.recetas ? `<a href="precios.html" class="nav-menu__link"><span>💲</span> Listas de Precios</a>` : ''}
+                    ${p.mostrador ? `<a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>` : ''}
+                    ${p.indicadores ? `<a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>` : ''}
+                    ${p.recetas ? `<a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>` : ''}
+                    ${p.stock ? `<a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>` : ''}
+                    ${p.presupuestos ? `<a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuestos</a>` : ''}
+                    ${p.precios ? `<a href="precios.html" class="nav-menu__link"><span>💲</span> Listas Precios</a>` : ''}
                 </div>
             </div>`;
         }
 
-        // CATEGORÍA 2: GESTIÓN Y FINANZAS
-        if (permisos.cajas || permisos.finanzas || permisos.stock || permisos.configuracion || userRol === 'master') {
-            htmlMenu += `
-            <div class="nav-category">
+        // 2. Gestión y Finanzas
+        if (p.cajas || p.finanzas || p.historial || p.compras || p.compras_lista || p.configuracion || userRol === 'master') {
+            htmlMenu += `<div class="nav-category">
                 <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
-                    ${permisos.cajas ? `<a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>` : ''}
-                    ${permisos.finanzas ? `<a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>` : ''}
-                    ${permisos.finanzas || permisos.mostrador ? `<a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>` : ''}
-                    ${permisos.stock ? `<a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-                                        <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>` : ''}
-                    ${permisos.configuracion || userRol === 'master' ? `<a href="usuarios.html" class="nav-menu__link"><span>🛡️</span> Permisos y Usuarios</a>` : ''}
+                    ${p.cajas ? `<a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>` : ''}
+                    ${p.finanzas ? `<a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>` : ''}
+                    ${p.historial ? `<a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>` : ''}
+                    ${p.compras ? `<a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>` : ''}
+                    ${p.compras_lista ? `<a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>` : ''}
+                    ${p.configuracion || userRol === 'master' ? `<a href="usuarios.html" class="nav-menu__link"><span>🛡️</span> Permisos y Usuarios</a>` : ''}
                 </div>
             </div>`;
         }
 
-        // CATEGORÍA 3: CLIENTES Y AGENDA
-        if (permisos.mostrador || permisos.finanzas) {
-            htmlMenu += `
-            <div class="nav-category">
+        // 3. Clientes y Agenda
+        if (p.clientes || p.agenda || p.modelos) {
+            htmlMenu += `<div class="nav-category">
                 <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
                 <div class="nav-category-content">
-                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
+                    ${p.clientes ? `<a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>` : ''}
+                    ${p.agenda ? `<a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>` : ''}
+                    ${p.modelos ? `<a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>` : ''}
                 </div>
             </div>`;
         }
@@ -122,15 +112,12 @@ function inicializarMenu() {
         htmlMenu += `
             <div style="padding: 1rem; border-top: 1px solid #e2e8f0; margin-top: 1rem;">
                 <button id="btn-cerrar-sesion-menu" class="btn-secondary" style="width: 100%; color: #dc2626; border-color: #fca5a5; background: #fef2f2;">Cerrar Sesión</button>
-            </div>
-        `;
+            </div>`;
 
         navMenu.innerHTML = htmlMenu;
     }
 
-    // ==========================================
-    // 4. LÓGICA DE ABRIR/CERRAR MENÚ Y ACORDEÓN
-    // ==========================================
+    // Funciones del Menú desplegable
     const togglearMenu = () => {
         navMenu.classList.toggle('active');
         document.body.classList.toggle('menu-open');
@@ -186,8 +173,5 @@ function inicializarMenu() {
     }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', inicializarMenu);
-} else {
-    inicializarMenu();
-}
+if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', inicializarMenu); } 
+else { inicializarMenu(); }
