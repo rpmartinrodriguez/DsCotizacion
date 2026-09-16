@@ -4,31 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Gestión de Usuarios - Dulce App</title>
-    
     <link rel="stylesheet" href="css/style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff96c5">
-
-    <!-- ========================================== -->
-    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
-    <!-- ========================================== -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Dulce App">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <!-- ========================================== -->
-
     <style>
         .main-container { max-width: 1000px; margin: 0 auto; padding: 1rem; }
         .page-title { margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px;}
-        
         .user-status { padding: 0.3rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
         .status-activo { background-color: #dcfce3; color: #15803d; }
         .status-inactivo { background-color: #fee2e2; color: #b91c1c; }
-        
         .user-role { padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: bold; background: #f1f5f9; color: #475569;}
         .role-master { background-color: #fef08a; color: #854d0e; }
-
         .permisos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0;}
         .permiso-item { display: flex; align-items: center; gap: 0.5rem; }
         .permiso-item input[type="checkbox"] { width: 1.2rem; height: 1.2rem; accent-color: #ec4899; cursor: pointer;}
@@ -37,7 +27,6 @@
 </head>
 <body>
     <div class="main-container">
-        <!-- HEADER -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
@@ -48,7 +37,6 @@
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DE NAVEGACIÓN DINÁMICO (Inyectado por menu.js) -->
         <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
@@ -56,7 +44,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <h1 class="page-title">Gestión de Usuarios</h1>
-                    <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Administrá quién tiene acceso a cada módulo de la aplicación.</p>
+                    <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Administrá quién tiene acceso a cada módulo.</p>
                 </div>
                 <button id="btn-nuevo-usuario" class="btn-primary" style="width: auto; background: #0ea5e9; border-color: #0ea5e9;">➕ Nuevo Empleado</button>
             </div>
@@ -84,12 +72,10 @@
 
     <!-- MODAL: CREAR/EDITAR USUARIO Y PERMISOS -->
     <div id="modal-usuario" class="modal-overlay">
-        <div class="modal-content card" style="max-width: 550px;">
+        <div class="modal-content card" style="max-width: 600px;">
             <h2 id="modal-titulo" class="card__title" style="color: #ec4899; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Editar Permisos</h2>
-            
             <input type="hidden" id="edit-user-id">
             
-            <!-- Campos exclusivos para creación -->
             <div id="campos-creacion" style="display: none; gap: 1rem; margin-top: 1rem; background: #f0f9ff; padding: 1rem; border-radius: 8px; border: 1px solid #bae6fd;">
                 <div class="form-group" style="flex: 1; margin: 0;">
                     <label style="color: #0369a1;">Email de acceso</label>
@@ -104,7 +90,7 @@
             <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                 <div class="form-group" style="flex: 1;">
                     <label>Nombre del Empleado</label>
-                    <input type="text" id="edit-user-nombre" placeholder="Ej: Ceci, Eve">
+                    <input type="text" id="edit-user-nombre">
                 </div>
                 <div class="form-group" style="flex: 1;">
                     <label>Estado de la Cuenta</label>
@@ -115,34 +101,25 @@
                 </div>
             </div>
 
-            <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #831843; font-size: 1.1rem;">Asignar Módulos (Permisos)</h3>
-            <p style="font-size: 0.85rem; color: #64748b; margin-top: 0;">Tildá las secciones que este usuario podrá ver y usar en su menú.</p>
+            <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; color: #831843; font-size: 1.1rem;">Módulos Permitidos</h3>
             
+            <!-- GRILLA COMPLETA CON LOS 15 MÓDULOS -->
             <div class="permisos-grid">
-                <div class="permiso-item">
-                    <input type="checkbox" id="perm-mostrador">
-                    <label for="perm-mostrador">🏪 Mostrador (Caja)</label>
-                </div>
-                <div class="permiso-item">
-                    <input type="checkbox" id="perm-stock">
-                    <label for="perm-stock">📦 Stock y Compras</label>
-                </div>
-                <div class="permiso-item">
-                    <input type="checkbox" id="perm-recetas">
-                    <label for="perm-recetas">🍰 Recetas y Precios</label>
-                </div>
-                <div class="permiso-item">
-                    <input type="checkbox" id="perm-cajas">
-                    <label for="perm-cajas">🗃️ Historial de Cajas</label>
-                </div>
-                <div class="permiso-item">
-                    <input type="checkbox" id="perm-finanzas">
-                    <label for="perm-finanzas">💰 Rentabilidad y Finanzas</label>
-                </div>
-                <div class="permiso-item">
-                    <input type="checkbox" id="perm-configuracion">
-                    <label for="perm-configuracion">🛡️ Panel de Usuarios (Admin)</label>
-                </div>
+                <div class="permiso-item"><input type="checkbox" id="perm-mostrador"><label for="perm-mostrador">🏪 Mostrador (Caja)</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-indicadores"><label for="perm-indicadores">📊 Indicadores</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-recetas"><label for="perm-recetas">🍰 Postres / Recetas</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-stock"><label for="perm-stock">📦 Stock</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-presupuestos"><label for="perm-presupuestos">🧾 Crear Presupuesto</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-precios"><label for="perm-precios">💲 Listas de Precios</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-cajas"><label for="perm-cajas">🗃️ Historial Cajas</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-finanzas"><label for="perm-finanzas">💰 Finanzas</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-historial"><label for="perm-historial">📚 Historial Presupuestos</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-compras"><label for="perm-compras">🛍️ Registrar Compra</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-compras_lista"><label for="perm-compras_lista">🛒 Lista de Compras</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-clientes"><label for="perm-clientes">👥 Clientes</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-agenda"><label for="perm-agenda">🗓️ Agenda</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-modelos"><label for="perm-modelos">🎨 Modelos 3D</label></div>
+                <div class="permiso-item"><input type="checkbox" id="perm-configuracion"><label for="perm-configuracion">🛡️ Permisos (Admin)</label></div>
             </div>
 
             <div class="modal-actions" style="justify-content: space-between; margin-top: 2rem;">
@@ -152,23 +129,15 @@
         </div>
     </div>
 
-    <!-- SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupUsuarios } from './js/usuarios.js?v=2';
-        
+        import { setupUsuarios } from './js/usuarios.js?v=3';
         try {
             const app = initializeApp(firebaseConfig);
-            // Le pasamos la config al JS para que pueda crear la app secundaria invisible
             setupUsuarios(app, firebaseConfig);
         } catch(e) { console.error("Error:", e); }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
-        }
-    </script>
+    <script src="js/menu.js?v=12" defer></script>
 </body>
 </html>
