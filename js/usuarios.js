@@ -5,7 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebas
 export async function setupUsuarios(app, firebaseConfig) {
     const db = getFirestore(app);
     
-    // Lista exacta de los 15 permisos, coincidiendo con los IDs del HTML
+    // Lista exacta de los 15 permisos
     const listaPermisos = [
         'mostrador', 'indicadores', 'recetas', 'stock', 'presupuestos', 
         'precios', 'cajas', 'finanzas', 'historial', 'compras', 
@@ -19,32 +19,54 @@ export async function setupUsuarios(app, firebaseConfig) {
     const btnCancelar = document.getElementById('btn-cancelar-usuario');
 
     let modoEdicion = true;
-    let memoriaUsuarios = {}; // <-- NUEVO: Guardamos los usuarios acá para no romper el HTML
+    let memoriaUsuarios = {}; 
+
+    // ==============================================================
+    // NUEVA TÉCNICA: DELEGACIÓN DE EVENTOS (A prueba de balas)
+    // Escuchamos los clics en la TABLA, no en los botones individuales
+    // ==============================================================
+    tabla.addEventListener('click', (e) => {
+        // Buscamos si el clic fue adentro de un botón "btn-editar" (o en el emoji del botón)
+        const botonEditar = e.target.closest('.btn-editar');
+        
+        // Si no hizo clic en "Editar", ignoramos
+        if (!botonEditar) return; 
+
+        // Si llegó acá, obtenemos el ID y abrimos el modal
+        const id = botonEditar.getAttribute('data-id');
+        const usuarioSeleccionado = memoriaUsuarios[id];
+        
+        if (usuarioSeleccionado) {
+            abrirModalEdicion(id, usuarioSeleccionado);
+        }
+    });
 
     async function cargarUsuarios() {
         tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Cargando usuarios...</td></tr>';
         try {
             const snap = await getDocs(collection(db, 'usuarios'));
-            tabla.innerHTML = '';
-            memoriaUsuarios = {}; // Limpiamos la memoria
+            memoriaUsuarios = {}; 
             
             if (snap.empty) {
                 tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No hay usuarios registrados.</td></tr>';
                 return;
             }
 
+            // En vez de inyectar uno por uno, armamos todo el HTML primero (Mucho más rápido y seguro)
+            let htmlFilas = '';
+
             snap.forEach(docSnap => {
                 const u = docSnap.data();
                 const id = docSnap.id;
                 
-                // Guardamos el usuario en nuestra memoria segura usando su ID
+                // Guardamos los datos puros en la memoria interna
                 memoriaUsuarios[id] = u; 
                 
                 const rolClass = u.rol === 'master' ? 'role-master' : '';
                 const estadoClass = u.estado === 'activo' ? 'status-activo' : 'status-inactivo';
                 const estadoTexto = u.estado === 'activo' ? 'Activo' : 'Inactivo';
 
-                tabla.innerHTML += `
+                htmlFilas += `
                     <tr>
                         <td><strong>${u.nombre || 'Sin nombre'}</strong></td>
                         <td>${u.email}</td>
@@ -56,14 +78,9 @@ export async function setupUsuarios(app, firebaseConfig) {
                     </tr>`;
             });
 
-            // Asignar eventos a los botones de forma segura
-            document.querySelectorAll('.btn-editar').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const id = btn.getAttribute('data-id'); // Obtenemos el ID directamente del botón
-                    const usuarioSeleccionado = memoriaUsuarios[id]; // Buscamos sus datos en la memoria
-                    abrirModalEdicion(id, usuarioSeleccionado);
-                });
-            });
+            // Inyectamos todo junto de una sola vez
+            tabla.innerHTML = htmlFilas;
+
         } catch(error) { 
             console.error("Error al cargar usuarios:", error);
             tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: red;">Error al cargar la lista de usuarios.</td></tr>';
@@ -79,7 +96,7 @@ export async function setupUsuarios(app, firebaseConfig) {
         document.getElementById('edit-user-nombre').value = u.nombre || '';
         document.getElementById('edit-user-estado').value = u.estado || 'activo';
 
-        // Tildar o destildar las casillas según los permisos guardados
+        // Tildar o destildar las casillas
         listaPermisos.forEach(p => {
             const checkbox = document.getElementById(`perm-${p}`);
             if (checkbox) {
@@ -101,7 +118,7 @@ export async function setupUsuarios(app, firebaseConfig) {
         document.getElementById('edit-user-nombre').value = '';
         document.getElementById('edit-user-estado').value = 'activo';
 
-        // Desmarcar todos los permisos por defecto para un usuario nuevo
+        // Desmarcar todos los permisos
         listaPermisos.forEach(p => {
             const checkbox = document.getElementById(`perm-${p}`);
             if (checkbox) checkbox.checked = false;
@@ -124,7 +141,6 @@ export async function setupUsuarios(app, firebaseConfig) {
             return;
         }
 
-        // Recolectar el estado exacto de las 15 casillas
         const permisosGuardar = {};
         listaPermisos.forEach(p => {
             const checkbox = document.getElementById(`perm-${p}`);
@@ -136,7 +152,7 @@ export async function setupUsuarios(app, firebaseConfig) {
 
         try {
             if (modoEdicion) {
-                // Actualizar usuario existente en Firestore
+                // Actualizar existente
                 await updateDoc(doc(db, 'usuarios', id), { 
                     nombre: nombre, 
                     estado: estado, 
@@ -144,18 +160,13 @@ export async function setupUsuarios(app, firebaseConfig) {
                 });
                 alert("Permisos actualizados con éxito.");
             } else {
-                // Crear usuario nuevo
+                // Crear nuevo
                 const email = document.getElementById('edit-user-email').value.trim();
                 const pass = document.getElementById('edit-user-pass').value;
                 
-                if (!email || !pass) {
-                    throw new Error("Falta email o contraseña para crear el usuario.");
-                }
-                if (pass.length < 6) {
-                    throw new Error("La contraseña debe tener al menos 6 caracteres.");
-                }
+                if (!email || !pass) throw new Error("Falta email o contraseña para crear el usuario.");
+                if (pass.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
 
-                // App secundaria para registrar al usuario sin desloguearte a vos (el Admin)
                 const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
                 const secondaryAuth = getAuth(secondaryApp);
                 
@@ -175,7 +186,7 @@ export async function setupUsuarios(app, firebaseConfig) {
             }
             
             modal.classList.remove('active');
-            cargarUsuarios(); // Recargar la tabla para mostrar los cambios
+            cargarUsuarios(); 
             
         } catch(error) {
             console.error("Error al guardar usuario:", error);
@@ -190,6 +201,5 @@ export async function setupUsuarios(app, firebaseConfig) {
         }
     });
 
-    // Cargar la lista automáticamente al abrir la página
     cargarUsuarios();
 }
