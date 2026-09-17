@@ -23,8 +23,8 @@
         /* SCROLL BARS PARA CONTENEDORES LARGOS       */
         /* ========================================== */
         
-        /* 1. Scroll interno EXCLUSIVO para los productos DENTRO de la categoría */
-        .categoria-acordeon__content {
+        /* 1. Scroll interno EXCLUSIVO para los productos DENTRO de la categoría ABIERTA (.active) */
+        .categoria-acordeon.active .categoria-acordeon__content {
             max-height: 55vh; /* Ocupa hasta el 55% de la pantalla */
             overflow-y: auto; /* Habilita el scroll vertical solo acá adentro */
             overflow-x: hidden;
