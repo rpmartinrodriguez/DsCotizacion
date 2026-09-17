@@ -124,7 +124,7 @@
                     </div>
                 </div>
 
-                <!-- NUEVO: CONTENEDOR CON FILTRO Y BOTÓN DE PAPELERA -->
+                <!-- CONTENEDOR CON FILTRO Y BOTÓN DE PAPELERA -->
                 <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
                     <div class="buscador-container" style="flex-grow: 1; margin-bottom: 0;">
                         <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
@@ -141,6 +141,7 @@
 
             <!-- SECCIÓN 2: ESTADÍSTICAS DEL NEGOCIO -->
             <div id="section-estadisticas" style="display: none;">
+                <!-- (El contenido de estadísticas queda idéntico) -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
                     <p class="text-light" style="margin:0;">Indicadores Financieros y de Control Avanzados.</p>
                     <button id="btn-cargar-stats" class="btn-primary" style="width: auto; background: #be185d;">🔄 Recalcular Todo</button>
@@ -152,7 +153,6 @@
 
                 <div id="stats-content" style="display: none;">
                     
-                    <!-- Fila 1: KPIs Principales -->
                     <div class="dashboard-grid">
                         <div class="dash-card">
                             <h3>Media <span class="info-icon" data-info="media">i</span></h3>
@@ -176,7 +176,6 @@
                         </div>
                     </div>
 
-                    <!-- Gráficos: Evolución y Horas Pico -->
                     <div class="charts-container">
                         <div class="chart-box">
                             <h3 style="margin-top: 0; color: #475569; display: flex; align-items: center; gap: 0.5rem;">Evolución de Ventas <span class="info-icon" data-info="ventas_diarias">i</span></h3>
@@ -188,7 +187,6 @@
                         </div>
                     </div>
 
-                    <!-- Panel de Productos Estrella (Moda) -->
                     <div class="card" style="margin-bottom: 1.5rem;">
                         <h3 style="margin-top:0; margin-bottom: 1rem; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Top 5 Productos Estrella (Moda) <span class="info-icon" data-info="moda">i</span></h3>
                         <ul class="list-top-productos" id="lista-top-productos"></ul>
@@ -196,7 +194,6 @@
                         <button id="btn-ver-mas-productos" class="btn-secondary" style="width: 100%; margin-top: 0.5rem; padding: 0.3rem; font-size: 0.8rem; border: none; background: #fdf2f8; color: #ec4899; cursor: pointer; display: none;">Ver detalle completo ⬇</button>
                     </div>
 
-                    <!-- Tabla de Rentabilidad y Margen Neto por Producto -->
                     <div class="card" style="margin-bottom: 1.5rem;">
                         <h3 style="margin-top:0; color:#831843; display:flex; align-items:center; gap:0.5rem;">Margen de Utilidad Neto por Producto <span class="info-icon" data-info="margen_neto_prod">i</span></h3>
                         <div style="overflow-x:auto;">
@@ -218,7 +215,6 @@
                         </div>
                     </div>
 
-                    <!-- Tabla: Producción Óptima Sugerida -->
                     <div class="card" style="margin-bottom: 1.5rem; background: #fef08a; border: 1px solid #fef08a;">
                         <h3 style="margin-top:0; color:#854d0e; display:flex; align-items:center; gap:0.5rem;">Volumen Sugerido de Producción Óptima <span class="info-icon" data-info="produccion_optima">i</span></h3>
                         <p style="font-size:0.85rem; color:#854d0e; margin:0 0 1rem 0;" id="txt-dia-semana">Pronóstico basado en el historial del día de la semana...</p>
@@ -236,9 +232,7 @@
                         </table>
                     </div>
 
-                    <!-- Fila de Tablas Inferiores -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
-                        
                         <div class="card" style="margin: 0;">
                             <h3 style="margin-top: 0; color: #831843; display: flex; align-items: center; gap: 0.5rem;">Clasificación ABC (Pareto) <span class="info-icon" data-info="abc">i</span></h3>
                             <table class="stats-table">
@@ -331,55 +325,81 @@
         </main>
     </div>
 
-    <!-- MODAL DE INFORMACIÓN INTELIGENTE (i) -->
-    <div id="modal-info" class="modal-overlay">
-        <div class="modal-content card" style="max-width: 500px;">
-            <h2 id="info-title" style="color: #ec4899; margin-top: 0; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Título</h2>
-            <div style="margin-top: 1rem;">
-                <h4 style="color: #831843; margin-bottom: 0.2rem;">¿Qué muestra?</h4>
-                <p id="info-desc" style="font-size: 0.95rem; color: #475569; margin-top: 0;"></p>
-                
-                <h4 style="color: #831843; margin-bottom: 0.2rem;">¿Para qué sirve?</h4>
-                <p id="info-sirve" style="font-size: 0.95rem; color: #475569; margin-top: 0;"></p>
-                
-                <h4 style="color: #831843; margin-bottom: 0.2rem;">Ejemplo práctico:</h4>
-                <div style="background: #f1f5f9; padding: 0.8rem; border-left: 3px solid #0ea5e9; border-radius: 4px; font-size: 0.9rem; margin-bottom: 1rem;" id="info-ej"></div>
-                
-                <h4 style="color: #831843; margin-bottom: 0.2rem;">¿Qué decisiones tomar?</h4>
-                <p id="info-dec" style="font-size: 0.95rem; color: #15803d; font-weight: 500; margin-top: 0;"></p>
+    <!-- ============================================== -->
+    <!-- NUEVO: MODAL PARA EDITAR CAJA COMPLETA         -->
+    <!-- ============================================== -->
+    <div id="modal-editar-caja" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content card" style="max-width: 450px;">
+            <h2 class="card__title" style="color: #8b5cf6; margin-top: 0; border-bottom: 2px solid #e9d5ff; padding-bottom: 0.5rem;">Editar Datos de la Caja</h2>
+            <input type="hidden" id="edit-caja-id">
+            
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="font-weight: bold; color: var(--text-main);">Fondo Inicial Declarado ($)</label>
+                <input type="number" id="edit-caja-fondo" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem;" min="0" step="10">
             </div>
-            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
-                <button id="btn-cerrar-info" class="btn-primary" style="width: auto;">Entendido</button>
+
+            <div class="form-group">
+                <label style="font-weight: bold; color: var(--text-main);">Fecha y Hora de Apertura</label>
+                <input type="datetime-local" id="edit-caja-apertura" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem;">
+            </div>
+
+            <div class="form-group" id="container-edit-cierre">
+                <label style="font-weight: bold; color: var(--text-main);">Fecha y Hora de Cierre</label>
+                <input type="datetime-local" id="edit-caja-cierre" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem;">
+            </div>
+            
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
+                <button id="btn-cancelar-edit-caja" class="btn-secondary" style="width: 48%;">Cancelar</button>
+                <button id="btn-guardar-edit-caja" class="btn-primary" style="width: 48%; background: #8b5cf6; border: none;">💾 Guardar Cambios</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE RESUMEN DE PRODUCTOS -->
-    <div id="modal-resumen-productos" class="modal-overlay" style="z-index: 2000;">
-        <div class="modal-content card" style="max-width: 500px;">
-            <h2 class="card__title" style="color: #0ea5e9; margin-top: 0; border-bottom: 2px solid #bae6fd; padding-bottom: 0.5rem;">Resumen de Artículos</h2>
-            <p class="text-light" style="font-size: 0.9rem; margin-bottom: 1rem;">Ranking de productos más vendidos en el turno (agrupados por cantidad).</p>
+    <!-- ============================================== -->
+    <!-- ACTUALIZADO: MODAL PARA EDITAR/ELIMINAR TICKET -->
+    <!-- ============================================== -->
+    <div id="modal-editar-ticket" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content card" style="max-width: 400px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #fef08a; padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                <h2 class="card__title" style="color: #ca8a04; margin: 0;">Editar Movimiento</h2>
+                <button id="btn-eliminar-ticket" class="btn-secondary" style="background: #fef2f2; border-color: #fca5a5; color: #ef4444; padding: 0.3rem 0.6rem; font-size: 0.85rem;" title="Borrar este movimiento definitivamente">🗑️ Eliminar</button>
+            </div>
             
-            <ul class="list-top-productos" id="ul-resumen-productos" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
-                <!-- Aquí se inyectan los productos -->
-            </ul>
+            <input type="hidden" id="edit-ticket-id">
+            <input type="hidden" id="edit-ticket-caja-id"> <!-- Para saber a qué caja descontarle si borramos -->
             
-            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
-                <button id="btn-cerrar-resumen" class="btn-primary" style="width: auto;">Listo</button>
+            <div class="form-group">
+                <label style="font-weight: bold; color: var(--text-main);">Monto Total Físico ($)</label>
+                <input type="number" id="edit-ticket-monto" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1.2rem; font-weight: bold; color: #be185d;" min="0" step="10">
+            </div>
+
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="font-weight: bold; color: var(--text-main);">Método Real Cobrado</label>
+                <select id="edit-ticket-metodo" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem;">
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="MercadoPago">MercadoPago</option>
+                </select>
+                <small style="color: #94a3b8;">* Si editás acá, el ticket mixto ("Ambos") pasará a ser de 1 solo método para facilitar el recálculo.</small>
+            </div>
+            
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
+                <button id="btn-cancelar-edit-ticket" class="btn-secondary" style="width: 48%;">Cancelar</button>
+                <button id="btn-guardar-edit-ticket" class="btn-primary" style="width: 48%; background: #eab308; border: none;">💾 Actualizar Venta</button>
             </div>
         </div>
     </div>
 
-    <!-- NUEVO: MODAL PAPELERA DE RECICLAJE DE CAJAS -->
+
+    <!-- OTROS MODALES (Información, Resumen de productos, Papelera de Cajas) -->
+    <div id="modal-info" class="modal-overlay">...</div>
+    <div id="modal-resumen-productos" class="modal-overlay" style="z-index: 2000;">...</div>
     <div id="modal-papelera" class="modal-overlay" style="z-index: 2000;">
         <div class="modal-content card" style="max-width: 600px;">
             <h2 class="card__title" style="color: #ef4444; margin-top: 0; border-bottom: 2px solid #fca5a5; padding-bottom: 0.5rem;">Cajas Eliminadas (Ocultas)</h2>
             <p class="text-light" style="font-size: 0.9rem; margin-bottom: 1rem;">Estas cajas están ocultas y no suman a las estadísticas. Podés restaurarlas para que vuelvan a aparecer en el historial normal.</p>
-            
             <div id="lista-cajas-papelera" style="max-height: 400px; overflow-y: auto; padding-right: 5px; border: 1px solid #fee2e2; border-radius: 8px; background: #fafafa; padding: 1rem;">
                 <p class="text-light" style="text-align: center;">Cargando papelera...</p>
             </div>
-            
             <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
                 <button id="btn-cerrar-papelera" class="btn-primary" style="width: auto; background: #64748b; border-color: #64748b;">Cerrar Papelera</button>
             </div>
@@ -390,7 +410,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=13';
+        import { setupCajas } from './js/cajas.js?v=14';
         
         try {
             const app = initializeApp(firebaseConfig);
