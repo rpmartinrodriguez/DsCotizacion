@@ -3,6 +3,7 @@ import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gs
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 
 export async function setupUsuarios(app, firebaseConfig) {
+    console.log("Iniciando módulo de usuarios...");
     const db = getFirestore(app);
     
     // Lista exacta de los 15 permisos
@@ -21,18 +22,11 @@ export async function setupUsuarios(app, firebaseConfig) {
     let modoEdicion = true;
     let memoriaUsuarios = {}; 
 
-    // ==============================================================
-    // NUEVA TÉCNICA: DELEGACIÓN DE EVENTOS (A prueba de balas)
-    // Escuchamos los clics en la TABLA, no en los botones individuales
-    // ==============================================================
+    // Delegación de eventos (A prueba de balas contra recargas de tabla)
     tabla.addEventListener('click', (e) => {
-        // Buscamos si el clic fue adentro de un botón "btn-editar" (o en el emoji del botón)
         const botonEditar = e.target.closest('.btn-editar');
-        
-        // Si no hizo clic en "Editar", ignoramos
         if (!botonEditar) return; 
 
-        // Si llegó acá, obtenemos el ID y abrimos el modal
         const id = botonEditar.getAttribute('data-id');
         const usuarioSeleccionado = memoriaUsuarios[id];
         
@@ -52,14 +46,12 @@ export async function setupUsuarios(app, firebaseConfig) {
                 return;
             }
 
-            // En vez de inyectar uno por uno, armamos todo el HTML primero (Mucho más rápido y seguro)
             let htmlFilas = '';
 
             snap.forEach(docSnap => {
                 const u = docSnap.data();
                 const id = docSnap.id;
                 
-                // Guardamos los datos puros en la memoria interna
                 memoriaUsuarios[id] = u; 
                 
                 const rolClass = u.rol === 'master' ? 'role-master' : '';
@@ -78,12 +70,11 @@ export async function setupUsuarios(app, firebaseConfig) {
                     </tr>`;
             });
 
-            // Inyectamos todo junto de una sola vez
             tabla.innerHTML = htmlFilas;
 
         } catch(error) { 
             console.error("Error al cargar usuarios:", error);
-            tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: red;">Error al cargar la lista de usuarios.</td></tr>';
+            tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: red;">Error al cargar la lista.</td></tr>';
         }
     }
 
@@ -96,7 +87,6 @@ export async function setupUsuarios(app, firebaseConfig) {
         document.getElementById('edit-user-nombre').value = u.nombre || '';
         document.getElementById('edit-user-estado').value = u.estado || 'activo';
 
-        // Tildar o destildar las casillas
         listaPermisos.forEach(p => {
             const checkbox = document.getElementById(`perm-${p}`);
             if (checkbox) {
@@ -104,7 +94,8 @@ export async function setupUsuarios(app, firebaseConfig) {
             }
         });
 
-        modal.classList.add('active');
+        // FORZAMOS LA VISIBILIDAD DEL MODAL
+        modal.style.display = 'flex';
     }
 
     btnNuevo.addEventListener('click', () => {
@@ -118,17 +109,18 @@ export async function setupUsuarios(app, firebaseConfig) {
         document.getElementById('edit-user-nombre').value = '';
         document.getElementById('edit-user-estado').value = 'activo';
 
-        // Desmarcar todos los permisos
         listaPermisos.forEach(p => {
             const checkbox = document.getElementById(`perm-${p}`);
             if (checkbox) checkbox.checked = false;
         });
 
-        modal.classList.add('active');
+        // FORZAMOS LA VISIBILIDAD DEL MODAL
+        modal.style.display = 'flex';
     });
 
     btnCancelar.addEventListener('click', () => {
-        modal.classList.remove('active');
+        // OCULTAMOS EL MODAL
+        modal.style.display = 'none';
     });
 
     btnGuardar.addEventListener('click', async () => {
@@ -152,7 +144,6 @@ export async function setupUsuarios(app, firebaseConfig) {
 
         try {
             if (modoEdicion) {
-                // Actualizar existente
                 await updateDoc(doc(db, 'usuarios', id), { 
                     nombre: nombre, 
                     estado: estado, 
@@ -160,7 +151,6 @@ export async function setupUsuarios(app, firebaseConfig) {
                 });
                 alert("Permisos actualizados con éxito.");
             } else {
-                // Crear nuevo
                 const email = document.getElementById('edit-user-email').value.trim();
                 const pass = document.getElementById('edit-user-pass').value;
                 
@@ -185,7 +175,8 @@ export async function setupUsuarios(app, firebaseConfig) {
                 alert("Empleado creado con éxito.");
             }
             
-            modal.classList.remove('active');
+            // OCULTAMOS EL MODAL AL TERMINAR
+            modal.style.display = 'none';
             cargarUsuarios(); 
             
         } catch(error) {
