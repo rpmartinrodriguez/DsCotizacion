@@ -1,5 +1,5 @@
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, updateDoc, doc 
+    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, updateDoc, doc, Timestamp, deleteDoc, runTransaction 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 export function setupCajas(app) {
@@ -44,13 +44,32 @@ export function setupCajas(app) {
     const listaCajasPapelera = document.getElementById('lista-cajas-papelera');
     const btnCerrarPapelera = document.getElementById('btn-cerrar-papelera');
 
+    // Referencias Editar Caja Completa
+    const modalEditarCaja = document.getElementById('modal-editar-caja');
+    const editCajaId = document.getElementById('edit-caja-id');
+    const editCajaFondo = document.getElementById('edit-caja-fondo');
+    const editCajaApertura = document.getElementById('edit-caja-apertura');
+    const editCajaCierre = document.getElementById('edit-caja-cierre');
+    const containerEditCierre = document.getElementById('container-edit-cierre');
+    const btnCancelarEditCaja = document.getElementById('btn-cancelar-edit-caja');
+    const btnGuardarEditCaja = document.getElementById('btn-guardar-edit-caja');
+
+    // Referencias Editar/Eliminar Ticket
+    const modalEditarTicket = document.getElementById('modal-editar-ticket');
+    const editTicketId = document.getElementById('edit-ticket-id');
+    const editTicketCajaId = document.getElementById('edit-ticket-caja-id');
+    const editTicketMonto = document.getElementById('edit-ticket-monto');
+    const editTicketMetodo = document.getElementById('edit-ticket-metodo');
+    const btnCancelarEditTicket = document.getElementById('btn-cancelar-edit-ticket');
+    const btnGuardarEditTicket = document.getElementById('btn-guardar-edit-ticket');
+    const btnEliminarTicket = document.getElementById('btn-eliminar-ticket');
+
     let todasLasCajas = [];
-    let cajasEliminadas = []; // Almacena las cajas con "eliminada: true"
+    let cajasEliminadas = []; 
     let statsYaCargadas = false;
     let chartVentasInstancia = null;
     let chartBarHorasInstancia = null;
 
-    // Contraseña maestra para borrar/restaurar
     const MASTER_PASS = "Lautaro2026";
 
     // ==========================================
@@ -241,9 +260,17 @@ export function setupCajas(app) {
         const nombre = fecha.toLocaleDateString('es-AR', { month: 'long' });
         return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + anio;
     }
+    
+    // Formato para los input type="datetime-local"
+    function toLocalDatetimeString(timestamp) {
+        if (!timestamp) return '';
+        const d = timestamp.toDate();
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
 
     // ==========================================
-    // 3. RENDERIZAR LA LISTA DE CAJAS (NO ELIMINADAS)
+    // 3. RENDERIZAR LA LISTA DE CAJAS
     // ==========================================
     function renderizarCajas() {
         const mesFiltro = filtroMesSelect.value;
@@ -281,8 +308,8 @@ export function setupCajas(app) {
                     <div>
                         <div style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
                             Apertura: ${formatearFecha(caja.fechaApertura)}
-                            <!-- BOTÓN DE ELIMINAR CAJA -->
-                            <button class="btn-eliminar-caja" data-id="${caja.id}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Eliminar caja de las estadísticas">🗑️</button>
+                            <button class="btn-editar-caja-datos" data-id="${caja.id}" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #8b5cf6;" title="Editar Fechas/Fondo">✏️</button>
+                            <button class="btn-eliminar-caja" data-id="${caja.id}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Eliminar caja (Ocultar)">🗑️</button>
                         </div>
                         <div style="font-size: 0.85rem; color: var(--text-light); font-weight: normal; margin-top: 0.2rem;">
                             👤 ${caja.usuarioNombre || 'Usuario'}
@@ -323,7 +350,7 @@ export function setupCajas(app) {
 
                         <div class="ticket-list">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                                <h3 style="font-size: 1rem; margin: 0;">Detalle de Ventas</h3>
+                                <h3 style="font-size: 1rem; margin: 0;">Detalle de Movimientos</h3>
                                 <button class="btn-resumen-productos btn-secondary" data-id="${caja.id}" style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.85rem; border-color: #0ea5e9; color: #0ea5e9;">📊 Ver Resumen de Productos</button>
                             </div>
                             <div id="tickets-${caja.id}">
@@ -362,7 +389,6 @@ export function setupCajas(app) {
         }
     }
 
-    // Escuchador Principal de Cajas (Separa en Normales y Eliminadas)
     onSnapshot(query(cajasCollection, orderBy('fechaApertura', 'desc')), (snapshot) => {
         todasLasCajas = [];
         cajasEliminadas = [];
@@ -379,7 +405,6 @@ export function setupCajas(app) {
         actualizarFiltros();
         renderizarCajas();
         
-        // Si el panel de estadísticas estaba abierto, lo forzamos a recalcular
         if (statsYaCargadas && sectionEstadisticas && sectionEstadisticas.style.display !== 'none') {
             generarDashboard();
         }
@@ -393,12 +418,12 @@ export function setupCajas(app) {
             const querySnapshot = await getDocs(q);
             
             if (querySnapshot.empty) {
-                container.innerHTML = '<p class="text-light" style="font-size: 0.9rem;">No hubo ventas en este turno.</p>';
+                container.innerHTML = '<p class="text-light" style="font-size: 0.9rem;">No hubo movimientos registrados.</p>';
                 return;
             }
 
             let ventas = [];
-            querySnapshot.forEach(docSnap => ventas.push(docSnap.data()));
+            querySnapshot.forEach(docSnap => ventas.push({ id: docSnap.id, ...docSnap.data() }));
 
             ventas.sort((a, b) => {
                 if (!a.fecha || !b.fecha) return 0;
@@ -425,7 +450,10 @@ export function setupCajas(app) {
                         <h4>Hora: ${formatearFecha(venta.fecha).split(',')[1] || ''} ${tagMP}</h4>
                         <p>${itemsTexto}</p>
                     </div>
-                    <div class="ticket-monto">${formatMoneda(venta.total)}</div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span class="ticket-monto">${formatMoneda(venta.total)}</span>
+                        <button class="btn-editar-ticket-individual" data-id="${venta.id}" data-caja="${cajaId}" data-total="${venta.total}" data-metodo="${venta.metodoPago}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>
+                    </div>
                 `;
                 container.appendChild(ticketDiv);
             });
@@ -483,10 +511,14 @@ export function setupCajas(app) {
         }
     }
 
+    // ==========================================
+    // DELEGACIÓN DE EVENTOS: CAJAS Y TICKETS
+    // ==========================================
     listaCajasContainer.addEventListener('click', async (e) => {
-        // Eliminar Caja (Soft Delete)
+        
+        // 1. ELIMINAR CAJA (Soft Delete)
         if (e.target.closest('.btn-eliminar-caja')) {
-            e.stopPropagation(); // Evita que se abra el acordeón
+            e.stopPropagation(); 
             const btn = e.target.closest('.btn-eliminar-caja');
             const cajaId = btn.dataset.id;
             
@@ -505,7 +537,56 @@ export function setupCajas(app) {
             return;
         }
 
-        // Intercepta el botón de facturado
+        // 2. EDITAR DATOS DE LA CAJA (Fechas y Fondo)
+        if (e.target.closest('.btn-editar-caja-datos')) {
+            e.stopPropagation(); 
+            const btn = e.target.closest('.btn-editar-caja-datos');
+            const cajaId = btn.dataset.id;
+            const caja = todasLasCajas.find(c => c.id === cajaId);
+            if(!caja) return;
+
+            const pass = prompt("Vas a modificar datos sensibles de la caja.\nIngresá la clave de Administrador:");
+            if (pass !== MASTER_PASS) {
+                if(pass !== null) alert("Clave incorrecta. Acción cancelada.");
+                return;
+            }
+
+            editCajaId.value = caja.id;
+            editCajaFondo.value = caja.fondoInicial || 0;
+            editCajaApertura.value = toLocalDatetimeString(caja.fechaApertura);
+            
+            if (caja.estado === 'cerrada' && caja.fechaCierre) {
+                containerEditCierre.style.display = 'block';
+                editCajaCierre.value = toLocalDatetimeString(caja.fechaCierre);
+            } else {
+                containerEditCierre.style.display = 'none';
+                editCajaCierre.value = '';
+            }
+
+            modalEditarCaja.classList.add('visible');
+            return;
+        }
+
+        // 3. EDITAR TICKET INDIVIDUAL (Desde adentro del acordeón)
+        if (e.target.closest('.btn-editar-ticket-individual')) {
+            const btn = e.target.closest('.btn-editar-ticket-individual');
+            
+            const pass = prompt("Modificar un movimiento afectará la contabilidad.\nIngresá la clave de Administrador:");
+            if (pass !== MASTER_PASS) {
+                if(pass !== null) alert("Clave incorrecta.");
+                return;
+            }
+
+            editTicketId.value = btn.dataset.id;
+            editTicketCajaId.value = btn.dataset.caja;
+            editTicketMonto.value = btn.dataset.total;
+            editTicketMetodo.value = btn.dataset.metodo === 'Ambos' ? 'Efectivo' : btn.dataset.metodo;
+            
+            modalEditarTicket.classList.add('visible');
+            return;
+        }
+
+        // 4. FACTURADO MP
         if (e.target.closest('.btn-facturado')) {
             const btn = e.target.closest('.btn-facturado');
             const cajaId = btn.dataset.id;
@@ -513,25 +594,19 @@ export function setupCajas(app) {
 
             try {
                 btn.textContent = "..."; 
-                await updateDoc(doc(db, 'cajas', cajaId), {
-                    facturadoMP: !estadoActual
-                });
-            } catch (err) {
-                console.error("Error al cambiar estado de facturación:", err);
-                alert("Hubo un error de conexión.");
-            }
+                await updateDoc(doc(db, 'cajas', cajaId), { facturadoMP: !estadoActual });
+            } catch (err) { alert("Hubo un error de conexión."); }
             return; 
         }
 
-        // Intercepta el botón de Resumen de Productos
+        // 5. RESUMEN PRODUCTOS
         if (e.target.closest('.btn-resumen-productos')) {
             const btn = e.target.closest('.btn-resumen-productos');
-            const cajaId = btn.dataset.id;
-            mostrarResumenProductos(cajaId);
+            mostrarResumenProductos(btn.dataset.id);
             return;
         }
 
-        // Intercepta el acordeón general
+        // 6. ABRIR ACORDEÓN
         const header = e.target.closest('.caja-header');
         if (!header) return;
 
@@ -556,6 +631,184 @@ export function setupCajas(app) {
             }
         }
     });
+
+    // ==========================================
+    // LÓGICA DE MODALES DE EDICIÓN
+    // ==========================================
+
+    // GUARDAR CAJA COMPLETA
+    if (btnCancelarEditCaja) btnCancelarEditCaja.addEventListener('click', () => modalEditarCaja.classList.remove('visible'));
+    if (btnGuardarEditCaja) {
+        btnGuardarEditCaja.addEventListener('click', async () => {
+            const cajaId = editCajaId.value;
+            const nuevoFondo = parseFloat(editCajaFondo.value) || 0;
+            const fApeStr = editCajaApertura.value;
+            const fCieStr = editCajaCierre.value;
+
+            if(!fApeStr) return alert("La fecha de apertura es obligatoria.");
+
+            btnGuardarEditCaja.disabled = true;
+            btnGuardarEditCaja.textContent = "Guardando...";
+
+            try {
+                let updates = {
+                    fondoInicial: nuevoFondo,
+                    fechaApertura: Timestamp.fromDate(new Date(fApeStr))
+                };
+
+                if (containerEditCierre.style.display === 'block' && fCieStr) {
+                    updates.fechaCierre = Timestamp.fromDate(new Date(fCieStr));
+                }
+
+                await updateDoc(doc(db, 'cajas', cajaId), updates);
+                alert("Caja actualizada.");
+                modalEditarCaja.classList.remove('visible');
+            } catch(e) {
+                alert("Error al actualizar la caja.");
+            }
+            
+            btnGuardarEditCaja.disabled = false;
+            btnGuardarEditCaja.textContent = "💾 Guardar Cambios";
+        });
+    }
+
+    // GUARDAR O ELIMINAR TICKET
+    if (btnCancelarEditTicket) btnCancelarEditTicket.addEventListener('click', () => modalEditarTicket.classList.remove('visible'));
+    
+    if (btnGuardarEditTicket) {
+        btnGuardarEditTicket.addEventListener('click', async () => {
+            const ticketId = editTicketId.value;
+            const cajaId = editTicketCajaId.value;
+            const nuevoMetodo = editTicketMetodo.value;
+            const nuevoTotal = parseFloat(editTicketMonto.value) || 0;
+            
+            if(nuevoTotal < 0) return alert("El monto no puede ser negativo.");
+
+            btnGuardarEditTicket.disabled = true;
+            btnGuardarEditTicket.textContent = 'Actualizando...';
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const ticketRef = doc(db, 'ventasMostrador', ticketId);
+                    const ticketDoc = await transaction.get(ticketRef);
+                    if (!ticketDoc.exists()) throw "Ticket no encontrado";
+                    
+                    const tData = ticketDoc.data();
+                    const viejoMetodo = tData.metodoPago;
+                    const viejoTotal = tData.total || 0;
+
+                    // Si no cambió nada, salimos
+                    if (viejoMetodo === nuevoMetodo && viejoTotal === nuevoTotal) return;
+
+                    // Calculamos la diferencia que hay que inyectar/sacar de la caja
+                    let difEfvo = 0; let difMP = 0;
+
+                    // 1. Restamos lo viejo
+                    if (viejoMetodo === 'Efectivo') difEfvo -= viejoTotal;
+                    else if (viejoMetodo === 'MercadoPago') difMP -= viejoTotal;
+                    else if (viejoMetodo === 'Ambos') {
+                        difEfvo -= (tData.pagoEfectivo || 0);
+                        difMP -= (tData.pagoMercadoPago || 0);
+                    }
+
+                    // 2. Sumamos lo nuevo (El modal lo simplifica a 1 solo método)
+                    if (nuevoMetodo === 'Efectivo') difEfvo += nuevoTotal;
+                    else if (nuevoMetodo === 'MercadoPago') difMP += nuevoTotal;
+
+                    // Actualizamos el ticket
+                    transaction.update(ticketRef, { 
+                        metodoPago: nuevoMetodo, 
+                        total: nuevoTotal,
+                        pagoEfectivo: nuevoMetodo === 'Efectivo' ? nuevoTotal : 0,
+                        pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? nuevoTotal : 0
+                    });
+
+                    // Actualizamos la caja
+                    const cajaRef = doc(db, 'cajas', cajaId);
+                    const cajaDoc = await transaction.get(cajaRef);
+                    if(cajaDoc.exists()) {
+                        const cData = cajaDoc.data();
+                        transaction.update(cajaRef, {
+                            totalEfectivo: (cData.totalEfectivo || 0) + difEfvo,
+                            totalMercadoPago: (cData.totalMercadoPago || 0) + difMP
+                        });
+                    }
+                });
+
+                alert("Ticket corregido con éxito.");
+                modalEditarTicket.classList.remove('visible');
+                
+                // Forzamos la recarga de los tickets en la vista
+                const ticketsContainer = document.getElementById(`tickets-${cajaId}`);
+                if (ticketsContainer) await cargarTicketsDeCaja(cajaId, ticketsContainer);
+
+            } catch (err) {
+                console.error("Error editando ticket", err);
+                alert("No se pudo editar: " + err);
+            }
+
+            btnGuardarEditTicket.disabled = false;
+            btnGuardarEditTicket.textContent = '💾 Actualizar Venta';
+        });
+    }
+
+    if (btnEliminarTicket) {
+        btnEliminarTicket.addEventListener('click', async () => {
+            const ticketId = editTicketId.value;
+            const cajaId = editTicketCajaId.value;
+
+            const seguro = confirm("⚠️ ¿Estás totalmente seguro de eliminar este movimiento? La plata se descontará de la caja.");
+            if (!seguro) return;
+
+            btnEliminarTicket.disabled = true;
+            btnEliminarTicket.textContent = 'Borrando...';
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const ticketRef = doc(db, 'ventasMostrador', ticketId);
+                    const ticketDoc = await transaction.get(ticketRef);
+                    if (!ticketDoc.exists()) throw "El ticket ya no existe.";
+                    
+                    const tData = ticketDoc.data();
+                    
+                    let aRestarEfvo = 0; let aRestarMP = 0;
+                    if (tData.metodoPago === 'Efectivo') aRestarEfvo = tData.total;
+                    else if (tData.metodoPago === 'MercadoPago') aRestarMP = tData.total;
+                    else if (tData.metodoPago === 'Ambos') {
+                        aRestarEfvo = tData.pagoEfectivo || 0;
+                        aRestarMP = tData.pagoMercadoPago || 0;
+                    }
+
+                    // Restamos de la caja
+                    const cajaRef = doc(db, 'cajas', cajaId);
+                    const cajaDoc = await transaction.get(cajaRef);
+                    if(cajaDoc.exists()) {
+                        const cData = cajaDoc.data();
+                        transaction.update(cajaRef, {
+                            totalEfectivo: (cData.totalEfectivo || 0) - aRestarEfvo,
+                            totalMercadoPago: (cData.totalMercadoPago || 0) - aRestarMP
+                        });
+                    }
+
+                    // Finalmente borramos el ticket físicamente de la base
+                    transaction.delete(ticketRef);
+                });
+
+                alert("Movimiento eliminado exitosamente.");
+                modalEditarTicket.classList.remove('visible');
+                
+                const ticketsContainer = document.getElementById(`tickets-${cajaId}`);
+                if (ticketsContainer) await cargarTicketsDeCaja(cajaId, ticketsContainer);
+
+            } catch(e) {
+                console.error(e);
+                alert("Error al intentar borrar el movimiento.");
+            }
+
+            btnEliminarTicket.disabled = false;
+            btnEliminarTicket.textContent = '🗑️ Eliminar';
+        });
+    }
 
     // ==========================================
     // 3.5 GESTIÓN DE LA PAPELERA (RESTAURAR CAJAS)
@@ -624,7 +877,7 @@ export function setupCajas(app) {
                     btn.textContent = "...";
                     await updateDoc(doc(db, 'cajas', cajaId), { eliminada: false });
                     alert("Caja restaurada al historial con éxito.");
-                    renderizarPapelera(); // Refresca la ventana de la papelera
+                    renderizarPapelera(); 
                 } catch(err) {
                     alert("Error al intentar restaurar.");
                     btn.textContent = "♻️ Restaurar";
@@ -695,13 +948,12 @@ export function setupCajas(app) {
                 getDocs(collection(db, 'recetas'))
             ]);
 
-            // IMPORTANTE: Filtrar ventas huérfanas (cuyas cajas fueron borradas)
+            // Filtrar ventas huérfanas (cuyas cajas fueron borradas)
             const cajasOcultasIDs = new Set(cajasEliminadas.map(c => c.id));
 
             let ventasArray = [];
             ventasSnap.forEach(v => {
                 const dataVenta = v.data();
-                // Solo la sumamos a la estadística si su caja NO está en la papelera
                 if (!cajasOcultasIDs.has(dataVenta.cajaId)) {
                     ventasArray.push(dataVenta);
                 }
@@ -711,7 +963,6 @@ export function setupCajas(app) {
             let auditArray = [];
             auditSnap.forEach(a => auditArray.push(a.data()));
 
-            // Mapa para buscar Categorias y Costos de Recetas
             let recetasMap = new Map();
             let sumatoriaMargenes = 0;
             let qtyMargenes = 0;
@@ -731,7 +982,7 @@ export function setupCajas(app) {
                 }
             });
 
-            // A. Procesar Distribución Horaria (Horas Pico)
+            // A. Procesar Distribución Horaria
             let horasDistribucion = Array(24).fill(0);
             ventasArray.forEach(v => {
                 if(v.fecha) {
@@ -746,11 +997,10 @@ export function setupCajas(app) {
                 dataHorasPlot.push(horasDistribucion[h]);
             }
 
-            // B. Procesar Ventas Diarias (Desde Cajas) y Demanda por día de semana
+            // B. Procesar Ventas Diarias
             let ventasDiariasMap = {};
             let diasSemanaConteo = Array(7).fill(0);
 
-            // Acá usamos TODASLASCAJAS que ya no contiene a las de la papelera
             todasLasCajas.forEach(c => {
                 if(c.fechaApertura) {
                     let diaCorta = formatearFechaCorta(c.fechaApertura);
@@ -795,11 +1045,8 @@ export function setupCajas(app) {
             let totalUnidadesVendidas = 0;
             let totalPlataVendida = 0;
             
-            // Vida Útil
             let acumuladoDiasRetencion = 0;
             let qtyTicketsConLote = 0;
-
-            // Pronóstico (Array de objetos para los 7 días de la semana)
             let demandaPorDiaSemana = Array(7).fill(0).map(() => ({}));
 
             ventasArray.forEach(v => {
@@ -831,7 +1078,6 @@ export function setupCajas(app) {
                     }
                 });
 
-                // Calcular PEPS (Vida Útil)
                 if (v.fecha && v.loteFechaElaboracion) {
                     let fVenta = v.fecha.toDate();
                     let fElab = new Date(v.loteFechaElaboracion); 
@@ -885,7 +1131,7 @@ export function setupCajas(app) {
                 if (arrSugeridos.length > 0) {
                     arrSugeridos.slice(0, 5).forEach(([nombre, qtyAcumulada]) => {
                         let promedioVendidoEseDia = qtyAcumulada / divisorDia;
-                        let sugerenciaOptima = Math.ceil(promedioVendidoEseDia * 1.15); // +15% de seguridad
+                        let sugerenciaOptima = Math.ceil(promedioVendidoEseDia * 1.15);
                         tbodyOptima.innerHTML += `
                             <tr>
                                 <td><strong>${nombre}</strong></td>
@@ -963,7 +1209,7 @@ export function setupCajas(app) {
                 document.getElementById('abc-c-text').textContent = listC.slice(0,4).join(', ') + (listC.length > 4 ? '...' : ' (Saldos)');
             }
 
-            // Crecimiento Clientes e Ingresos
+            // Crecimiento
             let crecClientesText = "Faltan datos";
             let crecIngresosText = "Faltan datos";
 
@@ -996,7 +1242,6 @@ export function setupCajas(app) {
                 }
             }
 
-            // Desperdicio
             let totalDesperdicioQty = 0;
             auditArray.forEach(a => {
                 if(a.tipo === 'RESTA' && a.motivo && a.motivo.toLowerCase().includes('descarte')) {
@@ -1031,7 +1276,7 @@ export function setupCajas(app) {
             if(document.getElementById('stat-margen-promedio')) document.getElementById('stat-margen-promedio').textContent = promedioMargenGlobal;
             if(document.getElementById('stat-linea-rentable')) document.getElementById('stat-linea-rentable').textContent = mejorLinea;
 
-            // Render Gráfico Lineal (Ventas Diarias)
+            // Render Gráfico Lineal 
             const elLine = document.getElementById('chartLineVentas');
             if (elLine) {
                 const ctxLine = elLine.getContext('2d');
@@ -1052,7 +1297,7 @@ export function setupCajas(app) {
                 });
             }
 
-            // Render Gráfico de Barras (Horas Pico)
+            // Render Gráfico de Barras 
             const elBar = document.getElementById('chartBarHoras');
             if (elBar) {
                 const ctxBar = elBar.getContext('2d');
