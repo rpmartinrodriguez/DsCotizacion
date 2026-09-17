@@ -96,15 +96,6 @@
             align-items: center;
             gap: 0.5rem;
         }
-
-        /* Estilos para la tabla de Carga Histórica */
-        .historico-totales { display: flex; gap: 1rem; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff; align-items: center; justify-content: space-between; margin-top: 1rem; flex-wrap: wrap; }
-        .historico-total-item { display: flex; flex-direction: column; }
-        .historico-total-label { font-size: 0.85rem; color: #6b7280; font-weight: bold; text-transform: uppercase; }
-        .historico-total-val { font-size: 1.5rem; font-weight: 900; }
-        .val-efectivo { color: #15803d; }
-        .val-mp { color: #0369a1; }
-        .val-general { color: #7c3aed; font-size: 1.8rem; }
     </style>
 </head>
 <body class="rol-empleado">
@@ -184,8 +175,10 @@
                         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                             <button id="btn-ir-stock" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
                             <button id="btn-ir-promos" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #f59e0b; color: #f59e0b;">🏷️ Promos</button>
-                            <!-- BOTÓN PARA IR A LA NUEVA PESTAÑA HISTÓRICA -->
-                            <button id="btn-ir-carga-historica" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #8b5cf6; color: #8b5cf6;">📝 Carga Histórica</button>
+                            
+                            <!-- BOTÓN PARA ABRIR MODAL HISTÓRICO -->
+                            <button id="btn-carga-manual" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #8b5cf6; color: #8b5cf6;">📝 Carga Histórica</button>
+                            
                             <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">Cerrar Caja</button>
                         </div>
                     </div>
@@ -276,102 +269,115 @@
                 <button id="btn-descargar-promo" class="btn-primary" style="background: #f59e0b; border-color: #f59e0b;">💾 Descargar Imagen Promo</button>
             </section>
 
-            <!-- ============================================== -->
-            <!-- PANTALLA 5: CARGA MANUAL HISTÓRICA EN TABLA    -->
-            <!-- ============================================== -->
-            <section id="pantalla-carga-historica" class="card master-only" style="display: none;">
-                <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                    <div>
-                        <h2 class="card__title" style="margin: 0; color: #8b5cf6;">Carga Histórica de Ventas</h2>
-                        <p class="text-light" style="margin: 0; font-size: 0.9rem;">Digitalizá cuadernos viejos. El sistema calculará automáticamente la matemática bidireccional.</p>
-                    </div>
-                    <button id="btn-volver-mostrador-historico" class="btn-secondary" style="width: auto; padding: 0.5rem 1rem;">🏪 Volver a Ventas</button>
-                </div>
-
-                <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.5rem;">
-                    <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-                        
-                        <div class="form-group" style="margin: 0; min-width: 150px;">
-                            <label style="font-weight: bold; color: #4c1d95;">Fecha Venta</label>
-                            <input type="date" id="manual-fecha" class="form-control" required style="padding: 0.6rem;">
-                        </div>
-
-                        <div class="form-group" style="margin: 0; flex-grow: 2; min-width: 250px;">
-                            <label style="font-size: 0.85rem; font-weight: bold;">Producto (Escribí para buscar)</label>
-                            <input type="text" id="manual-producto-input" class="form-control" list="lista-prod-manual" placeholder="Ej: Alfajores de maicena..." autocomplete="off">
-                            <datalist id="lista-prod-manual"></datalist>
-                            <span id="manual-precio-sugerido" style="font-size: 0.75rem; color: #64748b; margin-top: 0.3rem; display: block;">Precio hoy: $0.00</span>
-                        </div>
-
-                        <div class="form-group" style="margin: 0; max-width: 80px;">
-                            <label style="font-size: 0.85rem; font-weight: bold;">Cant.</label>
-                            <input type="number" id="manual-cantidad" class="form-control" value="1" min="1">
-                        </div>
-
-                        <div class="form-group" style="margin: 0; max-width: 110px;">
-                            <label style="font-size: 0.85rem; font-weight: bold; color: #059669;">Total ($)</label>
-                            <input type="number" id="manual-precio-total" class="form-control" step="10" min="0" placeholder="Ej: 3000">
-                        </div>
-
-                        <div class="form-group" style="margin: 0; max-width: 110px;">
-                            <label style="font-size: 0.85rem; font-weight: bold;">Unit. ($)</label>
-                            <input type="number" id="manual-precio" class="form-control" step="0.1" min="0" placeholder="Ej: 500">
-                        </div>
-
-                        <div class="form-group" style="margin: 0; min-width: 140px;">
-                            <label style="font-size: 0.85rem; font-weight: bold;">Método</label>
-                            <select id="manual-metodo-fila" class="form-control">
-                                <option value="Efectivo">💵 Efectivo</option>
-                                <option value="MercadoPago">📱 Merc.Pago</option>
-                            </select>
-                        </div>
-
-                        <button id="btn-add-manual-item" class="btn-primary" style="height: 42px; background: #8b5cf6; border-color: #8b5cf6; padding: 0 1rem; margin-top: 1.4rem;">➕ Añadir</button>
-                    </div>
-                </div>
-
-                <!-- TABLA DE MOVIMIENTOS A CARGAR -->
-                <div style="overflow-x: auto; margin-bottom: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <table class="table-clean" style="margin: 0;">
-                        <thead style="background: #f1f5f9;">
-                            <tr>
-                                <th>Fecha Asignada</th>
-                                <th>Producto</th>
-                                <th style="text-align: center;">Cant.</th>
-                                <th>P. Unitario</th>
-                                <th>Total Movimiento</th>
-                                <th>Método de Pago</th>
-                                <th style="text-align: center;">Quitar</th>
-                            </tr>
-                        </thead>
-                        <tbody id="manual-tabla-body">
-                            <tr>
-                                <td colspan="7" style="text-align: center; color: #94a3b8; padding: 2rem;">No agregaste ningún movimiento a la carga todavía.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- TOTALES INFERIORES -->
-                <div class="historico-totales">
-                    <div class="historico-total-item">
-                        <span class="historico-total-label">Subtotal Efectivo</span>
-                        <span class="historico-total-val val-efectivo" id="manual-total-efectivo">$0.00</span>
-                    </div>
-                    <div class="historico-total-item">
-                        <span class="historico-total-label">Subtotal M.Pago</span>
-                        <span class="historico-total-val val-mp" id="manual-total-mp">$0.00</span>
-                    </div>
-                    <div class="historico-total-item" style="border-left: 2px solid #d8b4fe; padding-left: 1rem;">
-                        <span class="historico-total-label">Total a Registrar</span>
-                        <span class="historico-total-val val-general" id="manual-total-general">$0.00</span>
-                    </div>
-                    <button id="btn-guardar-manual" class="btn-primary" style="background: #6d28d9; border-color: #6d28d9; font-size: 1.1rem; padding: 1rem 2rem;">💾 Impactar en la Base de Datos</button>
-                </div>
-
-            </section>
-
         </main>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- NUEVO Y CÓMODO MODAL: CARGA HISTÓRICA GIGANTE  -->
+    <!-- ============================================== -->
+    <div id="modal-carga-manual" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content card" style="max-width: 800px; width: 95%; max-height: 95vh; overflow-y: auto;">
+            
+            <h2 class="card__title" style="color: #8b5cf6; border-bottom: 2px solid #e9d5ff; padding-bottom: 0.5rem; margin-bottom: 1rem;">Carga Histórica de Ventas</h2>
+            <p class="text-light" style="font-size: 0.95rem; margin-bottom: 1.5rem;">Digitalizá cuadernos viejos usando este formulario súper amplio. El sistema recalcula totales y unitarios automáticamente.</p>
+
+            <!-- 1. SELECCIÓN DE FECHA (Global para los tickets a ingresar) -->
+            <div class="form-group" style="max-width: 300px; margin-bottom: 2rem;">
+                <label style="color: #4c1d95; font-weight: bold; font-size: 1rem;">📅 Fecha de la Venta (Del ticket)</label>
+                <input type="date" id="manual-fecha" class="form-control" style="font-size: 1.1rem; padding: 0.8rem;" required>
+            </div>
+
+            <!-- 2. PANEL DE CARGA DE PRODUCTO (Gris Claro) -->
+            <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 1px solid #cbd5e1; margin-bottom: 2rem;">
+                <h3 style="margin-top: 0; color: #334155; font-size: 1.1rem; margin-bottom: 1rem;">🛒 Agregar Nuevo Movimiento</h3>
+                
+                <!-- Fila 1: Producto -->
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="font-weight: bold; font-size: 1rem;">Escribí para buscar el Producto</label>
+                    <input type="text" id="manual-producto-input" class="form-control" list="lista-prod-manual" placeholder="Ej: Alfajores de maicena..." autocomplete="off" style="font-size: 1.1rem; padding: 0.8rem;">
+                    <datalist id="lista-prod-manual"></datalist>
+                    <span id="manual-precio-sugerido" style="font-size: 0.85rem; color: #64748b; margin-top: 0.4rem; display: block; font-weight: bold;">Precio actual configurado en el sistema: $0.00</span>
+                </div>
+
+                <!-- Fila 2: Matemática de Precios -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.95rem; font-weight: bold;">Cantidad</label>
+                        <input type="number" id="manual-cantidad" class="form-control" value="1" min="1" style="font-size: 1.1rem; padding: 0.8rem;">
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.95rem; font-weight: bold;">Unitario ($)</label>
+                        <input type="number" id="manual-precio" class="form-control" step="0.1" min="0" placeholder="Ej: 500" style="font-size: 1.1rem; padding: 0.8rem;">
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.95rem; font-weight: bold; color: #059669;">Total Mov. ($)</label>
+                        <input type="number" id="manual-precio-total" class="form-control" step="10" min="0" placeholder="Ej: 3000" style="font-size: 1.1rem; padding: 0.8rem; border-color: #34d399; background: #ecfdf5;">
+                    </div>
+
+                    <div class="form-group" style="margin: 0;">
+                        <label style="font-size: 0.95rem; font-weight: bold;">Método Pago</label>
+                        <select id="manual-metodo-fila" class="form-control" style="font-size: 1.1rem; padding: 0.8rem;">
+                            <option value="Efectivo">💵 Efectivo</option>
+                            <option value="MercadoPago">📱 Merc.Pago</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <!-- Fila 3: Botón Añadir -->
+                <button id="btn-add-manual-item" class="btn-primary" style="width: 100%; background: #8b5cf6; border-color: #8b5cf6; padding: 1rem; font-size: 1.1rem;">➕ Añadir a la tabla de Carga</button>
+            </div>
+
+            <!-- 3. TABLA DE RESULTADOS ACUMULADOS -->
+            <h3 style="margin-top: 0; color: #334155; font-size: 1.1rem; margin-bottom: 1rem;">📋 Pre-visualización de Datos a Subir</h3>
+            <div style="overflow-x: auto; margin-bottom: 1.5rem; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <table class="table-clean" style="margin: 0; min-width: 650px;">
+                    <thead style="background: #f1f5f9;">
+                        <tr>
+                            <th>Producto</th>
+                            <th style="text-align: center;">Cant.</th>
+                            <th>Unitario</th>
+                            <th>Total Fil.</th>
+                            <th>Método</th>
+                            <th style="text-align: center;">Quitar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="manual-tabla-body">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #94a3b8; padding: 2.5rem; font-size: 1.1rem;">Aún no agregaste movimientos. Completá el formulario gris de arriba.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 4. TOTALES INFERIORES -->
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; background: #faf5ff; padding: 1.5rem; border-radius: 12px; border: 1px solid #e9d5ff; margin-bottom: 2rem; justify-content: space-between; align-items: center;">
+                <div style="display: flex; gap: 2rem;">
+                    <div>
+                        <span style="font-size: 0.95rem; color: #6b7280; font-weight: bold; display: block; text-transform: uppercase;">Subt. Efectivo</span>
+                        <span style="font-size: 1.4rem; font-weight: 900; color: #15803d;" id="manual-total-efectivo">$0.00</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.95rem; color: #6b7280; font-weight: bold; display: block; text-transform: uppercase;">Subt. MP</span>
+                        <span style="font-size: 1.4rem; font-weight: 900; color: #0369a1;" id="manual-total-mp">$0.00</span>
+                    </div>
+                </div>
+                <div style="text-align: right; border-left: 2px solid #d8b4fe; padding-left: 2rem;">
+                    <span style="font-size: 1rem; color: #4c1d95; font-weight: bold; display: block; text-transform: uppercase;">Total General del Ticket</span>
+                    <span style="font-size: 2.2rem; font-weight: 900; color: #7c3aed;" id="manual-total-general">$0.00</span>
+                </div>
+            </div>
+
+            <!-- 5. ACCIONES DEL MODAL -->
+            <div class="modal-actions" style="justify-content: space-between;">
+                <button id="btn-cancelar-manual" class="btn-secondary" style="width: 48%; padding: 1rem; font-size: 1.1rem;">❌ Cancelar y Cerrar</button>
+                <button id="btn-guardar-manual" class="btn-primary" style="width: 48%; background: #6d28d9; border-color: #6d28d9; padding: 1rem; font-size: 1.1rem;">💾 Guardar TODO en Base de Datos</button>
+            </div>
+
+        </div>
     </div>
 
 
@@ -466,44 +472,6 @@
             <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
                 <button id="btn-cancelar-cierre" class="btn-secondary" style="width: 48%;">Volver</button>
                 <button id="btn-confirmar-cierre" class="btn-primary" style="width: 48%; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border:none;">Confirmar Cierre</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: AUDITORÍA DE TICKETS -->
-    <div id="modal-revision-tickets" class="modal-overlay" style="z-index: 1500;">
-        <div class="modal-content card" style="max-width: 600px;">
-            <h2 class="card__title" style="margin-bottom: 0.5rem;">Auditoría de Movimientos</h2>
-            <p class="text-light" style="font-size:0.9rem; margin-top: 0; margin-bottom: 1rem;">Revisá los tickets del turno. Requiere clave de Admin para editar.</p>
-            
-            <div id="lista-tickets-revision" style="max-height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
-                <p class="text-light" style="text-align: center; padding: 2rem;">Cargando tickets...</p>
-            </div>
-
-            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
-                <button id="btn-cerrar-revision" class="btn-primary" style="width: auto;">Listo, volver al cierre</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: EDITAR MÉTODO DE PAGO -->
-    <div id="modal-editar-ticket" class="modal-overlay" style="z-index: 2000;">
-        <div class="modal-content card" style="max-width: 350px;">
-            <h2 class="card__title" style="color: #eab308;">Corregir Ticket</h2>
-            <p class="text-light" style="font-size: 0.85rem;">Monto: <strong id="editar-ticket-monto-label">$0.00</strong></p>
-            <input type="hidden" id="edit-ticket-id">
-            
-            <div class="form-group" style="margin-top: 1rem;">
-                <label style="font-weight: bold; color: var(--text-main);">Método Real Cobrado</label>
-                <select id="edit-ticket-metodo" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; margin-top: 0.5rem;">
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="MercadoPago">MercadoPago</option>
-                </select>
-            </div>
-            
-            <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
-                <button id="btn-cancelar-edit-ticket" class="btn-secondary" style="width: 48%;">Cancelar</button>
-                <button id="btn-guardar-edit-ticket" class="btn-primary" style="width: 48%; background: #eab308; border: none;">Guardar Arreglo</button>
             </div>
         </div>
     </div>
