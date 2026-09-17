@@ -124,10 +124,14 @@
                     </div>
                 </div>
 
-                <div class="buscador-container" style="margin-bottom: 1.5rem;">
-                    <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
-                        <option value="todos">Cargando meses...</option>
-                    </select>
+                <!-- NUEVO: CONTENEDOR CON FILTRO Y BOTÓN DE PAPELERA -->
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
+                    <div class="buscador-container" style="flex-grow: 1; margin-bottom: 0;">
+                        <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
+                            <option value="todos">Cargando meses...</option>
+                        </select>
+                    </div>
+                    <button id="btn-abrir-papelera" class="btn-secondary" style="width: auto; padding: 0.8rem 1rem; border-color: #ef4444; color: #ef4444; font-weight: bold; background: #fef2f2;">🗑️ Papelera</button>
                 </div>
 
                 <div id="lista-cajas-container">
@@ -362,6 +366,22 @@
             
             <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
                 <button id="btn-cerrar-resumen" class="btn-primary" style="width: auto;">Listo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NUEVO: MODAL PAPELERA DE RECICLAJE DE CAJAS -->
+    <div id="modal-papelera" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content card" style="max-width: 600px;">
+            <h2 class="card__title" style="color: #ef4444; margin-top: 0; border-bottom: 2px solid #fca5a5; padding-bottom: 0.5rem;">Cajas Eliminadas (Ocultas)</h2>
+            <p class="text-light" style="font-size: 0.9rem; margin-bottom: 1rem;">Estas cajas están ocultas y no suman a las estadísticas. Podés restaurarlas para que vuelvan a aparecer en el historial normal.</p>
+            
+            <div id="lista-cajas-papelera" style="max-height: 400px; overflow-y: auto; padding-right: 5px; border: 1px solid #fee2e2; border-radius: 8px; background: #fafafa; padding: 1rem;">
+                <p class="text-light" style="text-align: center;">Cargando papelera...</p>
+            </div>
+            
+            <div class="modal-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
+                <button id="btn-cerrar-papelera" class="btn-primary" style="width: auto; background: #64748b; border-color: #64748b;">Cerrar Papelera</button>
             </div>
         </div>
     </div>
