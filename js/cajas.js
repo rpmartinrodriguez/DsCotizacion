@@ -38,10 +38,20 @@ export function setupCajas(app) {
     const ulResumenProductos = document.getElementById('ul-resumen-productos');
     const btnCerrarResumen = document.getElementById('btn-cerrar-resumen');
 
+    // Referencias a Papelera
+    const btnAbrirPapelera = document.getElementById('btn-abrir-papelera');
+    const modalPapelera = document.getElementById('modal-papelera');
+    const listaCajasPapelera = document.getElementById('lista-cajas-papelera');
+    const btnCerrarPapelera = document.getElementById('btn-cerrar-papelera');
+
     let todasLasCajas = [];
+    let cajasEliminadas = []; // Almacena las cajas con "eliminada: true"
     let statsYaCargadas = false;
     let chartVentasInstancia = null;
     let chartBarHorasInstancia = null;
+
+    // Contraseña maestra para borrar/restaurar
+    const MASTER_PASS = "Lautaro2026";
 
     // ==========================================
     // 1. DICCIONARIO PARA LA (i) DE TODOS LOS INDICADORES
@@ -233,7 +243,7 @@ export function setupCajas(app) {
     }
 
     // ==========================================
-    // 3. RENDERIZAR LA LISTA DE CAJAS
+    // 3. RENDERIZAR LA LISTA DE CAJAS (NO ELIMINADAS)
     // ==========================================
     function renderizarCajas() {
         const mesFiltro = filtroMesSelect.value;
@@ -269,7 +279,11 @@ export function setupCajas(app) {
             div.innerHTML = `
                 <div class="categoria-acordeon__header caja-header" data-id="${caja.id}">
                     <div>
-                        <div style="font-size: 1.1rem;">Apertura: ${formatearFecha(caja.fechaApertura)}</div>
+                        <div style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            Apertura: ${formatearFecha(caja.fechaApertura)}
+                            <!-- BOTÓN DE ELIMINAR CAJA -->
+                            <button class="btn-eliminar-caja" data-id="${caja.id}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Eliminar caja de las estadísticas">🗑️</button>
+                        </div>
                         <div style="font-size: 0.85rem; color: var(--text-light); font-weight: normal; margin-top: 0.2rem;">
                             👤 ${caja.usuarioNombre || 'Usuario'}
                             ${caja.fechaCierre ? ` | Cierre: ${formatearFecha(caja.fechaCierre)}` : ''}
@@ -348,10 +362,27 @@ export function setupCajas(app) {
         }
     }
 
+    // Escuchador Principal de Cajas (Separa en Normales y Eliminadas)
     onSnapshot(query(cajasCollection, orderBy('fechaApertura', 'desc')), (snapshot) => {
-        todasLasCajas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        todasLasCajas = [];
+        cajasEliminadas = [];
+        
+        snapshot.docs.forEach(doc => {
+            const data = { id: doc.id, ...doc.data() };
+            if (data.eliminada === true) {
+                cajasEliminadas.push(data);
+            } else {
+                todasLasCajas.push(data);
+            }
+        });
+        
         actualizarFiltros();
         renderizarCajas();
+        
+        // Si el panel de estadísticas estaba abierto, lo forzamos a recalcular
+        if (statsYaCargadas && sectionEstadisticas && sectionEstadisticas.style.display !== 'none') {
+            generarDashboard();
+        }
     });
 
     filtroMesSelect.addEventListener('change', renderizarCajas);
@@ -404,7 +435,6 @@ export function setupCajas(app) {
         }
     }
 
-    // Nuevo: Función para agrupar y mostrar los productos de un turno
     async function mostrarResumenProductos(cajaId) {
         if (!ulResumenProductos || !modalResumen) return;
 
@@ -420,7 +450,6 @@ export function setupCajas(app) {
                 return;
             }
 
-            // Agrupador de cantidades
             let conteoProductos = {};
             
             querySnapshot.forEach(docSnap => {
@@ -434,7 +463,6 @@ export function setupCajas(app) {
                 });
             });
 
-            // Convertir objeto en array y ordenar de mayor a menor cantidad
             let arrProductos = Object.entries(conteoProductos)
                 .map(([nombre, cantidad]) => ({ nombre, cantidad }))
                 .sort((a, b) => b.cantidad - a.cantidad);
@@ -456,6 +484,27 @@ export function setupCajas(app) {
     }
 
     listaCajasContainer.addEventListener('click', async (e) => {
+        // Eliminar Caja (Soft Delete)
+        if (e.target.closest('.btn-eliminar-caja')) {
+            e.stopPropagation(); // Evita que se abra el acordeón
+            const btn = e.target.closest('.btn-eliminar-caja');
+            const cajaId = btn.dataset.id;
+            
+            const pass = prompt("Atención: Vas a ocultar esta caja de las estadísticas.\nIngresá la clave de Administrador para confirmar:");
+            if (pass !== MASTER_PASS) {
+                if(pass !== null) alert("Clave incorrecta. Acción cancelada.");
+                return;
+            }
+
+            try {
+                await updateDoc(doc(db, 'cajas', cajaId), { eliminada: true });
+                alert("Caja movida a la papelera exitosamente.");
+            } catch(err) {
+                alert("Error de conexión al intentar borrar.");
+            }
+            return;
+        }
+
         // Intercepta el botón de facturado
         if (e.target.closest('.btn-facturado')) {
             const btn = e.target.closest('.btn-facturado');
@@ -507,6 +556,83 @@ export function setupCajas(app) {
             }
         }
     });
+
+    // ==========================================
+    // 3.5 GESTIÓN DE LA PAPELERA (RESTAURAR CAJAS)
+    // ==========================================
+    if (btnAbrirPapelera) {
+        btnAbrirPapelera.addEventListener('click', () => {
+            if(modalPapelera) modalPapelera.classList.add('visible');
+            renderizarPapelera();
+        });
+    }
+
+    if (btnCerrarPapelera) {
+        btnCerrarPapelera.addEventListener('click', () => {
+            if(modalPapelera) modalPapelera.classList.remove('visible');
+        });
+    }
+
+    function renderizarPapelera() {
+        if (!listaCajasPapelera) return;
+        listaCajasPapelera.innerHTML = '';
+
+        if (cajasEliminadas.length === 0) {
+            listaCajasPapelera.innerHTML = '<p class="text-light" style="text-align: center; padding: 2rem;">La papelera está vacía.</p>';
+            return;
+        }
+
+        cajasEliminadas.forEach(caja => {
+            const efvo = caja.totalEfectivo || 0;
+            const mp = caja.totalMercadoPago || 0;
+            const total = efvo + mp;
+
+            const div = document.createElement('div');
+            div.style.background = 'white';
+            div.style.border = '1px solid #e2e8f0';
+            div.style.padding = '1rem';
+            div.style.borderRadius = '8px';
+            div.style.marginBottom = '0.8rem';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+
+            div.innerHTML = `
+                <div>
+                    <strong style="color: #475569;">${formatearFecha(caja.fechaApertura)}</strong>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">👤 ${caja.usuarioNombre || 'Sistema'} | 💰 Total: ${formatMoneda(total)}</div>
+                </div>
+                <button class="btn-restaurar-caja btn-primary" data-id="${caja.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem; background: #10b981; border-color: #10b981;">♻️ Restaurar</button>
+            `;
+            listaCajasPapelera.appendChild(div);
+        });
+    }
+
+    if (listaCajasPapelera) {
+        listaCajasPapelera.addEventListener('click', async (e) => {
+            if (e.target.closest('.btn-restaurar-caja')) {
+                const btn = e.target.closest('.btn-restaurar-caja');
+                const cajaId = btn.dataset.id;
+
+                const pass = prompt("Se va a restaurar la caja y sus ventas volverán a sumar en las estadísticas.\nIngresá la clave de Administrador:");
+                if (pass !== MASTER_PASS) {
+                    if(pass !== null) alert("Clave incorrecta. No se restauró la caja.");
+                    return;
+                }
+
+                try {
+                    btn.textContent = "...";
+                    await updateDoc(doc(db, 'cajas', cajaId), { eliminada: false });
+                    alert("Caja restaurada al historial con éxito.");
+                    renderizarPapelera(); // Refresca la ventana de la papelera
+                } catch(err) {
+                    alert("Error al intentar restaurar.");
+                    btn.textContent = "♻️ Restaurar";
+                }
+            }
+        });
+    }
+
 
     // ==========================================
     // 4. LÓGICA DE LA CALCULADORA DE FACTURACIÓN
@@ -569,8 +695,17 @@ export function setupCajas(app) {
                 getDocs(collection(db, 'recetas'))
             ]);
 
+            // IMPORTANTE: Filtrar ventas huérfanas (cuyas cajas fueron borradas)
+            const cajasOcultasIDs = new Set(cajasEliminadas.map(c => c.id));
+
             let ventasArray = [];
-            ventasSnap.forEach(v => ventasArray.push(v.data()));
+            ventasSnap.forEach(v => {
+                const dataVenta = v.data();
+                // Solo la sumamos a la estadística si su caja NO está en la papelera
+                if (!cajasOcultasIDs.has(dataVenta.cajaId)) {
+                    ventasArray.push(dataVenta);
+                }
+            });
             ventasArray.sort((a,b) => (a.fecha?.seconds || 0) - (b.fecha?.seconds || 0));
 
             let auditArray = [];
@@ -615,6 +750,7 @@ export function setupCajas(app) {
             let ventasDiariasMap = {};
             let diasSemanaConteo = Array(7).fill(0);
 
+            // Acá usamos TODASLASCAJAS que ya no contiene a las de la papelera
             todasLasCajas.forEach(c => {
                 if(c.fechaApertura) {
                     let diaCorta = formatearFechaCorta(c.fechaApertura);
