@@ -30,13 +30,12 @@ export function setupUsuarios(app, firebaseConfig) {
     const editEmail = document.getElementById('edit-user-email');
     const editPass = document.getElementById('edit-user-pass');
     
-    // Checkboxes de permisos
-    const permMostrador = document.getElementById('perm-mostrador');
-    const permStock = document.getElementById('perm-stock');
-    const permRecetas = document.getElementById('perm-recetas');
-    const permCajas = document.getElementById('perm-cajas');
-    const permFinanzas = document.getElementById('perm-finanzas');
-    const permConfig = document.getElementById('perm-configuracion');
+    // Lista completa de los 15 permisos (coinciden con los IDs del HTML)
+    const listaPermisos = [
+        'mostrador', 'indicadores', 'recetas', 'stock', 'presupuestos', 
+        'precios', 'cajas', 'finanzas', 'historial', 'compras', 
+        'compras_lista', 'clientes', 'agenda', 'modelos', 'configuracion'
+    ];
 
     let todosLosUsuarios = [];
     let isCreateMode = false;
@@ -50,7 +49,10 @@ export function setupUsuarios(app, firebaseConfig) {
 
         try {
             const permisosLocal = JSON.parse(localStorage.getItem('userPermisos') || '{}');
-            if (permisosLocal.configuracion !== true) {
+            const rolLocal = localStorage.getItem('userRol');
+            
+            // Si no es master ni tiene permiso de configuracion, lo echamos
+            if (rolLocal !== 'master' && permisosLocal.configuracion !== true) {
                 alert("Acceso denegado. No tenés permisos de Administrador para ver esta página.");
                 window.location.href = 'pos.html'; 
             }
@@ -107,17 +109,18 @@ export function setupUsuarios(app, firebaseConfig) {
             editPass.value = '';
             editEstado.value = 'activo';
             editEstado.disabled = false;
-            permConfig.disabled = false;
+            
+            // Destildar las 15 casillas para un usuario nuevo
+            listaPermisos.forEach(p => {
+                const checkbox = document.getElementById(`perm-${p}`);
+                if (checkbox) checkbox.checked = false;
+            });
 
-            // Limpiar permisos por defecto (solo caja)
-            permMostrador.checked = true;
-            permStock.checked = false;
-            permRecetas.checked = false;
-            permCajas.checked = false;
-            permFinanzas.checked = false;
-            permConfig.checked = false;
+            // Si es un empleado nuevo, el config no está bloqueado, pero arranca destildado
+            const permConfig = document.getElementById('perm-configuracion');
+            if (permConfig) permConfig.disabled = false;
 
-            modalUsuario.classList.add('visible');
+            modalUsuario.classList.add('visible'); // Usamos tu clase 'visible' original
         });
     }
 
@@ -139,22 +142,23 @@ export function setupUsuarios(app, firebaseConfig) {
             editEstado.value = user.estado || 'inactivo';
 
             const p = user.permisos || {};
-            permMostrador.checked = p.mostrador === true;
-            permStock.checked = p.stock === true;
-            permRecetas.checked = p.recetas === true;
-            permCajas.checked = p.cajas === true;
-            permFinanzas.checked = p.finanzas === true;
-            permConfig.checked = p.configuracion === true;
+            
+            // Tildar las 15 casillas según la base de datos
+            listaPermisos.forEach(permisoStr => {
+                const checkbox = document.getElementById(`perm-${permisoStr}`);
+                if (checkbox) checkbox.checked = p[permisoStr] === true;
+            });
 
+            const permConfig = document.getElementById('perm-configuracion');
             if (user.rol === 'master') {
-                permConfig.disabled = true;
+                if (permConfig) permConfig.disabled = true;
                 editEstado.disabled = true;
             } else {
-                permConfig.disabled = false;
+                if (permConfig) permConfig.disabled = false;
                 editEstado.disabled = false;
             }
 
-            modalUsuario.classList.add('visible');
+            modalUsuario.classList.add('visible'); // Usamos tu clase 'visible' original
         });
     }
 
@@ -174,14 +178,19 @@ export function setupUsuarios(app, firebaseConfig) {
             btnGuardar.disabled = true;
             btnGuardar.textContent = isCreateMode ? 'Creando cuenta...' : 'Guardando...';
 
-            const permisosAsignados = {
-                mostrador: permMostrador.checked,
-                stock: permStock.checked,
-                recetas: permRecetas.checked,
-                cajas: permCajas.checked,
-                finanzas: permFinanzas.checked,
-                configuracion: permConfig.disabled ? true : permConfig.checked
-            };
+            // Recolectar el valor de las 15 casillas
+            const permisosAsignados = {};
+            const permConfig = document.getElementById('perm-configuracion');
+            
+            listaPermisos.forEach(p => {
+                const checkbox = document.getElementById(`perm-${p}`);
+                // Casuística especial para el Master: no le podemos sacar la configuración
+                if (p === 'configuracion' && permConfig && permConfig.disabled) {
+                    permisosAsignados[p] = true; 
+                } else {
+                    permisosAsignados[p] = checkbox ? checkbox.checked : false;
+                }
+            });
 
             try {
                 if (isCreateMode) {
