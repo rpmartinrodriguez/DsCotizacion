@@ -86,6 +86,21 @@
         .ticket-tag-metodo { font-size: 0.75rem; font-weight: bold; padding: 0.2rem 0.5rem; border-radius: 4px; margin-left: 0.5rem; }
         .tag-efectivo { background: #dcfce3; color: #15803d; }
         .tag-mp { background: #e0f2fe; color: #0369a1; }
+
+        /* Estilo para la etiqueta del nombre del operador */
+        .operador-badge {
+            background: #fdf2f8; 
+            color: #be185d; 
+            padding: 0.4rem 1rem; 
+            border-radius: 20px; 
+            font-weight: bold; 
+            font-size: 1.1rem; 
+            border: 1px solid #fbcfe8; 
+            box-shadow: 0 2px 4px rgba(236,72,153,0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 <body class="rol-empleado">
@@ -101,48 +116,19 @@
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DE NAVEGACIÓN -->
-        <nav class="nav-menu" id="nav-menu">
-            <div class="nav-menu__header">
-                <img src="assets/logo.png" alt="Logo" class="header__logo" style="height: 40px;">
-                <span class="nav-menu__title">Dulce App</span>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Panel Principal <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="pos.html" class="nav-menu__link"><span>🏪</span> Mostrador</a>
-                    <a href="index.html" class="nav-menu__link"><span>📊</span> Indicadores</a>
-                    <a href="recetas.html" class="nav-menu__link"><span>🍰</span> Postres</a>
-                    <a href="stock.html" class="nav-menu__link"><span>📦</span> Stock</a>
-                    <a href="presupuesto.html" class="nav-menu__link"><span>🧾</span> Presupuesto</a>
-                    <a href="precios.html" class="nav-menu__link"><span>💲</span> Lista de Precios</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Gestión y Finanzas <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="cajas.html" class="nav-menu__link"><span>🗃️</span> Historial Cajas</a>
-                    <a href="finanzas.html" class="nav-menu__link"><span>💰</span> Finanzas</a>
-                    <a href="historial.html" class="nav-menu__link"><span>📚</span> Historial Presupuestos</a>
-                    <a href="compras.html" class="nav-menu__link"><span>🛍️</span> Registrar Compra</a>
-                    <a href="compras-lista.html" class="nav-menu__link"><span>🛒</span> Lista de Compras</a>
-                    <a href="usuarios.html" class="nav-menu__link"><span>🛡️</span> Permisos y Usuarios</a>
-                </div>
-            </div>
-            <div class="nav-category">
-                <button class="nav-category-btn">Clientes y Agenda <span class="nav-icon">+</span></button>
-                <div class="nav-category-content">
-                    <a href="clientes.html" class="nav-menu__link"><span>👥</span> Clientes</a>
-                    <a href="agenda.html" class="nav-menu__link"><span>🗓️</span> Agenda</a>
-                    <a href="modelos.html" class="nav-menu__link"><span>🎨</span> Modelos 3D</a>
-                </div>
-            </div>
-        </nav>
+        <!-- MENÚ DINÁMICO -->
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main>
+            <!-- TÍTULO Y NOMBRE DEL OPERADOR -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                <h1 style="margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900;">Mostrador</h1>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <h1 style="margin: 0; color: #ec4899; font-size: 2.2rem; font-weight: 900;">Mostrador</h1>
+                    <span class="operador-badge">
+                        👤 <span id="nombre-operador-badge">...</span>
+                    </span>
+                </div>
             </div>
 
             <!-- PANTALLA 1: APERTURA DE CAJA -->
@@ -192,10 +178,8 @@
                     <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                         <h2 class="card__title" style="margin: 0;">Vitrina</h2>
                         <div style="display: flex; gap: 0.5rem;">
-                            <!-- Botones restringidos para la empleada -->
                             <button id="btn-ir-stock" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
                             <button id="btn-ir-promos" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #f59e0b; color: #f59e0b;">🏷️ Promos</button>
-                            
                             <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">Cerrar Caja</button>
                         </div>
                     </div>
@@ -204,7 +188,6 @@
                         <input type="search" id="buscador-pos" placeholder="🔍 Escanear código de barras o buscar..." style="flex-grow: 1; font-size: 1.1rem; padding: 0.8rem;">
                     </div>
 
-                    <!-- GRID TÁCTIL EN LUGAR DE LA TABLA -->
                     <div id="grid-productos-pos" class="productos-grid">
                         <!-- Las tarjetas se inyectan desde JS -->
                     </div>
@@ -490,6 +473,15 @@
         </div>
     </div>
 
+    <!-- SCRIPT PARA INYECTAR EL NOMBRE INMEDIATAMENTE -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const userName = localStorage.getItem('userName') || 'Usuario';
+            const badgeText = document.getElementById('nombre-operador-badge');
+            if(badgeText) badgeText.textContent = userName;
+        });
+    </script>
+
     <!-- SCRIPTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
@@ -502,6 +494,6 @@
             console.error("Error al inicializar Mostrador:", error); 
         }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=15" defer></script>
 </body>
 </html>
