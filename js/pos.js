@@ -31,7 +31,7 @@ export function setupPOS(app) {
     const radiosRetiro = document.querySelectorAll('input[name="retiro_dinero"]');
     
     const btnIniciarCierre = document.getElementById('btn-iniciar-cierre');
-    const gridProductos = document.getElementById('grid-productos-pos'); // Nuevo Grid Táctil
+    const gridProductos = document.getElementById('grid-productos-pos');
     const buscadorPOS = document.getElementById('buscador-pos');
     const carritoContainer = document.getElementById('carrito-pos-container');
     const posTotalMonto = document.getElementById('pos-total-monto');
@@ -105,6 +105,20 @@ export function setupPOS(app) {
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
     const btnDescargarBarcode = document.getElementById('btn-descargar-barcode');
 
+    // REFERENCIAS: NUEVA FUNCIONALIDAD CARGA MANUAL
+    const btnCargaManual = document.getElementById('btn-carga-manual');
+    const modalCargaManual = document.getElementById('modal-carga-manual');
+    const manualFecha = document.getElementById('manual-fecha');
+    const manualMetodo = document.getElementById('manual-metodo');
+    const manualProductoSelect = document.getElementById('manual-producto-select');
+    const manualPrecio = document.getElementById('manual-precio');
+    const manualCantidad = document.getElementById('manual-cantidad');
+    const btnAddManualItem = document.getElementById('btn-add-manual-item');
+    const manualCartLista = document.getElementById('manual-cart-lista');
+    const manualTotalMonto = document.getElementById('manual-total-monto');
+    const btnCancelarManual = document.getElementById('btn-cancelar-manual');
+    const btnGuardarManual = document.getElementById('btn-guardar-manual');
+
     // ==========================================
     // VARIABLES DE ESTADO
     // ==========================================
@@ -122,6 +136,10 @@ export function setupPOS(app) {
     let currentBarcodeProduct = null;
     let totalVentaActual = 0;
     let saldoTurnoAnteriorDetectado = 0; 
+
+    // Estado para la Carga Manual
+    let carritoManual = [];
+    let totalManual = 0;
 
     // Funciones Helper
     const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -421,6 +439,14 @@ export function setupPOS(app) {
         if (pantallaStock && pantallaStock.style.display !== 'none') {
             renderizarInventario(productosDisponibles);
         }
+
+        // Llenar el select del modal manual (si es Admin y existe el dom)
+        if (manualProductoSelect) {
+            manualProductoSelect.innerHTML = '<option value="" disabled selected>Seleccioná un producto...</option>';
+            productosDisponibles.forEach(p => {
+                manualProductoSelect.innerHTML += `<option value="${p.id}" data-precio="${p.precioCalculado}">${p.nombreTorta} (${formatMoneda(p.precioCalculado)})</option>`;
+            });
+        }
     };
 
     // ==========================================
@@ -654,7 +680,6 @@ export function setupPOS(app) {
         });
     });
 
-    // Billetera Rápida
     btnsQuickMoney.forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -731,6 +756,7 @@ export function setupPOS(app) {
                     return { id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad };
                 });
 
+                // Deducción de Stock
                 for (const item of carritoActual) {
                     const docRef = doc(db, 'recetas', item.id);
                     await runTransaction(db, async (transaction) => {
@@ -801,7 +827,6 @@ export function setupPOS(app) {
                 cierreNombreCajero.value = cajaActiva.usuarioNombre === 'Ceci' || cajaActiva.usuarioNombre === 'Eve' ? cajaActiva.usuarioNombre : '';
             }
 
-            // Calculamos siempre para mostrar el resumen a todos (empleados o admin)
             const fondo = cajaActiva.fondoInicial || 0;
             const efvo = cajaActiva.totalEfectivo || 0;
             const mp = cajaActiva.totalMercadoPago || 0;
@@ -1300,4 +1325,207 @@ export function setupPOS(app) {
             link.click();
         });
     }
+
+    // ==========================================
+    // NUEVA FUNCIONALIDAD: CARGA MANUAL HISTÓRICA (SOLO ADMIN)
+    // ==========================================
+    if (btnCargaManual) {
+        btnCargaManual.addEventListener('click', () => {
+            carritoManual = [];
+            totalManual = 0;
+            renderizarCarritoManual();
+            
+            if (manualFecha) manualFecha.value = dateToYMD(new Date());
+            if (manualMetodo) manualMetodo.value = 'Efectivo';
+            if (manualProductoSelect) manualProductoSelect.value = '';
+            if (manualPrecio) manualPrecio.value = '';
+            if (manualCantidad) manualCantidad.value = '1';
+            
+            if (modalCargaManual) modalCargaManual.classList.add('visible');
+        });
+    }
+
+    if (btnCancelarManual) {
+        btnCancelarManual.addEventListener('click', () => {
+            if (modalCargaManual) modalCargaManual.classList.remove('visible');
+        });
+    }
+
+    if (manualProductoSelect) {
+        manualProductoSelect.addEventListener('change', () => {
+            const opSelected = manualProductoSelect.options[manualProductoSelect.selectedIndex];
+            if (opSelected && opSelected.dataset.precio) {
+                manualPrecio.value = opSelected.dataset.precio;
+            }
+        });
+    }
+
+    if (btnAddManualItem) {
+        btnAddManualItem.addEventListener('click', () => {
+            const prodId = manualProductoSelect.value;
+            const precioIngresado = parseFloat(manualPrecio.value);
+            const cantIngresada = parseInt(manualCantidad.value);
+
+            if (!prodId) return alert("Seleccioná un producto de la lista.");
+            if (isNaN(precioIngresado) || precioIngresado <= 0) return alert("El precio debe ser un número válido mayor a 0.");
+            if (isNaN(cantIngresada) || cantIngresada <= 0) return alert("La cantidad debe ser mayor a 0.");
+
+            const opSelected = manualProductoSelect.options[manualProductoSelect.selectedIndex];
+            // Para el nombre, le sacamos el precio que está entre paréntesis en el option
+            const prodNombre = opSelected.text.split(' (')[0]; 
+
+            // Buscar si ya está en el carrito manual
+            const existe = carritoManual.find(i => i.id === prodId && i.precio === precioIngresado);
+            if (existe) {
+                existe.cantidad += cantIngresada;
+            } else {
+                carritoManual.push({
+                    id: prodId,
+                    nombre: prodNombre,
+                    precio: precioIngresado,
+                    cantidad: cantIngresada
+                });
+            }
+
+            // Resetear inputs cortitos para el proximo item
+            manualProductoSelect.value = '';
+            manualPrecio.value = '';
+            manualCantidad.value = '1';
+
+            renderizarCarritoManual();
+        });
+    }
+
+    const renderizarCarritoManual = () => {
+        if (!manualCartLista) return;
+        manualCartLista.innerHTML = '';
+        
+        if (carritoManual.length === 0) {
+            manualCartLista.innerHTML = '<p class="text-light" style="text-align: center; margin-top: 2rem;">No hay productos agregados a este ticket histórico.</p>';
+            manualTotalMonto.textContent = formatMoneda(0);
+            return;
+        }
+
+        totalManual = 0;
+        carritoManual.forEach((item, index) => {
+            const subtotal = item.precio * item.cantidad;
+            totalManual += subtotal;
+
+            const div = document.createElement('div');
+            div.className = 'cart-item';
+            div.innerHTML = `
+                <div class="cart-item-info">
+                    <h4 style="margin: 0; color: #4c1d95;">${item.nombre}</h4>
+                    <span style="font-size: 0.85rem; color: #64748b;">${item.cantidad} unidades x ${formatMoneda(item.precio)}</span>
+                </div>
+                <div class="cart-item-total" style="color: #7c3aed;">${formatMoneda(subtotal)}</div>
+                <button class="btn-remove-manual" data-index="${index}" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:1.2rem;">🗑️</button>
+            `;
+            manualCartLista.appendChild(div);
+        });
+
+        if (manualTotalMonto) manualTotalMonto.textContent = formatMoneda(totalManual);
+    };
+
+    if (manualCartLista) {
+        manualCartLista.addEventListener('click', (e) => {
+            const btnRemove = e.target.closest('.btn-remove-manual');
+            if (btnRemove) {
+                carritoManual.splice(btnRemove.dataset.index, 1);
+                renderizarCarritoManual();
+            }
+        });
+    }
+
+    if (btnGuardarManual) {
+        btnGuardarManual.addEventListener('click', async () => {
+            if (carritoManual.length === 0) return alert("Agregá al menos un producto al ticket histórico.");
+            
+            const fechaString = manualFecha.value;
+            if (!fechaString) return alert("Seleccioná la fecha del ticket a registrar.");
+            
+            const metodo = manualMetodo.value;
+            
+            // Convertir la fecha ingresada (YYYY-MM-DD) a un Timestamp de Firebase a las 12:00 del mediodía
+            const [y, m, d] = fechaString.split('-');
+            const fechaObj = new Date(y, m - 1, d, 12, 0, 0); 
+            const fechaFirebase = Timestamp.fromDate(fechaObj);
+
+            btnGuardarManual.disabled = true;
+            btnGuardarManual.textContent = "Guardando en la historia...";
+
+            try {
+                // Buscamos si existe alguna caja abierta en ESE DÍA para asignarle la venta.
+                // Si no hay, creamos una caja "virtual" retroactiva cerrada para alojar el ticket.
+                // Esto es vital para que las pantallas de finanzas y cajas encuentren la info.
+                
+                // Rango del día elegido (de 00:00 a 23:59)
+                const inicioDia = Timestamp.fromDate(new Date(y, m - 1, d, 0, 0, 0));
+                const finDia = Timestamp.fromDate(new Date(y, m - 1, d, 23, 59, 59));
+                
+                const qCajas = query(cajasCollection, 
+                    where('fechaApertura', '>=', inicioDia), 
+                    where('fechaApertura', '<=', finDia),
+                    limit(1)
+                );
+                
+                const cajasSnap = await getDocs(qCajas);
+                let idCajaHistorica;
+                
+                if (cajasSnap.empty) {
+                    // Si no había caja ese día, inventamos una
+                    const nuevaCajaRef = await addDoc(cajasCollection, {
+                        usuarioId: currentUser.uid,
+                        usuarioNombre: userName,
+                        turno: 'Carga Manual',
+                        fechaApertura: fechaFirebase,
+                        fechaCierre: fechaFirebase,
+                        fondoInicial: 0,
+                        totalEfectivo: metodo === 'Efectivo' ? totalManual : 0,
+                        totalMercadoPago: metodo === 'MercadoPago' ? totalManual : 0,
+                        estado: 'cerrada',
+                        cerradaPor: 'Sistema (Carga Manual)'
+                    });
+                    idCajaHistorica = nuevaCajaRef.id;
+                } else {
+                    // Si existía, le sumamos el monto
+                    const cajaHist = cajasSnap.docs[0];
+                    idCajaHistorica = cajaHist.id;
+                    const cData = cajaHist.data();
+                    
+                    await updateDoc(doc(db, 'cajas', idCajaHistorica), {
+                        totalEfectivo: (cData.totalEfectivo || 0) + (metodo === 'Efectivo' ? totalManual : 0),
+                        totalMercadoPago: (cData.totalMercadoPago || 0) + (metodo === 'MercadoPago' ? totalManual : 0)
+                    });
+                }
+
+                // Guardamos el ticket histórico
+                await addDoc(ventasCollection, {
+                    cajaId: idCajaHistorica,
+                    fecha: fechaFirebase, // ¡La fecha en el pasado!
+                    metodoPago: metodo,
+                    total: totalManual,
+                    pagoEfectivo: metodo === 'Efectivo' ? totalManual : 0,
+                    pagoMercadoPago: metodo === 'MercadoPago' ? totalManual : 0,
+                    items: carritoManual,
+                    vendedor: "Carga Histórica",
+                    esManual: true // Marca para saber que fue cargado a mano
+                });
+
+                // ATENCIÓN: Esta función NO DESCUENTA STOCK físico. 
+                // Asumimos que como es una venta del pasado, los postres ya no existen.
+
+                alert("¡Ticket del pasado registrado con éxito!");
+                modalCargaManual.classList.remove('visible');
+
+            } catch (error) {
+                console.error("Error al guardar venta manual:", error);
+                alert("Ocurrió un error al intentar guardar el ticket histórico.");
+            }
+
+            btnGuardarManual.disabled = false;
+            btnGuardarManual.textContent = "💾 Registrar Ticket Pasado";
+        });
+    }
+
 }
