@@ -22,20 +22,15 @@
         /* ========================================== */
         /* SCROLL BARS PARA CONTENEDORES LARGOS       */
         /* ========================================== */
-        #lista-recetas-container {
-            max-height: 65vh; /* Ocupa hasta el 65% del alto de la pantalla */
-            overflow-y: auto; /* Habilita el scroll vertical */
+        
+        /* 1. Scroll interno EXCLUSIVO para los productos DENTRO de la categoría */
+        .categoria-acordeon__content {
+            max-height: 55vh; /* Ocupa hasta el 55% de la pantalla */
+            overflow-y: auto; /* Habilita el scroll vertical solo acá adentro */
             overflow-x: hidden;
-            padding-right: 10px; /* Espacio para que el scroll no pise el texto */
         }
 
-        #lista-categorias-container {
-            max-height: 40vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding-right: 10px;
-        }
-
+        /* 2. Scroll interno para los ingredientes dentro del modal de crear receta */
         #ingredientes-en-receta-container {
             max-height: 250px;
             overflow-y: auto;
@@ -43,26 +38,22 @@
             padding-right: 5px;
         }
 
-        /* Diseño estético de la barra de scroll */
-        #lista-recetas-container::-webkit-scrollbar,
-        #lista-categorias-container::-webkit-scrollbar,
+        /* Diseño estético de la barra de scroll para que quede prolija */
+        .categoria-acordeon__content::-webkit-scrollbar,
         #ingredientes-en-receta-container::-webkit-scrollbar {
             width: 6px;
         }
-        #lista-recetas-container::-webkit-scrollbar-track,
-        #lista-categorias-container::-webkit-scrollbar-track,
+        .categoria-acordeon__content::-webkit-scrollbar-track,
         #ingredientes-en-receta-container::-webkit-scrollbar-track {
             background: #f8fafc;
             border-radius: 4px;
         }
-        #lista-recetas-container::-webkit-scrollbar-thumb,
-        #lista-categorias-container::-webkit-scrollbar-thumb,
+        .categoria-acordeon__content::-webkit-scrollbar-thumb,
         #ingredientes-en-receta-container::-webkit-scrollbar-thumb {
             background: #cbd5e1;
             border-radius: 4px;
         }
-        #lista-recetas-container::-webkit-scrollbar-thumb:hover,
-        #lista-categorias-container::-webkit-scrollbar-thumb:hover,
+        .categoria-acordeon__content::-webkit-scrollbar-thumb:hover,
         #ingredientes-en-receta-container::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
