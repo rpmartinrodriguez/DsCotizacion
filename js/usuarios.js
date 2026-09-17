@@ -1,196 +1,242 @@
-import { getFirestore, collection, getDocs, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { 
+    getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, query, orderBy 
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { 
+    getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut 
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 
-export async function setupUsuarios(app, firebaseConfig) {
-    console.log("Iniciando módulo de usuarios...");
+export function setupUsuarios(app, firebaseConfig) {
     const db = getFirestore(app);
-    
-    // Lista exacta de los 15 permisos
-    const listaPermisos = [
-        'mostrador', 'indicadores', 'recetas', 'stock', 'presupuestos', 
-        'precios', 'cajas', 'finanzas', 'historial', 'compras', 
-        'compras_lista', 'clientes', 'agenda', 'modelos', 'configuracion'
-    ];
+    const auth = getAuth(app);
+    const usuariosCollection = collection(db, 'usuarios');
 
-    const tabla = document.getElementById('tabla-usuarios');
-    const modal = document.getElementById('modal-usuario');
-    const btnNuevo = document.getElementById('btn-nuevo-usuario');
-    const btnGuardar = document.getElementById('btn-guardar-usuario');
+    // App Secundaria (Para crear usuarios sin expulsar al Administrador)
+    const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+    const secondaryAuth = getAuth(secondaryApp);
+
+    const tablaUsuarios = document.getElementById('tabla-usuarios');
+    const modalUsuario = document.getElementById('modal-usuario');
+    const modalTitulo = document.getElementById('modal-titulo');
     const btnCancelar = document.getElementById('btn-cancelar-usuario');
+    const btnGuardar = document.getElementById('btn-guardar-usuario');
+    const btnNuevoUsuario = document.getElementById('btn-nuevo-usuario');
 
-    let modoEdicion = true;
-    let memoriaUsuarios = {}; 
+    // Campos del Modal
+    const editId = document.getElementById('edit-user-id');
+    const editNombre = document.getElementById('edit-user-nombre');
+    const editEstado = document.getElementById('edit-user-estado');
+    const camposCreacion = document.getElementById('campos-creacion');
+    const editEmail = document.getElementById('edit-user-email');
+    const editPass = document.getElementById('edit-user-pass');
+    
+    // Checkboxes de permisos
+    const permMostrador = document.getElementById('perm-mostrador');
+    const permStock = document.getElementById('perm-stock');
+    const permRecetas = document.getElementById('perm-recetas');
+    const permCajas = document.getElementById('perm-cajas');
+    const permFinanzas = document.getElementById('perm-finanzas');
+    const permConfig = document.getElementById('perm-configuracion');
 
-    // Delegación de eventos (A prueba de balas contra recargas de tabla)
-    tabla.addEventListener('click', (e) => {
-        const botonEditar = e.target.closest('.btn-editar');
-        if (!botonEditar) return; 
+    let todosLosUsuarios = [];
+    let isCreateMode = false;
 
-        const id = botonEditar.getAttribute('data-id');
-        const usuarioSeleccionado = memoriaUsuarios[id];
-        
-        if (usuarioSeleccionado) {
-            abrirModalEdicion(id, usuarioSeleccionado);
-        }
-    });
-
-    async function cargarUsuarios() {
-        tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Cargando usuarios...</td></tr>';
-        try {
-            const snap = await getDocs(collection(db, 'usuarios'));
-            memoriaUsuarios = {}; 
-            
-            if (snap.empty) {
-                tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No hay usuarios registrados.</td></tr>';
-                return;
-            }
-
-            let htmlFilas = '';
-
-            snap.forEach(docSnap => {
-                const u = docSnap.data();
-                const id = docSnap.id;
-                
-                memoriaUsuarios[id] = u; 
-                
-                const rolClass = u.rol === 'master' ? 'role-master' : '';
-                const estadoClass = u.estado === 'activo' ? 'status-activo' : 'status-inactivo';
-                const estadoTexto = u.estado === 'activo' ? 'Activo' : 'Inactivo';
-
-                htmlFilas += `
-                    <tr>
-                        <td><strong>${u.nombre || 'Sin nombre'}</strong></td>
-                        <td>${u.email}</td>
-                        <td><span class="user-role ${rolClass}">${u.rol.toUpperCase()}</span></td>
-                        <td><span class="user-status ${estadoClass}">${estadoTexto}</span></td>
-                        <td style="text-align: center;">
-                            <button class="btn-secondary btn-editar" data-id="${id}">✏️ Editar</button>
-                        </td>
-                    </tr>`;
-            });
-
-            tabla.innerHTML = htmlFilas;
-
-        } catch(error) { 
-            console.error("Error al cargar usuarios:", error);
-            tabla.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: red;">Error al cargar la lista.</td></tr>';
-        }
-    }
-
-    function abrirModalEdicion(id, u) {
-        modoEdicion = true;
-        document.getElementById('modal-titulo').textContent = 'Editar Empleado';
-        document.getElementById('campos-creacion').style.display = 'none';
-        
-        document.getElementById('edit-user-id').value = id;
-        document.getElementById('edit-user-nombre').value = u.nombre || '';
-        document.getElementById('edit-user-estado').value = u.estado || 'activo';
-
-        listaPermisos.forEach(p => {
-            const checkbox = document.getElementById(`perm-${p}`);
-            if (checkbox) {
-                checkbox.checked = (u.permisos && u.permisos[p] === true) ? true : false;
-            }
-        });
-
-        // FORZAMOS LA VISIBILIDAD DEL MODAL
-        modal.style.display = 'flex';
-    }
-
-    btnNuevo.addEventListener('click', () => {
-        modoEdicion = false;
-        document.getElementById('modal-titulo').textContent = 'Crear Nuevo Empleado';
-        document.getElementById('campos-creacion').style.display = 'flex';
-        
-        document.getElementById('edit-user-id').value = '';
-        document.getElementById('edit-user-email').value = '';
-        document.getElementById('edit-user-pass').value = '';
-        document.getElementById('edit-user-nombre').value = '';
-        document.getElementById('edit-user-estado').value = 'activo';
-
-        listaPermisos.forEach(p => {
-            const checkbox = document.getElementById(`perm-${p}`);
-            if (checkbox) checkbox.checked = false;
-        });
-
-        // FORZAMOS LA VISIBILIDAD DEL MODAL
-        modal.style.display = 'flex';
-    });
-
-    btnCancelar.addEventListener('click', () => {
-        // OCULTAMOS EL MODAL
-        modal.style.display = 'none';
-    });
-
-    btnGuardar.addEventListener('click', async () => {
-        const id = document.getElementById('edit-user-id').value;
-        const nombre = document.getElementById('edit-user-nombre').value.trim();
-        const estado = document.getElementById('edit-user-estado').value;
-        
-        if (!nombre) {
-            alert("Por favor, ingresá el nombre del empleado.");
+    // --- BARRERA DE SEGURIDAD PARA LA PÁGINA ---
+    onAuthStateChanged(auth, user => {
+        if (!user) {
+            window.location.href = 'login.html';
             return;
         }
 
-        const permisosGuardar = {};
-        listaPermisos.forEach(p => {
-            const checkbox = document.getElementById(`perm-${p}`);
-            permisosGuardar[p] = checkbox ? checkbox.checked : false;
-        });
-
-        btnGuardar.disabled = true;
-        btnGuardar.textContent = 'Guardando...';
-
         try {
-            if (modoEdicion) {
-                await updateDoc(doc(db, 'usuarios', id), { 
-                    nombre: nombre, 
-                    estado: estado, 
-                    permisos: permisosGuardar 
-                });
-                alert("Permisos actualizados con éxito.");
-            } else {
-                const email = document.getElementById('edit-user-email').value.trim();
-                const pass = document.getElementById('edit-user-pass').value;
-                
-                if (!email || !pass) throw new Error("Falta email o contraseña para crear el usuario.");
-                if (pass.length < 6) throw new Error("La contraseña debe tener al menos 6 caracteres.");
-
-                const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
-                const secondaryAuth = getAuth(secondaryApp);
-                
-                const userCred = await createUserWithEmailAndPassword(secondaryAuth, email, pass);
-                
-                await setDoc(doc(db, 'usuarios', userCred.user.uid), {
-                    email: email, 
-                    nombre: nombre, 
-                    estado: estado, 
-                    rol: 'empleado', 
-                    fechaCreacion: new Date(),
-                    permisos: permisosGuardar
-                });
-                
-                await signOut(secondaryAuth);
-                alert("Empleado creado con éxito.");
+            const permisosLocal = JSON.parse(localStorage.getItem('userPermisos') || '{}');
+            if (permisosLocal.configuracion !== true) {
+                alert("Acceso denegado. No tenés permisos de Administrador para ver esta página.");
+                window.location.href = 'pos.html'; 
             }
-            
-            // OCULTAMOS EL MODAL AL TERMINAR
-            modal.style.display = 'none';
-            cargarUsuarios(); 
-            
-        } catch(error) {
-            console.error("Error al guardar usuario:", error);
-            if (error.code === 'auth/email-already-in-use') {
-                alert("El correo electrónico ya está registrado en el sistema.");
-            } else {
-                alert("Error al guardar: " + error.message);
-            }
-        } finally {
-            btnGuardar.disabled = false;
-            btnGuardar.textContent = 'Guardar Cambios';
+        } catch (e) {
+            window.location.href = 'pos.html';
         }
     });
 
-    cargarUsuarios();
+    // --- ESCUCHAR Y RENDERIZAR USUARIOS ---
+    onSnapshot(query(usuariosCollection, orderBy('fechaCreacion', 'asc')), (snapshot) => {
+        todosLosUsuarios = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderizarTabla();
+    });
+
+    function renderizarTabla() {
+        if (!tablaUsuarios) return;
+        tablaUsuarios.innerHTML = '';
+
+        if (todosLosUsuarios.length === 0) {
+            tablaUsuarios.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay usuarios registrados.</td></tr>';
+            return;
+        }
+
+        todosLosUsuarios.forEach(u => {
+            const estadoClase = u.estado === 'activo' ? 'status-activo' : 'status-inactivo';
+            const estadoTexto = u.estado === 'activo' ? 'Activo' : 'Inactivo';
+            const rolClase = u.rol === 'master' ? 'role-master' : '';
+            const rolTexto = u.rol === 'master' ? '👑 Master Admin' : '👤 Empleado';
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td data-label="Nombre"><strong>${u.nombre || 'Sin nombre'}</strong></td>
+                <td data-label="Email" style="color: #64748b;">${u.email}</td>
+                <td data-label="Rol"><span class="user-role ${rolClase}">${rolTexto}</span></td>
+                <td data-label="Estado"><span class="user-status ${estadoClase}">${estadoTexto}</span></td>
+                <td data-label="Acciones" style="text-align: center;">
+                    <button class="btn-editar-usuario btn-secondary" data-id="${u.id}" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;">⚙️ Gestionar</button>
+                </td>
+            `;
+            tablaUsuarios.appendChild(tr);
+        });
+    }
+
+    // --- ABRIR MODAL PARA NUEVO USUARIO ---
+    if (btnNuevoUsuario) {
+        btnNuevoUsuario.addEventListener('click', () => {
+            isCreateMode = true;
+            modalTitulo.textContent = "Crear Nuevo Empleado";
+            camposCreacion.style.display = 'block';
+            
+            editId.value = '';
+            editNombre.value = '';
+            editEmail.value = '';
+            editPass.value = '';
+            editEstado.value = 'activo';
+            editEstado.disabled = false;
+            permConfig.disabled = false;
+
+            // Limpiar permisos por defecto (solo caja)
+            permMostrador.checked = true;
+            permStock.checked = false;
+            permRecetas.checked = false;
+            permCajas.checked = false;
+            permFinanzas.checked = false;
+            permConfig.checked = false;
+
+            modalUsuario.classList.add('visible');
+        });
+    }
+
+    // --- ABRIR MODAL PARA EDITAR ---
+    if (tablaUsuarios) {
+        tablaUsuarios.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-editar-usuario');
+            if (!btn) return;
+
+            const user = todosLosUsuarios.find(u => u.id === btn.dataset.id);
+            if (!user) return;
+
+            isCreateMode = false;
+            modalTitulo.textContent = "Editar Permisos";
+            camposCreacion.style.display = 'none';
+
+            editId.value = user.id;
+            editNombre.value = user.nombre || '';
+            editEstado.value = user.estado || 'inactivo';
+
+            const p = user.permisos || {};
+            permMostrador.checked = p.mostrador === true;
+            permStock.checked = p.stock === true;
+            permRecetas.checked = p.recetas === true;
+            permCajas.checked = p.cajas === true;
+            permFinanzas.checked = p.finanzas === true;
+            permConfig.checked = p.configuracion === true;
+
+            if (user.rol === 'master') {
+                permConfig.disabled = true;
+                editEstado.disabled = true;
+            } else {
+                permConfig.disabled = false;
+                editEstado.disabled = false;
+            }
+
+            modalUsuario.classList.add('visible');
+        });
+    }
+
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', () => modalUsuario.classList.remove('visible'));
+    }
+
+    // --- GUARDAR O CREAR ---
+    if (btnGuardar) {
+        btnGuardar.addEventListener('click', async () => {
+            const nombreIngresado = editNombre.value.trim();
+            const emailIngresado = editEmail.value.trim();
+            const passIngresada = editPass.value;
+
+            if (!nombreIngresado) return alert("Tenés que ponerle un nombre al usuario.");
+
+            btnGuardar.disabled = true;
+            btnGuardar.textContent = isCreateMode ? 'Creando cuenta...' : 'Guardando...';
+
+            const permisosAsignados = {
+                mostrador: permMostrador.checked,
+                stock: permStock.checked,
+                recetas: permRecetas.checked,
+                cajas: permCajas.checked,
+                finanzas: permFinanzas.checked,
+                configuracion: permConfig.disabled ? true : permConfig.checked
+            };
+
+            try {
+                if (isCreateMode) {
+                    if (!emailIngresado || passIngresada.length < 6) {
+                        btnGuardar.disabled = false;
+                        btnGuardar.textContent = 'Guardar Cambios';
+                        return alert("El email es obligatorio y la clave debe tener al menos 6 letras.");
+                    }
+
+                    // 1. Crear el usuario en Firebase Auth sin expulsar al Admin
+                    const userCred = await createUserWithEmailAndPassword(secondaryAuth, emailIngresado, passIngresada);
+                    const newUid = userCred.user.uid;
+
+                    // 2. Desloguear a la app secundaria
+                    await signOut(secondaryAuth);
+
+                    // 3. Crear su perfil en Firestore
+                    await setDoc(doc(db, 'usuarios', newUid), {
+                        email: emailIngresado,
+                        nombre: nombreIngresado,
+                        estado: editEstado.value,
+                        rol: 'empleado',
+                        fechaCreacion: new Date(),
+                        permisos: permisosAsignados
+                    });
+                    
+                    alert(`El usuario ${nombreIngresado} fue creado exitosamente.`);
+                } else {
+                    // MODO EDICIÓN
+                    const id = editId.value;
+                    const estadoFinal = editEstado.disabled ? 'activo' : editEstado.value;
+
+                    await updateDoc(doc(db, 'usuarios', id), {
+                        nombre: nombreIngresado,
+                        estado: estadoFinal,
+                        permisos: permisosAsignados
+                    });
+
+                    if (id === auth.currentUser.uid) {
+                        localStorage.setItem('userName', nombreIngresado);
+                    }
+                }
+
+                modalUsuario.classList.remove('visible');
+            } catch (error) {
+                console.error("Error:", error);
+                if (error.code === 'auth/email-already-in-use') {
+                    alert("Ese correo electrónico ya está registrado.");
+                } else {
+                    alert("Hubo un error al procesar el usuario.");
+                }
+            }
+
+            btnGuardar.disabled = false;
+            btnGuardar.textContent = 'Guardar Cambios';
+        });
+    }
 }
