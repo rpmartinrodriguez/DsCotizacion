@@ -177,9 +177,11 @@
                 <div class="card" style="margin-bottom: 0;">
                     <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
                         <h2 class="card__title" style="margin: 0;">Vitrina</h2>
-                        <div style="display: flex; gap: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                             <button id="btn-ir-stock" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
                             <button id="btn-ir-promos" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #f59e0b; color: #f59e0b;">🏷️ Promos</button>
+                            <!-- NUEVO BOTÓN: CARGA MANUAL DE VENTAS HISTÓRICAS (Solo Admin) -->
+                            <button id="btn-carga-manual" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #8b5cf6; color: #8b5cf6;">📝 Carga Histórica</button>
                             <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">Cerrar Caja</button>
                         </div>
                     </div>
@@ -272,6 +274,66 @@
 
         </main>
     </div>
+
+    <!-- ============================================== -->
+    <!-- NUEVO MODAL: CARGA MANUAL HISTÓRICA            -->
+    <!-- ============================================== -->
+    <div id="modal-carga-manual" class="modal-overlay">
+        <div class="modal-content card" style="max-width: 700px;">
+            <h2 class="card__title" style="color: #8b5cf6;">Carga Manual de Caja (Histórico)</h2>
+            <p class="text-light" style="font-size: 0.9rem; margin-bottom: 1rem;">Ingresá ventas pasadas para actualizar las estadísticas. Podés modificar el precio si en ese momento valía distinto.</p>
+            
+            <div class="form-modern" style="grid-template-columns: 1fr 1fr; margin-bottom: 1rem; gap: 1rem;">
+                <div class="form-group" style="margin: 0;">
+                    <label style="color: #4c1d95; font-weight: bold;">Fecha de la Venta (Del cuaderno)</label>
+                    <input type="date" id="manual-fecha" class="form-control" required>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label style="color: #4c1d95; font-weight: bold;">Método de Pago</label>
+                    <select id="manual-metodo" class="form-control">
+                        <option value="Efectivo">💵 Efectivo</option>
+                        <option value="MercadoPago">📱 MercadoPago</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+                <div style="display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap;">
+                    <div class="form-group" style="margin: 0; flex-grow: 2; min-width: 200px;">
+                        <label style="font-size: 0.85rem;">Producto</label>
+                        <select id="manual-producto-select" class="form-control">
+                            <option value="" disabled selected>Seleccioná un producto...</option>
+                            <!-- Se llena con JS -->
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin: 0; max-width: 120px;">
+                        <label style="font-size: 0.85rem;">Precio Unit. ($)</label>
+                        <input type="number" id="manual-precio" class="form-control" step="10" min="0">
+                    </div>
+                    <div class="form-group" style="margin: 0; max-width: 80px;">
+                        <label style="font-size: 0.85rem;">Cantidad</label>
+                        <input type="number" id="manual-cantidad" class="form-control" value="1" min="1">
+                    </div>
+                    <button id="btn-add-manual-item" class="btn-primary" style="height: 42px; background: #8b5cf6; border-color: #8b5cf6; padding: 0 1rem;">Añadir</button>
+                </div>
+            </div>
+
+            <div class="cart-lista" id="manual-cart-lista" style="min-height: 150px; max-height: 200px; margin-bottom: 1rem; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0.5rem;">
+                <p class="text-light" style="text-align: center; margin-top: 2rem;">No hay productos agregados a este ticket histórico.</p>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #faf5ff; padding: 1rem; border-radius: 8px; border: 1px solid #e9d5ff;">
+                <span style="font-weight: bold; color: #4c1d95; font-size: 1.1rem;">Total Histórico:</span>
+                <span id="manual-total-monto" style="font-size: 1.8rem; font-weight: 900; color: #7c3aed;">$0.00</span>
+            </div>
+
+            <div class="modal-actions" style="justify-content: space-between; margin-top: 1.5rem;">
+                <button id="btn-cancelar-manual" class="btn-secondary" style="width: 48%;">Cancelar</button>
+                <button id="btn-guardar-manual" class="btn-primary" style="width: 48%; background: #6d28d9; border-color: #6d28d9;">💾 Registrar Ticket Pasado</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- MODAL: COBRO CON NUEVO SISTEMA INTELIGENTE (BILLETERA) -->
     <div id="modal-cobro" class="modal-overlay">
@@ -482,7 +544,7 @@
         });
     </script>
 
-    <!-- SCRIPTS -->
+    <!-- SCRIPTS CORE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
@@ -494,6 +556,6 @@
             console.error("Error al inicializar Mostrador:", error); 
         }
     </script>
-    <script src="js/menu.js?v=15" defer></script>
+    <script src="js/menu.js?v=16" defer></script>
 </body>
 </html>
