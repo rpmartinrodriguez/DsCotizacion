@@ -1352,7 +1352,6 @@ export function setupPOS(app) {
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaCargaHistorica.style.display = 'block';
 
-            // Resetear todo al abrir
             if (manualFecha) manualFecha.value = dateToYMD(new Date());
             carritoManual = [];
             renderTablaManual();
@@ -1367,7 +1366,6 @@ export function setupPOS(app) {
         });
     }
 
-    // Lógica del buscador inteligente (Datalist)
     if (manualProductoInput) {
         manualProductoInput.addEventListener('input', (e) => {
             const nombreIngresado = e.target.value.trim();
@@ -1375,8 +1373,6 @@ export function setupPOS(app) {
             
             if (prodEncontrado) {
                 if (manualPrecioSugerido) manualPrecioSugerido.textContent = `Precio hoy: ${formatMoneda(prodEncontrado.precioCalculado)}`;
-                
-                // Si están vacíos, autocompletamos con el precio de hoy para ayudar
                 if (!manualPrecio.value && !manualPrecioTotal.value) {
                     manualPrecio.value = prodEncontrado.precioCalculado;
                     calcularDesdeUnitario();
@@ -1403,7 +1399,6 @@ export function setupPOS(app) {
     if (manualPrecio) manualPrecio.addEventListener('input', calcularDesdeUnitario);
     if (manualCantidad) {
         manualCantidad.addEventListener('input', () => {
-            // Si el usuario cambia la cantidad, recalcula el total respetando el unitario
             calcularDesdeUnitario();
         });
     }
@@ -1438,7 +1433,6 @@ export function setupPOS(app) {
                 cantidad: cantIngresada
             });
 
-            // Resetear solo los inputs de carga (dejamos la fecha por si sigue cargando el mismo cuaderno)
             manualProductoInput.value = '';
             manualPrecioSugerido.textContent = 'Precio hoy: $0.00';
             manualPrecioTotal.value = '';
@@ -1511,7 +1505,7 @@ export function setupPOS(app) {
             btnGuardarManual.textContent = "Guardando movimientos...";
 
             try {
-                // 1. Agrupamos los movimientos por FECHA, porque cada día tiene su propia caja
+                // 1. Agrupamos los movimientos por FECHA
                 const agrupadosPorFecha = {};
                 carritoManual.forEach(item => {
                     if (!agrupadosPorFecha[item.fecha]) agrupadosPorFecha[item.fecha] = [];
@@ -1522,34 +1516,45 @@ export function setupPOS(app) {
                 for (const fechaStr in agrupadosPorFecha) {
                     const itemsDeEstaFecha = agrupadosPorFecha[fechaStr];
                     
-                    const [y, m, d] = fechaStr.split('-');
-                    const fechaFirebase = Timestamp.fromDate(new Date(y, m - 1, d, 12, 0, 0)); // Al mediodía
-                    
-                    const inicioDia = Timestamp.fromDate(new Date(y, m - 1, d, 0, 0, 0));
-                    const finDia = Timestamp.fromDate(new Date(y, m - 1, d, 23, 59, 59));
+                    // Parseo matemático y estricto de la fecha (evita errores silenciosos)
+                    const partes = fechaStr.split('-');
+                    const yNum = parseInt(partes[0], 10);
+                    const mNum = parseInt(partes[1], 10);
+                    const dNum = parseInt(partes[2], 10);
 
-                    // ¿Hay una caja abierta o cerrada en este día?
-                    const qCajas = query(cajasCollection, 
-                        where('fechaApertura', '>=', inicioDia), 
-                        where('fechaApertura', '<=', finDia),
-                        limit(1)
-                    );
-                    
-                    const cajasSnap = await getDocs(qCajas);
-                    let idCajaHistorica;
-                    
-                    // Sumamos los totales solo de ESTE DÍA
+                    const fechaFirebase = Timestamp.fromDate(new Date(yNum, mNum - 1, dNum, 12, 0, 0));
+                    const inicioDia = Timestamp.fromDate(new Date(yNum, mNum - 1, dNum, 0, 0, 0));
+                    const finDia = Timestamp.fromDate(new Date(yNum, mNum - 1, dNum, 23, 59, 59));
+
                     let sumaEfvoFecha = itemsDeEstaFecha.filter(i => i.metodo === 'Efectivo').reduce((acc, i) => acc + i.precioTotal, 0);
                     let sumaMpFecha = itemsDeEstaFecha.filter(i => i.metodo === 'MercadoPago').reduce((acc, i) => acc + i.precioTotal, 0);
 
-                    if (cajasSnap.empty) {
-                        // Creamos una caja virtual para ese día
+                    // Buscamos si para ese día ya habíamos creado una "Caja Histórica"
+                    const qCajas = query(cajasCollection, 
+                        where('fechaApertura', '>=', inicioDia), 
+                        where('fechaApertura', '<=', finDia)
+                    );
+                    
+                    const cajasSnap = await getDocs(qCajas);
+                    
+                    let cajaHistDoc = null;
+                    cajasSnap.forEach(doc => {
+                        // Solo inyectamos en cajas llamadas Carga Manual, no tocamos turnos reales!
+                        if(doc.data().turno === 'Carga Manual') {
+                            cajaHistDoc = doc;
+                        }
+                    });
+
+                    let idCajaHistorica;
+                    
+                    if (!cajaHistDoc) {
+                        // No existe, creamos una caja exclusiva para esta fecha
                         const nuevaCajaRef = await addDoc(cajasCollection, {
                             usuarioId: currentUser.uid,
                             usuarioNombre: userName,
                             turno: 'Carga Manual',
                             fechaApertura: fechaFirebase,
-                            fechaCierre: fechaFirebase,
+                            fechaCierre: fechaFirebase, // La cerramos al instante
                             fondoInicial: 0,
                             totalEfectivo: sumaEfvoFecha,
                             totalMercadoPago: sumaMpFecha,
@@ -1558,10 +1563,9 @@ export function setupPOS(app) {
                         });
                         idCajaHistorica = nuevaCajaRef.id;
                     } else {
-                        // Le inyectamos la plata a la caja que ya existía ese día
-                        const cajaHist = cajasSnap.docs[0];
-                        idCajaHistorica = cajaHist.id;
-                        const cData = cajaHist.data();
+                        // Ya existe una Carga Manual ese día, le sumamos la plata nueva
+                        idCajaHistorica = cajaHistDoc.id;
+                        const cData = cajaHistDoc.data();
                         
                         await updateDoc(doc(db, 'cajas', idCajaHistorica), {
                             totalEfectivo: (cData.totalEfectivo || 0) + sumaEfvoFecha,
@@ -1569,8 +1573,7 @@ export function setupPOS(app) {
                         });
                     }
 
-                    // 3. Guardamos cada movimiento como un ticket separado en 'ventasMostrador'
-                    // Esto permite que después en Historial puedas editarles el método de pago 1 por 1
+                    // 3. Guardamos cada movimiento de ese día a esa caja específica
                     for (const item of itemsDeEstaFecha) {
                         await addDoc(ventasCollection, {
                             cajaId: idCajaHistorica,
@@ -1591,13 +1594,13 @@ export function setupPOS(app) {
                     }
                 }
 
-                alert("¡Todos los movimientos fueron impactados con éxito en la base de datos!");
+                alert("¡Todos los movimientos fueron guardados con éxito en la base de datos!");
                 carritoManual = [];
                 renderTablaManual();
 
             } catch (error) {
                 console.error("Error al guardar venta manual:", error);
-                alert("Ocurrió un error al intentar guardar los tickets históricos.");
+                alert("Hubo un error guardando los datos. Revisá tu conexión a internet.");
             }
 
             btnGuardarManual.disabled = false;
