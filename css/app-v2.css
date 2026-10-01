@@ -1544,3 +1544,93 @@ body.ds-purchases #btn-guardar-compra {
     padding: 96px 28px 40px calc(var(--ds-sidebar) + 28px);
   }
 }
+
+
+/* Remaining administration pages v2 */
+body.ds-history .historial-card {
+  background: #fff;
+  border: 1px solid var(--ds-border);
+  border-radius: 15px;
+  box-shadow: none;
+}
+
+body.ds-history .historial-card:hover {
+  transform: none;
+  box-shadow: var(--ds-shadow-soft);
+}
+
+body.ds-history .historial-card__info h3,
+body.ds-history .historial-card__total {
+  color: var(--ds-text);
+}
+
+body.ds-history .historial-card.es-venta {
+  border-left-color: var(--ds-success);
+}
+
+body.ds-prices #lista-precios-container .card__subtitle {
+  color: var(--ds-primary-strong);
+}
+
+body.ds-shopping-list .lista-sencilla li {
+  border-bottom-color: var(--ds-border);
+}
+
+body.ds-users .page-title {
+  margin: 0 !important;
+  color: var(--ds-text) !important;
+  font-size: clamp(1.75rem,4vw,2.4rem) !important;
+  text-transform: none !important;
+  letter-spacing: -.04em !important;
+}
+
+body.ds-users .table-clean {
+  border: 1px solid var(--ds-border);
+  box-shadow: none;
+}
+
+body.ds-users .permisos-grid {
+  background: #faf8fa;
+  border-color: var(--ds-border);
+  border-radius: 12px;
+}
+
+body.ds-users .permiso-item label {
+  color: var(--ds-text);
+}
+
+body.ds-users .user-role {
+  border-radius: 999px;
+}
+
+body.ds-users #btn-nuevo-usuario {
+  background: var(--ds-primary) !important;
+  border-color: var(--ds-primary) !important;
+}
+
+body.ds-models .form-modern {
+  align-items: end;
+}
+
+body.ds-current-quote .precio-venta-final {
+  background: var(--ds-primary);
+  border-radius: 14px;
+}
+
+body.ds-current-quote #resumen-cotizacion-texto {
+  box-shadow: none !important;
+  border: 1px solid var(--ds-border) !important;
+  background: #fff !important;
+}
+
+body.ds-prices .modal-actions,
+body.ds-history .modal-actions,
+body.ds-current-quote .modal-actions {
+  flex-wrap: wrap;
+}
+
+@media (max-width:700px) {
+  body.ds-users .permisos-grid {
+    grid-template-columns: 1fr;
+  }
+}
