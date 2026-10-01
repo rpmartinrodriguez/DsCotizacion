@@ -4,7 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { createAuthorization } from "./core/authorization.js";
-import { formatCurrency as formatMoneda, formatTimestampDateTime } from "./core/format.js";
+import { formatCurrency as formatMoneda, formatTimestampDateTime, dateToYMD } from "./core/format.js";
 import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/pricing.js";
 import { drawBarcodeLabel, drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { setupManualHistory } from "./pos/manual-history.js";
