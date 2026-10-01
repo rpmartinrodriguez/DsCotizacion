@@ -904,3 +904,359 @@ body.ds-pos .btn-payment.selected {
     padding-bottom: 18px;
   }
 }
+
+
+/* Shared content pages v2 */
+body.ds-content .ds-content-main {
+  padding: 88px 16px 96px;
+  box-sizing: border-box;
+}
+
+.ds-content-wrap {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
+.ds-content-head {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.ds-content-head h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 4vw, 2.4rem);
+  line-height: 1.05;
+  letter-spacing: -.04em;
+}
+
+.ds-content-head p {
+  color: var(--ds-muted);
+  margin: 7px 0 0;
+  max-width: 720px;
+}
+
+.ds-content-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.ds-action-primary,
+.ds-action-secondary {
+  min-height: 43px;
+  padding: 0 14px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  font-size: .86rem;
+  font-weight: 750;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.ds-action-primary {
+  border: 1px solid var(--ds-primary);
+  background: var(--ds-primary);
+  color: #fff;
+}
+
+.ds-action-secondary {
+  border: 1px solid var(--ds-border);
+  background: #fff;
+  color: var(--ds-text);
+}
+
+.ds-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ds-search {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 14px;
+  font: inherit;
+  color: var(--ds-text);
+  outline: none;
+}
+
+.ds-search:focus {
+  border-color: #dba2bc;
+  box-shadow: 0 0 0 4px rgba(217,86,145,.08);
+}
+
+body.ds-content .card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  box-shadow: var(--ds-shadow-soft);
+}
+
+body.ds-content .modal-content.card {
+  box-shadow: 0 26px 80px rgba(30,20,27,.22);
+}
+
+body.ds-content .btn-primary,
+body.ds-content .btn-secondary {
+  border-radius: 11px;
+  box-shadow: none;
+}
+
+/* Stock v2 */
+.ds-stock-panel {
+  overflow: hidden;
+}
+
+body.ds-stock .table-clean {
+  border-radius: 14px;
+  box-shadow: none;
+  border: 1px solid var(--ds-border);
+  background: #fff;
+}
+
+body.ds-stock .table-clean th {
+  background: #faf8fa;
+  color: #847986;
+  letter-spacing: .045em;
+  font-size: .72rem;
+}
+
+body.ds-stock .table-clean td {
+  border-color: var(--ds-border);
+}
+
+body.ds-stock .stock-actions .btn-stock-link,
+body.ds-stock .stock-actions .btn-stock {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--ds-border);
+  background: #fff;
+  box-shadow: none;
+  font-size: .95rem;
+}
+
+body.ds-stock .lotes-editor-container {
+  box-shadow: none;
+  border: 1px solid var(--ds-border);
+  background: #faf9fb;
+}
+
+/* Agenda v2 */
+.ds-agenda-panel {
+  padding: 18px;
+}
+
+body.ds-agenda .calendario-container {
+  background: transparent;
+}
+
+body.ds-agenda .calendario-header {
+  margin-bottom: 18px;
+}
+
+body.ds-agenda .calendario-header h3 {
+  font-size: 1.15rem;
+  color: var(--ds-text);
+  letter-spacing: -.02em;
+}
+
+body.ds-agenda .calendario-header .btn-secondary {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--ds-border);
+  background: #fff;
+  box-shadow: none;
+  color: var(--ds-text);
+}
+
+body.ds-agenda .calendario-grid {
+  gap: 6px;
+}
+
+body.ds-agenda .calendario-dia-semana {
+  color: #978c98;
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 8px 0;
+}
+
+body.ds-agenda .calendario-dia {
+  min-height: 82px;
+  background: #fff;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  padding: 9px;
+  box-sizing: border-box;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+
+body.ds-agenda .calendario-dia.vacia {
+  background: transparent;
+  border-color: transparent;
+}
+
+body.ds-agenda .calendario-dia.hoy {
+  border-color: #d890b1;
+  box-shadow: inset 0 0 0 1px #d890b1;
+}
+
+body.ds-agenda .calendario-dia.con-eventos {
+  cursor: pointer;
+  background: #fffafd;
+}
+
+body.ds-agenda .calendario-dia.con-eventos:hover {
+  border-color: #ddb0c5;
+  transform: translateY(-1px);
+}
+
+body.ds-agenda .item-entrega {
+  width: 7px;
+  height: 7px;
+  background: var(--ds-primary);
+  border-radius: 999px;
+}
+
+body.ds-agenda .lista-entregas {
+  padding: 0;
+  margin: 7px 0 0;
+}
+
+/* Clients v2 */
+.ds-client-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+body.ds-clients .cliente-resumen-card {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--ds-border);
+  border-radius: 16px;
+  box-shadow: none;
+  padding: 17px;
+}
+
+body.ds-clients .cliente-resumen-card h3 {
+  color: var(--ds-text);
+  border: 0;
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+  letter-spacing: -.015em;
+}
+
+body.ds-clients .cliente-card__contact {
+  color: var(--ds-muted);
+  margin: 4px 0;
+  font-size: .81rem;
+}
+
+body.ds-clients .cliente-resumen-stats {
+  margin-top: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--ds-border);
+  border-bottom: 1px solid var(--ds-border);
+  gap: 10px;
+}
+
+body.ds-clients .cliente-resumen-stats .stat {
+  flex: 1;
+}
+
+body.ds-clients .cliente-resumen-stats .stat span {
+  color: var(--ds-muted);
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+body.ds-clients .cliente-resumen-stats .stat p {
+  color: var(--ds-text);
+  font-size: 1rem;
+  font-weight: 780;
+  margin-top: 4px;
+}
+
+body.ds-clients .historial-card__actions {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+  margin-top: 14px !important;
+}
+
+body.ds-clients .historial-card__actions .btn-primary,
+body.ds-clients .historial-card__actions .btn-secondary {
+  width: auto;
+  padding: 9px 12px;
+  font-size: .8rem;
+}
+
+body.ds-clients .cliente-historial-detalle {
+  margin-top: 14px;
+  border-radius: 12px;
+  background: #faf8fa;
+  border: 1px solid var(--ds-border);
+  padding: 14px;
+}
+
+body.ds-clients .cliente-historial-detalle ul {
+  padding-left: 18px;
+}
+
+@media (min-width: 720px) {
+  .ds-content-head {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .ds-toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .ds-client-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .ds-client-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  body.ds-content .ds-content-main {
+    padding: 96px 28px 40px calc(var(--ds-sidebar) + 28px);
+  }
+}
+
+@media (max-width: 700px) {
+  body.ds-agenda .calendario-grid {
+    gap: 3px;
+  }
+
+  body.ds-agenda .calendario-dia {
+    min-height: 52px;
+    border-radius: 9px;
+    padding: 5px;
+  }
+
+  body.ds-clients .cliente-resumen-stats {
+    flex-direction: row;
+  }
+}
