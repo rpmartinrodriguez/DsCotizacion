@@ -12,16 +12,23 @@ async function obtenerSesionAutorizada() {
             import("./firebase-config.js")
         ]);
 
-        const { initializeApp, getApps } = firebaseAppModule;
+        const { getApps, getApp } = firebaseAppModule;
         const { getAuth, onAuthStateChanged, signOut } = firebaseAuthModule;
         const { getFirestore, doc, getDoc } = firebaseFirestoreModule;
-        const { firebaseConfig } = configModule;
+        let app = getApps().find((candidate) => candidate.name === '[DEFAULT]');
 
-        const guardAppName = 'DulceMenuGuard';
-        const existingGuardApp = getApps().find((candidate) => candidate.name === guardAppName);
-        const guardApp = existingGuardApp || initializeApp(firebaseConfig, guardAppName);
-        const auth = getAuth(guardApp);
-        const db = getFirestore(guardApp);
+        for (let intento = 0; !app && intento < 120; intento += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 25));
+            app = getApps().find((candidate) => candidate.name === '[DEFAULT]');
+        }
+
+        if (!app) {
+            throw new Error('La aplicación principal de Firebase no se inicializó.');
+        }
+
+        app = getApp();
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
         const user = await new Promise((resolve) => {
             const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
