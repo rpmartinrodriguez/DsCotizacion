@@ -244,15 +244,57 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupDashboard } from './js/dashboard.js';
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupDashboard(app);
-        } catch (error) {
-            console.error(error);
-        }
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user || user.isAnonymous) {
+                window.location.replace('login.html');
+                return;
+            }
+
+            try {
+                const perfilSnap = await getDoc(doc(db, 'usuarios', user.uid));
+
+                if (!perfilSnap.exists() || perfilSnap.data().estado !== 'activo') {
+                    await signOut(auth);
+                    window.location.replace('login.html');
+                    return;
+                }
+
+                const perfil = perfilSnap.data();
+                const permisos = perfil.permisos || {};
+                const rol = perfil.rol || 'empleado';
+
+                if (rol !== 'master' && permisos.indicadores !== true) {
+                    if (permisos.mostrador) window.location.replace('pos.html');
+                    else if (permisos.stock) window.location.replace('stock.html');
+                    else window.location.replace('login.html');
+                    return;
+                }
+
+                localStorage.setItem('userPermisos', JSON.stringify(permisos));
+                localStorage.setItem('userName', perfil.nombre || user.email);
+                localStorage.setItem('userRol', rol);
+
+                const userNameEl = document.getElementById('ds-user-name');
+                if (userNameEl) {
+                    userNameEl.textContent = (perfil.nombre || user.email || 'equipo').trim().split(/\s+/)[0];
+                }
+
+                setupDashboard(app);
+            } catch (error) {
+                console.error("No se pudo validar la sesión:", error);
+                await signOut(auth);
+                window.location.replace('login.html');
+            }
+        });
     </script>
 
     <script src="js/menu.js?v=12" defer></script>
