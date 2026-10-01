@@ -2,6 +2,7 @@ import {
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
     updateDoc, getDoc, runTransaction, where, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { escapeHtml, escapeAttribute } from "./core/html.js";
 
 export function setupStock(app) {
     const db = getFirestore(app);
@@ -63,15 +64,19 @@ export function setupStock(app) {
                 }
                 
                 const fila = document.createElement('tr');
+                const safeId = escapeAttribute(id);
+                const safeNombre = escapeHtml(item.nombre);
+                const safeNombreAttr = escapeAttribute(item.nombre);
+                const safeUnidad = escapeHtml(item.unidad);
                 fila.innerHTML = `
-                    <td data-label="Nombre">${item.nombre}</td>
-                    <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${item.unidad}</td>
-                    <td data-label="Precio Base">$${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${item.unidad}</td>
+                    <td data-label="Nombre">${safeNombre}</td>
+                    <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${safeUnidad}</td>
+                    <td data-label="Precio Base">${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${safeUnidad}</td>
                     <td data-label="Última Carga">${fechaUltimaCarga}</td>
                     <td class="action-buttons stock-actions">
-                        <button class="btn-stock-link ajustar" data-id="${id}" title="Ajustar Stock Total">⚖️</button>
-                        <button class="btn-stock-link edit" data-id="${id}" title="Editar Producto y Lotes">✏️</button>
-                        <button class="btn-stock-link history" data-id="${id}" data-nombre="${item.nombre}" title="Ver Historial de Movimientos">📜</button>
+                        <button class="btn-stock-link ajustar" data-id="${safeId}" title="Ajustar Stock Total">⚖️</button>
+                        <button class="btn-stock-link edit" data-id="${safeId}" title="Editar Producto y Lotes">✏️</button>
+                        <button class="btn-stock-link history" data-id="${safeId}" data-nombre="${safeNombreAttr}" title="Ver Historial de Movimientos">📜</button>
                     </td>
                 `;
                 tablaStockBody.appendChild(fila);
