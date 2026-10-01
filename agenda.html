@@ -2,67 +2,74 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Agenda de Entregas - Dulce App</title>
-    
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff96c5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Agenda · Dulce Sall Admin</title>
 
-    <!-- ========================================== -->
-    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
-    <!-- ========================================== -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <!-- ========================================== -->
 </head>
-<body>
+<body class="ds-app ds-content ds-agenda">
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+                <img src="assets/logo.png" alt="Dulce Sall" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
 
-        <!-- El menú ahora lo inyecta dinámicamente menu.js -->
-        <nav class="nav-menu" id="nav-menu"></nav>        
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <section class="card">
-                <h2 class="card__title">Agenda de Entregas</h2>
-                
-                <div class="calendario-container">
-                    <div class="calendario-header">
-                        <button id="prev-month-btn" class="btn-secondary">‹</button>
-                        <h3 id="month-year-display">Cargando...</h3>
-                        <button id="next-month-btn" class="btn-secondary">›</button>
+        <main class="ds-content-main">
+            <div class="ds-content-wrap">
+                <section class="ds-content-head">
+                    <div>
+                        <p class="ds-eyebrow">Comercial</p>
+                        <h1>Agenda de entregas</h1>
+                        <p>Visualizá pedidos confirmados y fechas comprometidas en un calendario simple.</p>
                     </div>
-                    <div class="calendario-grid" id="calendario-grid">
-                        <div class="calendario-dia-semana">D</div>
-                        <div class="calendario-dia-semana">L</div>
-                        <div class="calendario-dia-semana">M</div>
-                        <div class="calendario-dia-semana">X</div>
-                        <div class="calendario-dia-semana">J</div>
-                        <div class="calendario-dia-semana">V</div>
-                        <div class="calendario-dia-semana">S</div>
+                    <div class="ds-content-actions">
+                        <a href="presupuesto.html" class="ds-action-secondary">Nuevo presupuesto</a>
                     </div>
-                </div>
-            </section>
+                </section>
+
+                <section class="card ds-agenda-panel">
+                    <div class="calendario-container">
+                        <div class="calendario-header">
+                            <button id="prev-month-btn" class="btn-secondary" aria-label="Mes anterior">‹</button>
+                            <h3 id="month-year-display">Cargando…</h3>
+                            <button id="next-month-btn" class="btn-secondary" aria-label="Mes siguiente">›</button>
+                        </div>
+
+                        <div class="calendario-grid" id="calendario-grid">
+                            <div class="calendario-dia-semana">D</div>
+                            <div class="calendario-dia-semana">L</div>
+                            <div class="calendario-dia-semana">M</div>
+                            <div class="calendario-dia-semana">X</div>
+                            <div class="calendario-dia-semana">J</div>
+                            <div class="calendario-dia-semana">V</div>
+                            <div class="calendario-dia-semana">S</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
     <div id="agenda-dia-modal" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="agenda-modal-title">Entregas del Día</h2>
-            <div id="agenda-modal-lista">
-                </div>
+            <h2 class="card__title" id="agenda-modal-title">Entregas del día</h2>
+            <div id="agenda-modal-lista"></div>
             <div class="modal-actions">
                 <button id="agenda-modal-btn-cerrar" class="btn-primary">Cerrar</button>
             </div>
@@ -73,17 +80,19 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupAgenda } from './js/agenda.js';
+
         try {
             const app = initializeApp(firebaseConfig);
             setupAgenda(app);
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+        }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
         }
     </script>
 </body>
