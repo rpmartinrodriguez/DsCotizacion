@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mi Cotización - Dulce App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Cotización actual · Dulce Sall Admin</title>
     
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff96c5">
 
@@ -14,11 +15,11 @@
     <!-- ========================================== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <!-- ========================================== -->
 </head>
-<body>
+<body class="ds-app ds-content ds-current-quote">
     <div class="main-container">
         <!-- ====================================================== -->
         <!-- HEADER                                                 -->
@@ -44,8 +45,8 @@
         <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <h1 class="header__slogan">Cotización Actual</h1>
+        <main class="ds-content-main"><div class="ds-content-wrap">
+                <section class="ds-content-head"><div><p class="ds-eyebrow">Operación</p><h1>Cotización actual</h1><p>Revisá productos seleccionados, costos y precio final antes de guardar el presupuesto.</p></div></section>
 
             <!-- ====================================================== -->
             <!-- SECCIÓN 1: Ítems del Carrito                           -->
@@ -145,6 +146,7 @@
                 </div>
                 <button id="btn-finalizar-cotizacion" class="btn-primary">Guardar Cotización en Historial</button>
             </section>
+            </div>
         </main>
     </div>
 
@@ -178,7 +180,8 @@
             setupCotizacion(app);
         } catch (error) { console.error(error); }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
