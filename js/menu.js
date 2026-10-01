@@ -12,14 +12,16 @@ async function obtenerSesionAutorizada() {
             import("./firebase-config.js")
         ]);
 
-        const { initializeApp, getApps, getApp } = firebaseAppModule;
+        const { initializeApp, getApps } = firebaseAppModule;
         const { getAuth, onAuthStateChanged, signOut } = firebaseAuthModule;
         const { getFirestore, doc, getDoc } = firebaseFirestoreModule;
         const { firebaseConfig } = configModule;
 
-        const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        const guardAppName = 'DulceMenuGuard';
+        const existingGuardApp = getApps().find((candidate) => candidate.name === guardAppName);
+        const guardApp = existingGuardApp || initializeApp(firebaseConfig, guardAppName);
+        const auth = getAuth(guardApp);
+        const db = getFirestore(guardApp);
 
         const user = await new Promise((resolve) => {
             const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
