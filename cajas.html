@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Historial de Cajas - Dulce App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Cajas · Dulce Sall Admin</title>
     
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff96c5">
 
@@ -14,7 +15,7 @@
     <!-- ========================================== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <!-- ========================================== -->
     
@@ -67,7 +68,7 @@
         .list-top-productos li { padding: 0.6rem 0; border-bottom: 1px dashed #eee; font-size: 0.95rem; display: flex; justify-content: space-between;}
     </style>
 </head>
-<body>
+<body class="ds-app ds-content ds-cash">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -84,8 +85,14 @@
         <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <h1 class="page-title">Historial de Cajas</h1>
+        <main class="ds-cash-main"><div class="ds-content-wrap">
+            <section class="ds-content-head">
+                <div>
+                    <p class="ds-eyebrow">Administración</p>
+                    <h1 class="page-title">Cajas y estadísticas</h1>
+                    <p>Historial de turnos, facturación, movimientos y métricas operativas del mostrador.</p>
+                </div>
+            </section>
 
             <div class="tabs-container">
                 <button class="tab-btn active" id="tab-btn-historial">🗃️ Historial y Facturación</button>
@@ -322,6 +329,7 @@
 
                 </div>
             </div>
+            </div>
         </main>
     </div>
 
@@ -419,6 +427,7 @@
             console.error(e);
         }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
 </body>
 </html>
