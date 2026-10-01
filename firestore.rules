@@ -1,0 +1,188 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // DRAFT PARA DULCE SALL ADMIN 2.0
+    // Este archivo todavía NO está desplegado en Firebase.
+    // Debe probarse contra todos los flujos del Deploy Preview antes de producción.
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid));
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data;
+    }
+
+    function activeUser() {
+      return hasProfile()
+        && profile().get('estado', 'inactivo') == 'activo';
+    }
+
+    function isMaster() {
+      return activeUser()
+        && profile().get('rol', 'empleado') == 'master';
+    }
+
+    function hasPermission(permission) {
+      return activeUser()
+        && (
+          isMaster()
+          || profile().get('permisos', {}).get(permission, false) == true
+        );
+    }
+
+    // El usuario necesita poder leer SU perfil incluso si quedó inactivo,
+    // para que el frontend pueda cerrar su sesión correctamente.
+    match /usuarios/{userId} {
+      allow get: if signedIn()
+        && (
+          request.auth.uid == userId
+          || isMaster()
+          || hasPermission('configuracion')
+        );
+
+      allow list: if isMaster() || hasPermission('configuracion');
+
+      allow create, update, delete: if isMaster()
+        || hasPermission('configuracion');
+    }
+
+    // Configuración sensible del mostrador (ej. margen global).
+    match /config/{documentId} {
+      allow read: if hasPermission('mostrador')
+        || hasPermission('configuracion');
+
+      allow write: if isMaster()
+        || hasPermission('configuracion');
+    }
+
+    // Apertura, cierre, correcciones y administración de cajas.
+    match /cajas/{cajaId} {
+      allow read: if hasPermission('mostrador')
+        || hasPermission('cajas')
+        || hasPermission('finanzas')
+        || hasPermission('indicadores');
+
+      allow create, update: if hasPermission('mostrador')
+        || hasPermission('cajas');
+
+      allow delete: if isMaster()
+        || hasPermission('configuracion');
+    }
+
+    // Tickets del mostrador. Cajas también necesita corregir movimientos.
+    match /ventasMostrador/{ventaId} {
+      allow read: if hasPermission('mostrador')
+        || hasPermission('cajas');
+
+      allow create: if hasPermission('mostrador');
+
+      allow update, delete: if hasPermission('mostrador')
+        || hasPermission('cajas');
+    }
+
+    // Auditoría de movimientos del stock del mostrador.
+    match /auditoriaMostrador/{auditId} {
+      allow read: if hasPermission('mostrador')
+        || hasPermission('cajas');
+
+      allow create: if hasPermission('mostrador');
+
+      allow update, delete: if isMaster()
+        || hasPermission('configuracion');
+    }
+
+    // Recetas y productos vendidos en Mostrador.
+    match /recetas/{recetaId} {
+      allow read: if hasPermission('mostrador')
+        || hasPermission('recetas')
+        || hasPermission('presupuestos')
+        || hasPermission('precios')
+        || hasPermission('cajas')
+        || hasPermission('modelos')
+        || hasPermission('stock');
+
+      allow create, update, delete: if hasPermission('recetas')
+        || hasPermission('mostrador');
+    }
+
+    match /categorias/{categoriaId} {
+      allow read: if hasPermission('recetas');
+      allow create, update, delete: if hasPermission('recetas');
+    }
+
+    // Materias primas: varios módulos necesitan leer costos/stock.
+    // Historial necesita escribir cuando convierte un presupuesto en venta.
+    match /materiasPrimas/{materiaPrimaId} {
+      allow read: if hasPermission('indicadores')
+        || hasPermission('mostrador')
+        || hasPermission('recetas')
+        || hasPermission('stock')
+        || hasPermission('presupuestos')
+        || hasPermission('precios')
+        || hasPermission('finanzas')
+        || hasPermission('compras')
+        || hasPermission('compras_lista')
+        || hasPermission('historial');
+
+      allow create, update: if hasPermission('stock')
+        || hasPermission('compras')
+        || hasPermission('historial');
+
+      allow delete: if isMaster()
+        || hasPermission('configuracion');
+    }
+
+    match /movimientosStock/{movimientoId} {
+      allow read: if hasPermission('stock')
+        || hasPermission('compras')
+        || hasPermission('historial');
+
+      allow create: if hasPermission('stock')
+        || hasPermission('compras')
+        || hasPermission('historial');
+
+      allow update, delete: if isMaster()
+        || hasPermission('configuracion');
+    }
+
+    // Presupuestos alimentan Dashboard, Clientes, Agenda, Finanzas e Historial.
+    match /presupuestosGuardados/{presupuestoId} {
+      allow read: if hasPermission('indicadores')
+        || hasPermission('presupuestos')
+        || hasPermission('historial')
+        || hasPermission('clientes')
+        || hasPermission('agenda')
+        || hasPermission('compras_lista')
+        || hasPermission('finanzas');
+
+      allow create: if hasPermission('presupuestos');
+
+      allow update, delete: if hasPermission('presupuestos')
+        || hasPermission('historial');
+    }
+
+    match /clientes/{clienteId} {
+      allow read, create, update: if hasPermission('clientes');
+
+      allow delete: if isMaster()
+        || hasPermission('configuracion');
+    }
+
+    match /modelos3D/{modeloId} {
+      allow read, create, update, delete: if hasPermission('modelos');
+    }
+
+    // Todo lo que no esté expresamente contemplado queda bloqueado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
