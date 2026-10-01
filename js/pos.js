@@ -7,6 +7,7 @@ import { createAuthorization } from "./core/authorization.js";
 import { formatCurrency as formatMoneda, formatTimestampDateTime, dateToYMD } from "./core/format.js";
 import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/pricing.js";
 import { drawBarcodeLabel, drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
+import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
 
 export function setupPOS(app) {
@@ -379,7 +380,13 @@ export function setupPOS(app) {
             if (pantallaPromociones) {
                 pantallaPromociones.style.display = 'block';
                 if (selectPromoProd) {
-                    selectPromoProd.innerHTML = productosDisponibles.map(p => `<option value="${p.nombreTorta}">${p.nombreTorta}</option>`).join('');
+                    selectPromoProd.innerHTML = '';
+                    productosDisponibles.forEach((product) => {
+                        const option = document.createElement('option');
+                        option.value = product.nombreTorta || '';
+                        option.textContent = product.nombreTorta || '';
+                        selectPromoProd.appendChild(option);
+                    });
                 }
             }
         });
@@ -457,7 +464,7 @@ export function setupPOS(app) {
             card.dataset.id = prod.id;
             
             card.innerHTML = `
-                <div class="prod-nombre">${prod.nombreTorta}</div>
+                <div class="prod-nombre">${escapeHtml(prod.nombreTorta)}</div>
                 <div>
                     <div class="prod-precio">${formatMoneda(precioCalculado)}</div>
                     <div class="prod-stock">${stock} disp.</div>
@@ -573,7 +580,7 @@ export function setupPOS(app) {
             div.className = 'cart-item';
             div.innerHTML = `
                 <div class="cart-item-info">
-                    <h4>${item.nombre}</h4>
+                    <h4>${escapeHtml(item.nombre)}</h4>
                     <div class="cantidad-control">
                         <button class="btn-restar-cant" data-index="${index}" style="padding:0.2rem 0.5rem; border:1px solid #ccc; border-radius:4px; background:#f8fafc; cursor:pointer;">-</button>
                         <span style="font-weight:bold; min-width:20px; text-align:center;">${item.cantidad}</span>
@@ -892,8 +899,13 @@ export function setupPOS(app) {
 
                 listaTicketsRevision.innerHTML = '';
                 ventasArr.forEach(venta => {
-                    let descItems = venta.items.map(i => `${i.cantidad}x ${i.nombre}`).join(', ');
-                    let badgeClase = venta.metodoPago === 'MercadoPago' ? 'tag-mp' : 'tag-efectivo';
+                    const descItems = (venta.items || [])
+                        .map(item => `${item.cantidad}x ${escapeHtml(item.nombre)}`)
+                        .join(', ');
+                    const badgeClase = venta.metodoPago === 'MercadoPago' ? 'tag-mp' : 'tag-efectivo';
+                    const safeMetodo = escapeHtml(venta.metodoPago || '');
+                    const safeMetodoAttr = escapeAttribute(venta.metodoPago || '');
+                    const safeVentaId = escapeAttribute(venta.id);
                     
                     const div = document.createElement('div');
                     div.className = 'ticket-revision-item';
@@ -901,12 +913,12 @@ export function setupPOS(app) {
                         <div class="ticket-revision-info">
                             <div style="display:flex; justify-content:space-between;">
                                 <span style="font-size: 0.85rem; color:#64748b;">${formatFecha(venta.fecha)}</span>
-                                <span class="ticket-tag-metodo ${badgeClase}">${venta.metodoPago}</span>
+                                <span class="ticket-tag-metodo ${badgeClase}">${safeMetodo}</span>
                             </div>
                             <p style="margin: 0.2rem 0; font-size: 0.9rem;">${descItems}</p>
                             <span style="font-weight: bold; color: #be185d;">${formatMoneda(venta.total)}</span>
                         </div>
-                        <button class="btn-editar-ticket-auditoria" data-id="${venta.id}" data-total="${venta.total}" data-metodo="${venta.metodoPago}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; margin-left:1rem;" title="Editar Método de Pago">✏️</button>
+                        <button class="btn-editar-ticket-auditoria" data-id="${safeVentaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; margin-left:1rem;" title="Editar Método de Pago">✏️</button>
                     `;
                     listaTicketsRevision.appendChild(div);
                 });
@@ -1027,18 +1039,21 @@ export function setupPOS(app) {
             const margenMostrado = tieneMargenIndiv ? parseFloat(prod.margenIndividual) : margenGlobal;
             
             const tr = document.createElement('tr');
+            const safeCategoria = escapeHtml(prod.categoria || 'Sin Categoría');
+            const safeNombre = escapeHtml(prod.nombreTorta || '');
+            const safeProdId = escapeAttribute(prod.id);
             tr.innerHTML = `
-                <td data-label="Categoría"><span class="categoria-tag">${prod.categoria || 'Sin Categoría'}</span></td>
-                <td data-label="Producto"><strong>${prod.nombreTorta}</strong></td>
+                <td data-label="Categoría"><span class="categoria-tag">${safeCategoria}</span></td>
+                <td data-label="Producto"><strong>${safeNombre}</strong></td>
                 <td data-label="Costo Base">${formatMoneda(costo)}</td>
                 <td class="admin-only" data-label="% Ganancia">${margenMostrado}% <small style="color:var(--text-light);">${tieneMargenIndiv ? '(Indiv)' : '(Global)'}</small></td>
                 <td data-label="Precio Venta" style="font-weight: bold; color: var(--primary-color);">${formatMoneda(prod.precioCalculado)}</td>
                 <td data-label="Stock" style="text-align: center; color: ${stock > 0 ? 'var(--text-main)' : 'var(--danger-color)'}"><strong>${stock}</strong> u.</td>
                 <td data-label="Acciones" style="text-align: center;">
                     <div style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
-                        <button class="btn-primary btn-editar-prod" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;">📝 Stock</button>
-                        <button class="btn-secondary btn-ver-barcode" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;">🖨️ Barras</button>
-                        <button class="btn-secondary btn-editar-margen admin-only" data-id="${prod.id}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem; border-color: #6366f1; color: #6366f1;">⚙️ %</button>
+                        <button class="btn-primary btn-editar-prod" data-id="${safeProdId}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;">📝 Stock</button>
+                        <button class="btn-secondary btn-ver-barcode" data-id="${safeProdId}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem;">🖨️ Barras</button>
+                        <button class="btn-secondary btn-editar-margen admin-only" data-id="${safeProdId}" style="padding: 0.3rem 0.6rem; width: auto; font-size: 0.85rem; border-color: #6366f1; color: #6366f1;">⚙️ %</button>
                     </div>
                 </td>
             `;
@@ -1145,15 +1160,19 @@ export function setupPOS(app) {
             logs.forEach(log => {
                 const logDiv = document.createElement('div');
                 logDiv.className = 'log-item';
-                let tipoSpan = log.tipo === 'SUMA' ? `<span class="log-tipo-sumar">[+${log.cantidad}]</span>` : `<span class="log-tipo-restar">[-${log.cantidad}]</span>`;
-                let infoLote = log.loteVto ? ` (Vto: ${log.loteVto})` : '';
+                const tipoSpan = log.tipo === 'SUMA'
+                    ? `<span class="log-tipo-sumar">[+${Number(log.cantidad) || 0}]</span>`
+                    : `<span class="log-tipo-restar">[-${Number(log.cantidad) || 0}]</span>`;
+                const infoLote = log.loteVto ? ` (Vto: ${escapeHtml(log.loteVto)})` : '';
+                const safeMotivo = escapeHtml(log.motivo || 'Ajuste');
+                const safeUsuario = escapeHtml(log.usuario || 'Usuario');
 
                 logDiv.innerHTML = `
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.2rem;">
-                        <span>${tipoSpan} ${log.motivo || 'Ajuste'}${infoLote}</span>
+                        <span>${tipoSpan} ${safeMotivo}${infoLote}</span>
                         <span style="color: var(--text-light); font-size: 0.75rem;">${formatFecha(log.fecha)}</span>
                     </div>
-                    <div style="color: var(--text-light); font-size: 0.75rem;">👤 ${log.usuario} | Stock resultante: ${log.stockResultante}</div>
+                    <div style="color: var(--text-light); font-size: 0.75rem;">👤 ${safeUsuario} | Stock resultante: ${Number(log.stockResultante) || 0}</div>
                 `;
                 if (modalProdAuditoria) modalProdAuditoria.appendChild(logDiv);
             });
