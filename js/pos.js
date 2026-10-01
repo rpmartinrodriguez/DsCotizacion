@@ -4,9 +4,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { createAuthorization } from "./core/authorization.js";
-import { formatCurrency as formatMoneda, formatTimestampDateTime, dateToYMD } from "./core/format.js";
+import { formatCurrency as formatMoneda, formatTimestampDateTime } from "./core/format.js";
 import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/pricing.js";
 import { drawBarcodeLabel, drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
+import { setupManualHistory } from "./pos/manual-history.js";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -110,27 +111,7 @@ export function setupPOS(app) {
     const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
     const btnDescargarBarcode = document.getElementById('btn-descargar-barcode');
 
-    // ==========================================
-    // REFERENCIAS: NUEVA PESTAÑA CARGA HISTÓRICA
-    // ==========================================
     const pantallaCargaHistorica = document.getElementById('pantalla-carga-historica');
-    const btnIrCargaHistorica = document.getElementById('btn-ir-carga-historica');
-    const btnVolverMostradorHistorico = document.getElementById('btn-volver-mostrador-historico');
-
-    const manualFecha = document.getElementById('manual-fecha');
-    const manualMetodoFila = document.getElementById('manual-metodo-fila');
-    const manualProductoInput = document.getElementById('manual-producto-input');
-    const listaProdManual = document.getElementById('lista-prod-manual');
-    const manualPrecioSugerido = document.getElementById('manual-precio-sugerido');
-    const manualCantidad = document.getElementById('manual-cantidad');
-    const manualPrecioTotal = document.getElementById('manual-precio-total');
-    const manualPrecio = document.getElementById('manual-precio');
-    const btnAddManualItem = document.getElementById('btn-add-manual-item');
-    const manualTablaBody = document.getElementById('manual-tabla-body');
-    const manualTotalEfectivo = document.getElementById('manual-total-efectivo');
-    const manualTotalMp = document.getElementById('manual-total-mp');
-    const manualTotalGeneral = document.getElementById('manual-total-general');
-    const btnGuardarManual = document.getElementById('btn-guardar-manual');
 
     // ==========================================
     // VARIABLES DE ESTADO GLOBALES
@@ -148,10 +129,15 @@ export function setupPOS(app) {
     let margenGlobal = 0; 
     let currentBarcodeProduct = null;
     let totalVentaActual = 0;
-    let saldoTurnoAnteriorDetectado = 0; 
+    let saldoTurnoAnteriorDetectado = 0;
 
-    // Estado para la tabla de Carga Manual
-    let carritoManual = [];
+    const manualHistory = setupManualHistory({
+        db,
+        cajasCollection,
+        ventasCollection,
+        getCurrentUser: () => currentUser,
+        getUserName: () => userName
+    });
 
     // Funciones Helper compartidas
     const formatFecha = (timestamp) => formatTimestampDateTime(timestamp, { shortYear: true });
@@ -452,15 +438,7 @@ export function setupPOS(app) {
             renderizarInventario(productosDisponibles);
         }
 
-        // Llenar el Datalist del buscador manual histórico
-        if (listaProdManual) {
-            listaProdManual.innerHTML = '';
-            productosDisponibles.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.nombreTorta;
-                listaProdManual.appendChild(opt);
-            });
-        }
+        manualHistory.setProducts(productosDisponibles);
     };
 
     // ==========================================
@@ -1306,270 +1284,5 @@ export function setupPOS(app) {
         });
     }
 
-    // ==========================================
-    // NUEVA FUNCIONALIDAD: CARGA MANUAL HISTÓRICA EN TABLA
-    // ==========================================
-    if (btnIrCargaHistorica) {
-        btnIrCargaHistorica.addEventListener('click', () => {
-            pantallaPOS.style.display = 'none';
-            if (pantallaStock) pantallaStock.style.display = 'none';
-            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
-            pantallaCargaHistorica.style.display = 'block';
-
-            if (manualFecha) manualFecha.value = dateToYMD(new Date());
-            carritoManual = [];
-            renderTablaManual();
-        });
-    }
-
-    if (btnVolverMostradorHistorico) {
-        btnVolverMostradorHistorico.addEventListener('click', () => {
-            pantallaCargaHistorica.style.display = 'none';
-            pantallaPOS.style.display = 'grid';
-            if (buscadorPOS) buscadorPOS.focus();
-        });
-    }
-
-    if (manualProductoInput) {
-        manualProductoInput.addEventListener('input', (e) => {
-            const nombreIngresado = e.target.value.trim();
-            const prodEncontrado = productosDisponibles.find(p => p.nombreTorta === nombreIngresado);
-            
-            if (prodEncontrado) {
-                if (manualPrecioSugerido) manualPrecioSugerido.textContent = `Precio hoy: ${formatMoneda(prodEncontrado.precioCalculado)}`;
-                if (!manualPrecio.value && !manualPrecioTotal.value) {
-                    manualPrecio.value = prodEncontrado.precioCalculado;
-                    calcularDesdeUnitario();
-                }
-            } else {
-                if (manualPrecioSugerido) manualPrecioSugerido.textContent = `Precio hoy: $0.00`;
-            }
-        });
-    }
-
-    // MATEMÁTICA BIDIRECCIONAL
-    const calcularDesdeUnitario = () => {
-        const uni = parseFloat(manualPrecio.value) || 0;
-        const cant = parseInt(manualCantidad.value) || 1;
-        if (manualPrecioTotal) manualPrecioTotal.value = (uni * cant).toFixed(0);
-    };
-
-    const calcularDesdeTotal = () => {
-        const tot = parseFloat(manualPrecioTotal.value) || 0;
-        const cant = parseInt(manualCantidad.value) || 1;
-        if (cant > 0 && manualPrecio) manualPrecio.value = (tot / cant).toFixed(2);
-    };
-
-    if (manualPrecio) manualPrecio.addEventListener('input', calcularDesdeUnitario);
-    if (manualCantidad) {
-        manualCantidad.addEventListener('input', () => {
-            calcularDesdeUnitario();
-        });
-    }
-    if (manualPrecioTotal) manualPrecioTotal.addEventListener('input', calcularDesdeTotal);
-
-
-    if (btnAddManualItem) {
-        btnAddManualItem.addEventListener('click', () => {
-            const fechaIngresada = manualFecha.value;
-            const nombreIngresado = manualProductoInput.value.trim();
-            const metodoIngresado = manualMetodoFila.value;
-            
-            if (!fechaIngresada) return alert("Seleccioná la fecha del movimiento.");
-
-            const prod = productosDisponibles.find(p => p.nombreTorta === nombreIngresado);
-            if (!prod) return alert("Escribí y seleccioná un producto válido de la lista.");
-            
-            const precioIngresado = parseFloat(manualPrecio.value);
-            const totalIngresado = parseFloat(manualPrecioTotal.value);
-            const cantIngresada = parseInt(manualCantidad.value);
-
-            if (isNaN(precioIngresado) || precioIngresado < 0 || isNaN(totalIngresado)) return alert("El precio debe ser un número válido.");
-            if (isNaN(cantIngresada) || cantIngresada <= 0) return alert("La cantidad debe ser mayor a 0.");
-
-            carritoManual.push({
-                id: prod.id,
-                nombre: prod.nombreTorta,
-                fecha: fechaIngresada,
-                metodo: metodoIngresado,
-                precioUnitario: precioIngresado,
-                precioTotal: totalIngresado,
-                cantidad: cantIngresada
-            });
-
-            manualProductoInput.value = '';
-            manualPrecioSugerido.textContent = 'Precio hoy: $0.00';
-            manualPrecioTotal.value = '';
-            manualPrecio.value = '';
-            manualCantidad.value = '1';
-            manualProductoInput.focus();
-
-            renderTablaManual();
-        });
-    }
-
-    const renderTablaManual = () => {
-        if (!manualTablaBody) return;
-        manualTablaBody.innerHTML = '';
-        
-        if (carritoManual.length === 0) {
-            manualTablaBody.innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align: center; color: #94a3b8; padding: 2rem;">No agregaste ningún movimiento a la carga todavía.</td>
-                </tr>
-            `;
-            manualTotalEfectivo.textContent = formatMoneda(0);
-            manualTotalMp.textContent = formatMoneda(0);
-            manualTotalGeneral.textContent = formatMoneda(0);
-            return;
-        }
-
-        let tEfvo = 0; let tMp = 0;
-
-        carritoManual.forEach((item, index) => {
-            if (item.metodo === 'Efectivo') tEfvo += item.precioTotal;
-            else tMp += item.precioTotal;
-
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">${item.fecha}</span></td>
-                <td><strong style="color: #4c1d95;">${item.nombre}</strong></td>
-                <td style="text-align: center;">${item.cantidad}</td>
-                <td style="color: #64748b;">${formatMoneda(item.precioUnitario)}</td>
-                <td style="font-weight: bold; color: ${item.metodo === 'Efectivo' ? '#15803d' : '#0369a1'};">${formatMoneda(item.precioTotal)}</td>
-                <td>${item.metodo === 'Efectivo' ? '💵 Efectivo' : '📱 MercadoPago'}</td>
-                <td style="text-align: center;">
-                    <button class="btn-remove-manual-row" data-index="${index}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Quitar fila">🗑️</button>
-                </td>
-            `;
-            manualTablaBody.appendChild(tr);
-        });
-
-        manualTotalEfectivo.textContent = formatMoneda(tEfvo);
-        manualTotalMp.textContent = formatMoneda(tMp);
-        manualTotalGeneral.textContent = formatMoneda(tEfvo + tMp);
-    };
-
-    if (manualTablaBody) {
-        manualTablaBody.addEventListener('click', (e) => {
-            const btnRemove = e.target.closest('.btn-remove-manual-row');
-            if (btnRemove) {
-                carritoManual.splice(btnRemove.dataset.index, 1);
-                renderTablaManual();
-            }
-        });
-    }
-
-    // IMPACTAR TODO EN LA BASE DE DATOS
-    if (btnGuardarManual) {
-        btnGuardarManual.addEventListener('click', async () => {
-            if (carritoManual.length === 0) return alert("La tabla de carga está vacía.");
-            
-            btnGuardarManual.disabled = true;
-            btnGuardarManual.textContent = "Guardando movimientos...";
-
-            try {
-                // 1. Agrupamos los movimientos por FECHA
-                const agrupadosPorFecha = {};
-                carritoManual.forEach(item => {
-                    if (!agrupadosPorFecha[item.fecha]) agrupadosPorFecha[item.fecha] = [];
-                    agrupadosPorFecha[item.fecha].push(item);
-                });
-
-                // 2. Procesamos día por día
-                for (const fechaStr in agrupadosPorFecha) {
-                    const itemsDeEstaFecha = agrupadosPorFecha[fechaStr];
-                    
-                    // Parseo matemático y estricto de la fecha (evita errores silenciosos)
-                    const partes = fechaStr.split('-');
-                    const yNum = parseInt(partes[0], 10);
-                    const mNum = parseInt(partes[1], 10);
-                    const dNum = parseInt(partes[2], 10);
-
-                    const fechaFirebase = Timestamp.fromDate(new Date(yNum, mNum - 1, dNum, 12, 0, 0));
-                    const inicioDia = Timestamp.fromDate(new Date(yNum, mNum - 1, dNum, 0, 0, 0));
-                    const finDia = Timestamp.fromDate(new Date(yNum, mNum - 1, dNum, 23, 59, 59));
-
-                    let sumaEfvoFecha = itemsDeEstaFecha.filter(i => i.metodo === 'Efectivo').reduce((acc, i) => acc + i.precioTotal, 0);
-                    let sumaMpFecha = itemsDeEstaFecha.filter(i => i.metodo === 'MercadoPago').reduce((acc, i) => acc + i.precioTotal, 0);
-
-                    // Buscamos si para ese día ya habíamos creado una "Caja Histórica"
-                    const qCajas = query(cajasCollection, 
-                        where('fechaApertura', '>=', inicioDia), 
-                        where('fechaApertura', '<=', finDia)
-                    );
-                    
-                    const cajasSnap = await getDocs(qCajas);
-                    
-                    let cajaHistDoc = null;
-                    cajasSnap.forEach(doc => {
-                        // Solo inyectamos en cajas llamadas Carga Manual, no tocamos turnos reales!
-                        if(doc.data().turno === 'Carga Manual') {
-                            cajaHistDoc = doc;
-                        }
-                    });
-
-                    let idCajaHistorica;
-                    
-                    if (!cajaHistDoc) {
-                        // No existe, creamos una caja exclusiva para esta fecha
-                        const nuevaCajaRef = await addDoc(cajasCollection, {
-                            usuarioId: currentUser.uid,
-                            usuarioNombre: userName,
-                            turno: 'Carga Manual',
-                            fechaApertura: fechaFirebase,
-                            fechaCierre: fechaFirebase, // La cerramos al instante
-                            fondoInicial: 0,
-                            totalEfectivo: sumaEfvoFecha,
-                            totalMercadoPago: sumaMpFecha,
-                            estado: 'cerrada',
-                            cerradaPor: 'Sistema (Carga Manual)'
-                        });
-                        idCajaHistorica = nuevaCajaRef.id;
-                    } else {
-                        // Ya existe una Carga Manual ese día, le sumamos la plata nueva
-                        idCajaHistorica = cajaHistDoc.id;
-                        const cData = cajaHistDoc.data();
-                        
-                        await updateDoc(doc(db, 'cajas', idCajaHistorica), {
-                            totalEfectivo: (cData.totalEfectivo || 0) + sumaEfvoFecha,
-                            totalMercadoPago: (cData.totalMercadoPago || 0) + sumaMpFecha
-                        });
-                    }
-
-                    // 3. Guardamos cada movimiento de ese día a esa caja específica
-                    for (const item of itemsDeEstaFecha) {
-                        await addDoc(ventasCollection, {
-                            cajaId: idCajaHistorica,
-                            fecha: fechaFirebase,
-                            metodoPago: item.metodo,
-                            total: item.precioTotal,
-                            pagoEfectivo: item.metodo === 'Efectivo' ? item.precioTotal : 0,
-                            pagoMercadoPago: item.metodo === 'MercadoPago' ? item.precioTotal : 0,
-                            items: [{
-                                id: item.id,
-                                nombre: item.nombre,
-                                precio: item.precioUnitario,
-                                cantidad: item.cantidad
-                            }],
-                            vendedor: "Carga Histórica",
-                            esManual: true 
-                        });
-                    }
-                }
-
-                alert("¡Todos los movimientos fueron guardados con éxito en la base de datos!");
-                carritoManual = [];
-                renderTablaManual();
-
-            } catch (error) {
-                console.error("Error al guardar venta manual:", error);
-                alert("Hubo un error guardando los datos. Revisá tu conexión a internet.");
-            }
-
-            btnGuardarManual.disabled = false;
-            btnGuardarManual.textContent = "💾 Impactar en la Base de Datos";
-        });
-    }
 
 }
