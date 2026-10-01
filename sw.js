@@ -1,14 +1,21 @@
 // ==========================================
 // CAMBIAR ESTE NÚMERO CADA VEZ QUE HAGAS UNA ACTUALIZACIÓN GRANDE
 // ==========================================
-const CACHE_NAME = 'dulce-app-dinamico-v2.01'; 
+const CACHE_NAME = 'dulce-sall-admin-v2.10'; 
 
 // Recursos básicos iniciales
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
     '/css/style.css',
+    '/css/app-v2.css',
+    '/js/menu.js',
+    '/js/shell-v2.js',
+    '/login.html',
+    '/manifest.json',
     '/assets/logo.png',
+    '/assets/logo-192.png',
+    '/assets/logo-512.png',
     '/assets/apple-touch-icon.png'
 ];
 
