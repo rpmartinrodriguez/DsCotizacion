@@ -1,9 +1,11 @@
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, updateDoc, doc, Timestamp, deleteDoc, runTransaction 
+    getFirestore, collection, onSnapshot, query, orderBy, getDocs, getDoc, where, updateDoc, doc, Timestamp, deleteDoc, runTransaction 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
+    const auth = getAuth(app);
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
@@ -70,7 +72,22 @@ export function setupCajas(app) {
     let chartVentasInstancia = null;
     let chartBarHorasInstancia = null;
 
-    const MASTER_PASS = "Lautaro2026";
+    const usuarioPuedeAdministrar = async () => {
+        const user = auth.currentUser;
+        if (!user) return false;
+
+        try {
+            const perfilSnap = await getDoc(doc(db, 'usuarios', user.uid));
+            if (!perfilSnap.exists()) return false;
+
+            const perfil = perfilSnap.data();
+            return perfil.estado === 'activo' &&
+                (perfil.rol === 'master' || perfil.permisos?.configuracion === true);
+        } catch (error) {
+            console.error("No se pudo validar el permiso de administrador:", error);
+            return false;
+        }
+    };
 
     // ==========================================
     // 1. DICCIONARIO PARA LA (i) DE TODOS LOS INDICADORES
@@ -522,9 +539,8 @@ export function setupCajas(app) {
             const btn = e.target.closest('.btn-eliminar-caja');
             const cajaId = btn.dataset.id;
             
-            const pass = prompt("Atención: Vas a ocultar esta caja de las estadísticas.\nIngresá la clave de Administrador para confirmar:");
-            if (pass !== MASTER_PASS) {
-                if(pass !== null) alert("Clave incorrecta. Acción cancelada.");
+            if (!(await usuarioPuedeAdministrar())) {
+                alert("Tu usuario no tiene permisos para eliminar una caja.");
                 return;
             }
 
@@ -545,9 +561,8 @@ export function setupCajas(app) {
             const caja = todasLasCajas.find(c => c.id === cajaId);
             if(!caja) return;
 
-            const pass = prompt("Vas a modificar datos sensibles de la caja.\nIngresá la clave de Administrador:");
-            if (pass !== MASTER_PASS) {
-                if(pass !== null) alert("Clave incorrecta. Acción cancelada.");
+            if (!(await usuarioPuedeAdministrar())) {
+                alert("Tu usuario no tiene permisos para modificar datos sensibles de caja.");
                 return;
             }
 
@@ -571,9 +586,8 @@ export function setupCajas(app) {
         if (e.target.closest('.btn-editar-ticket-individual')) {
             const btn = e.target.closest('.btn-editar-ticket-individual');
             
-            const pass = prompt("Modificar un movimiento afectará la contabilidad.\nIngresá la clave de Administrador:");
-            if (pass !== MASTER_PASS) {
-                if(pass !== null) alert("Clave incorrecta.");
+            if (!(await usuarioPuedeAdministrar())) {
+                alert("Tu usuario no tiene permisos para modificar movimientos.");
                 return;
             }
 
@@ -867,9 +881,8 @@ export function setupCajas(app) {
                 const btn = e.target.closest('.btn-restaurar-caja');
                 const cajaId = btn.dataset.id;
 
-                const pass = prompt("Se va a restaurar la caja y sus ventas volverán a sumar en las estadísticas.\nIngresá la clave de Administrador:");
-                if (pass !== MASTER_PASS) {
-                    if(pass !== null) alert("Clave incorrecta. No se restauró la caja.");
+                if (!(await usuarioPuedeAdministrar())) {
+                    alert("Tu usuario no tiene permisos para restaurar cajas.");
                     return;
                 }
 
