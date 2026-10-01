@@ -973,20 +973,19 @@ export function setupPOS(app) {
     }
 
     if (listaTicketsRevision) {
-        listaTicketsRevision.addEventListener('click', (e) => {
+        listaTicketsRevision.addEventListener('click', async (e) => {
             const btn = e.target.closest('.btn-editar-ticket-auditoria');
             if (!btn) return;
-            
-            const pass = prompt("Acción protegida. Ingrese clave de administrador:");
-            if (pass !== "Lautaro2026") {
-                alert("Clave incorrecta. No podés editar el ticket.");
+
+            if (!(await usuarioPuedeAdministrar())) {
+                alert("Tu usuario no tiene permisos para editar tickets.");
                 return;
             }
 
             editTicketId.value = btn.dataset.id;
             editarTicketMontoLabel.textContent = formatMoneda(parseFloat(btn.dataset.total));
             editTicketMetodo.value = btn.dataset.metodo === 'Ambos' ? 'Efectivo' : btn.dataset.metodo;
-            
+
             modalEditarTicket.classList.add('visible');
         });
     }
