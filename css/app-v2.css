@@ -514,3 +514,201 @@ body.ds-app .top-lista li:last-child {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* Login v2 */
+body.ds-login {
+  min-height: 100vh;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  background:
+    radial-gradient(circle at 15% 10%, rgba(217,86,145,.11), transparent 32%),
+    radial-gradient(circle at 90% 85%, rgba(184,60,117,.08), transparent 30%),
+    var(--ds-bg);
+  color: var(--ds-text);
+}
+
+.ds-login-visual {
+  display: none;
+}
+
+.ds-login-main {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 18px;
+  box-sizing: border-box;
+}
+
+.ds-login-card {
+  width: min(100%, 420px);
+  background: rgba(255,255,255,.94);
+  border: 1px solid var(--ds-border);
+  border-radius: 24px;
+  box-shadow: 0 24px 70px rgba(53, 38, 48, .11);
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.ds-login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.ds-login-brand img {
+  height: 52px;
+  width: auto;
+}
+
+.ds-login-brand-copy strong {
+  display: block;
+  font-size: 1rem;
+  letter-spacing: -.01em;
+}
+
+.ds-login-brand-copy span {
+  display: block;
+  color: var(--ds-muted);
+  font-size: .77rem;
+  margin-top: 2px;
+}
+
+.ds-login-card h1 {
+  font-size: 2rem;
+  line-height: 1.08;
+  letter-spacing: -.04em;
+  margin: 0;
+}
+
+.ds-login-card > p {
+  color: var(--ds-muted);
+  line-height: 1.55;
+  margin: 10px 0 24px;
+}
+
+.ds-login-form-group {
+  margin-bottom: 15px;
+}
+
+.ds-login-form-group label {
+  display: block;
+  font-size: .79rem;
+  font-weight: 700;
+  color: #5e5660;
+  margin: 0 0 7px;
+}
+
+.ds-login-input {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--ds-border);
+  background: #fff;
+  color: var(--ds-text);
+  font: inherit;
+  padding: 0 13px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.ds-login-input:focus {
+  border-color: #dba2bc;
+  box-shadow: 0 0 0 4px rgba(217,86,145,.09);
+}
+
+.ds-login-submit {
+  width: 100%;
+  min-height: 50px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--ds-primary);
+  color: #fff;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  margin-top: 5px;
+  box-shadow: 0 9px 24px rgba(217,86,145,.22);
+  transition: transform .15s, background .15s;
+}
+
+.ds-login-submit:hover {
+  background: var(--ds-primary-strong);
+}
+
+.ds-login-submit:active {
+  transform: translateY(1px);
+}
+
+.ds-login-submit:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.ds-login-error {
+  display: none;
+  border-radius: 11px;
+  border: 1px solid #f0c9cc;
+  background: #fff5f5;
+  color: #a02c34;
+  padding: 11px 12px;
+  font-size: .83rem;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+.ds-login-footnote {
+  margin-top: 20px;
+  color: var(--ds-muted);
+  font-size: .75rem;
+  text-align: center;
+}
+
+@media (min-width: 900px) {
+  body.ds-login {
+    grid-template-columns: minmax(340px, .9fr) minmax(520px, 1.1fr);
+  }
+
+  .ds-login-visual {
+    display: flex;
+    min-height: 100vh;
+    padding: 54px;
+    box-sizing: border-box;
+    flex-direction: column;
+    justify-content: flex-end;
+    background:
+      linear-gradient(180deg, rgba(50,27,39,.08), rgba(50,27,39,.55)),
+      url('../assets/logo.png') center 24% / min(44%, 330px) auto no-repeat,
+      linear-gradient(140deg, #f4d7e5, #c96a94);
+    color: #fff;
+  }
+
+  .ds-login-visual-copy {
+    max-width: 520px;
+  }
+
+  .ds-login-visual-copy small {
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-weight: 800;
+    opacity: .9;
+  }
+
+  .ds-login-visual-copy h2 {
+    font-size: clamp(2.3rem, 4vw, 4rem);
+    line-height: .98;
+    letter-spacing: -.05em;
+    margin: 12px 0 14px;
+  }
+
+  .ds-login-visual-copy p {
+    margin: 0;
+    max-width: 470px;
+    line-height: 1.55;
+    opacity: .91;
+  }
+}
