@@ -11,6 +11,7 @@ import {
     timestampToLocalDateTimeValue as toLocalDatetimeString
 } from "./core/format.js";
 import { cashMetricsInfo as infoDiccionario } from "./data/cash-metrics-info.js";
+import { escapeHtml, escapeAttribute } from "./core/html.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
@@ -185,16 +186,19 @@ export function setupCajas(app) {
             div.className = 'categoria-acordeon'; 
             div.style.marginBottom = '1.5rem';
 
+            const safeCajaId = escapeAttribute(caja.id);
+            const safeUsuario = escapeHtml(caja.usuarioNombre || 'Usuario');
+
             div.innerHTML = `
-                <div class="categoria-acordeon__header caja-header" data-id="${caja.id}">
+                <div class="categoria-acordeon__header caja-header" data-id="${safeCajaId}">
                     <div>
                         <div style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
                             Apertura: ${formatearFecha(caja.fechaApertura)}
-                            <button class="btn-editar-caja-datos" data-id="${caja.id}" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #8b5cf6;" title="Editar Fechas/Fondo">✏️</button>
-                            <button class="btn-eliminar-caja" data-id="${caja.id}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Eliminar caja (Ocultar)">🗑️</button>
+                            <button class="btn-editar-caja-datos" data-id="${safeCajaId}" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #8b5cf6;" title="Editar Fechas/Fondo">✏️</button>
+                            <button class="btn-eliminar-caja" data-id="${safeCajaId}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Eliminar caja (Ocultar)">🗑️</button>
                         </div>
                         <div style="font-size: 0.85rem; color: var(--text-light); font-weight: normal; margin-top: 0.2rem;">
-                            👤 ${caja.usuarioNombre || 'Usuario'}
+                            👤 ${safeUsuario}
                             ${caja.fechaCierre ? ` | Cierre: ${formatearFecha(caja.fechaCierre)}` : ''}
                         </div>
                     </div>
@@ -219,7 +223,7 @@ export function setupCajas(app) {
                                 <span>Ventas MP</span>
                                 <div>
                                     <span style="color: var(--success-color); display: block; margin-bottom: 0.3rem;">${formatMoneda(mp)}</span>
-                                    <button class="btn-facturado ${btnFacturadoClass}" data-id="${caja.id}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
+                                    <button class="btn-facturado ${btnFacturadoClass}" data-id="${safeCajaId}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
                                         ${btnFacturadoText}
                                     </button>
                                 </div>
@@ -233,9 +237,9 @@ export function setupCajas(app) {
                         <div class="ticket-list">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                                 <h3 style="font-size: 1rem; margin: 0;">Detalle de Movimientos</h3>
-                                <button class="btn-resumen-productos btn-secondary" data-id="${caja.id}" style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.85rem; border-color: #0ea5e9; color: #0ea5e9;">📊 Ver Resumen de Productos</button>
+                                <button class="btn-resumen-productos btn-secondary" data-id="${safeCajaId}" style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.85rem; border-color: #0ea5e9; color: #0ea5e9;">📊 Ver Resumen de Productos</button>
                             </div>
-                            <div id="tickets-${caja.id}">
+                            <div id="tickets-${safeCajaId}">
                                 <p class="text-light" style="font-size: 0.9rem;">Cargando tickets...</p>
                             </div>
                         </div>
@@ -315,15 +319,19 @@ export function setupCajas(app) {
             container.innerHTML = '';
             ventas.forEach(venta => {
                 const itemsTexto = (venta.items || [])
-                    .map(item => `${item.cantidad}x ${item.nombre}`)
+                    .map(item => `${item.cantidad}x ${escapeHtml(item.nombre)}`)
                     .join(', ');
 
                 let tagMP = '';
                 if (venta.metodoPago === 'Ambos') {
                     tagMP = `<span class="metodo-pago-tag">Efvo: ${formatMoneda(venta.pagoEfectivo)} | MP: ${formatMoneda(venta.pagoMercadoPago)}</span>`;
                 } else {
-                    tagMP = `<span class="metodo-pago-tag">${venta.metodoPago}</span>`;
+                    tagMP = `<span class="metodo-pago-tag">${escapeHtml(venta.metodoPago || '')}</span>`;
                 }
+
+                const safeVentaId = escapeAttribute(venta.id);
+                const safeCajaId = escapeAttribute(cajaId);
+                const safeMetodoAttr = escapeAttribute(venta.metodoPago || '');
 
                 const ticketDiv = document.createElement('div');
                 ticketDiv.className = 'ticket-item';
@@ -334,7 +342,7 @@ export function setupCajas(app) {
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="ticket-monto">${formatMoneda(venta.total)}</span>
-                        <button class="btn-editar-ticket-individual" data-id="${venta.id}" data-caja="${cajaId}" data-total="${venta.total}" data-metodo="${venta.metodoPago}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>
+                        <button class="btn-editar-ticket-individual" data-id="${safeVentaId}" data-caja="${safeCajaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>
                     </div>
                 `;
                 container.appendChild(ticketDiv);
@@ -381,7 +389,7 @@ export function setupCajas(app) {
             arrProductos.forEach((prod, idx) => {
                 const li = document.createElement('li');
                 li.innerHTML = `
-                    <span><strong>#${idx + 1}</strong> ${prod.nombre}</span>
+                    <span><strong>#${idx + 1}</strong> ${escapeHtml(prod.nombre)}</span>
                     <span style="color:#0ea5e9; font-weight:bold;">${prod.cantidad} u.</span>
                 `;
                 ulResumenProductos.appendChild(li);
@@ -718,6 +726,8 @@ export function setupCajas(app) {
             const efvo = caja.totalEfectivo || 0;
             const mp = caja.totalMercadoPago || 0;
             const total = efvo + mp;
+            const safeCajaId = escapeAttribute(caja.id);
+            const safeUsuario = escapeHtml(caja.usuarioNombre || 'Sistema');
 
             const div = document.createElement('div');
             div.style.background = 'white';
@@ -732,9 +742,9 @@ export function setupCajas(app) {
             div.innerHTML = `
                 <div>
                     <strong style="color: #475569;">${formatearFecha(caja.fechaApertura)}</strong>
-                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">👤 ${caja.usuarioNombre || 'Sistema'} | 💰 Total: ${formatMoneda(total)}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">👤 ${safeUsuario} | 💰 Total: ${formatMoneda(total)}</div>
                 </div>
-                <button class="btn-restaurar-caja btn-primary" data-id="${caja.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem; background: #10b981; border-color: #10b981;">♻️ Restaurar</button>
+                <button class="btn-restaurar-caja btn-primary" data-id="${safeCajaId}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem; background: #10b981; border-color: #10b981;">♻️ Restaurar</button>
             `;
             listaCajasPapelera.appendChild(div);
         });
@@ -981,7 +991,7 @@ export function setupCajas(app) {
                     let porcMargen = p.bruto > 0 ? (util / p.bruto) * 100 : 0;
                     tbodyMargen.innerHTML += `
                         <tr>
-                            <td><strong>${nombre}</strong></td>
+                            <td><strong>${escapeHtml(nombre)}</strong></td>
                             <td>${p.qty} u.</td>
                             <td>${formatMoneda(p.bruto)}</td>
                             <td style="color:#64748b;">${formatMoneda(p.costoTotalMatPrima)}</td>
@@ -1012,7 +1022,7 @@ export function setupCajas(app) {
                         let sugerenciaOptima = Math.ceil(promedioVendidoEseDia * 1.15);
                         tbodyOptima.innerHTML += `
                             <tr>
-                                <td><strong>${nombre}</strong></td>
+                                <td><strong>${escapeHtml(nombre)}</strong></td>
                                 <td>${promedioVendidoEseDia.toFixed(1)} unidades</td>
                                 <td><span style="background:#fef08a; color:#854d0e; padding:4px 10px; border-radius:6px; font-weight:900; border:1px dashed #ca8a04;">Preparar ${sugerenciaOptima} unidades</span></td>
                             </tr>
@@ -1037,13 +1047,13 @@ export function setupCajas(app) {
                 if(sortedByQty.length > 0) {
                     sortedByQty.slice(0, 5).forEach((p, idx) => {
                         let participacion = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
-                        ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
+                        ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${escapeHtml(p[0])}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
                     });
                     
                     if(sortedByQty.length > 5) {
                         sortedByQty.slice(5).forEach((p, idx) => {
                             let participacion = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
-                            ulResto.innerHTML += `<li><span>#${idx+6} ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
+                            ulResto.innerHTML += `<li><span>#${idx+6} ${escapeHtml(p[0])}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
                         });
                         btnVerMas.style.display = 'block';
                         btnVerMas.onclick = () => {
