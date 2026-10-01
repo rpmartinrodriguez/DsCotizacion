@@ -1,11 +1,19 @@
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, getDocs, getDoc, where, updateDoc, doc, Timestamp, deleteDoc, runTransaction 
+    getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, updateDoc, doc, Timestamp, deleteDoc, runTransaction 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { createAuthorization } from "./core/authorization.js";
+import {
+    formatCurrency as formatMoneda,
+    formatTimestampDateTime,
+    formatTimestampShortDate as formatearFechaCorta,
+    timestampToMonthKey as formatearMesAnio,
+    monthKeyToLabel as nombreMes,
+    timestampToLocalDateTimeValue as toLocalDatetimeString
+} from "./core/format.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
-    const auth = getAuth(app);
+    const authorization = createAuthorization(app);
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
@@ -72,22 +80,7 @@ export function setupCajas(app) {
     let chartVentasInstancia = null;
     let chartBarHorasInstancia = null;
 
-    const usuarioPuedeAdministrar = async () => {
-        const user = auth.currentUser;
-        if (!user) return false;
-
-        try {
-            const perfilSnap = await getDoc(doc(db, 'usuarios', user.uid));
-            if (!perfilSnap.exists()) return false;
-
-            const perfil = perfilSnap.data();
-            return perfil.estado === 'activo' &&
-                (perfil.rol === 'master' || perfil.permisos?.configuracion === true);
-        } catch (error) {
-            console.error("No se pudo validar el permiso de administrador:", error);
-            return false;
-        }
-    };
+    const usuarioPuedeAdministrar = authorization.canAdminister;
 
     // ==========================================
     // 1. DICCIONARIO PARA LA (i) DE TODOS LOS INDICADORES
@@ -250,41 +243,11 @@ export function setupCajas(app) {
         btnCargarStats.addEventListener('click', generarDashboard);
     }
 
-    // Helpers de Formato
-    function formatMoneda(val) {
-        return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    function formatearFecha(timestamp) {
+    // Helpers de Formato compartidos
+    const formatearFecha = (timestamp) => {
         if (!timestamp) return 'Fecha desconocida';
-        const date = timestamp.toDate();
-        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
-    }
-    function formatearFechaCorta(timestamp) {
-        if (!timestamp) return '';
-        const date = timestamp.toDate();
-        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-    }
-    function formatearMesAnio(timestamp) {
-        if (!timestamp) return null;
-        const date = timestamp.toDate();
-        const mes = (date.getMonth() + 1).toString().padStart(2, '0');
-        const anio = date.getFullYear();
-        return `${anio}-${mes}`; 
-    }
-    function nombreMes(mesAnio) {
-        const [anio, mes] = mesAnio.split('-');
-        const fecha = new Date(anio, parseInt(mes) - 1, 1);
-        const nombre = fecha.toLocaleDateString('es-AR', { month: 'long' });
-        return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + anio;
-    }
-    
-    // Formato para los input type="datetime-local"
-    function toLocalDatetimeString(timestamp) {
-        if (!timestamp) return '';
-        const d = timestamp.toDate();
-        const pad = (n) => n.toString().padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
+        return formatTimestampDateTime(timestamp);
+    };
 
     // ==========================================
     // 3. RENDERIZAR LA LISTA DE CAJAS
