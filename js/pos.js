@@ -1,12 +1,15 @@
 import { 
     getFirestore, collection, onSnapshot, query, where, doc, 
-    addDoc, updateDoc, Timestamp, runTransaction, getDocs, getDoc, setDoc, orderBy, limit
+    addDoc, updateDoc, Timestamp, runTransaction, getDocs, setDoc, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { createAuthorization } from "./core/authorization.js";
+import { formatCurrency as formatMoneda, formatTimestampDateTime, dateToYMD } from "./core/format.js";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
     const auth = getAuth(app);
+    const authorization = createAuthorization(app);
     
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
@@ -148,19 +151,8 @@ export function setupPOS(app) {
     // Estado para la tabla de Carga Manual
     let carritoManual = [];
 
-    // Funciones Helper
-    const formatMoneda = (val) => `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    const formatFecha = (timestamp) => {
-        if (!timestamp || !timestamp.toDate) return '';
-        const d = timestamp.toDate();
-        return d.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
-    };
-    const dateToYMD = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    };
+    // Funciones Helper compartidas
+    const formatFecha = (timestamp) => formatTimestampDateTime(timestamp, { shortYear: true });
 
     // ==========================================
     // CÁLCULO DE COSTOS
@@ -220,22 +212,7 @@ export function setupPOS(app) {
         procesarYRenderizar();
     });
 
-    const usuarioPuedeAdministrar = async () => {
-        const user = auth.currentUser;
-        if (!user) return false;
-
-        try {
-            const perfilSnap = await getDoc(doc(db, 'usuarios', user.uid));
-            if (!perfilSnap.exists()) return false;
-
-            const perfil = perfilSnap.data();
-            return perfil.estado === 'activo' &&
-                (perfil.rol === 'master' || perfil.permisos?.configuracion === true);
-        } catch (error) {
-            console.error("No se pudo validar el permiso de administrador:", error);
-            return false;
-        }
-    };
+    const usuarioPuedeAdministrar = authorization.canAdminister;
 
     if (btnDesbloquearAdmin) {
         btnDesbloquearAdmin.addEventListener('click', async () => {
