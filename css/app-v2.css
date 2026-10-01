@@ -1260,3 +1260,207 @@ body.ds-clients .cliente-historial-detalle ul {
     flex-direction: row;
   }
 }
+
+
+/* Cash & finance v2 */
+body.ds-cash .ds-cash-main,
+body.ds-finance .ds-finance-main {
+  padding: 88px 16px 96px;
+  box-sizing: border-box;
+}
+
+body.ds-cash .page-title {
+  margin: 0 0 18px !important;
+  color: var(--ds-text) !important;
+  font-size: clamp(1.75rem, 4vw, 2.4rem) !important;
+  text-transform: none !important;
+  letter-spacing: -.04em !important;
+}
+
+body.ds-cash .tabs-container {
+  gap: 4px;
+  border-bottom: 1px solid var(--ds-border);
+  padding-bottom: 0;
+  margin-bottom: 18px;
+}
+
+body.ds-cash .tab-btn {
+  border-radius: 10px 10px 0 0;
+  font-size: .85rem;
+  color: #8a7f8a;
+  padding: 10px 12px;
+}
+
+body.ds-cash .tab-btn:hover {
+  color: var(--ds-primary-strong);
+  background: #faf5f8;
+}
+
+body.ds-cash .tab-btn.active {
+  color: var(--ds-primary-strong);
+  background: var(--ds-primary-soft);
+  border-bottom: 2px solid var(--ds-primary);
+}
+
+body.ds-cash .card,
+body.ds-finance .card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  box-shadow: var(--ds-shadow-soft);
+}
+
+body.ds-cash .categoria-acordeon {
+  border: 1px solid var(--ds-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: none;
+}
+
+body.ds-cash .categoria-acordeon__header {
+  background: #fff;
+  border: 0;
+  padding: 14px 16px;
+}
+
+body.ds-cash .categoria-acordeon__content {
+  border-top: 1px solid var(--ds-border);
+}
+
+body.ds-cash .caja-resumen {
+  background: #faf8fa !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 12px !important;
+}
+
+body.ds-cash .ticket-item {
+  border-color: var(--ds-border);
+}
+
+body.ds-cash .dashboard-grid {
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap: 12px;
+}
+
+body.ds-cash .dash-card {
+  border: 1px solid var(--ds-border);
+  box-shadow: none;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: left;
+}
+
+body.ds-cash .dash-card h3 {
+  color: var(--ds-muted);
+  justify-content: flex-start;
+  font-size: .72rem;
+  letter-spacing: .05em;
+}
+
+body.ds-cash .dash-card .valor {
+  color: var(--ds-text);
+  font-size: 1.5rem;
+  letter-spacing: -.035em;
+}
+
+body.ds-cash .chart-box,
+body.ds-cash .stats-table {
+  border-color: var(--ds-border);
+  box-shadow: none;
+}
+
+body.ds-cash .stats-table th {
+  background: #faf8fa;
+  color: #7f7480;
+}
+
+body.ds-cash .info-icon {
+  background: var(--ds-primary);
+}
+
+.ds-finance-shell {
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.ds-finance-report {
+  padding: 20px;
+}
+
+body.ds-finance .reporte-financiero {
+  display: grid;
+  gap: 0;
+}
+
+body.ds-finance .linea-reporte {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+body.ds-finance .linea-reporte:last-child {
+  border-bottom: 0;
+}
+
+body.ds-finance .linea-reporte span:first-child {
+  color: var(--ds-muted);
+}
+
+body.ds-finance .linea-reporte span:last-child {
+  font-weight: 780;
+  color: var(--ds-text);
+  text-align: right;
+}
+
+body.ds-finance .total-bruto,
+body.ds-finance .total-neto {
+  padding: 20px 0;
+  font-size: 1.08rem;
+}
+
+body.ds-finance .total-neto {
+  margin-top: 4px;
+  border-radius: 13px;
+  padding: 18px;
+  background: #faf8fa;
+  border: 1px solid var(--ds-border);
+}
+
+body.ds-finance .valor-positivo {
+  color: var(--ds-success) !important;
+}
+
+body.ds-finance .valor-negativo {
+  color: var(--ds-danger) !important;
+}
+
+body.ds-finance .calculo-divisor {
+  display: none;
+}
+
+@media (min-width:1024px) {
+  body.ds-cash .ds-cash-main,
+  body.ds-finance .ds-finance-main {
+    padding: 96px 28px 40px calc(var(--ds-sidebar) + 28px);
+  }
+
+  body.ds-cash .main-container {
+    max-width: none !important;
+  }
+}
+
+@media (max-width:640px) {
+  body.ds-finance .linea-reporte {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  body.ds-finance .linea-reporte span:last-child {
+    text-align: left;
+  }
+}
