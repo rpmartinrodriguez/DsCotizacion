@@ -2,6 +2,7 @@ import {
     getFirestore, collection, onSnapshot, query, where, doc, 
     setDoc, getDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { escapeHtml, escapeAttribute } from "./core/html.js";
 
 export function setupClientes(app) {
     const db = getFirestore(app);
@@ -40,13 +41,19 @@ export function setupClientes(app) {
         clientesOrdenados.forEach(cliente => {
             const card = document.createElement('div');
             card.className = 'cliente-resumen-card';
-            const telefonoHtml = cliente.telefono ? `<p class="cliente-card__contact">📞 ${cliente.telefono}</p>` : '';
-            const emailHtml = cliente.email ? `<p class="cliente-card__contact">✉️ ${cliente.email}</p>` : '';
+            const telefonoHtml = cliente.telefono
+                ? `<p class="cliente-card__contact">📞 ${escapeHtml(cliente.telefono)}</p>`
+                : '';
+            const emailHtml = cliente.email
+                ? `<p class="cliente-card__contact">✉️ ${escapeHtml(cliente.email)}</p>`
+                : '';
             const clienteIdSanitizado = cliente.id;
+            const safeClienteId = escapeAttribute(clienteIdSanitizado);
+            const safeNombre = escapeHtml(cliente.nombre);
             
             card.innerHTML = `
                 <div class="cliente-card__info">
-                    <h3>${cliente.nombre}</h3>
+                    <h3>${safeNombre}</h3>
                     ${telefonoHtml}
                     ${emailHtml}
                 </div>
@@ -56,10 +63,10 @@ export function setupClientes(app) {
                     <div class="stat"><span>Cotizaciones</span><p>${cliente.presupuestos.length || 0}</p></div>
                 </div>
                 <div class="historial-card__actions" style="justify-content: flex-end; border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 1rem;">
-                     <button class="btn-secondary btn-ver-historial-cliente" data-id="${clienteIdSanitizado}">Ver Historial</button>
-                     <button class="btn-primary btn-editar-cliente" data-id="${clienteIdSanitizado}">✏️ Editar</button>
+                     <button class="btn-secondary btn-ver-historial-cliente" data-id="${safeClienteId}">Ver Historial</button>
+                     <button class="btn-primary btn-editar-cliente" data-id="${safeClienteId}">✏️ Editar</button>
                 </div>
-                <div class="cliente-historial-detalle" id="detalle-${clienteIdSanitizado}" style="display:none;">
+                <div class="cliente-historial-detalle" id="detalle-${safeClienteId}" style="display:none;">
                     <p>Cargando historial...</p>
                 </div>`;
             container.appendChild(card);
@@ -77,7 +84,7 @@ export function setupClientes(app) {
                 const fecha = p.fecha.toDate().toLocaleDateString('es-AR');
                 const precio = p.precioVenta || p.costoTotal || 0;
                 const ventaBadge = p.esVenta ? `<span class="venta-confirmada-badge mini">VENTA</span>` : '';
-                return `<li class="presupuesto-item"><span>${p.tituloTorta} - $${precio.toFixed(2)}</span> <span>(${fecha})</span> ${ventaBadge}</li>`;
+                return `<li class="presupuesto-item"><span>${escapeHtml(p.tituloTorta)} - ${precio.toFixed(2)}</span> <span>(${fecha})</span> ${ventaBadge}</li>`;
             }).join('');
 
         detalleDiv.innerHTML = `<h4>Historial de Presupuestos</h4><ul>${detalleHtml}</ul>`;
