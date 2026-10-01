@@ -6,6 +6,7 @@ import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/fi
 import { createAuthorization } from "./core/authorization.js";
 import { formatCurrency as formatMoneda, formatTimestampDateTime, dateToYMD } from "./core/format.js";
 import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/pricing.js";
+import { drawBarcodeLabel, drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -1257,35 +1258,9 @@ export function setupPOS(app) {
     // ETIQUETAS Y BARCODE (JSBARCODE)
     // ==========================================
     const drawBarcodeCanvas = () => {
-        if(!currentBarcodeProduct) return;
-        const prod = currentBarcodeProduct;
-        
-        const canvasFinal = document.getElementById("barcode-canvas-descarga");
-        canvasFinal.width = 400;
-        canvasFinal.height = 240;
-        const ctx = canvasFinal.getContext("2d");
-        
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, canvasFinal.width, canvasFinal.height);
-        ctx.fillStyle = "black";
-        ctx.textAlign = "center";
-        
-        let fontSize = 28;
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        while (ctx.measureText(prod.nombreTorta).width > 360 && fontSize > 14) {
-            fontSize -= 2;
-            ctx.font = `bold ${fontSize}px sans-serif`;
-        }
-        ctx.fillText(prod.nombreTorta, canvasFinal.width / 2, 45); 
-
-        const tempCanvas = document.createElement("canvas");
-        try {
-            JsBarcode(tempCanvas, prod.codigoBarras, { format: "EAN13", lineColor: "#000", width: 3, height: 120, displayValue: true, fontSize: 24, margin: 10 });
-        } catch(e) {
-            JsBarcode(tempCanvas, prod.codigoBarras, { format: "CODE128", lineColor: "#000", width: 2.5, height: 120, displayValue: true, fontSize: 22, margin: 10 });
-        }
-
-        ctx.drawImage(tempCanvas, (canvasFinal.width - tempCanvas.width) / 2, 60);
+        if (!currentBarcodeProduct) return;
+        const canvas = document.getElementById('barcode-canvas-descarga');
+        drawBarcodeLabel(canvas, currentBarcodeProduct);
     };
 
     const abrirModalBarcode = (prod) => {
@@ -1297,17 +1272,17 @@ export function setupPOS(app) {
 
     if (btnCerrarBarcode) {
         btnCerrarBarcode.addEventListener('click', () => {
-            if(modalBarcode) modalBarcode.classList.remove('visible');
+            if (modalBarcode) modalBarcode.classList.remove('visible');
         });
     }
 
     if (btnDescargarBarcode) {
         btnDescargarBarcode.addEventListener('click', () => {
-            const canvas = document.getElementById("barcode-canvas-descarga");
-            const link = document.createElement('a');
-            link.download = `Etiqueta-${btnDescargarBarcode.dataset.nombre || 'etiqueta'}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const canvas = document.getElementById('barcode-canvas-descarga');
+            downloadCanvasPng(
+                canvas,
+                `Etiqueta-${btnDescargarBarcode.dataset.nombre || 'etiqueta'}.png`
+            );
         });
     }
 
@@ -1316,25 +1291,18 @@ export function setupPOS(app) {
             const tipo = inputPromoTipo ? (inputPromoTipo.value || 'OFERTA') : 'OFERTA';
             const prod = selectPromoProd ? selectPromoProd.value : '';
             const frase = inputPromoFrase ? (inputPromoFrase.value || '') : '';
-            
-            const canvas = document.getElementById('promo-canvas-descarga');
-            canvas.width = 400;  canvas.height = 240; 
-            const ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = "white"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = "black"; ctx.lineWidth = 6; ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
-            ctx.textAlign = "center"; ctx.fillStyle = "black";
-            
-            ctx.font = "bold 60px sans-serif"; ctx.fillText(tipo.toUpperCase(), canvas.width / 2, 85);
-            let fontSize = 36; ctx.font = `bold ${fontSize}px sans-serif`;
-            while (ctx.measureText(prod).width > 380 && fontSize > 16) { fontSize -= 2; ctx.font = `bold ${fontSize}px sans-serif`; }
-            ctx.fillText(prod, canvas.width / 2, 145);
-            ctx.font = "bold 24px sans-serif"; ctx.fillText(frase, canvas.width / 2, 205);
 
-            const link = document.createElement('a');
-            link.download = `Promo-${tipo}-${prod.substring(0,10)}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
+            const canvas = document.getElementById('promo-canvas-descarga');
+            drawPromoLabel(canvas, {
+                type: tipo,
+                productName: prod,
+                subtitle: frase
+            });
+
+            downloadCanvasPng(
+                canvas,
+                `Promo-${tipo}-${prod.substring(0,10)}.png`
+            );
         });
     }
 
