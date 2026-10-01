@@ -84,9 +84,9 @@ export function setupCajas(app) {
     const usuarioPuedeAdministrar = authorization.canAdminister;
 
     // ==========================================
-    // 1. DICCIONARIO PARA caja es volátil. Mantené un colchón de fondo inicial más grande."
-        }
-    };
+    // 1. DICCIONARIO PARA LA (i) DE TODOS LOS INDICADORES
+    // ==========================================
+
 
     document.addEventListener('click', (e) => {
         const icon = e.target.closest('.info-icon');
