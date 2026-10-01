@@ -1464,3 +1464,83 @@ body.ds-finance .calculo-divisor {
     text-align: left;
   }
 }
+
+
+/* Quotes, recipes and purchases v2 */
+body.ds-quotes .ds-quotes-main,
+body.ds-recipes .ds-recipes-main,
+body.ds-purchases .ds-purchases-main {
+  padding: 88px 16px 96px;
+  box-sizing: border-box;
+}
+
+body.ds-quotes .presupuesto-layout,
+body.ds-recipes .card,
+body.ds-purchases .card {
+  gap: 16px;
+}
+
+body.ds-quotes .card,
+body.ds-recipes .card,
+body.ds-purchases .card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  box-shadow: var(--ds-shadow-soft);
+}
+
+body.ds-quotes .precio-venta-final {
+  background: var(--ds-primary);
+  border-radius: 14px;
+}
+
+body.ds-quotes #btn-finalizar {
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+body.ds-recipes .categoria-acordeon {
+  border: 1px solid var(--ds-border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: none;
+}
+
+body.ds-recipes .categoria-acordeon__header {
+  background: #fff;
+}
+
+body.ds-recipes .receta-card {
+  border: 1px solid var(--ds-border);
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+body.ds-recipes .receta-card__actions .btn-primary,
+body.ds-recipes .receta-card__actions .btn-secondary,
+body.ds-purchases .btn-primary {
+  box-shadow: none;
+  border-radius: 11px;
+}
+
+.ds-form-shell {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+body.ds-purchases #form-nueva-compra .form-modern {
+  gap: 14px;
+}
+
+body.ds-purchases #btn-guardar-compra {
+  max-width: 260px;
+}
+
+@media (min-width:1024px) {
+  body.ds-quotes .ds-quotes-main,
+  body.ds-recipes .ds-recipes-main,
+  body.ds-purchases .ds-purchases-main {
+    padding: 96px 28px 40px calc(var(--ds-sidebar) + 28px);
+  }
+}
