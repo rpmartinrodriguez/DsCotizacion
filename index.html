@@ -2,117 +2,266 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Indicadores - Dulce App</title>
-    
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff96c5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Inicio · Dulce Sall Admin</title>
 
-    <!-- ========================================== -->
-    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
-    <!-- ========================================== -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <!-- ========================================== -->
-    
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="ds-app">
     <div class="main-container">
-        <!-- HEADER -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
             </button>
-            <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+
+            <a href="index.html" class="header__logo-link" aria-label="Inicio">
+                <img src="assets/logo.png" alt="Dulce Sall" class="header__logo">
             </a>
-            <a href="cotizacion-actual.html" class="header__cart-link">
-                <div id="cart-icon" class="header__cart-icon">
-                    🛒
-                    <span id="cart-count" class="cart-count">0</span>
-                </div>
-            </a>
+
+            <div class="ds-topbar-actions">
+                <a class="ds-icon-link" href="agenda.html" aria-label="Agenda" title="Agenda">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                        <path d="M16 3v4M8 3v4M3 10h18"></path>
+                    </svg>
+                </a>
+                <a class="ds-icon-link" href="usuarios.html" aria-label="Cuenta" title="Cuenta">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                        <circle cx="12" cy="8" r="4"></circle>
+                        <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+                    </svg>
+                </a>
+            </div>
         </header>
 
-        <!-- MENÚ DINÁMICO (Inyectado por menu.js) -->
-        <nav class="nav-menu" id="nav-menu"></nav>        
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <div style="text-align: center;">
-                 <h1 class="header__title">Dulce App</h1>
-                 <p class="header__slogan">Horneando tus Mejores Momentos</p>
+        <main class="ds-main">
+            <div class="ds-dashboard">
+                <section class="ds-page-head">
+                    <div>
+                        <p class="ds-eyebrow">Dulce Sall · Administración</p>
+                        <h1 class="ds-page-title">Hola, <span id="ds-user-name">equipo</span>.</h1>
+                        <p class="ds-page-subtitle">Un resumen rápido de lo que está pasando en el negocio.</p>
+                    </div>
+
+                    <div class="ds-page-actions">
+                        <div class="ds-select-wrap">
+                            <select id="filtro-mes" class="ds-select" aria-label="Período de indicadores">
+                                <option value="todos">Todos los tiempos</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="ds-quick-actions" aria-label="Acciones rápidas">
+                    <a href="pos.html" class="ds-quick">
+                        <span class="ds-quick-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9h16l-1-5H5L4 9Z"></path><path d="M5 9v11h14V9M9 20v-6h6v6"></path></svg>
+                        </span>
+                        <span><strong>Mostrador</strong><small>Vender y cobrar</small></span>
+                    </a>
+                    <a href="agenda.html" class="ds-quick">
+                        <span class="ds-quick-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>
+                        </span>
+                        <span><strong>Agenda</strong><small>Ver entregas</small></span>
+                    </a>
+                    <a href="stock.html" class="ds-quick">
+                        <span class="ds-quick-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 7 8 4 8-4M4 12l8 4 8-4M4 17l8 4 8-4"></path></svg>
+                        </span>
+                        <span><strong>Stock</strong><small>Control de insumos</small></span>
+                    </a>
+                    <a href="presupuesto.html" class="ds-quick">
+                        <span class="ds-quick-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l4 4v16H6V2Z"></path><path d="M14 2v5h5M9 12h6M9 16h6"></path></svg>
+                        </span>
+                        <span><strong>Presupuesto</strong><small>Nueva cotización</small></span>
+                    </a>
+                </section>
+
+                <section class="ds-kpis">
+                    <article class="ds-kpi">
+                        <div class="ds-kpi-top">
+                            <p class="ds-kpi-label">Ingresos por ventas</p>
+                            <span class="ds-kpi-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg>
+                            </span>
+                        </div>
+                        <p class="ds-kpi-value" id="kpi-ingresos-ventas">$0,00</p>
+                    </article>
+
+                    <article class="ds-kpi">
+                        <div class="ds-kpi-top">
+                            <p class="ds-kpi-label">Ganancia bruta</p>
+                            <span class="ds-kpi-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17 9 11l4 4 8-9"></path><path d="M15 6h6v6"></path></svg>
+                            </span>
+                        </div>
+                        <p class="ds-kpi-value" id="kpi-ganancia-bruta">$0,00</p>
+                    </article>
+
+                    <article class="ds-kpi">
+                        <div class="ds-kpi-top">
+                            <p class="ds-kpi-label">Valor cotizado</p>
+                            <span class="ds-kpi-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z"></path><path d="M9 8h6M9 12h6"></path></svg>
+                            </span>
+                        </div>
+                        <p class="ds-kpi-value" id="kpi-valor-cotizado">$0,00</p>
+                    </article>
+
+                    <article class="ds-kpi">
+                        <div class="ds-kpi-top">
+                            <p class="ds-kpi-label">Presupuestos</p>
+                            <span class="ds-kpi-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
+                            </span>
+                        </div>
+                        <p class="ds-kpi-value" id="kpi-presupuestos-creados">0</p>
+                    </article>
+                </section>
+
+                <section class="ds-grid ds-grid--2">
+                    <article class="ds-panel">
+                        <div class="ds-panel-head">
+                            <div>
+                                <h2 class="ds-panel-title">Evolución de ingresos</h2>
+                                <p class="ds-panel-subtitle">Ventas confirmadas agrupadas por mes</p>
+                            </div>
+                        </div>
+                        <div class="ds-chart-wrap">
+                            <canvas id="grafico-ingresos"></canvas>
+                        </div>
+                    </article>
+
+                    <a href="agenda.html" class="ds-panel ds-panel-link">
+                        <div class="ds-panel-head">
+                            <div>
+                                <h2 class="ds-panel-title">Próximas entregas</h2>
+                                <p class="ds-panel-subtitle">Los próximos pedidos comprometidos</p>
+                            </div>
+                            <span class="ds-panel-action">Ver agenda →</span>
+                        </div>
+                        <div id="lista-proximas-entregas"><p>Cargando…</p></div>
+                    </a>
+                </section>
+
+                <section class="ds-grid ds-grid--3">
+                    <article class="ds-panel">
+                        <div class="ds-panel-head">
+                            <div>
+                                <h2 class="ds-panel-title">Valor del stock</h2>
+                                <p class="ds-panel-subtitle">Capital actualmente inmovilizado en insumos</p>
+                            </div>
+                        </div>
+                        <p class="ds-stock-value" id="kpi-valor-stock">$0,00</p>
+                        <a class="ds-panel-action" href="stock.html">Gestionar stock →</a>
+                    </article>
+
+                    <a href="compras-lista.html" class="ds-panel ds-panel-link">
+                        <div class="ds-panel-head">
+                            <div>
+                                <h2 class="ds-panel-title">Faltantes próximos</h2>
+                                <p class="ds-panel-subtitle">Insumos necesarios para ventas próximas</p>
+                            </div>
+                            <span class="ds-panel-action">Compras →</span>
+                        </div>
+                        <div id="lista-faltantes-dashboard"><p>Cargando…</p></div>
+                    </a>
+
+                    <a href="clientes.html" class="ds-panel ds-panel-link">
+                        <div class="ds-panel-head">
+                            <div>
+                                <h2 class="ds-panel-title">Principales clientes</h2>
+                                <p class="ds-panel-subtitle">Top 5 por monto vendido</p>
+                            </div>
+                            <span class="ds-panel-action">Clientes →</span>
+                        </div>
+                        <div id="lista-top-clientes"><p>Cargando…</p></div>
+                    </a>
+                </section>
+
+                <section class="ds-grid ds-grid--2">
+                    <article class="ds-panel">
+                        <div class="ds-panel-head">
+                            <div>
+                                <h2 class="ds-panel-title">Productos más vendidos</h2>
+                                <p class="ds-panel-subtitle">Ranking por cantidad de ventas</p>
+                            </div>
+                        </div>
+                        <div id="reporte-mas-vendidos"><p>Cargando…</p></div>
+                    </article>
+
+                    <article class="ds-panel">
+                        <div class="ds-panel-head">
+                            <div>
+                                <h2 class="ds-panel-title">Productos más rentables</h2>
+                                <p class="ds-panel-subtitle">Ganancia acumulada estimada</p>
+                            </div>
+                        </div>
+                        <div id="reporte-mas-rentables"><p>Cargando…</p></div>
+                    </article>
+                </section>
             </div>
-            
-            <a href="agenda.html" class="card-link">
-                <section class="card">
-                    <h2 class="card__title">Próximas Entregas</h2>
-                    <div id="lista-proximas-entregas"><p>Calculando...</p></div>
-                </section>
-            </a>
-            <a href="compras-lista.html" class="card-link">
-                <section class="card card-aviso">
-                    <h2 class="card__title">Faltantes para Próximas Ventas</h2>
-                    <div id="lista-faltantes-dashboard"><p>Calculando...</p></div>
-                </section>
-            </a>
-            <section class="card">
-                <div class="form-group">
-                    <label for="filtro-mes">Ver Indicadores para el Mes de:</label>
-                    <select id="filtro-mes">
-                        <option value="todos">Todos los Tiempos</option>
-                    </select>
-                </div>
-            </section>
-            <div class="dashboard-grid">
-                <div class="stat-card"><h4>Ingresos por Ventas</h4><p id="kpi-ingresos-ventas">$0.00</p></div>
-                <div class="stat-card"><h4>Valor Total Cotizado</h4><p id="kpi-valor-cotizado">$0.00</p></div>
-                <div class="stat-card"><h4>Ganancia Bruta (Ventas)</h4><p id="kpi-ganancia-bruta">$0.00</p></div>
-                <div class="stat-card"><h4>Presupuestos Creados</h4><p id="kpi-presupuestos-creados">0</p></div>
-            </div>
-            <section class="card">
-                <h2 class="card__title">Ingresos por Mes (Ventas Reales)</h2>
-                <canvas id="grafico-ingresos"></canvas>
-            </section>
-            <section class="card">
-                <h2 class="card__title">Valor Actual del Stock</h2>
-                <p class="stat-card-main" id="kpi-valor-stock">$0.00</p>
-            </section>
-            <a href="clientes.html" class="card-link">
-                <section class="card">
-                    <h2 class="card__title">Top 5 Clientes (por Monto)</h2>
-                    <div id="lista-top-clientes"><p>Calculando...</p></div>
-                </section>
-            </a>
-            <section class="card">
-                <h2 class="card__title">🏆 Postres Más Vendidos (Top 5)</h2>
-                <div id="reporte-mas-vendidos"><p>Calculando...</p></div>
-            </section>
-            <section class="card">
-                <h2 class="card__title">💰 Postres Más Rentables (Top 5)</h2>
-                <div id="reporte-mas-rentables"><p>Calculando...</p></div>
-            </section>
         </main>
+
+        <nav class="ds-mobile-nav" aria-label="Navegación principal">
+            <a href="index.html" class="active" data-permission="indicadores">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11 12 3l9 8"></path><path d="M5 10v11h14V10"></path></svg>
+                <span>Inicio</span>
+            </a>
+            <a href="pos.html" data-permission="mostrador">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9h16l-1-5H5L4 9Z"></path><path d="M5 9v11h14V9"></path></svg>
+                <span>Mostrador</span>
+            </a>
+            <a href="agenda.html" data-permission="agenda">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>
+                <span>Agenda</span>
+            </a>
+            <a href="stock.html" data-permission="stock">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 12 8 4 8-4"></path></svg>
+                <span>Stock</span>
+            </a>
+            <button type="button" id="mobile-more-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>
+                <span>Más</span>
+            </button>
+        </nav>
     </div>
-    
-    <!-- SCRIPTS -->
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupDashboard } from './js/dashboard.js';
+
         try {
             const app = initializeApp(firebaseConfig);
             setupDashboard(app);
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+        }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=1" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
         }
     </script>
 </body>
