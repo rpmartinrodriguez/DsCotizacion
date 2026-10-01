@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, where, doc, 
-    addDoc, updateDoc, Timestamp, runTransaction, getDocs, setDoc, orderBy, limit
+    addDoc, updateDoc, Timestamp, runTransaction, getDocs, getDoc, setDoc, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
@@ -220,20 +220,41 @@ export function setupPOS(app) {
         procesarYRenderizar();
     });
 
+    const usuarioPuedeAdministrar = async () => {
+        const user = auth.currentUser;
+        if (!user) return false;
+
+        try {
+            const perfilSnap = await getDoc(doc(db, 'usuarios', user.uid));
+            if (!perfilSnap.exists()) return false;
+
+            const perfil = perfilSnap.data();
+            return perfil.estado === 'activo' &&
+                (perfil.rol === 'master' || perfil.permisos?.configuracion === true);
+        } catch (error) {
+            console.error("No se pudo validar el permiso de administrador:", error);
+            return false;
+        }
+    };
+
     if (btnDesbloquearAdmin) {
-        btnDesbloquearAdmin.addEventListener('click', () => {
+        btnDesbloquearAdmin.addEventListener('click', async () => {
             if (document.body.classList.contains('admin-open')) {
                 document.body.classList.remove('admin-open');
                 btnDesbloquearAdmin.textContent = "🔑 Modo Admin";
                 procesarYRenderizar();
                 return;
             }
-            const pass = prompt("Ingrese la contraseña de Administrador:");
-            if (pass === "Lautaro2026") {
-                document.body.classList.add('admin-open');
-                btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
-                procesarYRenderizar();
-            } else if (pass !== null) alert("Contraseña incorrecta de acceso.");
+
+            const autorizado = await usuarioPuedeAdministrar();
+            if (!autorizado) {
+                alert("Tu usuario no tiene permisos de administrador.");
+                return;
+            }
+
+            document.body.classList.add('admin-open');
+            btnDesbloquearAdmin.textContent = "🔒 Cerrar Admin";
+            procesarYRenderizar();
         });
     }
 
