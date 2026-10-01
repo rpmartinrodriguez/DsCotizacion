@@ -4,11 +4,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { createAuthorization } from "./core/authorization.js";
-import { formatCurrency as formatMoneda, formatTimestampDateTime, dateToYMD } from "./core/format.js";
+import { formatCurrency as formatMoneda, formatTimestampDateTime } from "./core/format.js";
 import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/pricing.js";
-import { drawBarcodeLabel, drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
+import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
+import { setupPOSInventory } from "./pos/inventory.js";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -81,8 +82,6 @@ export function setupPOS(app) {
 
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
-    const buscadorInventario = document.getElementById('buscador-inventario');
-    const tablaInventario = document.getElementById('tabla-inventario-mostrador');
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
 
@@ -93,24 +92,6 @@ export function setupPOS(app) {
     const inputPromoFrase = document.getElementById('promo-frase');
     const btnDescargarPromo = document.getElementById('btn-descargar-promo');
 
-    const modalStock = document.getElementById('modal-stock-detalle');
-    const modalProdId = document.getElementById('modal-prod-id');
-    const modalProdNombre = document.getElementById('modal-prod-nombre');
-    const modalProdGananciaIndiv = document.getElementById('modal-prod-ganancia-indiv');
-    const modalProdStockActual = document.getElementById('modal-prod-stock-actual');
-    const modalProdTipoMov = document.getElementById('modal-prod-tipo-movimiento');
-    const modalProdCantMov = document.getElementById('modal-prod-cantidad-movimiento');
-    const loteFieldsContainer = document.getElementById('lote-fields-container');
-    const modalProdLoteElab = document.getElementById('modal-prod-lote-elab');
-    const modalProdLoteVto = document.getElementById('modal-prod-lote-vto');
-    const modalProdMotivo = document.getElementById('modal-prod-motivo');
-    const modalProdAuditoria = document.getElementById('modal-prod-auditoria-logs');
-    const btnCancelarStock = document.getElementById('btn-cerrar-modal-stock');
-    const btnGuardarStock = document.getElementById('btn-guardar-modal-stock');
-    
-    const modalBarcode = document.getElementById('modal-barcode');
-    const btnCerrarBarcode = document.getElementById('btn-cerrar-barcode');
-    const btnDescargarBarcode = document.getElementById('btn-descargar-barcode');
 
     const pantallaCargaHistorica = document.getElementById('pantalla-carga-historica');
 
@@ -128,7 +109,6 @@ export function setupPOS(app) {
     let carritoActual = [];
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
-    let currentBarcodeProduct = null;
     let totalVentaActual = 0;
     let saldoTurnoAnteriorDetectado = 0;
 
@@ -138,6 +118,14 @@ export function setupPOS(app) {
         ventasCollection,
         getCurrentUser: () => currentUser,
         getUserName: () => userName
+    });
+
+    const inventory = setupPOSInventory({
+        db,
+        auditoriaCollection,
+        getCurrentUser: () => currentUser,
+        getUserName: () => userName,
+        getGlobalMargin: () => margenGlobal
     });
 
     // Funciones Helper compartidas
