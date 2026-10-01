@@ -3,13 +3,11 @@ async function obtenerSesionAutorizada() {
         const [
             firebaseAppModule,
             firebaseAuthModule,
-            firebaseFirestoreModule,
-            configModule
+            firebaseFirestoreModule
         ] = await Promise.all([
             import("https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"),
             import("https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"),
-            import("https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"),
-            import("./firebase-config.js")
+            import("https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js")
         ]);
 
         const { getApps, getApp } = firebaseAppModule;
