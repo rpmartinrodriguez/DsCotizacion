@@ -712,3 +712,195 @@ body.ds-login {
     opacity: .91;
   }
 }
+
+
+/* POS / Mostrador v2 */
+body.ds-pos .ds-pos-main {
+  padding: 88px 16px 96px;
+  box-sizing: border-box;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+body.ds-pos .ds-pos-main > div:first-child {
+  margin-bottom: 20px !important;
+}
+
+body.ds-pos .ds-pos-main > div:first-child h1 {
+  color: var(--ds-text) !important;
+  font-size: clamp(1.75rem, 4vw, 2.35rem) !important;
+  letter-spacing: -.04em;
+}
+
+body.ds-pos .operador-badge {
+  background: var(--ds-surface) !important;
+  color: var(--ds-muted) !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-size: .82rem !important;
+  font-weight: 700 !important;
+  padding: 7px 11px !important;
+}
+
+body.ds-pos .card {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  box-shadow: var(--ds-shadow-soft);
+}
+
+body.ds-pos .card__title {
+  color: var(--ds-text);
+  letter-spacing: -.02em;
+}
+
+body.ds-pos .pos-grid {
+  gap: 16px;
+}
+
+body.ds-pos .productos-grid {
+  grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+  gap: 10px;
+}
+
+body.ds-pos .producto-card {
+  min-height: 132px;
+  padding: 14px 10px;
+  border: 1px solid var(--ds-border);
+  border-radius: 14px;
+  box-shadow: none;
+  background: #fff;
+}
+
+body.ds-pos .producto-card:hover {
+  border-color: #e5b4ca;
+  box-shadow: 0 9px 24px rgba(52,38,48,.07);
+  transform: translateY(-1px);
+}
+
+body.ds-pos .prod-nombre {
+  color: var(--ds-text);
+  font-size: .88rem;
+}
+
+body.ds-pos .prod-precio {
+  color: var(--ds-primary-strong);
+  font-size: 1.12rem;
+}
+
+body.ds-pos .prod-stock {
+  background: #f6f3f5;
+  color: var(--ds-muted);
+  font-weight: 650;
+}
+
+body.ds-pos #buscador-pos,
+body.ds-pos #buscador-inventario {
+  min-height: 48px;
+  border-radius: 12px !important;
+  border: 1px solid var(--ds-border) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  padding-left: 14px !important;
+}
+
+body.ds-pos #buscador-pos:focus,
+body.ds-pos #buscador-inventario:focus {
+  outline: 0;
+  border-color: #dba2bc !important;
+  box-shadow: 0 0 0 4px rgba(217,86,145,.08) !important;
+}
+
+body.ds-pos #pantalla-pos > .card:last-child {
+  position: relative;
+}
+
+body.ds-pos #pantalla-pos > .card:last-child > div[style*="background: #fdf2f8"] {
+  background: var(--ds-primary-soft) !important;
+  border-color: #efd0df !important;
+  border-radius: 14px !important;
+}
+
+body.ds-pos #pos-total-monto {
+  color: var(--ds-primary-strong) !important;
+  letter-spacing: -.05em;
+}
+
+body.ds-pos #btn-cobrar {
+  background: var(--ds-primary) !important;
+  border-radius: 12px !important;
+  text-transform: none !important;
+  box-shadow: 0 8px 20px rgba(217,86,145,.18);
+}
+
+body.ds-pos .btn-primary,
+body.ds-pos .btn-secondary {
+  border-radius: 11px;
+  box-shadow: none;
+}
+
+body.ds-pos .btn-secondary {
+  background: #fff;
+  border: 1px solid var(--ds-border);
+}
+
+body.ds-pos .cart-item {
+  border-bottom: 1px solid var(--ds-border);
+}
+
+body.ds-pos .cart-item-total {
+  color: var(--ds-primary-strong);
+}
+
+body.ds-pos .payment-methods {
+  gap: 10px;
+}
+
+body.ds-pos .btn-payment {
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+body.ds-pos .btn-payment.selected {
+  border-color: #d890b1;
+  background: var(--ds-primary-soft);
+  color: var(--ds-primary-strong);
+  box-shadow: none;
+}
+
+@media (min-width: 992px) {
+  body.ds-pos .pos-grid {
+    grid-template-columns: minmax(0, 2.15fr) minmax(330px, .85fr);
+    align-items: start;
+  }
+
+  body.ds-pos #pantalla-pos > .card:last-child {
+    position: sticky;
+    top: 86px;
+    max-height: calc(100vh - 110px);
+    overflow: hidden;
+  }
+
+  body.ds-pos .cart-lista {
+    max-height: calc(100vh - 360px);
+  }
+}
+
+@media (min-width: 1024px) {
+  body.ds-pos .ds-pos-main {
+    max-width: none;
+    padding: 96px 28px 40px calc(var(--ds-sidebar) + 28px);
+  }
+}
+
+@media (max-width: 700px) {
+  body.ds-pos .productos-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  body.ds-pos #pantalla-pos > .card:last-child {
+    padding-bottom: 18px;
+  }
+}
