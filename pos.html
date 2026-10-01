@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mostrador - Dulce App</title>
     
     <link rel="stylesheet" href="css/style.css">
@@ -97,8 +97,9 @@
             gap: 0.5rem;
         }
     </style>
+    <link rel="stylesheet" href="css/app-v2.css">
 </head>
-<body class="rol-empleado">
+<body class="rol-empleado ds-app ds-pos">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -115,7 +116,7 @@
         <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
+        <main class="ds-pos-main">
             <!-- TÍTULO Y NOMBRE DEL OPERADOR -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
@@ -596,6 +597,7 @@
             console.error("Error al inicializar Mostrador:", error); 
         }
     </script>
+    <script src="js/shell-v2.js?v=2" defer></script>
     <script src="js/menu.js?v=19" defer></script>
 </body>
 </html>
