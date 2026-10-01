@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión de Usuarios - Dulce App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Usuarios y permisos · Dulce Sall Admin</title>
     
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff96c5">
 
@@ -14,7 +15,7 @@
     <!-- ========================================== -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <!-- ========================================== -->
 
@@ -35,7 +36,7 @@
         .permiso-item label { font-size: 0.95rem; cursor: pointer; color: #334155; font-weight: 500;}
     </style>
 </head>
-<body>
+<body class="ds-app ds-content ds-users">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -52,14 +53,17 @@
         <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <main class="ds-content-main"><div class="ds-content-wrap">
+            <section class="ds-content-head">
                 <div>
-                    <h1 class="page-title">Gestión de Usuarios</h1>
-                    <p style="color: #64748b; font-size: 0.95rem; margin: 0;">Administrá quién tiene acceso a cada módulo de la aplicación.</p>
+                    <p class="ds-eyebrow">Configuración</p>
+                    <h1 class="page-title">Usuarios y permisos</h1>
+                    <p>Administrá quién puede ingresar y qué módulos puede utilizar cada persona.</p>
                 </div>
-                <button id="btn-nuevo-usuario" class="btn-primary" style="width: auto; background: #0ea5e9; border-color: #0ea5e9;">➕ Nuevo Empleado</button>
-            </div>
+                <div class="ds-content-actions">
+                    <button id="btn-nuevo-usuario" class="ds-action-primary">+ Nuevo empleado</button>
+                </div>
+            </section>
 
             <div class="card">
                 <div style="overflow-x: auto;">
@@ -78,6 +82,7 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
             </div>
         </main>
     </div>
@@ -203,6 +208,7 @@
             console.error("Error inicializando app de usuarios:", e); 
         }
     </script>
-    <script src="js/menu.js?v=13" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
 </body>
 </html>
