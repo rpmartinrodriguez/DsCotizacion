@@ -1,6 +1,7 @@
 import {
     getFirestore, collection, getDocs, query
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { calculateRecipeUnitCost } from "./core/pricing.js";
 
 export function setupPrecios(app) {
     const db = getFirestore(app);
@@ -40,21 +41,7 @@ export function setupPrecios(app) {
     };
 
     const calcularCostoUnitarioReceta = (receta, materiasPrimasMap) => {
-        let costoTotal = 0;
-        if (!receta.ingredientes) return 0;
-
-        receta.ingredientes.forEach((ing) => {
-            const mp = materiasPrimasMap.get(ing.idMateriaPrima);
-
-            if (mp && mp.lotes && mp.lotes.length > 0) {
-                const ultimoLote = [...mp.lotes]
-                    .sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds)[0];
-
-                costoTotal += (ultimoLote.costoUnitario || 0) * ing.cantidad;
-            }
-        });
-
-        return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
+        return calculateRecipeUnitCost(receta, materiasPrimasMap);
     };
 
     const renderizarListaPrecios = (recetas) => {
