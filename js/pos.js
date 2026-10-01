@@ -5,6 +5,7 @@ import {
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { createAuthorization } from "./core/authorization.js";
 import { formatCurrency as formatMoneda, formatTimestampDateTime, dateToYMD } from "./core/format.js";
+import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/pricing.js";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -158,25 +159,23 @@ export function setupPOS(app) {
     // CÁLCULO DE COSTOS
     // ==========================================
     const obtenerCostoBase = (receta) => {
-        if (receta.costoPorcion && receta.costoPorcion > 0) return receta.costoPorcion;
-        let costoTotal = 0;
-        if (!receta.ingredientes) return 0;
-        receta.ingredientes.forEach(ing => {
-            const mp = materiasPrimasMap.get(ing.idMateriaPrima);
-            if (mp && mp.lotes && mp.lotes.length > 0) {
-                const ultimoLote = [...mp.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds)[0];
-                costoTotal += (ultimoLote.costoUnitario || 0) * ing.cantidad;
-            }
-        });
-        return receta.rendimiento > 0 ? costoTotal / receta.rendimiento : costoTotal;
+        return calculateRecipeUnitCost(receta, materiasPrimasMap, { preferStoredUnitCost: true });
     };
 
     const calcularPrecioVenta = (prod) => {
-        const costo = prod.costoBaseCalculado || 0;
-        const tieneMargenIndiv = prod.margenIndividual !== undefined && prod.margenIndividual !== null && prod.margenIndividual !== '';
-        const margenAplicado = tieneMargenIndiv ? parseFloat(prod.margenIndividual) : margenGlobal;
-        const precioCrudo = costo * (1 + (margenAplicado / 100));
-        return Math.round(precioCrudo / 10) * 10;
+        const tieneMargenIndiv = prod.margenIndividual !== undefined &&
+            prod.margenIndividual !== null &&
+            prod.margenIndividual !== '';
+
+        const margenAplicado = tieneMargenIndiv
+            ? parseFloat(prod.margenIndividual)
+            : margenGlobal;
+
+        return calculateRoundedSalePrice(
+            prod.costoBaseCalculado || 0,
+            margenAplicado,
+            { roundTo: 10 }
+        );
     };
 
     // ==========================================
