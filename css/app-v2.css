@@ -2166,3 +2166,117 @@ body.ds-history .historial-card__detalle ul {
     margin-left: 0;
   }
 }
+
+
+/* ---------- Modal polish: Cajas / Historial ---------- */
+.ds-cash .modal-content,
+.ds-history .modal-content {
+  border: 1px solid var(--ds-border);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 28px 90px rgba(36,24,33,.24);
+  padding: 20px;
+}
+
+.ds-cash .modal-content .card__title,
+.ds-history .modal-content .card__title {
+  margin: 0 0 16px !important;
+  color: var(--ds-text) !important;
+  border-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 1.15rem;
+  letter-spacing: -.02em;
+}
+
+.ds-cash .modal-content .form-group label,
+.ds-history .modal-content .form-group label {
+  display: block;
+  margin-bottom: 6px;
+  color: #665d67 !important;
+  font-size: .78rem;
+  font-weight: 750 !important;
+}
+
+.ds-cash .modal-content input,
+.ds-cash .modal-content select,
+.ds-history .modal-content input,
+.ds-history .modal-content select,
+.ds-history .modal-content textarea {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 11px !important;
+  padding: 0 12px !important;
+  background: #fff;
+  color: var(--ds-text) !important;
+  font: inherit;
+  box-shadow: none !important;
+}
+
+.ds-cash .modal-content input:focus,
+.ds-cash .modal-content select:focus,
+.ds-history .modal-content input:focus,
+.ds-history .modal-content select:focus,
+.ds-history .modal-content textarea:focus {
+  outline: 0;
+  border-color: #d9a0ba !important;
+  box-shadow: 0 0 0 4px rgba(217,86,145,.08) !important;
+}
+
+.ds-cash .modal-actions,
+.ds-history .modal-actions {
+  display: flex;
+  gap: 9px;
+  justify-content: flex-end !important;
+  flex-wrap: wrap;
+  margin-top: 18px !important;
+}
+
+.ds-cash .modal-actions button,
+.ds-history .modal-actions button {
+  width: auto !important;
+  min-height: 42px;
+  padding: 0 14px !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+
+.ds-history .mensaje-agradecimiento {
+  white-space: pre-wrap;
+  padding: 14px;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  background: #faf9fa;
+  color: #514851;
+  font-family: inherit;
+  line-height: 1.55;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ds-history #confirm-venta-modal-overlay .modal-content {
+  max-width: 440px;
+}
+
+.ds-history #confirm-delete-modal-overlay.modal-overlay--danger .modal-content {
+  border-color: #efd4d6;
+}
+
+.ds-cash #modal-editar-ticket .modal-content > div:first-child,
+.ds-cash #modal-editar-caja .modal-content > div:first-child {
+  border-bottom-color: var(--ds-border) !important;
+}
+
+.ds-cash #btn-eliminar-ticket {
+  border-color: #efd6d8 !important;
+  color: #b7434b !important;
+  background: #fff8f8 !important;
+}
+
+.ds-cash #btn-guardar-edit-caja,
+.ds-cash #btn-guardar-edit-ticket {
+  background: var(--ds-primary) !important;
+  border-color: var(--ds-primary) !important;
+  color: #fff !important;
+}
