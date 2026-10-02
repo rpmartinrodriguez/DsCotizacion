@@ -2280,3 +2280,31 @@ body.ds-history .historial-card__detalle ul {
   border-color: var(--ds-primary) !important;
   color: #fff !important;
 }
+
+
+/* Login left brand — original PNG, white keyed to transparency at render time */
+@media (min-width: 900px) {
+  .ds-login-visual {
+    justify-content: space-between;
+    align-items: stretch;
+  }
+
+  .ds-login-visual-brand {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 18px 0 28px;
+  }
+
+  .ds-login-visual-logo {
+    display: block;
+    width: min(72%, 420px);
+    height: auto;
+    object-fit: contain;
+    filter: url(#ds-remove-white);
+  }
+}
