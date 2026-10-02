@@ -815,7 +815,7 @@ export function setupCajas(app) {
             resFacturadoMp.textContent = formatMoneda(acumuladoFacturadoMP);
             resPendienteMp.textContent = formatMoneda(pendienteFacturar);
 
-            resultadoFacturacion.style.display = 'block';
+            resultadoFacturacion.style.display = 'grid';
         });
     }
 
