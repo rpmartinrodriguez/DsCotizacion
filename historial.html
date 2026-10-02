@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Historial de Presupuestos - Dulce App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Historial · Dulce Sall Admin</title>
     
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff96c5">
 
@@ -14,11 +15,11 @@
     <!-- ========================================== -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <!-- ========================================== -->
 </head>
-<body>
+<body class="ds-app ds-content ds-history">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -40,16 +41,46 @@
         <nav class="nav-menu" id="nav-menu"></nav>        
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
+        <main class="ds-content-main"><div class="ds-content-wrap">
+                <section class="ds-content-head"><div><p class="ds-eyebrow">Administración</p><h1>Historial</h1><p>Consultá presupuestos guardados, ventas confirmadas y fechas de entrega.</p></div></section>
+            <section class="ds-history-summary" aria-label="Resumen del historial">
+                <article class="ds-history-summary-card">
+                    <span>Registros</span>
+                    <strong id="hist-kpi-total">0</strong>
+                </article>
+                <article class="ds-history-summary-card ds-history-summary-card--sales">
+                    <span>Ventas confirmadas</span>
+                    <strong id="hist-kpi-ventas">0</strong>
+                </article>
+                <article class="ds-history-summary-card ds-history-summary-card--pending">
+                    <span>Pendientes</span>
+                    <strong id="hist-kpi-pendientes">0</strong>
+                </article>
+                <article class="ds-history-summary-card ds-history-summary-card--sales">
+                    <span>Monto vendido</span>
+                    <strong id="hist-kpi-monto">$0,00</strong>
+                </article>
+            </section>
+
             <section class="card">
-                <h2 class="card__title">Presupuestos Guardados</h2>
-                <div class="buscador-container">
-                    <input type="search" id="buscador-historial" placeholder="🔍 Buscar por Torta o Cliente...">
+                <div class="ds-panel-head">
+                    <div>
+                        <h2 class="ds-panel-title">Presupuestos y ventas</h2>
+                        <p class="ds-panel-subtitle">Buscá por producto o cliente y accedé al detalle de cada operación.</p>
+                    </div>
                 </div>
+
+                <div class="ds-history-toolbar">
+                    <div class="buscador-container">
+                        <input type="search" id="buscador-historial" placeholder="Buscar por producto o cliente…">
+                    </div>
+                </div>
+
                 <div id="historial-container">
-                    <p>Cargando historial...</p>
+                    <p>Cargando historial…</p>
                 </div>
             </section>
+            </div>
         </main>
     </div>
     
@@ -103,7 +134,8 @@
             setupHistorial(app);
         } catch (error) { console.error(error); }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });

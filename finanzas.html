@@ -2,74 +2,77 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Reporte Financiero - Dulce App</title>
-    
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff96c5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Finanzas · Dulce Sall Admin</title>
 
-    <!-- ========================================== -->
-    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
-    <!-- ========================================== -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <!-- ========================================== -->
 </head>
-<body>
+<body class="ds-app ds-content ds-finance">
     <div class="main-container">
-        <!-- HEADER -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+                <img src="assets/logo.png" alt="Dulce Sall" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DINÁMICO (Inyectado por menu.js) -->
         <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <section class="card">
-                <h2 class="card__title">Estado de Resultados</h2>
-                <div class="form-group">
-                    <label for="filtro-mes-finanzas">Ver Reporte para el Mes de:</label>
-                    <select id="filtro-mes-finanzas">
-                        <option value="todos">Todos los Tiempos</option>
-                    </select>
-                </div>
-            </section>
-            
-            <section class="card">
-                <div class="reporte-financiero" id="reporte-financiero-container">
-                    <p>Calculando reporte...</p>
-                </div>
-            </section>
+        <main class="ds-finance-main">
+            <div class="ds-finance-shell">
+                <section class="ds-content-head">
+                    <div>
+                        <p class="ds-eyebrow">Administración</p>
+                        <h1>Finanzas</h1>
+                        <p>Ingresos, costos de producción, compras de stock y resultado estimado por período.</p>
+                    </div>
+                    <div class="ds-content-actions">
+                        <div class="ds-select-wrap">
+                            <select id="filtro-mes-finanzas" class="ds-select">
+                                <option value="todos">Todos los tiempos</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card ds-finance-report">
+                    <div class="reporte-financiero" id="reporte-financiero-container">
+                        <p>Calculando reporte…</p>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
-    <!-- SCRIPTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupFinanzas } from './js/finanzas.js';
+
         try {
             const app = initializeApp(firebaseConfig);
             setupFinanzas(app);
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+        }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
         }
     </script>
 </body>

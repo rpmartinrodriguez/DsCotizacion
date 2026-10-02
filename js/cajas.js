@@ -1,9 +1,21 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, getDocs, where, updateDoc, doc, Timestamp, deleteDoc, runTransaction 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { createAuthorization } from "./core/authorization.js";
+import {
+    formatCurrency as formatMoneda,
+    formatTimestampDateTime,
+    formatTimestampShortDate as formatearFechaCorta,
+    timestampToMonthKey as formatearMesAnio,
+    monthKeyToLabel as nombreMes,
+    timestampToLocalDateTimeValue as toLocalDatetimeString
+} from "./core/format.js";
+import { cashMetricsInfo as infoDiccionario } from "./data/cash-metrics-info.js";
+import { escapeHtml, escapeAttribute } from "./core/html.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
+    const authorization = createAuthorization(app);
     const cajasCollection = collection(db, 'cajas');
     const ventasCollection = collection(db, 'ventasMostrador');
     const auditoriaCollection = collection(db, 'auditoriaMostrador');
@@ -70,111 +82,12 @@ export function setupCajas(app) {
     let chartVentasInstancia = null;
     let chartBarHorasInstancia = null;
 
-    const MASTER_PASS = "Lautaro2026";
+    const usuarioPuedeAdministrar = authorization.canAdminister;
 
     // ==========================================
     // 1. DICCIONARIO PARA LA (i) DE TODOS LOS INDICADORES
     // ==========================================
-    const infoDiccionario = {
-        "media": {
-            titulo: "Media (Ingreso Diario Promedio)",
-            desc: "Suma total de la facturación dividida la cantidad de cajas registradas.",
-            sirve: "Saber el ingreso base que genera un día de trabajo normal.",
-            ej: "Si en 10 días se venden $300.000, la media es $30.000 diarios.",
-            dec: "Si baja constantemente, indica que es momento de armar campañas o revisar precios."
-        },
-        "mediana": {
-            titulo: "Mediana (El valor central real)",
-            desc: "El punto exacto del medio si ordenamos los días del de menor venta al de mayor venta.",
-            sirve: "Ignora picos de suerte aislados para darte el valor diario más real de tu mostrador.",
-            ej: "Días de $4.000, $5.000 y un evento de $80.000. El promedio engaña, pero la mediana te da $5.000.",
-            dec: "Si está muy abajo de la media, significa que dependés de fechas especiales y necesitás mover los días de semana."
-        },
-        "ticket_promedio": {
-            titulo: "Ticket Promedio (Gasto por Cliente)",
-            desc: "Facturación total dividida la cantidad de tickets cobrados.",
-            sirve: "Mide qué tan efectivo es el vendedor sugiriendo agregados a la compra.",
-            ej: "Si 5 clientes gastan $15.000 en total, cada uno dejó en promedio $3.000.",
-            dec: "Si es bajo, entrená al personal para ofrecer café, combos o complementos al despachar una porción."
-        },
-        "vida_util": {
-            titulo: "Días de Retención y Vida Útil Promedio",
-            desc: "Mide el tiempo promedio (en días) que pasa una porción desde que el repostero la elabora hasta que el ticket se cobra.",
-            sirve: "Controlar que la mercadería rote rápido y verificar que se cumpla la regla PEPS (Primero en Entrar, Primero en Salir).",
-            ej: "Un promedio de 1.2 días indica una vitrina de altísima rotación y frescura.",
-            dec: "Si sube a más de 3 días, corrés riesgo de vencimientos. Reducí el volumen de elaboración de esa línea."
-        },
-        "desperdicio": {
-            titulo: "Nivel de Desperdicio Real",
-            desc: "Porcentaje de porciones tiradas por descarte o vencimiento sobre el volumen total producido.",
-            sirve: "Detectar pérdidas directas de materia prima.",
-            ej: "Hacés 20 tartas, vendés 18 y tirás 2. El desperdicio es del 10%.",
-            dec: "Si supera el 5%, la comunicación entre producción y mostrador está fallando. Ajustá las cantidades diarias."
-        },
-        "moda": {
-            titulo: "Productos Estrella (Moda)",
-            desc: "Ranking de los artículos que más unidades venden en el mostrador.",
-            sirve: "Asegurar el stock de los productos preferidos por tu comunidad.",
-            ej: "Si vendés 100 Rogel y 10 Lemon Pie, el Rogel es la moda absoluta.",
-            dec: "Tienen prioridad en vitrina, cartelería y exhibición de fotos en redes."
-        },
-        "horas_pico": {
-            titulo: "Horas Pico de Venta (Matriz Temporal)",
-            desc: "Histograma que acumula los montos facturados según la hora exacta del ticket.",
-            sirve: "Saber a qué hora el local se llena para organizar los turnos del personal.",
-            ej: "Verás barras gigantes entre las 16:30hs y las 19:00hs.",
-            dec: "Asegurá tener la vitrina 100% armada e impecable media hora antes del pico de ventas."
-        },
-        "abc": {
-            titulo: "Clasificación ABC (Regla de Pareto)",
-            desc: "Clasifica tus productos según los ingresos totales: A (80% del dinero), B (15%), C (Solo el 5%).",
-            sirve: "No perder tiempo controlando stock de cosas que no mueven la aguja del negocio.",
-            ej: "Clase A: Tortas completas. Clase B: Porciones y cafetería. Clase C: Velitas y cajas vacías.",
-            dec: "Foco total de control diario en los Clase A. El resto se controla de forma mensual."
-        },
-        "margen_neto_prod": {
-            titulo: "Margen de Utilidad Neto por Producto",
-            desc: "Muestra la ganancia limpia en pesos y porcentaje de cada artículo, restando el costo de receta a la facturación.",
-            sirve: "Identificar qué recetas te dejan más ganancias reales y cuáles dan pérdidas.",
-            ej: "Una torta que se vende a $5.000 con costo de insumos de $2.000 te deja $3.000 netos (60% de margen).",
-            dec: "Empujá las ventas del producto con mayor margen porcentual y no solo el que se vende más caro."
-        },
-        "produccion_optima": {
-            titulo: "Volumen de Producción Óptimo (Pronóstico)",
-            desc: "Analiza el comportamiento histórico exacto del día de la semana actual para sugerir qué cantidad preparar para mañana.",
-            sirve: "Producir de forma inteligente para no quedarte sin stock un sábado y que no te sobre mercadería un lunes.",
-            ej: "Sabiendo que los sábados se vende el triple de Rogel que los martes, el sistema eleva automáticamente el pronóstico.",
-            dec: "Mandar a la cocina la lista sugerida para mitigar el descarte y maximizar la facturación neta."
-        },
-        "rotacion_inventario": {
-            titulo: "Índice de Rotación del Inventario",
-            desc: "Velocidad diaria de vaciado de la vitrina (Piezas promedio vendidas por día).",
-            sirve: "Monitorear el flujo constante de mercadería fresca.",
-            ej: "Una rotación de 45 piezas/día te indica un mostrador sano y activo.",
-            dec: "Si cae bruscamente, reduce el stock exhibido para evitar la sensación de 'mercadería estancada'."
-        },
-        "ventas_diarias": {
-            titulo: "Evolución de Ventas",
-            desc: "Línea de tendencia de facturación de los últimos 15 días comerciales.",
-            sirve: "Ver el rumbo del negocio en el corto plazo.",
-            ej: "Detectar si la facturación sube o baja respecto a las semanas previas.",
-            dec: "Si la línea tiene tendencia hacia abajo durante más de una semana, activa promociones o alertas."
-        },
-        "estrategicos": {
-            titulo: "Métricas Estratégicas Generales",
-            desc: "Monitorea la velocidad del mostrador y el crecimiento inter-período.",
-            sirve: "Garantizar la salud del negocio a largo plazo.",
-            ej: "Si vendías a 100 clientes y ahora a 120, tu crecimiento es del +20%.",
-            dec: "Analizá el Margen Promedio: si es bajo, es hora de remarcar precios porque los costos te están ganando."
-        },
-        "dispersion": {
-            titulo: "Medidas de Dispersión",
-            desc: "Miden qué tan caóticas o estables son tus ventas usando Varianza y Desviación Estándar.",
-            sirve: "Para saber qué tan predecible es tu negocio de cara al futuro.",
-            ej: "Un local estable vende $10.000 siempre. Uno inestable vende $2.000 un lunes y $35.000 un sábado.",
-            dec: "Si la desviación estándar es muy alta, tu caja es volátil. Mantené un colchón de fondo inicial más grande."
-        }
-    };
+
 
     document.addEventListener('click', (e) => {
         const icon = e.target.closest('.info-icon');
@@ -233,41 +146,11 @@ export function setupCajas(app) {
         btnCargarStats.addEventListener('click', generarDashboard);
     }
 
-    // Helpers de Formato
-    function formatMoneda(val) {
-        return `$${(val || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }
-    function formatearFecha(timestamp) {
+    // Helpers de Formato compartidos
+    const formatearFecha = (timestamp) => {
         if (!timestamp) return 'Fecha desconocida';
-        const date = timestamp.toDate();
-        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
-    }
-    function formatearFechaCorta(timestamp) {
-        if (!timestamp) return '';
-        const date = timestamp.toDate();
-        return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-    }
-    function formatearMesAnio(timestamp) {
-        if (!timestamp) return null;
-        const date = timestamp.toDate();
-        const mes = (date.getMonth() + 1).toString().padStart(2, '0');
-        const anio = date.getFullYear();
-        return `${anio}-${mes}`; 
-    }
-    function nombreMes(mesAnio) {
-        const [anio, mes] = mesAnio.split('-');
-        const fecha = new Date(anio, parseInt(mes) - 1, 1);
-        const nombre = fecha.toLocaleDateString('es-AR', { month: 'long' });
-        return nombre.charAt(0).toUpperCase() + nombre.slice(1) + ' ' + anio;
-    }
-    
-    // Formato para los input type="datetime-local"
-    function toLocalDatetimeString(timestamp) {
-        if (!timestamp) return '';
-        const d = timestamp.toDate();
-        const pad = (n) => n.toString().padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    }
+        return formatTimestampDateTime(timestamp);
+    };
 
     // ==========================================
     // 3. RENDERIZAR LA LISTA DE CAJAS
@@ -303,16 +186,19 @@ export function setupCajas(app) {
             div.className = 'categoria-acordeon'; 
             div.style.marginBottom = '1.5rem';
 
+            const safeCajaId = escapeAttribute(caja.id);
+            const safeUsuario = escapeHtml(caja.usuarioNombre || 'Usuario');
+
             div.innerHTML = `
-                <div class="categoria-acordeon__header caja-header" data-id="${caja.id}">
+                <div class="categoria-acordeon__header caja-header" data-id="${safeCajaId}">
                     <div>
                         <div style="font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
                             Apertura: ${formatearFecha(caja.fechaApertura)}
-                            <button class="btn-editar-caja-datos" data-id="${caja.id}" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #8b5cf6;" title="Editar Fechas/Fondo">✏️</button>
-                            <button class="btn-eliminar-caja" data-id="${caja.id}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Eliminar caja (Ocultar)">🗑️</button>
+                            <button class="btn-editar-caja-datos" data-id="${safeCajaId}" style="background: none; border: none; font-size: 1.1rem; cursor: pointer; color: #8b5cf6;" title="Editar Fechas/Fondo">✏️</button>
+                            <button class="btn-eliminar-caja" data-id="${safeCajaId}" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #ef4444;" title="Eliminar caja (Ocultar)">🗑️</button>
                         </div>
                         <div style="font-size: 0.85rem; color: var(--text-light); font-weight: normal; margin-top: 0.2rem;">
-                            👤 ${caja.usuarioNombre || 'Usuario'}
+                            👤 ${safeUsuario}
                             ${caja.fechaCierre ? ` | Cierre: ${formatearFecha(caja.fechaCierre)}` : ''}
                         </div>
                     </div>
@@ -337,7 +223,7 @@ export function setupCajas(app) {
                                 <span>Ventas MP</span>
                                 <div>
                                     <span style="color: var(--success-color); display: block; margin-bottom: 0.3rem;">${formatMoneda(mp)}</span>
-                                    <button class="btn-facturado ${btnFacturadoClass}" data-id="${caja.id}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
+                                    <button class="btn-facturado ${btnFacturadoClass}" data-id="${safeCajaId}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
                                         ${btnFacturadoText}
                                     </button>
                                 </div>
@@ -351,9 +237,9 @@ export function setupCajas(app) {
                         <div class="ticket-list">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                                 <h3 style="font-size: 1rem; margin: 0;">Detalle de Movimientos</h3>
-                                <button class="btn-resumen-productos btn-secondary" data-id="${caja.id}" style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.85rem; border-color: #0ea5e9; color: #0ea5e9;">📊 Ver Resumen de Productos</button>
+                                <button class="btn-resumen-productos btn-secondary" data-id="${safeCajaId}" style="width: auto; padding: 0.3rem 0.8rem; font-size: 0.85rem; border-color: #0ea5e9; color: #0ea5e9;">📊 Ver Resumen de Productos</button>
                             </div>
-                            <div id="tickets-${caja.id}">
+                            <div id="tickets-${safeCajaId}">
                                 <p class="text-light" style="font-size: 0.9rem;">Cargando tickets...</p>
                             </div>
                         </div>
@@ -433,15 +319,19 @@ export function setupCajas(app) {
             container.innerHTML = '';
             ventas.forEach(venta => {
                 const itemsTexto = (venta.items || [])
-                    .map(item => `${item.cantidad}x ${item.nombre}`)
+                    .map(item => `${item.cantidad}x ${escapeHtml(item.nombre)}`)
                     .join(', ');
 
                 let tagMP = '';
                 if (venta.metodoPago === 'Ambos') {
                     tagMP = `<span class="metodo-pago-tag">Efvo: ${formatMoneda(venta.pagoEfectivo)} | MP: ${formatMoneda(venta.pagoMercadoPago)}</span>`;
                 } else {
-                    tagMP = `<span class="metodo-pago-tag">${venta.metodoPago}</span>`;
+                    tagMP = `<span class="metodo-pago-tag">${escapeHtml(venta.metodoPago || '')}</span>`;
                 }
+
+                const safeVentaId = escapeAttribute(venta.id);
+                const safeCajaId = escapeAttribute(cajaId);
+                const safeMetodoAttr = escapeAttribute(venta.metodoPago || '');
 
                 const ticketDiv = document.createElement('div');
                 ticketDiv.className = 'ticket-item';
@@ -452,7 +342,7 @@ export function setupCajas(app) {
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="ticket-monto">${formatMoneda(venta.total)}</span>
-                        <button class="btn-editar-ticket-individual" data-id="${venta.id}" data-caja="${cajaId}" data-total="${venta.total}" data-metodo="${venta.metodoPago}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>
+                        <button class="btn-editar-ticket-individual" data-id="${safeVentaId}" data-caja="${safeCajaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>
                     </div>
                 `;
                 container.appendChild(ticketDiv);
@@ -499,7 +389,7 @@ export function setupCajas(app) {
             arrProductos.forEach((prod, idx) => {
                 const li = document.createElement('li');
                 li.innerHTML = `
-                    <span><strong>#${idx + 1}</strong> ${prod.nombre}</span>
+                    <span><strong>#${idx + 1}</strong> ${escapeHtml(prod.nombre)}</span>
                     <span style="color:#0ea5e9; font-weight:bold;">${prod.cantidad} u.</span>
                 `;
                 ulResumenProductos.appendChild(li);
@@ -522,9 +412,8 @@ export function setupCajas(app) {
             const btn = e.target.closest('.btn-eliminar-caja');
             const cajaId = btn.dataset.id;
             
-            const pass = prompt("Atención: Vas a ocultar esta caja de las estadísticas.\nIngresá la clave de Administrador para confirmar:");
-            if (pass !== MASTER_PASS) {
-                if(pass !== null) alert("Clave incorrecta. Acción cancelada.");
+            if (!(await usuarioPuedeAdministrar())) {
+                alert("Tu usuario no tiene permisos para eliminar una caja.");
                 return;
             }
 
@@ -545,9 +434,8 @@ export function setupCajas(app) {
             const caja = todasLasCajas.find(c => c.id === cajaId);
             if(!caja) return;
 
-            const pass = prompt("Vas a modificar datos sensibles de la caja.\nIngresá la clave de Administrador:");
-            if (pass !== MASTER_PASS) {
-                if(pass !== null) alert("Clave incorrecta. Acción cancelada.");
+            if (!(await usuarioPuedeAdministrar())) {
+                alert("Tu usuario no tiene permisos para modificar datos sensibles de caja.");
                 return;
             }
 
@@ -571,9 +459,8 @@ export function setupCajas(app) {
         if (e.target.closest('.btn-editar-ticket-individual')) {
             const btn = e.target.closest('.btn-editar-ticket-individual');
             
-            const pass = prompt("Modificar un movimiento afectará la contabilidad.\nIngresá la clave de Administrador:");
-            if (pass !== MASTER_PASS) {
-                if(pass !== null) alert("Clave incorrecta.");
+            if (!(await usuarioPuedeAdministrar())) {
+                alert("Tu usuario no tiene permisos para modificar movimientos.");
                 return;
             }
 
@@ -839,6 +726,8 @@ export function setupCajas(app) {
             const efvo = caja.totalEfectivo || 0;
             const mp = caja.totalMercadoPago || 0;
             const total = efvo + mp;
+            const safeCajaId = escapeAttribute(caja.id);
+            const safeUsuario = escapeHtml(caja.usuarioNombre || 'Sistema');
 
             const div = document.createElement('div');
             div.style.background = 'white';
@@ -853,9 +742,9 @@ export function setupCajas(app) {
             div.innerHTML = `
                 <div>
                     <strong style="color: #475569;">${formatearFecha(caja.fechaApertura)}</strong>
-                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">👤 ${caja.usuarioNombre || 'Sistema'} | 💰 Total: ${formatMoneda(total)}</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.2rem;">👤 ${safeUsuario} | 💰 Total: ${formatMoneda(total)}</div>
                 </div>
-                <button class="btn-restaurar-caja btn-primary" data-id="${caja.id}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem; background: #10b981; border-color: #10b981;">♻️ Restaurar</button>
+                <button class="btn-restaurar-caja btn-primary" data-id="${safeCajaId}" style="width: auto; padding: 0.5rem 1rem; font-size: 0.9rem; background: #10b981; border-color: #10b981;">♻️ Restaurar</button>
             `;
             listaCajasPapelera.appendChild(div);
         });
@@ -867,9 +756,8 @@ export function setupCajas(app) {
                 const btn = e.target.closest('.btn-restaurar-caja');
                 const cajaId = btn.dataset.id;
 
-                const pass = prompt("Se va a restaurar la caja y sus ventas volverán a sumar en las estadísticas.\nIngresá la clave de Administrador:");
-                if (pass !== MASTER_PASS) {
-                    if(pass !== null) alert("Clave incorrecta. No se restauró la caja.");
+                if (!(await usuarioPuedeAdministrar())) {
+                    alert("Tu usuario no tiene permisos para restaurar cajas.");
                     return;
                 }
 
@@ -927,7 +815,7 @@ export function setupCajas(app) {
             resFacturadoMp.textContent = formatMoneda(acumuladoFacturadoMP);
             resPendienteMp.textContent = formatMoneda(pendienteFacturar);
 
-            resultadoFacturacion.style.display = 'block';
+            resultadoFacturacion.style.display = 'grid';
         });
     }
 
@@ -1103,7 +991,7 @@ export function setupCajas(app) {
                     let porcMargen = p.bruto > 0 ? (util / p.bruto) * 100 : 0;
                     tbodyMargen.innerHTML += `
                         <tr>
-                            <td><strong>${nombre}</strong></td>
+                            <td><strong>${escapeHtml(nombre)}</strong></td>
                             <td>${p.qty} u.</td>
                             <td>${formatMoneda(p.bruto)}</td>
                             <td style="color:#64748b;">${formatMoneda(p.costoTotalMatPrima)}</td>
@@ -1134,7 +1022,7 @@ export function setupCajas(app) {
                         let sugerenciaOptima = Math.ceil(promedioVendidoEseDia * 1.15);
                         tbodyOptima.innerHTML += `
                             <tr>
-                                <td><strong>${nombre}</strong></td>
+                                <td><strong>${escapeHtml(nombre)}</strong></td>
                                 <td>${promedioVendidoEseDia.toFixed(1)} unidades</td>
                                 <td><span style="background:#fef08a; color:#854d0e; padding:4px 10px; border-radius:6px; font-weight:900; border:1px dashed #ca8a04;">Preparar ${sugerenciaOptima} unidades</span></td>
                             </tr>
@@ -1159,13 +1047,13 @@ export function setupCajas(app) {
                 if(sortedByQty.length > 0) {
                     sortedByQty.slice(0, 5).forEach((p, idx) => {
                         let participacion = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
-                        ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
+                        ulTop.innerHTML += `<li><span><strong>#${idx+1}</strong> ${escapeHtml(p[0])}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
                     });
                     
                     if(sortedByQty.length > 5) {
                         sortedByQty.slice(5).forEach((p, idx) => {
                             let participacion = ((p[1].qty / totalUnidadesVendidas) * 100).toFixed(1);
-                            ulResto.innerHTML += `<li><span>#${idx+6} ${p[0]}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
+                            ulResto.innerHTML += `<li><span>#${idx+6} ${escapeHtml(p[0])}</span> <span style="color:#ec4899; font-weight:bold;">${p[1].qty} u. <small>(${participacion}%)</small></span></li>`;
                         });
                         btnVerMas.style.display = 'block';
                         btnVerMas.onclick = () => {

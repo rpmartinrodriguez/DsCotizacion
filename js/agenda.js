@@ -96,7 +96,14 @@ export function setupAgenda(app) {
             ul.className = 'lista-sencilla';
             entregasDelDia.forEach(entrega => {
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${entrega.data.tituloTorta}</span> <span>${entrega.data.nombreCliente}</span>`;
+
+                const producto = document.createElement('span');
+                producto.textContent = entrega.data.tituloTorta || 'Pedido';
+
+                const cliente = document.createElement('span');
+                cliente.textContent = entrega.data.nombreCliente || 'Sin cliente';
+
+                li.append(producto, cliente);
                 ul.appendChild(li);
             });
             modalLista.appendChild(ul);

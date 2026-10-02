@@ -2,97 +2,102 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Resumen por Cliente - Dulce App</title>
-    
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff96c5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Clientes · Dulce Sall Admin</title>
 
-    <!-- ========================================== -->
-    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
-    <!-- ========================================== -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <!-- ========================================== -->
 </head>
-<body>
+<body class="ds-app ds-content ds-clients">
     <div class="main-container">
-        <!-- HEADER -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+                <img src="assets/logo.png" alt="Dulce Sall" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DINÁMICO (Inyectado por menu.js) -->
-        <nav class="nav-menu" id="nav-menu"></nav>        
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <section class="card">
-                <h2 class="card__title">Resumen por Cliente</h2>
-                <div class="buscador-container">
-                    <input type="search" id="buscador-clientes" placeholder="🔍 Buscar por nombre de cliente...">
-                </div>
-                <div id="resumen-clientes-container">
-                    <p>Calculando resumen de clientes...</p>
-                </div>
-            </section>
+        <main class="ds-content-main">
+            <div class="ds-content-wrap">
+                <section class="ds-content-head">
+                    <div>
+                        <p class="ds-eyebrow">Comercial</p>
+                        <h1>Clientes</h1>
+                        <p>Consultá compras, cotizaciones y datos de contacto de cada cliente.</p>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="ds-toolbar">
+                        <input type="search" id="buscador-clientes" class="ds-search" placeholder="Buscar cliente por nombre…">
+                    </div>
+
+                    <div id="resumen-clientes-container" class="ds-client-grid">
+                        <p>Calculando resumen de clientes…</p>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
-    <!-- MODAL EDITAR CLIENTE -->
     <div id="cliente-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="cliente-modal-title">Editar Cliente</h2>
-            <div class="form-modern" style="grid-template-columns: 1fr;">
+            <h2 class="card__title" id="cliente-modal-title">Editar cliente</h2>
+            <div class="form-modern" style="grid-template-columns:1fr;">
                 <div class="form-group">
-                    <label>Nombre (no se puede editar)</label>
+                    <label>Nombre</label>
                     <input type="text" id="cliente-nombre-display" readonly>
                 </div>
                 <div class="form-group">
                     <label for="cliente-telefono-input">Teléfono</label>
-                    <input type="tel" id="cliente-telefono-input" placeholder="Ej: 11 2233-4455">
+                    <input type="tel" id="cliente-telefono-input" placeholder="Ej: 3446 000000">
                 </div>
                 <div class="form-group">
                     <label for="cliente-email-input">Email</label>
-                    <input type="email" id="cliente-email-input" placeholder="Ej: correo@dominio.com">
+                    <input type="email" id="cliente-email-input" placeholder="correo@dominio.com">
                 </div>
                 <div class="form-group">
-                    <label for="cliente-notas-input">Notas (Alergias, preferencias, etc.)</label>
-                    <textarea id="cliente-notas-input" rows="3"></textarea>
+                    <label for="cliente-notas-input">Notas</label>
+                    <textarea id="cliente-notas-input" rows="3" placeholder="Alergias, preferencias u observaciones"></textarea>
                 </div>
             </div>
             <div class="modal-actions">
                 <button id="cliente-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="cliente-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
+                <button id="cliente-modal-btn-guardar" class="btn-primary">Guardar cambios</button>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPTS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupClientes } from './js/clientes.js';
+
         try {
             const app = initializeApp(firebaseConfig);
             setupClientes(app);
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+        }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
         }
     </script>
 </body>

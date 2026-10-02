@@ -4,15 +4,19 @@ import {
 import { 
     getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signOut 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+import { createAuthorization } from "./core/authorization.js";
+import { escapeHtml, escapeAttribute } from "./core/html.js";
 
 export function setupUsuarios(app, firebaseConfig) {
     const db = getFirestore(app);
     const auth = getAuth(app);
+    const authorization = createAuthorization(app);
     const usuariosCollection = collection(db, 'usuarios');
 
-    // App Secundaria (Para crear usuarios sin expulsar al Administrador)
-    const secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+    // App secundaria para crear usuarios sin cerrar la sesión del administrador.
+    const secondaryApp = getApps().find(candidate => candidate.name === 'SecondaryApp')
+        || initializeApp(firebaseConfig, 'SecondaryApp');
     const secondaryAuth = getAuth(secondaryApp);
 
     const tablaUsuarios = document.getElementById('tabla-usuarios');
@@ -41,23 +45,16 @@ export function setupUsuarios(app, firebaseConfig) {
     let isCreateMode = false;
 
     // --- BARRERA DE SEGURIDAD PARA LA PÁGINA ---
-    onAuthStateChanged(auth, user => {
-        if (!user) {
-            window.location.href = 'login.html';
+    onAuthStateChanged(auth, async (user) => {
+        if (!user || user.isAnonymous) {
+            window.location.replace('login.html');
             return;
         }
 
-        try {
-            const permisosLocal = JSON.parse(localStorage.getItem('userPermisos') || '{}');
-            const rolLocal = localStorage.getItem('userRol');
-            
-            // Si no es master ni tiene permiso de configuracion, lo echamos
-            if (rolLocal !== 'master' && permisosLocal.configuracion !== true) {
-                alert("Acceso denegado. No tenés permisos de Administrador para ver esta página.");
-                window.location.href = 'pos.html'; 
-            }
-        } catch (e) {
-            window.location.href = 'pos.html';
+        const autorizado = await authorization.canAdminister();
+        if (!autorizado) {
+            alert("Acceso denegado. No tenés permisos de administrador.");
+            window.location.replace('pos.html');
         }
     });
 
@@ -83,13 +80,16 @@ export function setupUsuarios(app, firebaseConfig) {
             const rolTexto = u.rol === 'master' ? '👑 Master Admin' : '👤 Empleado';
 
             const tr = document.createElement('tr');
+            const safeNombre = escapeHtml(u.nombre || 'Sin nombre');
+            const safeEmail = escapeHtml(u.email || '');
+            const safeId = escapeAttribute(u.id);
             tr.innerHTML = `
-                <td data-label="Nombre"><strong>${u.nombre || 'Sin nombre'}</strong></td>
-                <td data-label="Email" style="color: #64748b;">${u.email}</td>
+                <td data-label="Nombre"><strong>${safeNombre}</strong></td>
+                <td data-label="Email" style="color: #64748b;">${safeEmail}</td>
                 <td data-label="Rol"><span class="user-role ${rolClase}">${rolTexto}</span></td>
                 <td data-label="Estado"><span class="user-status ${estadoClase}">${estadoTexto}</span></td>
                 <td data-label="Acciones" style="text-align: center;">
-                    <button class="btn-editar-usuario btn-secondary" data-id="${u.id}" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;">⚙️ Gestionar</button>
+                    <button class="btn-editar-usuario btn-secondary" data-id="${safeId}" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;">⚙️ Gestionar</button>
                 </td>
             `;
             tablaUsuarios.appendChild(tr);
@@ -169,6 +169,13 @@ export function setupUsuarios(app, firebaseConfig) {
     // --- GUARDAR O CREAR ---
     if (btnGuardar) {
         btnGuardar.addEventListener('click', async () => {
+            const autorizado = await authorization.canAdminister();
+            if (!autorizado) {
+                alert("Tu sesión ya no tiene permisos de administrador.");
+                window.location.replace('pos.html');
+                return;
+            }
+
             const nombreIngresado = editNombre.value.trim();
             const emailIngresado = editEmail.value.trim();
             const passIngresada = editPass.value;

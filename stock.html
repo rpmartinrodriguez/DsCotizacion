@@ -2,74 +2,80 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestión de Stock - Dulce App</title>
-    
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff96c5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Stock · Dulce Sall Admin</title>
 
-    <!-- ========================================== -->
-    <!-- ETIQUETAS EXCLUSIVAS Y OBLIGATORIAS PARA APPLE / iOS -->
-    <!-- ========================================== -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="manifest" href="manifest.json">
+
+    <meta name="theme-color" content="#ffffff">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Dulce App">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-    <!-- ========================================== -->
 </head>
-<body>
+<body class="ds-app ds-content ds-stock">
     <div class="main-container">
-        <!-- HEADER -->
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
                 <span></span><span></span><span></span>
             </button>
             <a href="index.html" class="header__logo-link">
-                <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
+                <img src="assets/logo.png" alt="Dulce Sall" class="header__logo">
             </a>
             <div class="header__spacer"></div>
         </header>
 
-        <!-- MENÚ DINÁMICO (Inyectado por menu.js) -->
-        <nav class="nav-menu" id="nav-menu"></nav>        
+        <nav class="nav-menu" id="nav-menu"></nav>
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
-        <main>
-            <section class="card">
-                <div class="card-header-actions">
-                    <h2 class="card__title">Inventario de Materias Primas</h2>
-                    <a href="compras.html" class="btn-primary">Registrar Nueva Compra</a>
-                </div>
-                <div class="buscador-container">
-                    <input type="search" id="buscador-stock" placeholder="🔍 Buscar por nombre...">
-                </div>
-                <table class="table-clean" id="tabla-stock">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Stock Actual</th>
-                            <th>Precio Base (Última Compra)</th>
-                            <th>Última Carga</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td colspan="5" style="text-align: center;">Cargando stock...</td></tr>
-                    </tbody>
-                </table>
-            </section>
+        <main class="ds-content-main">
+            <div class="ds-content-wrap">
+                <section class="ds-content-head">
+                    <div>
+                        <p class="ds-eyebrow">Operación</p>
+                        <h1>Stock e inventario</h1>
+                        <p>Controlá existencias, costos de compra, lotes y movimientos de materias primas.</p>
+                    </div>
+                    <div class="ds-content-actions">
+                        <a href="compras.html" class="ds-action-primary">+ Registrar compra</a>
+                    </div>
+                </section>
+
+                <section class="card ds-stock-panel">
+                    <div class="ds-toolbar">
+                        <input type="search" id="buscador-stock" class="ds-search" placeholder="Buscar materia prima por nombre…">
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table class="table-clean" id="tabla-stock">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Stock actual</th>
+                                    <th>Precio base</th>
+                                    <th>Última carga</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="5" style="text-align:center;">Cargando stock…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
-    
-    <!-- Modal para Edición Completa de Lotes -->
+
     <div id="edit-producto-completo-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="producto-completo-modal-title">Editar Producto</h2>
+            <h2 class="card__title" id="producto-completo-modal-title">Editar producto</h2>
             <div class="modal-body">
-                <div class="form-modern" style="grid-template-columns: 2fr 1fr;">
+                <div class="form-modern" style="grid-template-columns:2fr 1fr;">
                     <div class="form-group">
-                        <label for="producto-nombre-completo-input">Nombre del Producto</label>
+                        <label for="producto-nombre-completo-input">Nombre del producto</label>
                         <input type="text" id="producto-nombre-completo-input">
                     </div>
                     <div class="form-group">
@@ -84,46 +90,45 @@
                         </select>
                     </div>
                 </div>
-                <h4 class="card__subtitle">Lotes de Compra</h4>
+
+                <h4 class="card__subtitle">Lotes de compra</h4>
                 <div id="lotes-editor-container" class="lotes-editor-container">
-                    <p>Cargando lotes...</p>
+                    <p>Cargando lotes…</p>
                 </div>
             </div>
             <div class="modal-actions">
                 <button id="producto-completo-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="producto-completo-modal-btn-guardar" class="btn-primary">Guardar Cambios</button>
+                <button id="producto-completo-modal-btn-guardar" class="btn-primary">Guardar cambios</button>
             </div>
         </div>
     </div>
 
-    <!-- Nuevo Modal para Ajuste Rápido de Stock -->
     <div id="ajustar-stock-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="ajustar-stock-modal-title">Ajustar Stock Total</h2>
+            <h2 class="card__title" id="ajustar-stock-modal-title">Ajustar stock total</h2>
             <div class="modal-body">
                 <p>Estás ajustando el stock de: <strong id="ajustar-stock-nombre-producto"></strong></p>
                 <div class="form-group">
-                    <label>Stock Actual Calculado</label>
+                    <label>Stock actual calculado</label>
                     <input type="text" id="stock-actual-calculado" disabled>
                 </div>
                 <div class="form-group">
-                    <label for="nuevo-stock-real">Nuevo Stock Real (la cantidad que contaste)</label>
-                    <input type="number" id="nuevo-stock-real" step="any" placeholder="Ingresa la cantidad correcta">
+                    <label for="nuevo-stock-real">Nuevo stock real</label>
+                    <input type="number" id="nuevo-stock-real" step="any" placeholder="Cantidad contada físicamente">
                 </div>
             </div>
             <div class="modal-actions">
                 <button id="ajustar-stock-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="ajustar-stock-btn-guardar" class="btn-primary">Confirmar Ajuste</button>
+                <button id="ajustar-stock-btn-guardar" class="btn-primary">Confirmar ajuste</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Historial -->
     <div id="historial-movimientos-modal-overlay" class="modal-overlay">
         <div class="modal-content card">
-            <h2 class="card__title" id="movimientos-modal-title">Historial de Movimientos</h2>
+            <h2 class="card__title" id="movimientos-modal-title">Historial de movimientos</h2>
             <div id="movimientos-lista-container" class="movimientos-container">
-                <p>Cargando historial...</p>
+                <p>Cargando historial…</p>
             </div>
             <div class="modal-actions">
                 <button id="movimientos-modal-btn-cerrar" class="btn-primary">Cerrar</button>
@@ -131,20 +136,23 @@
         </div>
     </div>
 
-    <!-- Scripts -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupStock } from './js/stock.js';
+
         try {
             const app = initializeApp(firebaseConfig);
             setupStock(app);
-        } catch (error) { console.error(error); }
+        } catch (error) {
+            console.error(error);
+        }
     </script>
-    <script src="js/menu.js?v=11" defer></script>
+    <script src="js/menu.js?v=12" defer></script>
+    <script src="js/shell-v2.js?v=2" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
+            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
         }
     </script>
 </body>

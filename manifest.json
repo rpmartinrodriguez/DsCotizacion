@@ -1,22 +1,24 @@
 {
-  "name": "Dulce App - Gestión",
-  "short_name": "Dulce App",
-  "description": "Sistema de gestión, mostrador y stock",
+  "name": "Dulce Sall Admin",
+  "short_name": "Dulce Sall",
+  "description": "Gestión integral de Dulce Sall: mostrador, caja, stock, pedidos, clientes y administración.",
   "start_url": "./login.html",
   "display": "standalone",
   "background_color": "#fdf2f8",
   "theme_color": "#ff96c5",
-  "orientation": "portrait",
+  "orientation": "any",
   "icons": [
     {
-      "src": "assets/icon-192x192.png",
+      "src": "assets/logo-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "assets/icon-512x512.png",
+      "src": "assets/logo-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "assets/apple-touch-icon.png",
@@ -24,5 +26,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "scope": "./",
+  "id": "/"
 }

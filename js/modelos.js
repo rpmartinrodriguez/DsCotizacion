@@ -1,129 +1,176 @@
-import { 
-    getFirestore, collection, onSnapshot, query, addDoc, doc, 
+import {
+    getFirestore, collection, onSnapshot, query, addDoc, doc,
     deleteDoc, orderBy, getDocs
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js";
 
-// --- Configuración de Firebase ---
-const firebaseConfig = {
-  apiKey: "AIzaSyA33nr4_j2kMIeDJ-fyRqKLkUw9AToRnnM",
-  authDomain: "dscotizacion.firebaseapp.com",
-  projectId: "dscotizacion",
-  storageBucket: "dscotizacion.firebasestorage.app",
-  messagingSenderId: "103917274080",
-  appId: "1:103917274080:web:478f18b226473a70202185"
-};
-
-// --- Inicialización de Firebase ---
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const modelosCollection = collection(db, 'modelos3D');
-const recetasCollection = collection(db, 'recetas'); // <-- NUEVO: Referencia a la colección de recetas
 
-// --- Referencias al DOM ---
+const modelosCollection = collection(db, 'modelos3D');
+const recetasCollection = collection(db, 'recetas');
+
 const form = document.getElementById('form-modelo');
 const listaContainer = document.getElementById('lista-modelos-container');
 const recetaNombreInput = document.getElementById('receta-nombre');
 const modeloUrlInput = document.getElementById('modelo-url');
-const datalistRecetas = document.getElementById('lista-recetas-existentes'); // <-- NUEVO: Referencia al datalist
+const datalistRecetas = document.getElementById('lista-recetas-existentes');
 
-// --- NUEVA FUNCIÓN: Cargar Recetas para Autocompletado ---
+let unsubscribeModelos = null;
+
+const normalizarUrl = (value) => {
+    try {
+        const url = new URL(value);
+        if (!['http:', 'https:'].includes(url.protocol)) return null;
+        return url.toString();
+    } catch {
+        return null;
+    }
+};
+
 const cargarRecetasExistentes = async () => {
     try {
-        const q = query(recetasCollection, orderBy("nombreTorta"));
-        const snapshot = await getDocs(q);
-        datalistRecetas.innerHTML = ''; // Limpiamos la lista
-        snapshot.forEach(doc => {
-            const receta = doc.data();
+        const snapshot = await getDocs(query(recetasCollection, orderBy('nombreTorta')));
+        datalistRecetas.innerHTML = '';
+
+        snapshot.forEach((documento) => {
+            const receta = documento.data();
             const option = document.createElement('option');
-            option.value = receta.nombreTorta;
+            option.value = receta.nombreTorta || '';
             datalistRecetas.appendChild(option);
         });
     } catch (error) {
-        console.error("Error al cargar las recetas para el autocompletado:", error);
+        console.error("Error al cargar recetas:", error);
     }
 };
 
-// --- Función para renderizar la lista de modelos (sin cambios) ---
-const renderModelos = (modelos) => {
+const crearTablaModelos = (modelos) => {
     listaContainer.innerHTML = '';
+
     if (modelos.length === 0) {
-        listaContainer.innerHTML = '<p>No hay links asociados todavía.</p>';
+        const empty = document.createElement('p');
+        empty.textContent = 'No hay links asociados todavía.';
+        listaContainer.appendChild(empty);
         return;
     }
-    
+
     const table = document.createElement('table');
     table.className = 'table-clean';
-    table.innerHTML = `
-        <thead>
-            <tr>
-                <th>Nombre de la Receta</th>
-                <th>URL del Visor</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    `;
-    const tbody = table.querySelector('tbody');
 
-    modelos.forEach(modelo => {
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+        <tr>
+            <th>Nombre de la receta</th>
+            <th>URL del visor</th>
+            <th>Acciones</th>
+        </tr>
+    `;
+
+    const tbody = document.createElement('tbody');
+
+    modelos.forEach((modelo) => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td data-label="Receta">${modelo.data.nombreReceta}</td>
-            <td data-label="URL"><a href="${modelo.data.urlVisor}" target="_blank" title="${modelo.data.urlVisor}">Ver Link</a></td>
-            <td class="action-buttons stock-actions">
-                <button class="btn-stock subtract btn-delete" data-id="${modelo.id}" title="Eliminar">🗑️</button>
-            </td>
-        `;
+
+        const recetaCell = document.createElement('td');
+        recetaCell.dataset.label = 'Receta';
+        recetaCell.textContent = modelo.data.nombreReceta || 'Sin nombre';
+
+        const urlCell = document.createElement('td');
+        urlCell.dataset.label = 'URL';
+
+        const url = normalizarUrl(modelo.data.urlVisor || '');
+        if (url) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = 'Abrir visor';
+            link.title = url;
+            urlCell.appendChild(link);
+        } else {
+            urlCell.textContent = 'URL inválida';
+        }
+
+        const actionsCell = document.createElement('td');
+        actionsCell.className = 'action-buttons stock-actions';
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'btn-stock subtract btn-delete';
+        deleteButton.dataset.id = modelo.id;
+        deleteButton.title = 'Eliminar';
+        deleteButton.type = 'button';
+        deleteButton.textContent = '🗑️';
+        actionsCell.appendChild(deleteButton);
+
+        tr.append(recetaCell, urlCell, actionsCell);
         tbody.appendChild(tr);
     });
 
+    table.append(thead, tbody);
     listaContainer.appendChild(table);
-
-    document.querySelectorAll('.btn-delete').forEach(button => {
-        button.addEventListener('click', async (e) => {
-            const id = e.currentTarget.dataset.id;
-            if (confirm('¿Estás seguro de que quieres eliminar este link?')) {
-                await deleteDoc(doc(db, 'modelos3D', id));
-            }
-        });
-    });
 };
 
-// --- Listener de Firebase ---
 const startListeners = () => {
-    const q = query(modelosCollection, orderBy("nombreReceta"));
-    onSnapshot(q, (snapshot) => {
-        const modelos = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
-        renderModelos(modelos);
-    }, (error) => {
-        console.error("Error al escuchar la colección 'modelos3D': ", error);
-        listaContainer.innerHTML = '<p style="color: red;">Error al cargar los links.</p>';
-    });
+    if (unsubscribeModelos) return;
+
+    unsubscribeModelos = onSnapshot(
+        query(modelosCollection, orderBy('nombreReceta')),
+        (snapshot) => {
+            const modelos = snapshot.docs.map((documento) => ({
+                id: documento.id,
+                data: documento.data()
+            }));
+            crearTablaModelos(modelos);
+        },
+        (error) => {
+            console.error("Error al cargar modelos 3D:", error);
+            listaContainer.textContent = 'No se pudieron cargar los links.';
+        }
+    );
 };
 
-// --- Listener del Formulario ---
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const nombreReceta = recetaNombreInput.value;
-    const urlVisor = modeloUrlInput.value;
+listaContainer.addEventListener('click', async (event) => {
+    const button = event.target.closest('.btn-delete');
+    if (!button) return;
 
     if (!auth.currentUser) {
-        alert("Error de autenticación. Por favor, recarga la página.");
+        window.location.replace('login.html');
         return;
     }
 
-    if (!nombreReceta.trim() || !urlVisor.trim()) {
-        alert('Por favor, completa ambos campos.');
+    if (!confirm('¿Querés eliminar este link?')) return;
+
+    try {
+        await deleteDoc(doc(db, 'modelos3D', button.dataset.id));
+    } catch (error) {
+        console.error("Error al eliminar el link:", error);
+        alert('No se pudo eliminar el link.');
+    }
+});
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    if (!auth.currentUser || auth.currentUser.isAnonymous) {
+        window.location.replace('login.html');
+        return;
+    }
+
+    const nombreReceta = recetaNombreInput.value.trim();
+    const urlVisor = normalizarUrl(modeloUrlInput.value.trim());
+
+    if (!nombreReceta || !urlVisor) {
+        alert('Completá una receta y una URL http/https válida.');
         return;
     }
 
     try {
         await addDoc(modelosCollection, {
-            nombreReceta: nombreReceta.trim(),
-            urlVisor: urlVisor.trim()
+            nombreReceta,
+            urlVisor
         });
         form.reset();
     } catch (error) {
@@ -132,20 +179,12 @@ form.addEventListener('submit', async (e) => {
     }
 });
 
-// --- Lógica de Autenticación y Punto de Entrada ---
-const main = () => {
-    onAuthStateChanged(auth, user => {
-        if (user) {
-            console.log("Usuario anónimo autenticado:", user.uid);
-            startListeners();
-            cargarRecetasExistentes(); // <-- NUEVO: Llamamos a la función para cargar las recetas
-        } else {
-            signInAnonymously(auth).catch(error => {
-                console.error("Error al iniciar sesión anónimamente:", error);
-            });
-        }
-    });
-};
+onAuthStateChanged(auth, (user) => {
+    if (!user || user.isAnonymous) {
+        window.location.replace('login.html');
+        return;
+    }
 
-// Iniciamos la aplicación
-document.addEventListener('DOMContentLoaded', main);
+    startListeners();
+    cargarRecetasExistentes();
+});
