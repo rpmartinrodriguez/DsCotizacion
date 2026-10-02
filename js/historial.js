@@ -2,6 +2,8 @@ import {
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
     deleteDoc, updateDoc, Timestamp, writeBatch, runTransaction, getDocs, where
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { formatCurrency } from "./core/format.js";
+import { escapeHtml, escapeAttribute } from "./core/html.js";
 
 export function setupHistorial(app) {
     const db = getFirestore(app);
@@ -27,6 +29,10 @@ export function setupHistorial(app) {
     const confirmDeleteModalText = document.getElementById('confirm-delete-modal-text');
     const btnConfirmarDelete = document.getElementById('confirm-delete-modal-btn-confirmar');
     const btnCancelarDelete = document.getElementById('confirm-delete-modal-btn-cancelar');
+    const histKpiTotal = document.getElementById('hist-kpi-total');
+    const histKpiVentas = document.getElementById('hist-kpi-ventas');
+    const histKpiPendientes = document.getElementById('hist-kpi-pendientes');
+    const histKpiMonto = document.getElementById('hist-kpi-monto');
 
     // Variables de Estado
     let todoElHistorial = [];
@@ -112,6 +118,21 @@ export function setupHistorial(app) {
         document.body.removeChild(link);
     };
 
+    const actualizarResumen = () => {
+        const total = todoElHistorial.length;
+        const ventas = todoElHistorial.filter(item => item.data?.esVenta === true);
+        const pendientes = total - ventas.length;
+        const montoVendido = ventas.reduce((sum, item) => {
+            const data = item.data || {};
+            return sum + Number(data.precioVenta || data.costoTotal || 0);
+        }, 0);
+
+        if (histKpiTotal) histKpiTotal.textContent = total.toLocaleString('es-AR');
+        if (histKpiVentas) histKpiVentas.textContent = ventas.length.toLocaleString('es-AR');
+        if (histKpiPendientes) histKpiPendientes.textContent = pendientes.toLocaleString('es-AR');
+        if (histKpiMonto) histKpiMonto.textContent = formatCurrency(montoVendido);
+    };
+
     const renderizarHistorial = (datos) => {
         historialContainer.innerHTML = '';
         if (datos.length === 0) {
@@ -125,12 +146,38 @@ export function setupHistorial(app) {
                 if (!presupuesto || !presupuesto.fecha?.toDate) return;
                 const fecha = presupuesto.fecha.toDate();
                 const fechaFormateada = fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                const botonVentaHtml = presupuesto.esVenta ? `<span class="venta-confirmada-badge">✅ Venta Confirmada</span>` : `<button class="btn-marcar-venta" data-id="${id}">✅ Convertir a Venta</button>`;
-                const totalMostrado = (presupuesto.precioVenta || presupuesto.costoTotal || 0).toFixed(2);
+                const safeId = escapeAttribute(id);
+                const safeTitle = escapeHtml(presupuesto.tituloTorta || 'Sin título');
+                const safeClient = escapeHtml(presupuesto.nombreCliente || 'Sin nombre');
+                const botonVentaHtml = presupuesto.esVenta
+                    ? `<span class="venta-confirmada-badge">Venta confirmada</span>`
+                    : `<button class="btn-marcar-venta" data-id="${safeId}">Convertir a venta</button>`;
+
+                const totalMostrado = Number(presupuesto.precioVenta || presupuesto.costoTotal || 0);
                 const card = document.createElement('div');
                 card.className = 'historial-card';
                 if (presupuesto.esVenta) card.classList.add('es-venta');
-                card.innerHTML = `<div class="historial-card__header"><div class="historial-card__info"><h3>${presupuesto.tituloTorta || 'Sin Título'}</h3><p><strong>Cliente:</strong> ${presupuesto.nombreCliente || 'Sin Nombre'}</p><p class="fecha">${fechaFormateada} hs</p></div><div class="historial-card__total">$${totalMostrado}</div></div><div class="historial-card__detalle" id="detalle-${id}" style="display: none;"><p>Cargando detalle...</p></div><div class="historial-card__actions"><button class="btn-ver-detalle" data-id="${id}">Ver Detalle</button>${botonVentaHtml}<button class="btn-borrar-presupuesto" data-id="${id}">🗑️ Borrar</button></div>`;
+
+                card.innerHTML = `
+                    <div class="historial-card__header">
+                        <div class="historial-card__info">
+                            <h3>${safeTitle}</h3>
+                            <p><strong>Cliente:</strong> ${safeClient}</p>
+                            <p class="fecha">${fechaFormateada} hs</p>
+                        </div>
+                        <div class="historial-card__total">${formatCurrency(totalMostrado)}</div>
+                    </div>
+
+                    <div class="historial-card__detalle" id="detalle-${safeId}" style="display:none;">
+                        <p>Cargando detalle…</p>
+                    </div>
+
+                    <div class="historial-card__actions">
+                        <button class="btn-ver-detalle" data-id="${safeId}">Ver detalle</button>
+                        ${botonVentaHtml}
+                        <button class="btn-borrar-presupuesto" data-id="${safeId}">Borrar</button>
+                    </div>
+                `;
                 historialContainer.appendChild(card);
             } catch (error) {
                 console.error(`Error al renderizar el presupuesto ID: ${pConId.id}.`, error);
@@ -150,10 +197,10 @@ export function setupHistorial(app) {
                 detalleLotesHtml = '<ul class="lote-detalle">' + ing.lotesUtilizados.map(lote => {
                     const esFechaValida = lote.fechaLote && typeof lote.fechaLote.toDate === 'function';
                     const fechaLoteStr = esFechaValida ? lote.fechaLote.toDate().toLocaleDateString('es-AR') : 'Proyectado';
-                    return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${ing.unidad} @ $${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${fechaLoteStr})</li>`;
+                    return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${escapeHtml(ing.unidad || '')} @ ${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${escapeHtml(fechaLoteStr)})</li>`;
                 }).join('') + '</ul>';
             }
-            return `<li><strong>${ing.nombre || ing.nombreMateriaPrima}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${ing.unidad} ($${(ing.costoTotal || 0).toFixed(2)})</strong>${detalleLotesHtml}</li>`;
+            return `<li><strong>${escapeHtml(ing.nombre || ing.nombreMateriaPrima || 'Ingrediente')}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${escapeHtml(ing.unidad || '')} (${(ing.costoTotal || 0).toFixed(2)})</strong>${detalleLotesHtml}</li>`;
         }).join('');
         let detalleCostosHtml = '';
         if (presupuestoData.precioVenta) {
@@ -169,6 +216,7 @@ export function setupHistorial(app) {
 
     onSnapshot(query(presupuestosGuardadosCollection, orderBy("fecha", "desc")), (snapshot) => {
         todoElHistorial = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        actualizarResumen();
         buscadorInput.dispatchEvent(new Event('input'));
     });
 
