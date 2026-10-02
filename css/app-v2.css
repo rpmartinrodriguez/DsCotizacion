@@ -2308,3 +2308,116 @@ body.ds-history .historial-card__detalle ul {
     filter: url(#ds-remove-white);
   }
 }
+
+
+/* =========================================================
+   LOGIN FINAL — logo sobre blanco + copy sobre rosa
+   ========================================================= */
+@media (min-width: 900px) {
+  body.ds-login {
+    grid-template-columns: minmax(360px, .95fr) minmax(520px, 1.05fr);
+  }
+
+  .ds-login-visual {
+    display: grid !important;
+    grid-template-rows: 1fr 1fr;
+    min-height: 100vh;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #ffffff;
+    overflow: hidden;
+  }
+
+  .ds-login-visual::before,
+  .ds-login-visual::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .ds-login-visual-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 36px 28px;
+    background: #ffffff;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ds-login-visual-logo {
+    display: block;
+    width: min(72%, 420px);
+    max-width: 420px;
+    height: auto;
+    object-fit: contain;
+    filter: none !important;
+    mix-blend-mode: normal;
+  }
+
+  .ds-login-visual-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: none !important;
+    padding: 48px 44px;
+    box-sizing: border-box;
+    background:
+      radial-gradient(circle at 80% 22%, rgba(255,255,255,.16), transparent 25%),
+      radial-gradient(circle at 16% 88%, rgba(255,255,255,.10), transparent 22%),
+      linear-gradient(145deg, #e9b9cf 0%, #d46c99 48%, #a44273 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ds-login-visual-copy::before,
+  .ds-login-visual-copy::after {
+    content: "";
+    position: absolute;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  .ds-login-visual-copy::before {
+    width: 340px;
+    height: 340px;
+    right: -145px;
+    top: -120px;
+  }
+
+  .ds-login-visual-copy::after {
+    width: 230px;
+    height: 230px;
+    left: -105px;
+    bottom: 34px;
+  }
+
+  .ds-login-visual-copy small,
+  .ds-login-visual-copy h2,
+  .ds-login-visual-copy p {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ds-login-visual-copy small {
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    font-weight: 800;
+    opacity: .92;
+  }
+
+  .ds-login-visual-copy h2 {
+    font-size: clamp(2.15rem, 4vw, 3.55rem);
+    line-height: .98;
+    letter-spacing: -.05em;
+    margin: 12px 0 14px;
+  }
+
+  .ds-login-visual-copy p {
+    margin: 0;
+    max-width: 470px;
+    line-height: 1.55;
+    color: rgba(255,255,255,.92);
+  }
+}
