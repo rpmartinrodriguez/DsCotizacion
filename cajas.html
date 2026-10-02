@@ -101,44 +101,51 @@
 
             <!-- SECCIÓN 1: HISTORIAL Y FACTURACIÓN -->
             <div id="section-historial">
-                <div class="card" style="margin-bottom: 1.5rem; background-color: #f0f9ff; border: 1px solid #bae6fd;">
-                    <h2 class="card__title" style="color: #0369a1; margin-bottom: 1rem;">Calculadora de Facturación (MercadoPago)</h2>
-                    <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                        <div style="flex-grow: 1;">
-                            <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Desde:</label>
-                            <input type="date" id="calc-desde" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
+                <section class="card ds-billing-card">
+                    <div class="ds-billing-head">
+                        <div>
+                            <h2>Facturación de Mercado Pago</h2>
+                            <p>Calculá lo ingresado, lo ya facturado y el saldo pendiente del período.</p>
                         </div>
-                        <div style="flex-grow: 1;">
-                            <label style="font-size: 0.85rem; color: #0369a1; font-weight: bold;">Hasta:</label>
-                            <input type="date" id="calc-hasta" style="width: 100%; padding: 0.5rem; border: 1px solid #bae6fd; border-radius: 4px;">
-                        </div>
-                        <button id="btn-calcular-facturacion" class="btn-primary" style="background-color: #0ea5e9; border-color: #0ea5e9; padding: 0.5rem 1.5rem;">Calcular</button>
+                        <span class="ds-billing-badge">MP</span>
                     </div>
-                    
-                    <div id="resultado-facturacion" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #bae6fd; display: none;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="color: #334155;">Ingresos Totales (MP):</span>
-                            <strong id="res-total-mp" style="color: #334155;">$0.00</strong>
+
+                    <div class="ds-billing-form">
+                        <div class="ds-field">
+                            <label for="calc-desde">Desde</label>
+                            <input type="date" id="calc-desde">
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="color: #15803d;">Ya Facturado:</span>
-                            <strong id="res-facturado-mp" style="color: #15803d;">$0.00</strong>
+                        <div class="ds-field">
+                            <label for="calc-hasta">Hasta</label>
+                            <input type="date" id="calc-hasta">
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 1.2rem; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #bae6fd;">
-                            <span style="color: #b91c1c; font-weight: bold;">Pendiente a Facturar:</span>
-                            <strong id="res-pendiente-mp" style="color: #b91c1c;">$0.00</strong>
+                        <button id="btn-calcular-facturacion" class="ds-action-primary">Calcular período</button>
+                    </div>
+
+                    <div id="resultado-facturacion" class="ds-billing-results">
+                        <div class="ds-billing-result">
+                            <span>Ingresos Mercado Pago</span>
+                            <strong id="res-total-mp">$0.00</strong>
+                        </div>
+                        <div class="ds-billing-result ds-billing-result--success">
+                            <span>Ya facturado</span>
+                            <strong id="res-facturado-mp">$0.00</strong>
+                        </div>
+                        <div class="ds-billing-result ds-billing-result--pending">
+                            <span>Pendiente a facturar</span>
+                            <strong id="res-pendiente-mp">$0.00</strong>
                         </div>
                     </div>
-                </div>
+                </section>
 
                 <!-- CONTENEDOR CON FILTRO Y BOTÓN DE PAPELERA -->
-                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
-                    <div class="buscador-container" style="flex-grow: 1; margin-bottom: 0;">
-                        <select id="filtro-mes-cajas" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--border-color); font-size: 1rem; background-color: white;">
+                <div class="ds-cash-toolbar">
+                    <div class="buscador-container">
+                        <select id="filtro-mes-cajas">
                             <option value="todos">Cargando meses...</option>
                         </select>
                     </div>
-                    <button id="btn-abrir-papelera" class="btn-secondary" style="width: auto; padding: 0.8rem 1rem; border-color: #ef4444; color: #ef4444; font-weight: bold; background: #fef2f2;">🗑️ Papelera</button>
+                    <button id="btn-abrir-papelera" class="ds-trash-button">Papelera</button>
                 </div>
 
                 <div id="lista-cajas-container">
@@ -149,9 +156,9 @@
             <!-- SECCIÓN 2: ESTADÍSTICAS DEL NEGOCIO -->
             <div id="section-estadisticas" style="display: none;">
                 <!-- (El contenido de estadísticas queda idéntico) -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-                    <p class="text-light" style="margin:0;">Indicadores Financieros y de Control Avanzados.</p>
-                    <button id="btn-cargar-stats" class="btn-primary" style="width: auto; background: #be185d;">🔄 Recalcular Todo</button>
+                <div class="ds-stats-toolbar">
+                    <p>Indicadores financieros y operativos calculados a partir del historial real de cajas.</p>
+                    <button id="btn-cargar-stats" class="ds-action-primary">Recalcular indicadores</button>
                 </div>
 
                 <div id="stats-loading" style="text-align: center; padding: 2rem; display: none;">
