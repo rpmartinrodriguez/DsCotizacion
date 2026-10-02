@@ -1634,3 +1634,535 @@ body.ds-current-quote .modal-actions {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================================
+   FINAL POLISH — Login / Cajas / Historial
+   ========================================================= */
+
+/* Login: evitar logo con bloque blanco sobre el panel de color */
+@media (min-width: 900px) {
+  .ds-login-visual {
+    background:
+      radial-gradient(circle at 78% 20%, rgba(255,255,255,.22), transparent 24%),
+      radial-gradient(circle at 18% 14%, rgba(255,255,255,.12), transparent 18%),
+      linear-gradient(145deg, #e9b9cf 0%, #d46c99 48%, #a44273 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ds-login-visual::before,
+  .ds-login-visual::after {
+    content: "";
+    position: absolute;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  .ds-login-visual::before {
+    width: 430px;
+    height: 430px;
+    right: -170px;
+    top: -120px;
+  }
+
+  .ds-login-visual::after {
+    width: 300px;
+    height: 300px;
+    left: -130px;
+    bottom: 80px;
+  }
+
+  .ds-login-visual-copy {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.ds-login-brand img {
+  object-fit: contain;
+  background: transparent;
+}
+
+
+/* ---------- CAJAS ---------- */
+.ds-cash .tabs-container {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  padding: 4px;
+  background: #f2eef2;
+  border: 0;
+  border-radius: 14px;
+  margin: 0 0 20px;
+  overflow-x: auto;
+}
+
+.ds-cash .tab-btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 15px;
+  background: transparent;
+  color: #786e79;
+  white-space: nowrap;
+}
+
+.ds-cash .tab-btn.active {
+  background: #fff;
+  color: var(--ds-primary-strong);
+  border: 0;
+  box-shadow: 0 3px 12px rgba(49,34,45,.08);
+}
+
+.ds-billing-card {
+  margin-bottom: 18px;
+  padding: 20px;
+  background:
+    linear-gradient(135deg, rgba(217,86,145,.06), rgba(255,255,255,0) 55%),
+    #fff !important;
+  border: 1px solid var(--ds-border) !important;
+}
+
+.ds-billing-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ds-billing-head h2 {
+  margin: 0;
+  color: var(--ds-text) !important;
+  font-size: 1.05rem;
+  letter-spacing: -.02em;
+}
+
+.ds-billing-head p {
+  margin: 5px 0 0;
+  color: var(--ds-muted);
+  font-size: .8rem;
+}
+
+.ds-billing-badge {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: var(--ds-primary-soft);
+  color: var(--ds-primary-strong);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+.ds-billing-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-items: end;
+}
+
+.ds-field label {
+  display: block;
+  margin-bottom: 6px;
+  color: #665d67 !important;
+  font-size: .76rem !important;
+  font-weight: 750 !important;
+}
+
+.ds-field input,
+.ds-field select,
+#filtro-mes-cajas {
+  width: 100% !important;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 12px !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 11px !important;
+  background: #fff !important;
+  font: inherit;
+  color: var(--ds-text);
+}
+
+.ds-field input:focus,
+.ds-field select:focus,
+#filtro-mes-cajas:focus {
+  outline: 0;
+  border-color: #d9a0ba !important;
+  box-shadow: 0 0 0 4px rgba(217,86,145,.08);
+}
+
+.ds-billing-results {
+  display: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid var(--ds-border) !important;
+}
+
+.ds-billing-result {
+  min-width: 0;
+  padding: 12px 13px;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  background: #faf9fa;
+}
+
+.ds-billing-result span {
+  display: block;
+  color: var(--ds-muted) !important;
+  font-size: .7rem;
+  margin-bottom: 5px;
+}
+
+.ds-billing-result strong {
+  display: block;
+  color: var(--ds-text) !important;
+  font-size: 1.05rem;
+  letter-spacing: -.02em;
+}
+
+.ds-billing-result--success strong {
+  color: var(--ds-success) !important;
+}
+
+.ds-billing-result--pending {
+  background: #fff7f7;
+  border-color: #f0d5d7;
+}
+
+.ds-billing-result--pending strong {
+  color: var(--ds-danger) !important;
+}
+
+.ds-cash-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.ds-cash-toolbar .buscador-container {
+  flex: 1 1 250px;
+  margin: 0 !important;
+}
+
+.ds-trash-button {
+  min-height: 44px;
+  width: auto !important;
+  padding: 0 13px !important;
+  border-radius: 11px !important;
+  border: 1px solid #efd6d8 !important;
+  color: #b7434b !important;
+  background: #fff8f8 !important;
+  font-weight: 750 !important;
+}
+
+.ds-stats-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--ds-border);
+  border-radius: 13px;
+  background: #fff;
+}
+
+.ds-stats-toolbar p {
+  margin: 0 !important;
+  color: var(--ds-muted) !important;
+}
+
+.ds-stats-toolbar #btn-cargar-stats {
+  width: auto !important;
+  margin: 0;
+  background: var(--ds-primary) !important;
+  border-color: var(--ds-primary) !important;
+}
+
+.ds-cash .categoria-acordeon {
+  margin-bottom: 12px !important;
+  border-radius: 16px;
+  border: 1px solid var(--ds-border);
+  box-shadow: var(--ds-shadow-soft);
+}
+
+.ds-cash .categoria-acordeon__header {
+  padding: 16px 17px;
+}
+
+.ds-cash .categoria-acordeon__header:hover {
+  background: #fdfafd;
+}
+
+.ds-cash .caja-resumen {
+  background: #faf9fa !important;
+  border: 1px solid var(--ds-border) !important;
+  border-radius: 12px !important;
+}
+
+.ds-cash .ticket-item {
+  background: #fff;
+  border: 1px solid var(--ds-border);
+  border-radius: 11px;
+  padding: 11px 12px;
+  margin-bottom: 7px;
+}
+
+.ds-cash .charts-container {
+  gap: 14px;
+}
+
+.ds-cash .chart-box {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.ds-cash .dashboard-grid {
+  grid-template-columns: repeat(2, minmax(0,1fr));
+}
+
+.ds-cash .dash-card {
+  background: #fff;
+  min-height: 112px;
+}
+
+.ds-cash .dash-card .subtext {
+  color: var(--ds-muted);
+  font-size: .72rem;
+}
+
+
+/* ---------- HISTORIAL ---------- */
+.ds-history-summary {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ds-history-summary-card {
+  padding: 15px;
+  border: 1px solid var(--ds-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--ds-shadow-soft);
+}
+
+.ds-history-summary-card span {
+  display: block;
+  color: var(--ds-muted);
+  font-size: .7rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.ds-history-summary-card strong {
+  display: block;
+  font-size: 1.25rem;
+  color: var(--ds-text);
+  letter-spacing: -.03em;
+}
+
+.ds-history-summary-card--sales strong {
+  color: var(--ds-success);
+}
+
+.ds-history-summary-card--pending strong {
+  color: var(--ds-warning);
+}
+
+.ds-history-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ds-history-toolbar .buscador-container {
+  flex: 1;
+  margin: 0;
+}
+
+.ds-history-toolbar input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: #fff;
+  font: inherit;
+  outline: 0;
+}
+
+.ds-history-toolbar input:focus {
+  border-color: #dba2bc;
+  box-shadow: 0 0 0 4px rgba(217,86,145,.08);
+}
+
+body.ds-history #historial-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+body.ds-history .historial-card {
+  margin: 0;
+  padding: 17px;
+  border: 1px solid var(--ds-border);
+  border-left: 4px solid #d8ced6;
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: var(--ds-shadow-soft);
+}
+
+body.ds-history .historial-card.es-venta {
+  border-left-color: var(--ds-success);
+}
+
+body.ds-history .historial-card__header {
+  align-items: flex-start;
+  gap: 15px;
+}
+
+body.ds-history .historial-card__info h3 {
+  margin: 0 0 7px;
+  font-size: 1rem;
+  letter-spacing: -.015em;
+}
+
+body.ds-history .historial-card__info p {
+  margin: 4px 0;
+  color: var(--ds-muted);
+  font-size: .8rem;
+}
+
+body.ds-history .historial-card__info .fecha {
+  color: #9a9099;
+  font-size: .74rem;
+}
+
+body.ds-history .historial-card__total {
+  flex: 0 0 auto;
+  font-size: 1.2rem;
+  font-weight: 780;
+  letter-spacing: -.03em;
+}
+
+body.ds-history .historial-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 15px !important;
+  padding-top: 14px !important;
+  border-top: 1px solid var(--ds-border) !important;
+}
+
+body.ds-history .historial-card__actions button {
+  min-height: 37px;
+  padding: 0 11px;
+  border-radius: 9px;
+  border: 1px solid var(--ds-border);
+  background: #fff;
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body.ds-history .btn-marcar-venta {
+  border-color: #cce8da !important;
+  color: #26744f !important;
+  background: #f5fbf8 !important;
+}
+
+body.ds-history .btn-borrar-presupuesto {
+  margin-left: auto;
+  border-color: #efd6d8 !important;
+  color: #b7434b !important;
+  background: #fff8f8 !important;
+}
+
+body.ds-history .venta-confirmada-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 35px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #edf8f2;
+  border: 1px solid #cce8da;
+  color: #26744f;
+  font-size: .73rem;
+  font-weight: 750;
+}
+
+body.ds-history .historial-card__detalle {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  background: #faf9fa;
+}
+
+body.ds-history .historial-card__detalle h4 {
+  margin: 0 0 10px;
+  color: var(--ds-text);
+}
+
+body.ds-history .historial-card__detalle ul {
+  padding-left: 18px;
+}
+
+@media (min-width: 700px) {
+  .ds-billing-form {
+    grid-template-columns: 1fr 1fr auto;
+  }
+
+  .ds-history-summary {
+    grid-template-columns: repeat(4,minmax(0,1fr));
+  }
+
+  body.ds-history #historial-container {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .ds-cash .dashboard-grid {
+    grid-template-columns: repeat(4,minmax(0,1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .ds-billing-results {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-cash .tabs-container {
+    width: 100%;
+  }
+
+  .ds-cash .tab-btn {
+    flex: 1 0 auto;
+  }
+
+  body.ds-history .historial-card__header {
+    flex-direction: column;
+  }
+
+  body.ds-history .historial-card__total {
+    font-size: 1.35rem;
+  }
+
+  body.ds-history .btn-borrar-presupuesto {
+    margin-left: 0;
+  }
+}
