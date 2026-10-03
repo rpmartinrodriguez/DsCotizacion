@@ -3136,3 +3136,14 @@ body.ds-history .historial-card__detalle ul {
     min-width: 0;
   }
 }
+
+
+.ds-price-history-row.is-alert {
+  border-left-color: #c93643;
+  background: #fffafa;
+}
+
+.ds-price-history-row.is-alert > div:first-child span {
+  color: #a52f39;
+  font-weight: 800;
+}
