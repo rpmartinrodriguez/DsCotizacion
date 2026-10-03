@@ -234,7 +234,7 @@ export function setupStock(app) {
             alert(`No se pudieron guardar los cambios: ${error.message}`);
         } finally {
             btnGuardarCompleto.disabled = false;
-            btnGuardarCompleto.textContent = 'Guardar Cambios';
+            btnGuardarCompleto.textContent = 'Guardar';
         }
     };
 
@@ -281,10 +281,12 @@ export function setupStock(app) {
                 const docSnap = await transaction.get(docRef);
                 if (!docSnap.exists()) throw "El producto ya no existe.";
                 let data = docSnap.data();
-                let lotesActualizados = [...data.lotes];
+                let lotesActualizados = Array.isArray(data.lotes)
+                    ? data.lotes.map(lote => ({ ...lote }))
+                    : [];
                 let cantidadAjustada = Math.abs(diferencia);
                 if (diferencia < 0) {
-                    lotesActualizados.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
+                    lotesActualizados.sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
                     for (const lote of lotesActualizados) {
                         if (cantidadAjustada <= 0) break;
                         const aDescontar = Math.min(lote.stockRestante, cantidadAjustada);
@@ -292,7 +294,7 @@ export function setupStock(app) {
                         cantidadAjustada -= aDescontar;
                     }
                 } else {
-                    lotesActualizados.sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
+                    lotesActualizados.sort((a, b) => (b.fechaCompra?.seconds || 0) - (a.fechaCompra?.seconds || 0));
                     if (lotesActualizados.length > 0) {
                         lotesActualizados[0].stockRestante += cantidadAjustada;
                     } else {
