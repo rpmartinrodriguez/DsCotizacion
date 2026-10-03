@@ -109,6 +109,46 @@ export function setupPrecios(app) {
         return Number.isFinite(value) && value > 0 ? value : 5;
     };
 
+    const parseLocalizedPrice = (value) => {
+        const raw = String(value ?? '')
+            .trim()
+            .replace(/[^0-9,.-]/g, '');
+
+        if (!raw) return NaN;
+
+        const lastComma = raw.lastIndexOf(',');
+        const lastDot = raw.lastIndexOf('.');
+
+        if (lastComma >= 0 && lastDot >= 0) {
+            const decimalSeparator = lastComma > lastDot ? ',' : '.';
+            const thousandsSeparator = decimalSeparator === ',' ? /\./g : /,/g;
+            const normalized = raw
+                .replace(thousandsSeparator, '')
+                .replace(decimalSeparator, '.');
+            return Number(normalized);
+        }
+
+        if (lastComma >= 0) {
+            const decimals = raw.length - lastComma - 1;
+            return Number(
+                decimals === 3
+                    ? raw.replace(/,/g, '')
+                    : raw.replace(',', '.')
+            );
+        }
+
+        if (lastDot >= 0) {
+            const decimals = raw.length - lastDot - 1;
+            return Number(
+                decimals === 3
+                    ? raw.replace(/\./g, '')
+                    : raw
+            );
+        }
+
+        return Number(raw);
+    };
+
     const roundRetailPrice = (rawPrice) =>
         calculateRoundedSalePrice(rawPrice, 0, { roundTo: 100, midpointDown: true });
 
@@ -581,7 +621,9 @@ export function setupPrecios(app) {
 
         renderLastDecision(row);
 
-        reviewBtnApply.disabled = row.currentCost <= 0 || row.suggestedPrice <= 0;
+        const needsSuggestedIncrease = row.suggestedDelta > 0.01;
+        reviewBtnApply.disabled = row.currentCost <= 0 || row.suggestedPrice <= 0 || !needsSuggestedIncrease;
+        reviewBtnApply.textContent = needsSuggestedIncrease ? 'Aplicar sugerencia' : 'Sin ajuste necesario';
         reviewBtnCustom.disabled = row.currentCost <= 0;
 
         reviewModal.classList.add('visible');
@@ -711,8 +753,7 @@ export function setupPrecios(app) {
 
         if (response === null) return;
 
-        const sanitized = String(response).replace(/[^0-9.,-]/g, '').replace(/\./g, '').replace(',', '.');
-        const rawPrice = Number(sanitized);
+        const rawPrice = parseLocalizedPrice(response);
 
         if (!Number.isFinite(rawPrice) || rawPrice <= 0) {
             alert('Ingresá un precio válido.');
