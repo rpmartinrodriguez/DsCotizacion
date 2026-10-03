@@ -2859,3 +2859,74 @@ body.ds-history .historial-card__detalle ul {
   color: #7c5a31;
   font-size: .68rem;
 }
+
+
+.ds-supplier-package-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 105px;
+  gap: 8px;
+}
+
+.ds-supplier-package-row select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--ds-border);
+  border-radius: 11px;
+  padding: 0 10px;
+  background: #fff;
+  color: var(--ds-text);
+  font: inherit;
+}
+
+.ds-supplier-status.is-alert {
+  background: #fff0f1;
+  color: #a52f39 !important;
+  border: 1px solid #f0c7cb;
+  font-weight: 750;
+}
+
+.ds-provider-table-price span.is-alert {
+  background: #feecee;
+  color: #a52f39;
+  border: 1px solid #efc5c9;
+}
+
+.ds-supplier-result-card.is-alert {
+  border-left-color: #c93643;
+  background: #fffafa;
+}
+
+.ds-applied-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ds-applied-cost strong {
+  color: var(--ds-text);
+  font-size: .82rem;
+}
+
+.ds-applied-cost span {
+  width: fit-content;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: .62rem;
+  font-weight: 800;
+}
+
+.ds-applied-cost span.is-provider {
+  background: #fff0f1;
+  color: #a64049;
+}
+
+.ds-applied-cost span.is-purchase {
+  background: #f2eff2;
+  color: #726873;
+}
+
+@media (max-width: 760px) {
+  .ds-supplier-package-row {
+    grid-template-columns: minmax(0,1fr) 100px;
+  }
+}
