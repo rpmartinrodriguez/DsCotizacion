@@ -138,19 +138,23 @@ export function setupPOS(app) {
         return calculateRecipeUnitCost(receta, materiasPrimasMap);
     };
 
-    const calcularPrecioVenta = (prod) => {
+    const obtenerPorcentajeGananciaAplicado = (prod) => {
         const tieneMargenIndiv = prod.margenIndividual !== undefined &&
             prod.margenIndividual !== null &&
             prod.margenIndividual !== '';
 
-        const margenAplicado = tieneMargenIndiv
-            ? parseFloat(prod.margenIndividual)
-            : margenGlobal;
+        return tieneMargenIndiv
+            ? parseFloat(prod.margenIndividual) || 0
+            : Number(margenGlobal) || 0;
+    };
+
+    const calcularPrecioVenta = (prod) => {
+        const porcentajeAplicado = obtenerPorcentajeGananciaAplicado(prod);
 
         return calculateRoundedSalePrice(
             prod.costoBaseCalculado || 0,
-            margenAplicado,
-            { roundTo: 10 }
+            porcentajeAplicado,
+            { roundTo: 100, midpointDown: true }
         );
     };
 
@@ -423,7 +427,13 @@ export function setupPOS(app) {
 
         productosDisponibles = recetasBrutas.map(receta => {
             const costoBase = obtenerCostoBase(receta);
-            return { ...receta, costoBaseCalculado: costoBase, precioCalculado: calcularPrecioVenta({ ...receta, costoBaseCalculado: costoBase }) };
+            const productoCalculado = { ...receta, costoBaseCalculado: costoBase };
+
+            return {
+                ...productoCalculado,
+                porcentajeGananciaAplicado: obtenerPorcentajeGananciaAplicado(productoCalculado),
+                precioCalculado: calcularPrecioVenta(productoCalculado)
+            };
         });
 
         if (pantallaPOS && pantallaPOS.style.display !== 'none') {
@@ -725,8 +735,39 @@ export function setupPOS(app) {
 
             try {
                 const itemsParaGuardar = carritoActual.map(i => {
-                    return { id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad };
+                    const producto = productosDisponibles.find(p => p.id === i.id);
+                    const cantidad = Number(i.cantidad) || 0;
+                    const precioUnitario = Number(i.precio) || 0;
+                    const costoUnitarioVenta = Number(producto?.costoBaseCalculado) || 0;
+                    const costoTotalItem = costoUnitarioVenta * cantidad;
+                    const facturacionItem = precioUnitario * cantidad;
+                    const utilidadBrutaItem = facturacionItem - costoTotalItem;
+                    const margenBrutoVentaPct = facturacionItem > 0
+                        ? (utilidadBrutaItem / facturacionItem) * 100
+                        : 0;
+
+                    return {
+                        id: i.id,
+                        nombre: i.nombre,
+                        precio: precioUnitario,
+                        cantidad,
+                        costoUnitarioVenta,
+                        costoTotalVenta: costoTotalItem,
+                        utilidadBrutaVenta: utilidadBrutaItem,
+                        margenBrutoVentaPct,
+                        porcentajeGananciaAplicado: Number(producto?.porcentajeGananciaAplicado) || 0,
+                        costoSnapshotVersion: 1
+                    };
                 });
+
+                const costoTotalVenta = itemsParaGuardar.reduce(
+                    (sum, item) => sum + (Number(item.costoTotalVenta) || 0),
+                    0
+                );
+                const utilidadBrutaVenta = totalVentaActual - costoTotalVenta;
+                const margenBrutoVentaPct = totalVentaActual > 0
+                    ? (utilidadBrutaVenta / totalVentaActual) * 100
+                    : 0;
 
                 // Deducción de Stock
                 for (const item of carritoActual) {
@@ -766,9 +807,18 @@ export function setupPOS(app) {
                 }
 
                 await addDoc(ventasCollection, {
-                    cajaId: cajaActiva.id, fecha: Timestamp.now(), metodoPago: metodoPagoSeleccionado,
-                    total: totalVentaActual, pagoEfectivo: efectivoReal, pagoMercadoPago: mpReal,
-                    items: itemsParaGuardar, vendedor: cajaActiva.usuarioNombre || userName
+                    cajaId: cajaActiva.id,
+                    fecha: Timestamp.now(),
+                    metodoPago: metodoPagoSeleccionado,
+                    total: totalVentaActual,
+                    pagoEfectivo: efectivoReal,
+                    pagoMercadoPago: mpReal,
+                    items: itemsParaGuardar,
+                    costoTotalVenta,
+                    utilidadBrutaVenta,
+                    margenBrutoVentaPct,
+                    costoSnapshotVersion: 1,
+                    vendedor: cajaActiva.usuarioNombre || userName
                 });
 
                 cajaActiva.totalEfectivo = (cajaActiva.totalEfectivo || 0) + efectivoReal;
