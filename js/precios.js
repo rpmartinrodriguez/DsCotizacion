@@ -405,13 +405,21 @@ export function setupPrecios(app) {
                 : 0;
 
             let status = 'good';
+            let issue = '';
+            const missingCost = currentCost <= 0;
             const criticalByMargin = Number.isFinite(currentMargin) && currentMargin < (target - 10);
             const criticalByLoss = Number.isFinite(lossPoints) && lossPoints >= Math.max(10, dropThreshold * 2);
             const reviewByMargin = Number.isFinite(currentMargin) && currentMargin < target;
             const reviewByLoss = Number.isFinite(lossPoints) && lossPoints >= dropThreshold;
 
-            if (criticalByMargin || criticalByLoss) status = 'critical';
-            else if (reviewByMargin || reviewByLoss) status = 'review';
+            if (missingCost) {
+                status = 'critical';
+                issue = 'missing-cost';
+            } else if (criticalByMargin || criticalByLoss) {
+                status = 'critical';
+            } else if (reviewByMargin || reviewByLoss) {
+                status = 'review';
+            }
 
             return {
                 ...recipe,
@@ -426,6 +434,7 @@ export function setupPrecios(app) {
                 monthlyImpact,
                 sales,
                 status,
+                issue,
                 materialDrivers: buildMaterialDrivers(recipe)
             };
         });
@@ -468,11 +477,13 @@ export function setupPrecios(app) {
         }
 
         reviewBody.innerHTML = visible.map((row) => {
-            const statusLabel = row.status === 'critical'
-                ? 'Crítico'
-                : row.status === 'review'
-                    ? 'Revisar'
-                    : 'Correcto';
+            const statusLabel = row.issue === 'missing-cost'
+                ? 'Sin costo'
+                : row.status === 'critical'
+                    ? 'Crítico'
+                    : row.status === 'review'
+                        ? 'Revisar'
+                        : 'Correcto';
 
             const historicalHtml = Number.isFinite(row.historicalMargin)
                 ? formatPercent(row.historicalMargin)
