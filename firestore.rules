@@ -57,8 +57,8 @@ service cloud.firestore {
     // Configuración sensible del mostrador (ej. margen global).
     match /config/{documentId} {
       allow read: if hasPermission('mostrador')
-        || hasPermission('precios')
-        || hasPermission('configuracion');
+        || hasPermission('configuracion')
+        || (hasPermission('precios') && documentId == 'mostrador');
 
       allow write: if isMaster()
         || hasPermission('configuracion');
@@ -116,7 +116,15 @@ service cloud.firestore {
 
       allow update: if hasPermission('recetas')
         || hasPermission('mostrador')
-        || hasPermission('precios');
+        || (
+          hasPermission('precios')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'margenIndividual',
+            'historialCambiosPrecio',
+            'ultimaRevisionPrecio',
+            'ultimaDecisionPrecio'
+          ])
+        );
     }
 
     match /categorias/{categoriaId} {
