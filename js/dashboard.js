@@ -1,6 +1,7 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getEffectiveUnitCost } from "./core/pricing.js";
 
 export function setupDashboard(app) {
     const db = getFirestore(app);
@@ -198,7 +199,10 @@ export function setupDashboard(app) {
         let valorTotalStock = 0;
         materiasPrimasDisponibles.forEach(item => {
             if(item.lotes && Array.isArray(item.lotes)) {
-                item.lotes.forEach(lote => valorTotalStock += lote.stockRestante * lote.costoUnitario);
+                const costoUnitarioAplicado = getEffectiveUnitCost(item);
+                item.lotes.forEach(lote => {
+                    valorTotalStock += (Number(lote.stockRestante) || 0) * costoUnitarioAplicado;
+                });
             }
         });
         kpiValorStock.textContent = `$${formatCurrency(valorTotalStock)}`;
