@@ -1,12 +1,7 @@
 import { getAuth, getIdToken } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import {
-    collection,
-    addDoc,
     doc,
     getDoc,
-    getDocs,
-    query,
-    where,
     updateDoc,
     Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
@@ -60,8 +55,6 @@ const formatDateTime = (timestamp) => {
 
 export function setupSupplierPricing(app, db, { getStock }) {
     const auth = getAuth(app);
-    const historyCollection = collection(db, 'historialPreciosProveedor');
-
     const bulkButton = document.getElementById('btn-actualizar-precios-proveedor');
     const urlInput = document.getElementById('proveedor-url-input');
     const quantityInput = document.getElementById('proveedor-cantidad-input');
@@ -311,27 +304,37 @@ export function setupSupplierPricing(app, db, { getStock }) {
 
         const oldProviderPrice = Number(data.proveedorPrecioActual) || 0;
         const oldProviderUnitCost = Number(data.proveedorCostoUnitarioActual) || 0;
-        const oldReferenceUnitCost = Number(data.costoReferenciaProveedorUnitario) || 0;
         const detectedUnitCost = newPrice / providerQuantity;
 
-        // Regla Dulce Sall: una baja del proveedor nunca reduce automáticamente
-        // el costo de referencia que usan los cálculos.
-        const hasNormalizedSupplierHistory = oldProviderUnitCost > 0;
-        const trustedPreviousReference = hasNormalizedSupplierHistory
-            ? oldReferenceUnitCost
-            : 0;
-
-        const newReferenceUnitCost = Math.max(
-            latestPurchaseUnitCost,
-            trustedPreviousReference,
-            detectedUnitCost
-        );
+        // El costo vigente de reposición es siempre el costo unitario actual del proveedor.
+        // Puede subir o bajar; los lotes históricos de compra permanecen intactos.
+        const newReferenceUnitCost = detectedUnitCost;
 
         const variation = oldProviderUnitCost > 0
             ? ((detectedUnitCost - oldProviderUnitCost) / oldProviderUnitCost) * 100
             : null;
 
         const checkedAt = Timestamp.now();
+        const previousHistory = Array.isArray(data.historialPreciosProveedor)
+            ? data.historialPreciosProveedor
+            : [];
+
+        const historyEntry = {
+            precioAnterior: oldProviderPrice || null,
+            precioNuevo: newPrice,
+            variacionPct: variation,
+            presentacionCantidad: packageQuantity,
+            presentacionUnidad: packageUnit,
+            cantidadProveedorBase: providerQuantity,
+            unidad: data.unidad || '',
+            costoUnitarioAnterior: oldProviderUnitCost || null,
+            costoUnitarioDetectado: detectedUnitCost,
+            proveedorHost: detection.host || '',
+            fuente: detection.source || '',
+            fecha: checkedAt
+        };
+
+        const updatedHistory = [historyEntry, ...previousHistory].slice(0, 60);
 
         await updateDoc(ref, {
             proveedorPrecioAnterior: oldProviderPrice || null,
@@ -346,39 +349,14 @@ export function setupSupplierPricing(app, db, { getStock }) {
             proveedorUltimaFuente: detection.source || '',
             proveedorUltimoHost: detection.host || '',
             proveedorTituloDetectado: detection.title || '',
-            costoReferenciaProveedorUnitario: newReferenceUnitCost
+            costoReferenciaProveedorUnitario: newReferenceUnitCost,
+            historialPreciosProveedor: updatedHistory
         });
 
-        let historySaved = true;
-        try {
-            await addDoc(historyCollection, {
-                materiaPrimaId: productId,
-                materiaPrimaNombre: data.nombre || activeProductName || '',
-                proveedorUrl: data.proveedorUrl || '',
-                proveedorHost: detection.host || '',
-                fuente: detection.source || '',
-                precioAnterior: oldProviderPrice || null,
-                precioNuevo: newPrice,
-                variacionPct: variation,
-                presentacionCantidad: packageQuantity,
-                presentacionUnidad: packageUnit,
-                cantidadProveedorBase: providerQuantity,
-                unidad: data.unidad || '',
-                costoUnitarioAnterior: oldProviderUnitCost || null,
-                costoUnitarioDetectado: detectedUnitCost,
-                costoReferenciaAnterior: Math.max(latestPurchaseUnitCost, trustedPreviousReference),
-                costoReferenciaNuevo: newReferenceUnitCost,
-                fecha: checkedAt
-            });
-        } catch (historyError) {
-            historySaved = false;
-            console.warn('Precio actualizado, pero no se pudo guardar el historial:', historyError);
-        }
-
         let movement = 'initial';
-        if (oldProviderPrice > 0) {
-            if (newPrice > oldProviderPrice) movement = 'up';
-            else if (newPrice < oldProviderPrice) movement = 'down';
+        if (oldProviderUnitCost > 0) {
+            if (detectedUnitCost > oldProviderUnitCost) movement = 'up';
+            else if (detectedUnitCost < oldProviderUnitCost) movement = 'down';
             else movement = 'same';
         }
 
@@ -393,12 +371,11 @@ export function setupSupplierPricing(app, db, { getStock }) {
             packageQuantity,
             packageUnit,
             detectedUnitCost,
-            oldReferenceUnitCost: Math.max(latestPurchaseUnitCost, trustedPreviousReference),
+            oldReferenceUnitCost: oldProviderUnitCost || latestPurchaseUnitCost,
             newReferenceUnitCost,
             movement,
             host: detection.host || '',
-            source: detection.source || '',
-            historySaved
+            source: detection.source || ''
         };
     };
 
@@ -423,7 +400,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
             message = `Aumentó ${formatPercent(result.variation)}. El costo de referencia fue actualizado.`;
             kind = 'up';
         } else if (result.movement === 'down') {
-            message = `Bajó ${formatPercent(result.variation)}. Se conserva el costo de referencia más alto.`;
+            message = `Bajó ${formatPercent(result.variation)}. El costo de reposición fue actualizado al valor actual.`;
             kind = 'down';
         } else if (result.movement === 'same') {
             message = 'El precio no cambió.';
@@ -434,9 +411,6 @@ export function setupSupplierPricing(app, db, { getStock }) {
             kind = 'alert';
         }
 
-        if (!result.historySaved) {
-            message += ' Precio actualizado; el historial requiere habilitar la regla nueva de Firestore.';
-        }
 
         setStatus(message, kind);
     };
@@ -505,9 +479,9 @@ export function setupSupplierPricing(app, db, { getStock }) {
 
             let detail = 'Primera consulta';
             if (result.movement === 'up') detail = `Aumentó ${formatPercent(result.variation)}`;
-            if (result.movement === 'down') detail = `Bajó ${formatPercent(result.variation)} · costo conservado`;
+            if (result.movement === 'down') detail = `Bajó ${formatPercent(result.variation)} · costo actualizado`;
             if (result.movement === 'same') detail = 'Sin cambios';
-            if (significant) detail = `⚠ Variación importante ${formatPercent(result.variation)} · ${result.movement === 'down' ? 'costo conservado' : 'revisar margen'}`;
+            if (significant) detail = `⚠ Variación importante ${formatPercent(result.variation)} · revisar margen`;
 
             item.innerHTML = `
                 <div class="ds-supplier-result-main">
@@ -594,18 +568,13 @@ export function setupSupplierPricing(app, db, { getStock }) {
         historyModal.classList.add('visible');
 
         try {
-            const snapshot = await getDocs(
-                query(historyCollection, where('materiaPrimaId', '==', activeProductId))
-            );
+            const snapshot = await getDoc(doc(db, 'materiasPrimas', activeProductId));
+            if (!snapshot.exists()) throw new Error('La materia prima ya no existe.');
 
-            const rows = snapshot.docs
-                .map((snapshotDoc) => snapshotDoc.data())
-                .sort((a, b) => {
-                    const aSeconds = a.fecha?.seconds || 0;
-                    const bSeconds = b.fecha?.seconds || 0;
-                    return bSeconds - aSeconds;
-                })
-                .slice(0, 100);
+            const data = snapshot.data();
+            const rows = Array.isArray(data.historialPreciosProveedor)
+                ? data.historialPreciosProveedor
+                : [];
 
             if (!rows.length) {
                 historyList.innerHTML = '<p>No hay consultas de proveedor registradas todavía.</p>';
@@ -614,17 +583,21 @@ export function setupSupplierPricing(app, db, { getStock }) {
 
             historyList.innerHTML = rows.map((row) => {
                 const variation = Number(row.variacionPct);
-                const cls = variation > 0 ? 'is-up' : variation < 0 ? 'is-down' : 'is-same';
+                const significant = isSignificantVariation(variation);
+                const cls = significant ? 'is-alert' : variation > 0 ? 'is-up' : variation < 0 ? 'is-down' : 'is-same';
+                const packageText = Number(row.presentacionCantidad) > 0 && row.presentacionUnidad
+                    ? `${Number(row.presentacionCantidad).toLocaleString('es-AR')} ${escapeHtml(row.presentacionUnidad)}`
+                    : 'Presentación no informada';
 
                 return `
                     <article class="ds-price-history-row ${cls}">
                         <div>
                             <strong>${formatCurrency(Number(row.precioNuevo) || 0)}</strong>
-                            <span>${formatPercent(row.variacionPct)}</span>
+                            <span>${significant ? '⚠ ' : ''}${formatPercent(row.variacionPct)}</span>
                         </div>
                         <div>
-                            <small>${formatDateTime(row.fecha)}</small>
-                            <p>Costo de referencia: ${formatCurrency(Number(row.costoReferenciaNuevo) || 0)} / ${escapeHtml(row.unidad || 'unidad')}</p>
+                            <small>${formatDateTime(row.fecha)} · ${packageText}</small>
+                            <p>Costo vigente: ${formatCurrency(Number(row.costoUnitarioDetectado) || 0)} / ${escapeHtml(row.unidad || 'unidad')}</p>
                         </div>
                     </article>
                 `;
