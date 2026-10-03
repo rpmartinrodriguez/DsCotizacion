@@ -3,6 +3,7 @@ import {
     setDoc, deleteDoc, addDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { addToCart, updateCartIcon } from './cart.js';
+import { getEffectiveUnitCost } from './core/pricing.js';
 
 export function setupRecetas(app) {
     const db = getFirestore(app);
@@ -135,21 +136,10 @@ export function setupRecetas(app) {
             // Buscamos la materia prima en el stock actual por ID
             const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === ing.idMateriaPrima);
             
-            if (materiaPrima && materiaPrima.lotes && materiaPrima.lotes.length > 0) {
-                // Usamos el costo del último lote comprado (El más actual)
-                const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
-                const ultimoLote = lotesOrdenados[0];
-                
-                let costoUnitarioMP = ultimoLote.costoUnitario;
-                
-                if (typeof costoUnitarioMP !== 'number') {
-                    if (ultimoLote.cantidadComprada > 0) {
-                        costoUnitarioMP = ultimoLote.precioCompra / ultimoLote.cantidadComprada;
-                    } else {
-                        costoUnitarioMP = 0;
-                    }
-                }
-
+            if (materiaPrima) {
+                // Para decisiones de precio usamos el costo más conservador:
+                // último costo real de compra o costo de reposición del proveedor.
+                const costoUnitarioMP = getEffectiveUnitCost(materiaPrima);
                 costoTotal += costoUnitarioMP * ing.cantidad;
             }
         });
