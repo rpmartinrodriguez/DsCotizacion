@@ -39,6 +39,7 @@
                         <p>Controlá existencias, costos de compra, lotes y movimientos de materias primas.</p>
                     </div>
                     <div class="ds-content-actions">
+                        <button type="button" id="btn-actualizar-precios-proveedor" class="ds-action-secondary">↻ Actualizar proveedores</button>
                         <a href="compras.html" class="ds-action-primary">+ Registrar compra</a>
                     </div>
                 </section>
@@ -91,6 +92,51 @@
                     </div>
                 </div>
 
+                <section class="ds-supplier-editor">
+                    <div class="ds-supplier-editor-head">
+                        <div>
+                            <span class="ds-mini-eyebrow">Proveedor</span>
+                            <h4>Precio de reposición</h4>
+                            <p>Guardá el enlace exacto del producto. Dulce Sall consulta el precio sin modificar tus lotes de compra.</p>
+                        </div>
+                        <span class="ds-supplier-shield">Consulta segura</span>
+                    </div>
+
+                    <div class="ds-supplier-form">
+                        <div class="form-group ds-supplier-url-field">
+                            <label for="proveedor-url-input">URL del producto</label>
+                            <input type="url" id="proveedor-url-input" placeholder="https://proveedor.com/producto/..." autocomplete="off">
+                            <small>Pegá la página exacta del producto del proveedor.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="proveedor-cantidad-input">Cantidad de esa presentación</label>
+                            <input type="number" id="proveedor-cantidad-input" min="0" step="any" placeholder="Ej. 1000">
+                            <small>En la misma unidad del stock.</small>
+                        </div>
+                    </div>
+
+                    <div class="ds-supplier-kpis">
+                        <div>
+                            <span>Precio proveedor</span>
+                            <strong id="proveedor-precio-actual">Sin consultar</strong>
+                        </div>
+                        <div>
+                            <span>Costo referencia</span>
+                            <strong id="proveedor-costo-referencia">Sin referencia</strong>
+                        </div>
+                        <div>
+                            <span>Última consulta</span>
+                            <strong id="proveedor-ultima-consulta">Nunca</strong>
+                        </div>
+                    </div>
+
+                    <div class="ds-supplier-actions">
+                        <button type="button" id="btn-consultar-precio-proveedor" class="btn-primary">Guardar y consultar ahora</button>
+                        <button type="button" id="btn-ver-historial-precios" class="btn-secondary">Historial de precios</button>
+                    </div>
+                    <p id="proveedor-status" class="ds-supplier-status"></p>
+                </section>
+
                 <h4 class="card__subtitle">Lotes de compra</h4>
                 <div id="lotes-editor-container" class="lotes-editor-container">
                     <p>Cargando lotes…</p>
@@ -132,6 +178,36 @@
             </div>
             <div class="modal-actions">
                 <button id="movimientos-modal-btn-cerrar" class="btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="supplier-results-modal-overlay" class="modal-overlay">
+        <div class="modal-content card ds-supplier-results-modal">
+            <div class="ds-modal-heading">
+                <div>
+                    <p class="ds-eyebrow">Proveedores</p>
+                    <h2 class="card__title">Actualización de precios</h2>
+                    <p>Comparación contra la última consulta. Las bajas no reducen automáticamente el costo de referencia.</p>
+                </div>
+            </div>
+            <div id="supplier-results-summary" class="ds-supplier-summary"></div>
+            <div id="supplier-results-list" class="ds-supplier-results-list"></div>
+            <div class="modal-actions">
+                <button type="button" id="supplier-results-close" class="btn-primary">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="supplier-history-modal-overlay" class="modal-overlay">
+        <div class="modal-content card ds-supplier-history-modal">
+            <h2 class="card__title" id="supplier-history-title">Historial de precios</h2>
+            <p class="ds-modal-copy">Se conserva cada consulta para poder seguir aumentos, bajas y el costo de referencia aplicado.</p>
+            <div id="supplier-history-list" class="ds-price-history-list">
+                <p>Cargando historial…</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" id="supplier-history-close" class="btn-primary">Cerrar</button>
             </div>
         </div>
     </div>
