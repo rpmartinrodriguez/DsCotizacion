@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.22';
+const CACHE_NAME = 'dulce-sall-admin-v2.23';
 
 const CORE_ASSETS = [
     '/',
