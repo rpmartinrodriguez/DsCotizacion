@@ -74,8 +74,9 @@ export function setupPOSInventory({
                 <td data-label="Precio Venta" style="font-weight:bold;color:var(--primary-color);">
                     ${formatCurrency(product.precioCalculado)}
                 </td>
-                <td data-label="Stock" style="text-align:center;color:${stock > 0 ? 'var(--text-main)' : 'var(--danger-color)'}">
+                <td data-label="Stock" style="text-align:center;">
                     <strong>${stock}</strong> u.
+                    <small class="ds-stock-mode-note">${stock > 0 ? 'informativo' : 'sin cargar · venta habilitada'}</small>
                 </td>
                 <td data-label="Acciones" style="text-align:center;">
                     <div style="display:flex;gap:.5rem;justify-content:center;align-items:center;">
