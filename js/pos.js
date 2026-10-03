@@ -43,7 +43,20 @@ export function setupPOS(app) {
     const buscadorPOS = document.getElementById('buscador-pos');
     const carritoContainer = document.getElementById('carrito-pos-container');
     const posTotalMonto = document.getElementById('pos-total-monto');
+    const posCobrarMonto = document.getElementById('pos-cobrar-monto');
+    const posCartCount = document.getElementById('pos-cart-count');
     const btnCobrar = document.getElementById('btn-cobrar');
+    const btnVaciarCarrito = document.getElementById('btn-vaciar-carrito');
+    const categoryFilters = document.getElementById('pos-category-filters');
+    const favoritesSection = document.getElementById('pos-favorites-section');
+    const favoritesStrip = document.getElementById('pos-favorites-strip');
+    const posGridTitle = document.getElementById('pos-grid-title');
+    const posGridCount = document.getElementById('pos-grid-count');
+    const mobileCheckout = document.getElementById('pos-mobile-checkout');
+    const mobileCount = document.getElementById('pos-mobile-count');
+    const mobileTotal = document.getElementById('pos-mobile-total');
+    const btnCobrarMobile = document.getElementById('btn-cobrar-mobile');
+    const btnVerCarritoMobile = document.getElementById('btn-ver-carrito-mobile');
 
     const modalCobro = document.getElementById('modal-cobro');
     const modalCobroTotal = document.getElementById('modal-cobro-total');
@@ -111,6 +124,10 @@ export function setupPOS(app) {
     let margenGlobal = 0; 
     let totalVentaActual = 0;
     let saldoTurnoAnteriorDetectado = 0;
+    let categoriaPOSActiva = 'Todos';
+    let terminoBusquedaPOS = '';
+    let topSellingKeys = new Set();
+    let topSellingLoaded = false;
 
     const manualHistory = setupManualHistory({
         db,
@@ -403,10 +420,128 @@ export function setupPOS(app) {
         });
     }
 
+    const cargarMasVendidos = async () => {
+        if (topSellingLoaded) return;
+        topSellingLoaded = true;
+
+        try {
+            const ventasRecientes = await getDocs(
+                query(ventasCollection, orderBy('fecha', 'desc'), limit(250))
+            );
+            const conteo = new Map();
+
+            ventasRecientes.forEach(ventaDoc => {
+                const venta = ventaDoc.data() || {};
+                const items = Array.isArray(venta.items) ? venta.items : [];
+
+                items.forEach(item => {
+                    const key = item.id
+                        ? `id:${item.id}`
+                        : `name:${String(item.nombre || '').trim().toLowerCase()}`;
+                    if (key === 'name:') return;
+                    conteo.set(key, (conteo.get(key) || 0) + (Number(item.cantidad) || 1));
+                });
+            });
+
+            topSellingKeys = new Set(
+                [...conteo.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 8)
+                    .map(([key]) => key)
+            );
+        } catch (error) {
+            console.warn('No se pudieron calcular los más vendidos:', error);
+            topSellingKeys = new Set();
+        }
+    };
+
+    const obtenerCategoriasPOS = () => {
+        const categorias = new Set(
+            productosDisponibles
+                .map(prod => String(prod.categoria || 'Otros').trim())
+                .filter(Boolean)
+        );
+
+        return ['Todos', ...[...categorias].sort((a, b) => a.localeCompare(b, 'es'))];
+    };
+
+    const renderizarFiltrosCategorias = () => {
+        if (!categoryFilters) return;
+
+        categoryFilters.innerHTML = obtenerCategoriasPOS().map(categoria => `
+            <button
+                type="button"
+                class="ds-pos-category-chip ${categoria === categoriaPOSActiva ? 'is-active' : ''}"
+                data-category="${escapeAttribute(categoria)}"
+            >${escapeHtml(categoria)}</button>
+        `).join('');
+    };
+
+    const productoCoincideBusqueda = (producto) => {
+        if (!terminoBusquedaPOS) return true;
+        const termino = terminoBusquedaPOS.toLowerCase();
+
+        return (
+            String(producto.nombreTorta || '').toLowerCase().includes(termino) ||
+            String(producto.categoria || '').toLowerCase().includes(termino) ||
+            String(producto.codigoBarras || '').toLowerCase().includes(termino)
+        );
+    };
+
+    const aplicarFiltrosPOS = () => {
+        const filtrados = productosDisponibles.filter(producto => {
+            const categoriaProducto = String(producto.categoria || 'Otros').trim();
+            const categoriaOk = categoriaPOSActiva === 'Todos' || categoriaProducto === categoriaPOSActiva;
+            return categoriaOk && productoCoincideBusqueda(producto);
+        });
+
+        if (posGridTitle) {
+            posGridTitle.textContent = categoriaPOSActiva === 'Todos'
+                ? (terminoBusquedaPOS ? 'Resultados' : 'Todos los productos')
+                : categoriaPOSActiva;
+        }
+
+        if (posGridCount) {
+            posGridCount.textContent = `${filtrados.length} ${filtrados.length === 1 ? 'producto' : 'productos'}`;
+        }
+
+        renderizarGridPOS(filtrados);
+        renderizarMasVendidos();
+        renderizarFiltrosCategorias();
+    };
+
+    const renderizarMasVendidos = () => {
+        if (!favoritesSection || !favoritesStrip) return;
+
+        const favoritos = productosDisponibles.filter(producto => {
+            const idKey = `id:${producto.id}`;
+            const nameKey = `name:${String(producto.nombreTorta || '').trim().toLowerCase()}`;
+            return topSellingKeys.has(idKey) || topSellingKeys.has(nameKey);
+        }).slice(0, 8);
+
+        favoritesSection.hidden = favoritos.length === 0;
+
+        if (!favoritos.length) {
+            favoritesStrip.innerHTML = '';
+            return;
+        }
+
+        favoritesStrip.innerHTML = favoritos.map(producto => `
+            <button type="button" class="ds-pos-favorite" data-id="${escapeAttribute(producto.id)}">
+                <span>${escapeHtml(producto.nombreTorta || 'Producto')}</span>
+                <strong>${formatMoneda(producto.precioCalculado || 0)}</strong>
+            </button>
+        `).join('');
+    };
+
     // ==========================================
     // CARGA Y RENDERIZADO
     // ==========================================
     const cargarDataYCostos = () => {
+        cargarMasVendidos().then(() => {
+            if (productosDisponibles.length) aplicarFiltrosPOS();
+        });
+
         onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
             snapshot.forEach(doc => materiasPrimasMap.set(doc.id, doc.data()));
@@ -437,7 +572,7 @@ export function setupPOS(app) {
         });
 
         if (pantallaPOS && pantallaPOS.style.display !== 'none') {
-            renderizarGridPOS(productosDisponibles);
+            aplicarFiltrosPOS();
         } 
         inventory.setProducts(productosDisponibles);
         manualHistory.setProducts(productosDisponibles);
@@ -449,21 +584,38 @@ export function setupPOS(app) {
     const renderizarGridPOS = (productos) => {
         if (!gridProductos) return;
         gridProductos.innerHTML = '';
+
+        if (!productos.length) {
+            gridProductos.innerHTML = `
+                <div class="ds-pos-no-results">
+                    <strong>No encontramos productos</strong>
+                    <span>Probá otra búsqueda o categoría.</span>
+                </div>
+            `;
+            return;
+        }
         
         productos.forEach(prod => {
-            const stock = prod.stockMostrador || 0;
-            const precioCalculado = prod.precioCalculado;
+            const stock = Number(prod.stockMostrador) || 0;
+            const precioCalculado = Number(prod.precioCalculado) || 0;
+            const categoria = String(prod.categoria || 'Otros');
             
-            const card = document.createElement('div');
+            const card = document.createElement('button');
+            card.type = 'button';
             card.className = 'producto-card';
             card.dataset.id = prod.id;
+            card.setAttribute('aria-label', `Agregar ${prod.nombreTorta || 'producto'} al carrito`);
             
             card.innerHTML = `
-                <div class="prod-nombre">${escapeHtml(prod.nombreTorta)}</div>
-                <div>
+                <div class="ds-pos-product-top">
+                    <span class="ds-pos-product-category">${escapeHtml(categoria)}</span>
+                    <span class="ds-pos-add-indicator">+</span>
+                </div>
+                <div class="prod-nombre">${escapeHtml(prod.nombreTorta || 'Producto')}</div>
+                <div class="ds-pos-product-bottom">
                     <div class="prod-precio">${formatMoneda(precioCalculado)}</div>
                     <div class="prod-stock ${stock <= 0 ? 'stock-informativo' : ''}">
-                        ${stock > 0 ? `${stock} registradas` : 'Venta habilitada · stock sin cargar'}
+                        ${stock > 0 ? `${stock} registradas` : 'Stock informativo'}
                     </div>
                 </div>
             `;
@@ -484,17 +636,20 @@ export function setupPOS(app) {
             });
         }
         renderizarCarrito();
+
+        const card = gridProductos?.querySelector(`.producto-card[data-id="${CSS.escape(prod.id)}"]`);
+        if (card) {
+            card.classList.remove('is-added');
+            requestAnimationFrame(() => card.classList.add('is-added'));
+            setTimeout(() => card.classList.remove('is-added'), 320);
+        }
     };
 
     // Búsqueda
     if (buscadorPOS) {
         buscadorPOS.addEventListener('input', (e) => {
-            const termino = e.target.value.toLowerCase();
-            const filtrados = productosDisponibles.filter(p => 
-                (p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino)) ||
-                (p.codigoBarras && String(p.codigoBarras).includes(termino))
-            );
-            renderizarGridPOS(filtrados);
+            terminoBusquedaPOS = String(e.target.value || '').trim().toLowerCase();
+            aplicarFiltrosPOS();
         });
 
         buscadorPOS.addEventListener('keydown', (e) => {
@@ -527,12 +682,32 @@ export function setupPOS(app) {
                 }
                 scanBuffer = '';
                 if (buscadorPOS) buscadorPOS.value = '';
-                renderizarGridPOS(productosDisponibles); 
+                terminoBusquedaPOS = '';
+                categoriaPOSActiva = 'Todos';
+                aplicarFiltrosPOS(); 
             }
         } else {
             scanBuffer += e.key;
         }
     });
+
+    if (categoryFilters) {
+        categoryFilters.addEventListener('click', (e) => {
+            const button = e.target.closest('[data-category]');
+            if (!button) return;
+            categoriaPOSActiva = button.dataset.category || 'Todos';
+            aplicarFiltrosPOS();
+        });
+    }
+
+    if (favoritesStrip) {
+        favoritesStrip.addEventListener('click', (e) => {
+            const button = e.target.closest('[data-id]');
+            if (!button) return;
+            const prod = productosDisponibles.find(p => p.id === button.dataset.id);
+            if (prod) agregarProductoAlCarrito(prod, 1);
+        });
+    }
 
     // Clic en Tarjeta (Touch POS)
     if (gridProductos) {
@@ -547,42 +722,70 @@ export function setupPOS(app) {
         });
     }
 
-    // Renderizar Carrito y controles +/-
+    // Renderizar Carrito compacto y controles
     const renderizarCarrito = () => {
         if (!carritoContainer) return;
         carritoContainer.innerHTML = '';
-        if (carritoActual.length === 0) {
-            carritoContainer.innerHTML = '<p class="text-light" style="text-align: center; margin-top: 2rem;">Tocá un producto para agregarlo.</p>';
-            if (posTotalMonto) posTotalMonto.textContent = formatMoneda(0);
-            if (btnCobrar) btnCobrar.disabled = true;
+
+        const cantidadItems = carritoActual.reduce((sum, item) => sum + (Number(item.cantidad) || 0), 0);
+        const total = carritoActual.reduce(
+            (sum, item) => sum + ((Number(item.precio) || 0) * (Number(item.cantidad) || 0)),
+            0
+        );
+
+        if (posTotalMonto) posTotalMonto.textContent = formatMoneda(total);
+        if (posCobrarMonto) posCobrarMonto.textContent = formatMoneda(total);
+        if (posCartCount) posCartCount.textContent = String(cantidadItems);
+        if (mobileCount) mobileCount.textContent = `${cantidadItems} ${cantidadItems === 1 ? 'producto' : 'productos'}`;
+        if (mobileTotal) mobileTotal.textContent = formatMoneda(total);
+
+        const vacio = carritoActual.length === 0;
+        if (btnCobrar) btnCobrar.disabled = vacio;
+        if (btnCobrarMobile) btnCobrarMobile.disabled = vacio;
+        if (btnVaciarCarrito) btnVaciarCarrito.disabled = vacio;
+        if (mobileCheckout) mobileCheckout.hidden = false;
+
+        if (vacio) {
+            carritoContainer.innerHTML = `
+                <div class="ds-pos-empty-cart">
+                    <span>🧁</span>
+                    <strong>Venta vacía</strong>
+                    <p>Tocá un producto para agregarlo.</p>
+                </div>
+            `;
             return;
         }
 
-        let total = 0;
         carritoActual.forEach((item, index) => {
-            const subtotal = item.precio * item.cantidad;
-            total += subtotal;
+            const subtotal = Number(item.precio) * Number(item.cantidad);
 
             const div = document.createElement('div');
-            div.className = 'cart-item';
+            div.className = 'cart-item ds-pos-cart-item';
             div.innerHTML = `
-                <div class="cart-item-info">
+                <div class="cart-item-info ds-pos-cart-item-info">
                     <h4>${escapeHtml(item.nombre)}</h4>
-                    <div class="cantidad-control">
-                        <button class="btn-restar-cant" data-index="${index}" style="padding:0.2rem 0.5rem; border:1px solid #ccc; border-radius:4px; background:#f8fafc; cursor:pointer;">-</button>
-                        <span style="font-weight:bold; min-width:20px; text-align:center;">${item.cantidad}</span>
-                        <button class="btn-sumar-cant" data-index="${index}" style="padding:0.2rem 0.5rem; border:1px solid #ccc; border-radius:4px; background:#f8fafc; cursor:pointer;">+</button>
-                        <span class="cart-item-precio-unit" style="margin-left:0.5rem;">x ${formatMoneda(item.precio)}</span>
-                    </div>
+                    <span class="ds-pos-unit-price">${formatMoneda(item.precio)} c/u</span>
                 </div>
+
+                <div class="ds-pos-qty-control">
+                    <button class="btn-restar-cant" data-index="${index}" type="button" aria-label="Restar una unidad">−</button>
+                    <input
+                        class="ds-pos-qty-input"
+                        data-index="${index}"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value="${item.cantidad}"
+                        aria-label="Cantidad de ${escapeAttribute(item.nombre)}"
+                    >
+                    <button class="btn-sumar-cant" data-index="${index}" type="button" aria-label="Sumar una unidad">+</button>
+                </div>
+
                 <div class="cart-item-total">${formatMoneda(subtotal)}</div>
-                <button class="btn-remove-cart" data-index="${index}" style="background:none; border:none; color:var(--danger-color); cursor:pointer; font-size:1.2rem;">🗑️</button>
+                <button class="btn-remove-cart" data-index="${index}" type="button" aria-label="Quitar ${escapeAttribute(item.nombre)}">×</button>
             `;
             carritoContainer.appendChild(div);
         });
-
-        if (posTotalMonto) posTotalMonto.textContent = formatMoneda(total);
-        if (btnCobrar) btnCobrar.disabled = false;
     };
 
     if (carritoContainer) {
@@ -592,31 +795,90 @@ export function setupPOS(app) {
             const btnSumar = e.target.closest('.btn-sumar-cant');
 
             if (btnRemove) { 
-                carritoActual.splice(btnRemove.dataset.index, 1); 
+                carritoActual.splice(Number(btnRemove.dataset.index), 1); 
                 renderizarCarrito(); 
             } else if (btnRestar) {
-                const idx = btnRestar.dataset.index;
-                if (carritoActual[idx].cantidad > 1) {
-                    carritoActual[idx].cantidad--;
-                } else {
-                    carritoActual.splice(idx, 1);
-                }
+                const idx = Number(btnRestar.dataset.index);
+                if (!carritoActual[idx]) return;
+                if (carritoActual[idx].cantidad > 1) carritoActual[idx].cantidad--;
+                else carritoActual.splice(idx, 1);
                 renderizarCarrito();
             } else if (btnSumar) {
-                const idx = btnSumar.dataset.index;
-                if (carritoActual[idx]) {
-                    carritoActual[idx].cantidad++;
-                }
+                const idx = Number(btnSumar.dataset.index);
+                if (carritoActual[idx]) carritoActual[idx].cantidad++;
                 renderizarCarrito();
             }
+        });
+
+        carritoContainer.addEventListener('change', (e) => {
+            const input = e.target.closest('.ds-pos-qty-input');
+            if (!input) return;
+            const idx = Number(input.dataset.index);
+            const cantidad = Math.max(1, Math.floor(Number(input.value) || 1));
+            if (carritoActual[idx]) {
+                carritoActual[idx].cantidad = cantidad;
+                renderizarCarrito();
+            }
+        });
+    }
+
+    if (btnVaciarCarrito) {
+        btnVaciarCarrito.addEventListener('click', () => {
+            if (!carritoActual.length) return;
+            if (!window.confirm('¿Vaciar la venta actual?')) return;
+            carritoActual = [];
+            renderizarCarrito();
+        });
+    }
+
+    if (btnVerCarritoMobile) {
+        btnVerCarritoMobile.addEventListener('click', () => {
+            document.querySelector('.ds-pos-cart')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     }
 
     // ==========================================
     // COBRO INTELIGENTE Y BILLETERA
     // ==========================================
+    const abrirCobro = () => {
+            if (!carritoActual.length) return;
+            totalVentaActual = carritoActual.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+            if (modalCobroTotal) modalCobroTotal.textContent = formatMoneda(totalVentaActual);
+            
+            metodoPagoSeleccionado = null;
+            btnPaymentMethods.forEach(b => b.classList.remove('selected'));
+            btnConfirmarVenta.disabled = true;
+            
+            if (paymentDetailsContainer) paymentDetailsContainer.style.display = 'none';
+            if (fieldMP) fieldMP.style.display = 'none';
+            if (fieldEfectivo) fieldEfectivo.style.display = 'none';
+            if (inputCobroMP) inputCobroMP.value = '';
+            if (inputCobroEfectivo) inputCobroEfectivo.value = '';
+            if (vueltoContainer) vueltoContainer.style.display = 'none';
+
+            const base = Math.max(5000, Math.ceil(totalVentaActual / 5000) * 5000);
+            const quickValues = ['exacto', base, base + 5000, base + 10000];
+            btnsQuickMoney.forEach((button, index) => {
+                const value = quickValues[index];
+                if (value === undefined) return;
+                button.dataset.val = String(value);
+                button.textContent = value === 'exacto' ? 'Exacto' : formatMoneda(value);
+            });
+
+            if (modalCobro) modalCobro.classList.add('visible');
+        };
+
     if (btnCobrar) {
-        btnCobrar.addEventListener('click', () => {
+        btnCobrar.addEventListener('click', abrirCobro);
+    }
+
+    if (btnCobrarMobile) {
+        btnCobrarMobile.addEventListener('click', abrirCobro);
+    }
+
+    /* legacy-open-payment-handler-removed */
+    if (false) {
+        btnCobrar?.addEventListener('click', () => {
             totalVentaActual = carritoActual.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
             if (modalCobroTotal) modalCobroTotal.textContent = formatMoneda(totalVentaActual);
             
@@ -715,8 +977,37 @@ export function setupPOS(app) {
         btnConfirmarVenta.disabled = !esValido;
     };
 
-    if (inputCobroMP) inputCobroMP.addEventListener('input', calcularVuelto);
+    if (inputCobroMP) {
+        inputCobroMP.addEventListener('input', () => {
+            if (metodoPagoSeleccionado === 'Ambos' && inputCobroEfectivo) {
+                const mp = Math.max(0, Math.min(totalVentaActual, Number(inputCobroMP.value) || 0));
+                inputCobroEfectivo.value = Math.max(0, totalVentaActual - mp);
+            }
+            calcularVuelto();
+        });
+    }
     if (inputCobroEfectivo) inputCobroEfectivo.addEventListener('input', calcularVuelto);
+
+    document.addEventListener('keydown', (event) => {
+        const tag = document.activeElement?.tagName?.toLowerCase();
+        const isTyping = ['input', 'textarea', 'select'].includes(tag);
+
+        if (event.key === '/' && !isTyping && pantallaPOS?.style.display !== 'none') {
+            event.preventDefault();
+            buscadorPOS?.focus();
+            buscadorPOS?.select();
+        }
+
+        if (event.key === 'F2' && pantallaPOS?.style.display !== 'none' && carritoActual.length) {
+            event.preventDefault();
+            abrirCobro();
+        }
+
+        if (event.key === 'Escape' && modalCobro?.classList.contains('visible')) {
+            modalCobro.classList.remove('visible');
+            buscadorPOS?.focus();
+        }
+    });
 
     if (btnConfirmarVenta) {
         btnConfirmarVenta.addEventListener('click', async () => {
