@@ -55,7 +55,7 @@
                                 <tr>
                                     <th>Nombre</th>
                                     <th>Stock actual</th>
-                                    <th>Precio base</th>
+                                    <th>Costo aplicado</th>
                                     <th>Proveedor</th>
                                     <th>Última carga</th>
                                     <th>Acciones</th>
@@ -110,9 +110,20 @@
                             <small>Pegá la página exacta del producto del proveedor.</small>
                         </div>
                         <div class="form-group">
-                            <label for="proveedor-cantidad-input">Cantidad de esa presentación</label>
-                            <input type="number" id="proveedor-cantidad-input" min="0" step="any" placeholder="Ej. 1000">
-                            <small>En la misma unidad del stock.</small>
+                            <label>Presentación del proveedor</label>
+                            <div class="ds-supplier-package-row">
+                                <input type="number" id="proveedor-cantidad-input" min="0" step="any" placeholder="Ej. 10">
+                                <select id="proveedor-unidad-select" aria-label="Unidad de presentación del proveedor">
+                                    <option value="">Detectar</option>
+                                    <option value="kg">kg</option>
+                                    <option value="gr">gr</option>
+                                    <option value="l">litros</option>
+                                    <option value="ml">ml</option>
+                                    <option value="cc">cc</option>
+                                    <option value="unidad">unidad</option>
+                                </select>
+                            </div>
+                            <small>Ej.: bolsa de 10 kg. Si lo dejás vacío, intentamos detectarlo desde la página.</small>
                         </div>
                     </div>
 
