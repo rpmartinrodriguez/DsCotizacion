@@ -3,6 +3,7 @@ import {
     updateDoc, getDoc, runTransaction, where, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
+import { setupSupplierPricing } from "./stock/supplier-pricing.js";
 
 export function setupStock(app) {
     const db = getFirestore(app);
@@ -40,10 +41,14 @@ export function setupStock(app) {
     let todoElStock = [];
     let unsubHistorial = null;
 
+    const supplierPricing = setupSupplierPricing(app, db, {
+        getStock: () => todoElStock
+    });
+
     const renderizarTabla = (datos) => {
         tablaStockBody.innerHTML = '';
         if (datos.length === 0) {
-            tablaStockBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No se encontraron productos.</td></tr>';
+            tablaStockBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No se encontraron productos.</td></tr>';
             return;
         }
         datos.forEach(itemConId => {
@@ -68,10 +73,35 @@ export function setupStock(app) {
                 const safeNombre = escapeHtml(item.nombre);
                 const safeNombreAttr = escapeAttribute(item.nombre);
                 const safeUnidad = escapeHtml(item.unidad);
+                const proveedorPrecio = Number(item.proveedorPrecioActual) || 0;
+                const proveedorVariacion = Number(item.proveedorVariacionPct);
+                const tieneProveedor = Boolean((item.proveedorUrl || '').trim());
+                let proveedorHtml = '<span class="ds-provider-table-empty">Sin configurar</span>';
+
+                if (tieneProveedor && proveedorPrecio <= 0) {
+                    proveedorHtml = '<span class="ds-provider-table-pending">Pendiente de consulta</span>';
+                } else if (proveedorPrecio > 0) {
+                    const variacionValida = Number.isFinite(proveedorVariacion) && item.proveedorPrecioAnterior;
+                    const cls = variacionValida
+                        ? (proveedorVariacion > 0 ? 'is-up' : proveedorVariacion < 0 ? 'is-down' : 'is-same')
+                        : 'is-same';
+                    const variacionTexto = variacionValida
+                        ? `${proveedorVariacion > 0 ? '+' : ''}${proveedorVariacion.toLocaleString('es-AR', { maximumFractionDigits: 2 })}%`
+                        : 'Inicial';
+
+                    proveedorHtml = `
+                        <div class="ds-provider-table-price">
+                            <strong>${proveedorPrecio.toLocaleString('es-AR')}</strong>
+                            <span class="${cls}">${variacionTexto}</span>
+                        </div>
+                    `;
+                }
+
                 fila.innerHTML = `
                     <td data-label="Nombre">${safeNombre}</td>
                     <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${safeUnidad}</td>
                     <td data-label="Precio Base">${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${safeUnidad}</td>
+                    <td data-label="Proveedor">${proveedorHtml}</td>
                     <td data-label="Última Carga">${fechaUltimaCarga}</td>
                     <td class="action-buttons stock-actions">
                         <button class="btn-stock-link ajustar" data-id="${safeId}" title="Ajustar Stock Total">⚖️</button>
@@ -100,6 +130,7 @@ export function setupStock(app) {
             modalCompletoTitle.textContent = `Editando: ${producto.nombre}`;
             nombreCompletoInput.value = producto.nombre;
             unidadCompletoSelect.value = producto.unidad;
+            supplierPricing.loadProduct(producto, id);
 
             lotesEditorContainer.innerHTML = '';
             if (producto.lotes && producto.lotes.length > 0) {
@@ -130,6 +161,7 @@ export function setupStock(app) {
 
     const closeModalCompleta = () => {
         modalCompleto.classList.remove('visible');
+        supplierPricing.reset();
         editandoId = null;
     };
     
@@ -162,10 +194,12 @@ export function setupStock(app) {
                     costoUnitario: cantidad > 0 ? precio / cantidad : 0
                 };
             });
+            const datosProveedor = supplierPricing.getEditorFields();
             const datosParaActualizar = {
                 nombre: nombreCompletoInput.value.trim(),
                 unidad: unidadCompletoSelect.value,
-                lotes: nuevosLotes
+                lotes: nuevosLotes,
+                ...datosProveedor
             };
             await updateDoc(docRef, datosParaActualizar);
             alert('¡Producto actualizado con éxito!');
