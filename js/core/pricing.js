@@ -9,6 +9,25 @@ export const getLatestLot = (lots = []) => {
     return [...lots].sort((a, b) => lotTimestamp(b) - lotTimestamp(a))[0] || null;
 };
 
+export const getEffectiveUnitCost = (rawMaterial) => {
+    const latestLot = getLatestLot(rawMaterial?.lotes);
+
+    let purchaseUnitCost = 0;
+    if (latestLot) {
+        purchaseUnitCost = Number(latestLot.costoUnitario) || 0;
+
+        if (purchaseUnitCost <= 0) {
+            const purchasePrice = Number(latestLot.precioCompra) || 0;
+            const purchaseQuantity = Number(latestLot.cantidadComprada) || 0;
+            purchaseUnitCost = purchaseQuantity > 0 ? purchasePrice / purchaseQuantity : 0;
+        }
+    }
+
+    const supplierReference = Number(rawMaterial?.costoReferenciaProveedorUnitario) || 0;
+
+    return Math.max(purchaseUnitCost, supplierReference);
+};
+
 export const calculateRecipeUnitCost = (
     recipe,
     ingredientMap,
@@ -28,11 +47,9 @@ export const calculateRecipeUnitCost = (
 
     recipe.ingredientes.forEach((ingredient) => {
         const rawMaterial = ingredientMap.get(ingredient.idMateriaPrima);
-        const latestLot = getLatestLot(rawMaterial?.lotes);
+        const unitCost = getEffectiveUnitCost(rawMaterial);
 
-        if (!latestLot) return;
-
-        const unitCost = Number(latestLot.costoUnitario) || 0;
+        if (unitCost <= 0) return;
         const quantity = Number(ingredient.cantidad) || 0;
         totalCost += unitCost * quantity;
     });
