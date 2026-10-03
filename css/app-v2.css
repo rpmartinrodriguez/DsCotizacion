@@ -2835,3 +2835,27 @@ body.ds-history .historial-card__detalle ul {
     flex-direction: column;
   }
 }
+
+
+.ds-replacement-cost-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #fff3e8;
+  color: #9a5a1d;
+  font-size: .62rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.ds-replacement-cost-note {
+  margin-top: 5px;
+  padding: 6px 8px;
+  border-left: 3px solid #d8a45f;
+  border-radius: 5px;
+  background: #fff9f1;
+  color: #7c5a31;
+  font-size: .68rem;
+}
