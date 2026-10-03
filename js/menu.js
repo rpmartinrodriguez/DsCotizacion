@@ -254,7 +254,13 @@ async function inicializarMenu() {
 
     if (sidebarCollapseBtn) {
         sidebarCollapseBtn.addEventListener('click', () => {
-            if (window.innerWidth < 1024) return;
+            if (window.innerWidth < 1024) {
+                navMenu.classList.remove('active');
+                document.body.classList.remove('menu-open');
+                if (navOverlay) navOverlay.classList.remove('active');
+                return;
+            }
+
             aplicarEstadoSidebar(
                 !document.body.classList.contains('ds-sidebar-collapsed'),
                 { persist: true }
