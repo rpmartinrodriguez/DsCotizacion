@@ -4133,3 +4133,184 @@ body.ds-history .historial-card__detalle ul {
     line-height: 1.2;
   }
 }
+
+
+/* =========================================================
+   Sidebar escritorio colapsable
+   ========================================================= */
+.nav-menu__brand-copy {
+  min-width: 0;
+}
+
+.nav-menu__user-name {
+  display: block;
+  margin-top: 2px;
+  color: #8b8189;
+  font-size: .72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-menu__glyph {
+  flex: 0 0 24px;
+  min-width: 24px;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.nav-menu__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-menu__footer {
+  margin-top: auto;
+  padding: 1rem;
+  border-top: 1px solid #eee8ef;
+}
+
+.nav-menu__logout {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #b4232c !important;
+  background: #fff !important;
+  border: 1px solid #f2d7da !important;
+  box-shadow: none !important;
+}
+
+.nav-menu__logout-icon {
+  flex: 0 0 auto;
+  font-size: 1rem;
+}
+
+.ds-sidebar-collapse-btn {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  body.ds-app,
+  body.ds-app .header,
+  body.ds-app .nav-menu,
+  body.ds-app .ds-main,
+  body.ds-app .ds-content-main,
+  body.ds-app .ds-pos-main {
+    transition:
+      width .2s ease,
+      left .2s ease,
+      padding-left .2s ease;
+  }
+
+  body.ds-app .nav-menu {
+    transition: width .2s ease;
+  }
+
+  .ds-sidebar-collapse-btn {
+    position: fixed;
+    z-index: 1160;
+    top: 82px;
+    left: calc(var(--ds-sidebar) - 15px);
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid #e4dde2;
+    border-radius: 999px;
+    background: #fff;
+    color: #71666f;
+    box-shadow: 0 5px 14px rgba(67,46,57,.12);
+    cursor: pointer;
+    transition:
+      left .2s ease,
+      background .15s ease,
+      color .15s ease,
+      transform .15s ease;
+  }
+
+  .ds-sidebar-collapse-btn:hover {
+    background: #fff0f6;
+    color: #a93d6e;
+    transform: scale(1.04);
+  }
+
+  .ds-sidebar-collapse-btn span {
+    display: block;
+    transform: translateY(-1px);
+    font-size: 1.35rem;
+    line-height: 1;
+  }
+
+  body.ds-sidebar-collapsed {
+    --ds-sidebar: 76px;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__header {
+    justify-content: center;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__header img {
+    width: 48px;
+    max-width: 48px;
+    height: 38px !important;
+    object-fit: contain;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__brand-copy,
+  body.ds-sidebar-collapsed .nav-category-btn,
+  body.ds-sidebar-collapsed .nav-menu__label,
+  body.ds-sidebar-collapsed .nav-menu__logout-label {
+    display: none !important;
+  }
+
+  body.ds-sidebar-collapsed .nav-category {
+    margin: 0;
+    padding: 0;
+  }
+
+  body.ds-sidebar-collapsed .nav-category-content {
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__link {
+    min-height: 42px;
+    margin: 5px 9px;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__glyph {
+    flex-basis: auto;
+    min-width: 0;
+    width: auto;
+    font-size: 1.08rem;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__footer {
+    padding: 10px 9px;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__logout {
+    width: 42px !important;
+    height: 42px;
+    margin: 0 auto;
+    padding: 0 !important;
+    border-radius: 11px !important;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__logout-icon {
+    font-size: 1.05rem;
+  }
+}
