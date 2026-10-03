@@ -3891,3 +3891,190 @@ body.ds-history .historial-card__detalle ul {
     min-height: calc(100dvh - 175px);
   }
 }
+
+
+.ds-pos-products-grid .ds-pos-no-results {
+  grid-column: 1 / -1;
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 5px;
+  color: #968b94;
+  text-align: center;
+}
+
+.ds-pos-products-grid .ds-pos-no-results strong {
+  color: #655d64;
+  font-size: .84rem;
+}
+
+.ds-pos-products-grid .ds-pos-no-results span {
+  font-size: .7rem;
+}
+
+.ds-pos-cart-list .cart-item {
+  grid-template-columns: minmax(0,1fr) auto auto 28px !important;
+}
+
+/* Cobro: menos pasos visuales y foco en método + importe */
+#modal-cobro .modal-content {
+  width: min(560px, calc(100vw - 24px));
+  max-width: 560px !important;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 18px !important;
+  border-radius: 18px;
+}
+
+#modal-cobro .card__title {
+  margin: 0 0 4px !important;
+  color: #4b424a !important;
+  font-size: 1.05rem !important;
+  text-align: left !important;
+}
+
+#modal-cobro .card__title + p {
+  margin: 0 0 14px !important;
+  text-align: left !important;
+  font-size: .72rem !important;
+}
+
+#modal-cobro #modal-cobro-total {
+  margin-top: 3px;
+  color: #a73367 !important;
+  font-size: 1.85rem !important;
+}
+
+#modal-cobro .card__subtitle {
+  margin: 0 0 8px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  color: #746a73;
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+#modal-cobro .payment-methods {
+  grid-template-columns: repeat(3,1fr) !important;
+  gap: 7px !important;
+  margin-bottom: 12px !important;
+}
+
+#modal-cobro .btn-payment {
+  min-height: 74px;
+  padding: 9px !important;
+  gap: 3px !important;
+  border-width: 1px !important;
+  border-radius: 11px !important;
+  box-shadow: none !important;
+  font-size: .72rem !important;
+}
+
+#modal-cobro .btn-payment > span:first-of-type {
+  font-size: 1.25rem !important;
+}
+
+#modal-cobro .btn-payment.selected {
+  box-shadow: 0 0 0 3px rgba(217,86,145,.08) !important;
+}
+
+#modal-cobro .check-icon {
+  top: -7px !important;
+  right: -7px !important;
+  width: 21px !important;
+  height: 21px !important;
+  line-height: 21px !important;
+  font-size: 11px !important;
+}
+
+#modal-cobro #payment-details-container {
+  margin-bottom: 12px !important;
+  padding: 12px !important;
+  border-color: #e4dde2 !important;
+  border-radius: 11px !important;
+  background: #faf9fa !important;
+}
+
+#modal-cobro .payment-input {
+  min-height: 44px;
+  padding: 8px 10px !important;
+  border-color: #ddd6db !important;
+  font-size: 1rem !important;
+}
+
+#modal-cobro .quick-money-grid {
+  grid-template-columns: repeat(4,1fr) !important;
+  gap: 5px !important;
+}
+
+#modal-cobro .btn-quick-money {
+  min-height: 36px;
+  padding: 5px !important;
+  border-color: #ded7dc !important;
+  background: #fff !important;
+  color: #665d65 !important;
+  font-size: .68rem !important;
+}
+
+#modal-cobro .btn-quick-money:hover {
+  border-color: #d79eb8 !important;
+  background: #fff2f7 !important;
+  color: #a43a6a !important;
+}
+
+#modal-cobro #vuelto-container {
+  margin-top: 10px !important;
+  padding-top: 9px !important;
+}
+
+#modal-cobro #modal-vuelto-total {
+  font-size: 1.6rem !important;
+}
+
+#modal-cobro .modal-actions {
+  gap: 8px;
+  margin-top: 0 !important;
+}
+
+#modal-cobro .modal-actions button {
+  width: auto !important;
+  flex: 1;
+  min-height: 44px;
+  padding: 0 12px !important;
+  font-size: .78rem !important;
+}
+
+@media (max-width: 560px) {
+  #modal-cobro .payment-methods {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
+
+  #modal-cobro .quick-money-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .ds-pos-cart-list .cart-item {
+    grid-template-columns: minmax(0,1fr) auto 28px !important;
+  }
+
+  .ds-pos-cart-list .ds-cart-qty-control {
+    grid-row: 2;
+    grid-column: 1 / 2;
+    justify-self: start;
+  }
+
+  .ds-pos-cart-list .cart-item-total {
+    grid-row: 1 / 3;
+    grid-column: 2;
+    align-self: center;
+  }
+
+  .ds-pos-cart-list .ds-cart-remove-btn {
+    grid-row: 1 / 3;
+    grid-column: 3;
+    align-self: center;
+  }
+}
