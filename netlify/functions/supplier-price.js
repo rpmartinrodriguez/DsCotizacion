@@ -421,6 +421,55 @@ const extractDataPriceCandidates = (html) => {
   return candidates;
 };
 
+
+const decodeHtmlText = (value) => {
+  return String(value || "")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&dollar;/gi, "$");
+};
+
+const stripTags = (value) =>
+  decodeHtmlText(String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim());
+
+const extractWooCommerceCandidates = (html) => {
+  const candidates = [];
+  let match;
+
+  // WooCommerce clásico:
+  // <span class="woocommerce-Price-amount amount"><bdi>...10,500...</bdi></span>
+  const bdiRegex =
+    /woocommerce-Price-amount[^>]*>[\s\S]{0,260}?<bdi[^>]*>([\s\S]{0,220}?)<\/bdi>/gi;
+
+  while ((match = bdiRegex.exec(html))) {
+    const text = stripTags(match[1]);
+    const numericMatch = text.match(/[\d][\d.,\s]{1,24}/);
+    const price = parseLocalizedNumber(numericMatch ? numericMatch[0] : text);
+    if (price) candidates.push({ price, source: "woocommerce:amount" });
+    if (candidates.length >= 12) break;
+  }
+
+  if (candidates.length) return candidates;
+
+  // Algunas plantillas imprimen el precio dentro de <p class="price"> sin <bdi>.
+  const priceBlockRegex =
+    /<(?:p|div|span)[^>]*class=["'][^"']*(?:^|\s)price(?:\s|$)[^"']*["'][^>]*>([\s\S]{0,420}?)<\/(?:p|div|span)>/gi;
+
+  while ((match = priceBlockRegex.exec(html))) {
+    const text = stripTags(match[1]);
+    const numericMatch = text.match(/[\d][\d.,\s]{1,24}/);
+    const price = parseLocalizedNumber(numericMatch ? numericMatch[0] : text);
+    if (price) candidates.push({ price, source: "woocommerce:price-block" });
+    if (candidates.length >= 12) break;
+  }
+
+  return candidates;
+};
+
 const extractVisiblePriceCandidates = (html) => {
   const candidates = [];
   const regex =
@@ -450,6 +499,7 @@ const extractPrice = (html) => {
   const groups = [
     extractJsonLdCandidates(html),
     extractMetaCandidates(html),
+    extractWooCommerceCandidates(html),
     extractDataPriceCandidates(html),
     extractVisiblePriceCandidates(html),
   ];
