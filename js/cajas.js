@@ -333,6 +333,13 @@ export function setupCajas(app) {
                 const safeVentaId = escapeAttribute(venta.id);
                 const safeCajaId = escapeAttribute(cajaId);
                 const safeMetodoAttr = escapeAttribute(venta.metodoPago || '');
+                const margenHistorico = Number(venta.margenBrutoVentaPct);
+                const tieneSnapshotVenta =
+                    Number(venta.costoSnapshotVersion) >= 1
+                    && Number.isFinite(margenHistorico);
+                const margenHistoricoHtml = tieneSnapshotVenta
+                    ? `<small class="ds-ticket-margin">Margen bruto histórico: ${margenHistorico.toFixed(1)}%</small>`
+                    : '<small class="ds-ticket-margin is-legacy">Venta anterior · costo histórico no guardado</small>';
 
                 const ticketDiv = document.createElement('div');
                 ticketDiv.className = 'ticket-item';
@@ -340,6 +347,7 @@ export function setupCajas(app) {
                     <div class="ticket-info">
                         <h4>Hora: ${formatearFecha(venta.fecha).split(',')[1] || ''} ${tagMP}</h4>
                         <p>${itemsTexto}</p>
+                        ${margenHistoricoHtml}
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="ticket-monto">${formatMoneda(venta.total)}</span>
@@ -603,13 +611,80 @@ export function setupCajas(app) {
                     if (nuevoMetodo === 'Efectivo') difEfvo += nuevoTotal;
                     else if (nuevoMetodo === 'MercadoPago') difMP += nuevoTotal;
 
-                    // Actualizamos el ticket
-                    transaction.update(ticketRef, { 
-                        metodoPago: nuevoMetodo, 
+                    const itemsOriginales = Array.isArray(tData.items) ? tData.items : [];
+                    const totalLineasAnterior = itemsOriginales.reduce(
+                        (sum, item) => sum + ((Number(item.precio) || 0) * (Number(item.cantidad) || 0)),
+                        0
+                    );
+                    const factorPrecio = totalLineasAnterior > 0
+                        ? nuevoTotal / totalLineasAnterior
+                        : 1;
+
+                    const itemsActualizados = itemsOriginales.map(item => {
+                        const cantidad = Number(item.cantidad) || 0;
+                        const precioAnterior = Number(item.precio) || 0;
+                        const nuevoPrecioUnitario = precioAnterior * factorPrecio;
+                        const costoUnitarioVenta = Number(item.costoUnitarioVenta);
+                        const tieneSnapshotItem =
+                            Number(item.costoSnapshotVersion) >= 1
+                            && Number.isFinite(costoUnitarioVenta)
+                            && costoUnitarioVenta >= 0;
+
+                        if (!tieneSnapshotItem) {
+                            return { ...item, precio: nuevoPrecioUnitario };
+                        }
+
+                        const costoTotalItem = costoUnitarioVenta * cantidad;
+                        const facturacionItem = nuevoPrecioUnitario * cantidad;
+                        const utilidadBrutaItem = facturacionItem - costoTotalItem;
+                        const margenBrutoItem = facturacionItem > 0
+                            ? (utilidadBrutaItem / facturacionItem) * 100
+                            : 0;
+
+                        return {
+                            ...item,
+                            precio: nuevoPrecioUnitario,
+                            costoTotalVenta: costoTotalItem,
+                            utilidadBrutaVenta: utilidadBrutaItem,
+                            margenBrutoVentaPct: margenBrutoItem
+                        };
+                    });
+
+                    const itemsConSnapshot = itemsActualizados.filter(item =>
+                        Number(item.costoSnapshotVersion) >= 1
+                        && Number.isFinite(Number(item.costoTotalVenta))
+                    );
+                    const todosConSnapshot =
+                        itemsActualizados.length > 0
+                        && itemsConSnapshot.length === itemsActualizados.length;
+                    const costoTotalVenta = todosConSnapshot
+                        ? itemsConSnapshot.reduce((sum, item) => sum + Number(item.costoTotalVenta || 0), 0)
+                        : null;
+                    const utilidadBrutaVenta = todosConSnapshot
+                        ? nuevoTotal - costoTotalVenta
+                        : null;
+                    const margenBrutoVentaPct = todosConSnapshot && nuevoTotal > 0
+                        ? (utilidadBrutaVenta / nuevoTotal) * 100
+                        : null;
+
+                    // Actualizamos el ticket. El costo histórico no cambia;
+                    // si corregimos el total cobrado, sí cambian utilidad y margen.
+                    const ticketUpdate = {
+                        metodoPago: nuevoMetodo,
                         total: nuevoTotal,
                         pagoEfectivo: nuevoMetodo === 'Efectivo' ? nuevoTotal : 0,
-                        pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? nuevoTotal : 0
-                    });
+                        pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? nuevoTotal : 0,
+                        items: itemsActualizados
+                    };
+
+                    if (todosConSnapshot) {
+                        ticketUpdate.costoTotalVenta = costoTotalVenta;
+                        ticketUpdate.utilidadBrutaVenta = utilidadBrutaVenta;
+                        ticketUpdate.margenBrutoVentaPct = margenBrutoVentaPct;
+                        ticketUpdate.costoSnapshotVersion = 1;
+                    }
+
+                    transaction.update(ticketRef, ticketUpdate);
 
                     // Actualizamos la caja
                     const cajaRef = doc(db, 'cajas', cajaId);
