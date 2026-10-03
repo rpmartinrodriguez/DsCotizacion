@@ -56,11 +56,11 @@ export const cashMetricsInfo = {
             dec: "Foco total de control diario en los Clase A. El resto se controla de forma mensual."
         },
         "margen_neto_prod": {
-            titulo: "Margen Bruto Actual por Producto",
-            desc: "Muestra la ganancia limpia en pesos y porcentaje de cada artículo, restando el costo de receta a la facturación.",
-            sirve: "Identificar qué recetas te dejan más ganancias reales y cuáles dan pérdidas.",
-            ej: "Una torta que se vende a $5.000 y hoy cuesta $2.000 en insumos deja $3.000 de utilidad bruta sobre materia prima (60%).",
-            dec: "Este indicador usa el costo actual de reposición de materias primas. Los gastos operativos y la ganancia neta se analizan en Finanzas."
+            titulo: "Margen Bruto Histórico por Producto",
+            desc: "Calcula la utilidad de cada venta con el costo de la receta congelado en el momento exacto en que se realizó.",
+            sirve: "Ver cuánto margen dejó realmente cada producto aunque sus materias primas cambien de precio después.",
+            ej: "Si hoy una torta se vende con 45% de margen y mañana el costo sube, la venta de hoy conserva ese 45%; la venta de mañana registra su nuevo margen.",
+            dec: "Las ventas nuevas guardan su costo histórico. Las anteriores a esta actualización se estiman porque ese dato no se almacenaba. La ganancia neta completa se analiza en Finanzas."
         },
         "produccion_optima": {
             titulo: "Volumen de Producción Óptimo (Pronóstico)",
