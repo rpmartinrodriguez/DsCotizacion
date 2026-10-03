@@ -78,6 +78,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
 
     let activeProductId = null;
     let activeProductName = '';
+    let activePackageSource = '';
+    let packageEditedByUser = false;
 
     const normalizeUnit = (unit) => {
         const value = String(unit || '').toLowerCase().trim();
@@ -158,13 +160,18 @@ export function setupSupplierPricing(app, db, { getStock }) {
         return {
             proveedorUrl: parsed.toString(),
             proveedorPresentacionCantidad: hasQuantity ? quantity : null,
-            proveedorPresentacionUnidad: hasUnit ? unit : ''
+            proveedorPresentacionUnidad: hasUnit ? unit : '',
+            proveedorPresentacionFuente: hasQuantity
+                ? (packageEditedByUser ? 'manual' : (activePackageSource || 'auto'))
+                : 'auto'
         };
     };
 
     const loadProduct = (producto, id) => {
         activeProductId = id;
         activeProductName = producto?.nombre || '';
+        activePackageSource = producto?.proveedorPresentacionFuente || '';
+        packageEditedByUser = false;
 
         const legacyQuantity = Number(producto?.proveedorCantidad) > 0
             ? Number(producto.proveedorCantidad)
@@ -218,6 +225,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
     const reset = () => {
         activeProductId = null;
         activeProductName = '';
+        activePackageSource = '';
+        packageEditedByUser = false;
         if (urlInput) urlInput.value = '';
         if (quantityInput) quantityInput.value = '';
         if (unitSelect) unitSelect.value = '';
@@ -288,8 +297,20 @@ export function setupSupplierPricing(app, db, { getStock }) {
             ? Number(data.proveedorCantidad)
             : 0;
 
-        const packageQuantity = configuredQuantity || detectedQuantity || legacyQuantity;
-        const packageUnit = configuredUnit || detectedUnit || (legacyQuantity > 0 ? normalizeUnit(data.unidad) : '');
+        const hasManualPackage =
+            data.proveedorPresentacionFuente === 'manual'
+            && configuredQuantity > 0
+            && configuredUnit;
+
+        const packageQuantity = hasManualPackage
+            ? configuredQuantity
+            : (detectedQuantity || configuredQuantity || legacyQuantity);
+        const packageUnit = hasManualPackage
+            ? configuredUnit
+            : (detectedUnit || configuredUnit || (legacyQuantity > 0 ? normalizeUnit(data.unidad) : ''));
+        const packageSource = hasManualPackage
+            ? 'manual'
+            : (detectedQuantity && detectedUnit ? 'detectada' : (configuredQuantity && configuredUnit ? 'guardada' : 'legacy'));
 
         if (packageQuantity <= 0 || !packageUnit) {
             throw new Error('No pude detectar la presentación del proveedor. Indicá, por ejemplo, 10 kg o 500 gr.');
@@ -344,6 +365,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
             proveedorVariacionPct: variation,
             proveedorPresentacionCantidad: packageQuantity,
             proveedorPresentacionUnidad: packageUnit,
+            proveedorPresentacionFuente: packageSource,
             proveedorCantidadBase: providerQuantity,
             proveedorUltimaConsulta: checkedAt,
             proveedorUltimaFuente: detection.source || '',
@@ -370,6 +392,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
             providerQuantity,
             packageQuantity,
             packageUnit,
+            packageSource,
             detectedUnitCost,
             oldReferenceUnitCost: oldProviderUnitCost || latestPurchaseUnitCost,
             newReferenceUnitCost,
@@ -392,6 +415,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
         if (lastCheckEl) lastCheckEl.textContent = new Date().toLocaleString('es-AR');
         if (quantityInput) quantityInput.value = result.packageQuantity || '';
         if (unitSelect) unitSelect.value = result.packageUnit || '';
+        activePackageSource = result.packageSource || activePackageSource;
+        packageEditedByUser = false;
 
         let message = 'Primera consulta registrada.';
         let kind = 'same';
@@ -607,6 +632,13 @@ export function setupSupplierPricing(app, db, { getStock }) {
             historyList.innerHTML = `<p class="ds-supplier-error">${escapeHtml(error.message || 'No se pudo cargar el historial.')}</p>`;
         }
     };
+
+    quantityInput?.addEventListener('input', () => {
+        packageEditedByUser = true;
+    });
+    unitSelect?.addEventListener('change', () => {
+        packageEditedByUser = true;
+    });
 
     if (queryOneButton) queryOneButton.addEventListener('click', queryActiveProduct);
     if (bulkButton) bulkButton.addEventListener('click', runBulkUpdate);
