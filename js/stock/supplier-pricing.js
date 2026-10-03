@@ -269,22 +269,28 @@ export function setupSupplierPricing(app, db, { getStock }) {
             costoReferenciaProveedorUnitario: newReferenceUnitCost
         });
 
-        await addDoc(historyCollection, {
-            materiaPrimaId: productId,
-            materiaPrimaNombre: data.nombre || activeProductName || '',
-            proveedorUrl: data.proveedorUrl || '',
-            proveedorHost: detection.host || '',
-            fuente: detection.source || '',
-            precioAnterior: oldProviderPrice || null,
-            precioNuevo: newPrice,
-            variacionPct: variation,
-            cantidadProveedor: providerQuantity,
-            unidad: data.unidad || '',
-            costoUnitarioDetectado: detectedUnitCost,
-            costoReferenciaAnterior: Math.max(latestPurchaseUnitCost, oldReferenceUnitCost),
-            costoReferenciaNuevo: newReferenceUnitCost,
-            fecha: checkedAt
-        });
+        let historySaved = true;
+        try {
+            await addDoc(historyCollection, {
+                materiaPrimaId: productId,
+                materiaPrimaNombre: data.nombre || activeProductName || '',
+                proveedorUrl: data.proveedorUrl || '',
+                proveedorHost: detection.host || '',
+                fuente: detection.source || '',
+                precioAnterior: oldProviderPrice || null,
+                precioNuevo: newPrice,
+                variacionPct: variation,
+                cantidadProveedor: providerQuantity,
+                unidad: data.unidad || '',
+                costoUnitarioDetectado: detectedUnitCost,
+                costoReferenciaAnterior: Math.max(latestPurchaseUnitCost, oldReferenceUnitCost),
+                costoReferenciaNuevo: newReferenceUnitCost,
+                fecha: checkedAt
+            });
+        } catch (historyError) {
+            historySaved = false;
+            console.warn('Precio actualizado, pero no se pudo guardar el historial:', historyError);
+        }
 
         let movement = 'initial';
         if (oldProviderPrice > 0) {
@@ -306,7 +312,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
             newReferenceUnitCost,
             movement,
             host: detection.host || '',
-            source: detection.source || ''
+            source: detection.source || '',
+            historySaved
         };
     };
 
@@ -322,15 +329,24 @@ export function setupSupplierPricing(app, db, { getStock }) {
         }
         if (lastCheckEl) lastCheckEl.textContent = new Date().toLocaleString('es-AR');
 
+        let message = 'Primera consulta registrada.';
+        let kind = 'same';
+
         if (result.movement === 'up') {
-            setStatus(`Aumentó ${formatPercent(result.variation)}. El costo de referencia fue actualizado.`, 'up');
+            message = `Aumentó ${formatPercent(result.variation)}. El costo de referencia fue actualizado.`;
+            kind = 'up';
         } else if (result.movement === 'down') {
-            setStatus(`Bajó ${formatPercent(result.variation)}. Se conserva el costo de referencia más alto.`, 'down');
+            message = `Bajó ${formatPercent(result.variation)}. Se conserva el costo de referencia más alto.`;
+            kind = 'down';
         } else if (result.movement === 'same') {
-            setStatus('El precio no cambió.', 'same');
-        } else {
-            setStatus('Primera consulta registrada.', 'same');
+            message = 'El precio no cambió.';
         }
+
+        if (!result.historySaved) {
+            message += ' Precio actualizado; el historial requiere habilitar la regla nueva de Firestore.';
+        }
+
+        setStatus(message, kind);
     };
 
     const queryActiveProduct = async () => {
