@@ -259,6 +259,8 @@ export function setupPOS(app) {
                     if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
                 }
                 
+                actualizarMobileBarVisibility();
+
                 if (!datosCargados) {
                     cargarDataYCostos();
                     datosCargados = true;
@@ -271,6 +273,7 @@ export function setupPOS(app) {
                 if (pantallaPromociones) pantallaPromociones.style.display = 'none';
                 if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
                 if (pantallaApertura) pantallaApertura.style.display = 'block';
+                actualizarMobileBarVisibility();
                 buscarSaldoTurnoAnterior(); 
             }
         });
@@ -662,7 +665,10 @@ export function setupPOS(app) {
         }
         renderizarCarrito();
 
-        const card = gridProductos?.querySelector(`.producto-card[data-id="${CSS.escape(String(prod.id))}"]`);
+        const card = gridProductos
+            ? [...gridProductos.querySelectorAll('.producto-card')]
+                .find(item => item.dataset.id === String(prod.id))
+            : null;
         if (card) {
             card.classList.add('is-added');
             window.setTimeout(() => card.classList.remove('is-added'), 260);
