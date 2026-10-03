@@ -65,6 +65,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
     const bulkButton = document.getElementById('btn-actualizar-precios-proveedor');
     const urlInput = document.getElementById('proveedor-url-input');
     const quantityInput = document.getElementById('proveedor-cantidad-input');
+    const unitSelect = document.getElementById('proveedor-unidad-select');
     const currentPriceEl = document.getElementById('proveedor-precio-actual');
     const referenceCostEl = document.getElementById('proveedor-costo-referencia');
     const lastCheckEl = document.getElementById('proveedor-ultima-consulta');
@@ -85,6 +86,45 @@ export function setupSupplierPricing(app, db, { getStock }) {
     let activeProductId = null;
     let activeProductName = '';
 
+    const normalizeUnit = (unit) => {
+        const value = String(unit || '').toLowerCase().trim();
+        if (['g', 'gr', 'grs', 'gramo', 'gramos'].includes(value)) return 'gr';
+        if (['kg', 'kilo', 'kilos'].includes(value)) return 'kg';
+        if (['l', 'lt', 'lts', 'litro', 'litros'].includes(value)) return 'l';
+        if (['ml'].includes(value)) return 'ml';
+        if (['cc'].includes(value)) return 'cc';
+        if (['u', 'un', 'uni', 'unidad', 'unidades'].includes(value)) return 'unidad';
+        return '';
+    };
+
+    const unitMeta = {
+        gr: { dimension: 'mass', factor: 1 },
+        kg: { dimension: 'mass', factor: 1000 },
+        ml: { dimension: 'volume', factor: 1 },
+        cc: { dimension: 'volume', factor: 1 },
+        l: { dimension: 'volume', factor: 1000 },
+        unidad: { dimension: 'unit', factor: 1 }
+    };
+
+    const convertQuantity = (quantity, fromUnit, toUnit) => {
+        const from = unitMeta[normalizeUnit(fromUnit)];
+        const to = unitMeta[normalizeUnit(toUnit)];
+        const numericQuantity = Number(quantity);
+
+        if (!from || !to || !Number.isFinite(numericQuantity) || numericQuantity <= 0) {
+            throw new Error('La presentación del proveedor no tiene una unidad válida.');
+        }
+
+        if (from.dimension !== to.dimension) {
+            throw new Error(`No puedo convertir ${fromUnit} a ${toUnit}. Revisá la unidad de esta materia prima.`);
+        }
+
+        return numericQuantity * from.factor / to.factor;
+    };
+
+    const isSignificantVariation = (variation) =>
+        Number.isFinite(Number(variation)) && Math.abs(Number(variation)) >= 10;
+
     const setStatus = (text, kind = '') => {
         if (!statusEl) return;
         statusEl.textContent = text || '';
@@ -94,11 +134,13 @@ export function setupSupplierPricing(app, db, { getStock }) {
     const getEditorFields = () => {
         const rawUrl = (urlInput?.value || '').trim();
         const quantity = Number(quantityInput?.value || 0);
+        const unit = normalizeUnit(unitSelect?.value || '');
 
         if (!rawUrl) {
             return {
                 proveedorUrl: '',
-                proveedorCantidad: 0
+                proveedorPresentacionCantidad: null,
+                proveedorPresentacionUnidad: ''
             };
         }
 
@@ -113,13 +155,17 @@ export function setupSupplierPricing(app, db, { getStock }) {
             throw new Error('La URL del proveedor debe comenzar con https://');
         }
 
-        if (!Number.isFinite(quantity) || quantity <= 0) {
-            throw new Error('Indicá qué cantidad del producto representa el precio del proveedor.');
+        const hasQuantity = Number.isFinite(quantity) && quantity > 0;
+        const hasUnit = Boolean(unit);
+
+        if (hasQuantity !== hasUnit) {
+            throw new Error('Completá cantidad y unidad de presentación, o dejá ambos vacíos para detectarlos automáticamente.');
         }
 
         return {
             proveedorUrl: parsed.toString(),
-            proveedorCantidad: quantity
+            proveedorPresentacionCantidad: hasQuantity ? quantity : null,
+            proveedorPresentacionUnidad: hasUnit ? unit : ''
         };
     };
 
@@ -127,13 +173,19 @@ export function setupSupplierPricing(app, db, { getStock }) {
         activeProductId = id;
         activeProductName = producto?.nombre || '';
 
-        const latestLot = getLatestLot(producto);
-        const defaultQuantity = Number(producto?.proveedorCantidad) > 0
+        const legacyQuantity = Number(producto?.proveedorCantidad) > 0
             ? Number(producto.proveedorCantidad)
-            : Number(latestLot?.cantidadComprada) || 0;
+            : 0;
+        const packageQuantity = Number(producto?.proveedorPresentacionCantidad) > 0
+            ? Number(producto.proveedorPresentacionCantidad)
+            : legacyQuantity;
+        const packageUnit = normalizeUnit(
+            producto?.proveedorPresentacionUnidad || (legacyQuantity > 0 ? producto?.unidad : '')
+        );
 
         if (urlInput) urlInput.value = producto?.proveedorUrl || '';
-        if (quantityInput) quantityInput.value = defaultQuantity || '';
+        if (quantityInput) quantityInput.value = packageQuantity || '';
+        if (unitSelect) unitSelect.value = packageUnit || '';
 
         if (currentPriceEl) {
             currentPriceEl.textContent = Number(producto?.proveedorPrecioActual) > 0
@@ -175,6 +227,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
         activeProductName = '';
         if (urlInput) urlInput.value = '';
         if (quantityInput) quantityInput.value = '';
+        if (unitSelect) unitSelect.value = '';
         if (currentPriceEl) currentPriceEl.textContent = 'Sin consultar';
         if (referenceCostEl) referenceCostEl.textContent = 'Sin referencia';
         if (lastCheckEl) lastCheckEl.textContent = 'Nunca';
@@ -227,13 +280,29 @@ export function setupSupplierPricing(app, db, { getStock }) {
         const data = snapshot.data();
         const latestLot = getLatestLot(data);
         const latestPurchaseUnitCost = getLotUnitCost(latestLot);
-        const providerQuantity = Number(data.proveedorCantidad) > 0
-            ? Number(data.proveedorCantidad)
-            : Number(latestLot?.cantidadComprada) || 0;
 
-        if (providerQuantity <= 0) {
-            throw new Error('Falta indicar la cantidad que representa el precio del proveedor.');
+        const configuredQuantity = Number(data.proveedorPresentacionCantidad) > 0
+            ? Number(data.proveedorPresentacionCantidad)
+            : 0;
+        const configuredUnit = normalizeUnit(data.proveedorPresentacionUnidad);
+
+        const detectedQuantity = Number(detection.packageQuantity) > 0
+            ? Number(detection.packageQuantity)
+            : 0;
+        const detectedUnit = normalizeUnit(detection.packageUnit);
+
+        const legacyQuantity = Number(data.proveedorCantidad) > 0
+            ? Number(data.proveedorCantidad)
+            : 0;
+
+        const packageQuantity = configuredQuantity || detectedQuantity || legacyQuantity;
+        const packageUnit = configuredUnit || detectedUnit || (legacyQuantity > 0 ? normalizeUnit(data.unidad) : '');
+
+        if (packageQuantity <= 0 || !packageUnit) {
+            throw new Error('No pude detectar la presentación del proveedor. Indicá, por ejemplo, 10 kg o 500 gr.');
         }
+
+        const providerQuantity = convertQuantity(packageQuantity, packageUnit, data.unidad);
 
         const newPrice = Number(detection.price);
         if (!Number.isFinite(newPrice) || newPrice <= 0) {
@@ -241,6 +310,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
         }
 
         const oldProviderPrice = Number(data.proveedorPrecioActual) || 0;
+        const oldProviderUnitCost = Number(data.proveedorCostoUnitarioActual) || 0;
         const oldReferenceUnitCost = Number(data.costoReferenciaProveedorUnitario) || 0;
         const detectedUnitCost = newPrice / providerQuantity;
 
@@ -252,8 +322,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
             detectedUnitCost
         );
 
-        const variation = oldProviderPrice > 0
-            ? ((newPrice - oldProviderPrice) / oldProviderPrice) * 100
+        const variation = oldProviderUnitCost > 0
+            ? ((detectedUnitCost - oldProviderUnitCost) / oldProviderUnitCost) * 100
             : null;
 
         const checkedAt = Timestamp.now();
@@ -261,7 +331,12 @@ export function setupSupplierPricing(app, db, { getStock }) {
         await updateDoc(ref, {
             proveedorPrecioAnterior: oldProviderPrice || null,
             proveedorPrecioActual: newPrice,
+            proveedorCostoUnitarioAnterior: oldProviderUnitCost || null,
+            proveedorCostoUnitarioActual: detectedUnitCost,
             proveedorVariacionPct: variation,
+            proveedorPresentacionCantidad: packageQuantity,
+            proveedorPresentacionUnidad: packageUnit,
+            proveedorCantidadBase: providerQuantity,
             proveedorUltimaConsulta: checkedAt,
             proveedorUltimaFuente: detection.source || '',
             proveedorUltimoHost: detection.host || '',
@@ -280,8 +355,11 @@ export function setupSupplierPricing(app, db, { getStock }) {
                 precioAnterior: oldProviderPrice || null,
                 precioNuevo: newPrice,
                 variacionPct: variation,
-                cantidadProveedor: providerQuantity,
+                presentacionCantidad: packageQuantity,
+                presentacionUnidad: packageUnit,
+                cantidadProveedorBase: providerQuantity,
                 unidad: data.unidad || '',
+                costoUnitarioAnterior: oldProviderUnitCost || null,
                 costoUnitarioDetectado: detectedUnitCost,
                 costoReferenciaAnterior: Math.max(latestPurchaseUnitCost, oldReferenceUnitCost),
                 costoReferenciaNuevo: newReferenceUnitCost,
@@ -307,6 +385,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
             newPrice,
             variation,
             providerQuantity,
+            packageQuantity,
+            packageUnit,
             detectedUnitCost,
             oldReferenceUnitCost: Math.max(latestPurchaseUnitCost, oldReferenceUnitCost),
             newReferenceUnitCost,
@@ -328,6 +408,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
             referenceCostEl.textContent = `${formatCurrency(result.newReferenceUnitCost)} / ${result.unit || 'unidad'}`;
         }
         if (lastCheckEl) lastCheckEl.textContent = new Date().toLocaleString('es-AR');
+        if (quantityInput) quantityInput.value = result.packageQuantity || '';
+        if (unitSelect) unitSelect.value = result.packageUnit || '';
 
         let message = 'Primera consulta registrada.';
         let kind = 'same';
@@ -340,6 +422,11 @@ export function setupSupplierPricing(app, db, { getStock }) {
             kind = 'down';
         } else if (result.movement === 'same') {
             message = 'El precio no cambió.';
+        }
+
+        if (isSignificantVariation(result.variation)) {
+            message = `⚠ Variación importante: ${formatPercent(result.variation)}. ${message}`;
+            kind = 'alert';
         }
 
         if (!result.historySaved) {
