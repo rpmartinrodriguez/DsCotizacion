@@ -83,7 +83,9 @@ export function setupStock(app) {
                         ? (Number(ultimoLote?.precioCompra) || 0) / Number(ultimoLote.cantidadComprada)
                         : 0);
                 const costoAplicado = getEffectiveUnitCost(item);
-                const usaCostoProveedor = Number(item.costoReferenciaProveedorUnitario) > ultimoCostoUnitario + 0.000001;
+                const usaCostoProveedor =
+                    Number(item.proveedorCostoUnitarioActual) > 0
+                    || Number(item.costoReferenciaProveedorUnitario) > 0;
                 const tieneCostoCompra = ultimoCostoUnitario > 0;
                 const fuenteCosto = usaCostoProveedor ? 'Proveedor' : (tieneCostoCompra ? 'Última compra' : 'Sin costo cargado');
                 const fuenteClase = usaCostoProveedor ? 'is-provider' : (tieneCostoCompra ? 'is-purchase' : 'is-empty');
