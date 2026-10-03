@@ -12,6 +12,7 @@ import {
 } from "./core/format.js";
 import { cashMetricsInfo as infoDiccionario } from "./data/cash-metrics-info.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
+import { calculateRecipeUnitCost } from "./core/pricing.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
@@ -830,10 +831,11 @@ export function setupCajas(app) {
         if (statsContent) statsContent.style.display = 'none';
 
         try {
-            const [ventasSnap, auditSnap, recetasSnap] = await Promise.all([
+            const [ventasSnap, auditSnap, recetasSnap, materiasSnap] = await Promise.all([
                 getDocs(collection(db, 'ventasMostrador')),
                 getDocs(collection(db, 'auditoriaMostrador')),
-                getDocs(collection(db, 'recetas'))
+                getDocs(collection(db, 'recetas')),
+                getDocs(collection(db, 'materiasPrimas'))
             ]);
 
             // Filtrar ventas huérfanas (cuyas cajas fueron borradas)
@@ -851,12 +853,17 @@ export function setupCajas(app) {
             let auditArray = [];
             auditSnap.forEach(a => auditArray.push(a.data()));
 
+            const materiasMap = new Map();
+            materiasSnap.forEach(m => materiasMap.set(m.id, m.data()));
+
             let recetasMap = new Map();
             let sumatoriaMargenes = 0;
             let qtyMargenes = 0;
             recetasSnap.forEach(r => {
                 let rd = r.data();
-                let costoUnit = parseFloat(rd.costoPorcion) || (parseFloat(rd.costoTotal) / parseFloat(rd.porcionesReceta)) || 0;
+                const costoDinamico = calculateRecipeUnitCost(rd, materiasMap);
+                const costoGuardado = parseFloat(rd.costoPorcion) || (parseFloat(rd.costoTotal) / parseFloat(rd.porcionesReceta)) || 0;
+                const costoUnit = costoDinamico > 0 ? costoDinamico : costoGuardado;
                 
                 recetasMap.set(rd.nombreTorta, { 
                     categoria: rd.categoria || 'Otros', 
