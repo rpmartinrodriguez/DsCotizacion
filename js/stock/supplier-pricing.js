@@ -316,9 +316,14 @@ export function setupSupplierPricing(app, db, { getStock }) {
 
         // Regla Dulce Sall: una baja del proveedor nunca reduce automáticamente
         // el costo de referencia que usan los cálculos.
+        const hasNormalizedSupplierHistory = oldProviderUnitCost > 0;
+        const trustedPreviousReference = hasNormalizedSupplierHistory
+            ? oldReferenceUnitCost
+            : 0;
+
         const newReferenceUnitCost = Math.max(
             latestPurchaseUnitCost,
-            oldReferenceUnitCost,
+            trustedPreviousReference,
             detectedUnitCost
         );
 
@@ -361,7 +366,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
                 unidad: data.unidad || '',
                 costoUnitarioAnterior: oldProviderUnitCost || null,
                 costoUnitarioDetectado: detectedUnitCost,
-                costoReferenciaAnterior: Math.max(latestPurchaseUnitCost, oldReferenceUnitCost),
+                costoReferenciaAnterior: Math.max(latestPurchaseUnitCost, trustedPreviousReference),
                 costoReferenciaNuevo: newReferenceUnitCost,
                 fecha: checkedAt
             });
@@ -388,7 +393,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
             packageQuantity,
             packageUnit,
             detectedUnitCost,
-            oldReferenceUnitCost: Math.max(latestPurchaseUnitCost, oldReferenceUnitCost),
+            oldReferenceUnitCost: Math.max(latestPurchaseUnitCost, trustedPreviousReference),
             newReferenceUnitCost,
             movement,
             host: detection.host || '',
