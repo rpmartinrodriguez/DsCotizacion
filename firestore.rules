@@ -127,6 +127,7 @@ service cloud.firestore {
         || hasPermission('stock')
         || hasPermission('presupuestos')
         || hasPermission('precios')
+        || hasPermission('cajas')
         || hasPermission('finanzas')
         || hasPermission('compras')
         || hasPermission('compras_lista')

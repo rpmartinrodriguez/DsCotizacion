@@ -135,22 +135,26 @@ export function setupPOS(app) {
     // CÁLCULO DE COSTOS
     // ==========================================
     const obtenerCostoBase = (receta) => {
-        return calculateRecipeUnitCost(receta, materiasPrimasMap, { preferStoredUnitCost: true });
+        return calculateRecipeUnitCost(receta, materiasPrimasMap);
     };
 
-    const calcularPrecioVenta = (prod) => {
+    const obtenerPorcentajeGananciaAplicado = (prod) => {
         const tieneMargenIndiv = prod.margenIndividual !== undefined &&
             prod.margenIndividual !== null &&
             prod.margenIndividual !== '';
 
-        const margenAplicado = tieneMargenIndiv
-            ? parseFloat(prod.margenIndividual)
-            : margenGlobal;
+        return tieneMargenIndiv
+            ? parseFloat(prod.margenIndividual) || 0
+            : Number(margenGlobal) || 0;
+    };
+
+    const calcularPrecioVenta = (prod) => {
+        const porcentajeAplicado = obtenerPorcentajeGananciaAplicado(prod);
 
         return calculateRoundedSalePrice(
             prod.costoBaseCalculado || 0,
-            margenAplicado,
-            { roundTo: 10 }
+            porcentajeAplicado,
+            { roundTo: 100, midpointDown: true }
         );
     };
 
@@ -423,7 +427,13 @@ export function setupPOS(app) {
 
         productosDisponibles = recetasBrutas.map(receta => {
             const costoBase = obtenerCostoBase(receta);
-            return { ...receta, costoBaseCalculado: costoBase, precioCalculado: calcularPrecioVenta({ ...receta, costoBaseCalculado: costoBase }) };
+            const productoCalculado = { ...receta, costoBaseCalculado: costoBase };
+
+            return {
+                ...productoCalculado,
+                porcentajeGananciaAplicado: obtenerPorcentajeGananciaAplicado(productoCalculado),
+                precioCalculado: calcularPrecioVenta(productoCalculado)
+            };
         });
 
         if (pantallaPOS && pantallaPOS.style.display !== 'none') {
@@ -445,14 +455,16 @@ export function setupPOS(app) {
             const precioCalculado = prod.precioCalculado;
             
             const card = document.createElement('div');
-            card.className = `producto-card ${stock <= 0 ? 'sin-stock' : ''}`;
+            card.className = 'producto-card';
             card.dataset.id = prod.id;
             
             card.innerHTML = `
                 <div class="prod-nombre">${escapeHtml(prod.nombreTorta)}</div>
                 <div>
                     <div class="prod-precio">${formatMoneda(precioCalculado)}</div>
-                    <div class="prod-stock">${stock} disp.</div>
+                    <div class="prod-stock ${stock <= 0 ? 'stock-informativo' : ''}">
+                        ${stock > 0 ? `${stock} registradas` : 'Venta habilitada · stock sin cargar'}
+                    </div>
                 </div>
             `;
             gridProductos.appendChild(card);
@@ -460,18 +472,8 @@ export function setupPOS(app) {
     };
 
     const agregarProductoAlCarrito = (prod, cantidadIngresada = 1) => {
-        const stockMax = prod.stockMostrador || 0;
-        if (cantidadIngresada > stockMax) {
-            alert(`Solo hay ${stockMax} unidades en stock de ${prod.nombreTorta}.`);
-            return;
-        }
-
         const existe = carritoActual.find(i => i.id === prod.id);
         if (existe) {
-            if (existe.cantidad + cantidadIngresada > stockMax) {
-                alert(`Superas el stock físico disponible (${stockMax}) de ${prod.nombreTorta}.`);
-                return;
-            }
             existe.cantidad += cantidadIngresada;
         } else {
             carritoActual.push({ 
@@ -536,7 +538,7 @@ export function setupPOS(app) {
     if (gridProductos) {
         gridProductos.addEventListener('click', (e) => {
             const card = e.target.closest('.producto-card');
-            if (!card || card.classList.contains('sin-stock')) return;
+            if (!card) return;
             
             const prod = productosDisponibles.find(p => p.id === card.dataset.id);
             if (prod) {
@@ -602,12 +604,8 @@ export function setupPOS(app) {
                 renderizarCarrito();
             } else if (btnSumar) {
                 const idx = btnSumar.dataset.index;
-                const item = carritoActual[idx];
-                const prod = productosDisponibles.find(p => p.id === item.id);
-                if (prod && item.cantidad < (prod.stockMostrador || 0)) {
+                if (carritoActual[idx]) {
                     carritoActual[idx].cantidad++;
-                } else {
-                    alert("No hay más stock físico.");
                 }
                 renderizarCarrito();
             }
@@ -737,8 +735,39 @@ export function setupPOS(app) {
 
             try {
                 const itemsParaGuardar = carritoActual.map(i => {
-                    return { id: i.id, nombre: i.nombre, precio: i.precio, cantidad: i.cantidad };
+                    const producto = productosDisponibles.find(p => p.id === i.id);
+                    const cantidad = Number(i.cantidad) || 0;
+                    const precioUnitario = Number(i.precio) || 0;
+                    const costoUnitarioVenta = Number(producto?.costoBaseCalculado) || 0;
+                    const costoTotalItem = costoUnitarioVenta * cantidad;
+                    const facturacionItem = precioUnitario * cantidad;
+                    const utilidadBrutaItem = facturacionItem - costoTotalItem;
+                    const margenBrutoVentaPct = facturacionItem > 0
+                        ? (utilidadBrutaItem / facturacionItem) * 100
+                        : 0;
+
+                    return {
+                        id: i.id,
+                        nombre: i.nombre,
+                        precio: precioUnitario,
+                        cantidad,
+                        costoUnitarioVenta,
+                        costoTotalVenta: costoTotalItem,
+                        utilidadBrutaVenta: utilidadBrutaItem,
+                        margenBrutoVentaPct,
+                        porcentajeGananciaAplicado: Number(producto?.porcentajeGananciaAplicado) || 0,
+                        costoSnapshotVersion: 1
+                    };
                 });
+
+                const costoTotalVenta = itemsParaGuardar.reduce(
+                    (sum, item) => sum + (Number(item.costoTotalVenta) || 0),
+                    0
+                );
+                const utilidadBrutaVenta = totalVentaActual - costoTotalVenta;
+                const margenBrutoVentaPct = totalVentaActual > 0
+                    ? (utilidadBrutaVenta / totalVentaActual) * 100
+                    : 0;
 
                 // Deducción de Stock
                 for (const item of carritoActual) {
@@ -768,16 +797,28 @@ export function setupPOS(app) {
                         const auditRef = doc(auditoriaCollection);
                         transaction.set(auditRef, {
                             productoId: item.id, productoNombre: item.nombre, tipo: 'RESTA', cantidad: item.cantidad,
-                            stockResultante: nuevoStock, motivo: `Venta (${metodoPagoSeleccionado})`,
+                            stockResultante: nuevoStock,
+                            motivo: item.cantidad > stockActual
+                                ? `Venta (${metodoPagoSeleccionado}) · stock informativo/no bloqueante`
+                                : `Venta (${metodoPagoSeleccionado})`,
                             usuario: userName, usuarioId: currentUser.uid, fecha: Timestamp.now()
                         });
                     });
                 }
 
                 await addDoc(ventasCollection, {
-                    cajaId: cajaActiva.id, fecha: Timestamp.now(), metodoPago: metodoPagoSeleccionado,
-                    total: totalVentaActual, pagoEfectivo: efectivoReal, pagoMercadoPago: mpReal,
-                    items: itemsParaGuardar, vendedor: cajaActiva.usuarioNombre || userName
+                    cajaId: cajaActiva.id,
+                    fecha: Timestamp.now(),
+                    metodoPago: metodoPagoSeleccionado,
+                    total: totalVentaActual,
+                    pagoEfectivo: efectivoReal,
+                    pagoMercadoPago: mpReal,
+                    items: itemsParaGuardar,
+                    costoTotalVenta,
+                    utilidadBrutaVenta,
+                    margenBrutoVentaPct,
+                    costoSnapshotVersion: 1,
+                    vendedor: cajaActiva.usuarioNombre || userName
                 });
 
                 cajaActiva.totalEfectivo = (cajaActiva.totalEfectivo || 0) + efectivoReal;

@@ -12,6 +12,7 @@ import {
 } from "./core/format.js";
 import { cashMetricsInfo as infoDiccionario } from "./data/cash-metrics-info.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
+import { calculateRecipeUnitCost } from "./core/pricing.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
@@ -332,6 +333,13 @@ export function setupCajas(app) {
                 const safeVentaId = escapeAttribute(venta.id);
                 const safeCajaId = escapeAttribute(cajaId);
                 const safeMetodoAttr = escapeAttribute(venta.metodoPago || '');
+                const margenHistorico = Number(venta.margenBrutoVentaPct);
+                const tieneSnapshotVenta =
+                    Number(venta.costoSnapshotVersion) >= 1
+                    && Number.isFinite(margenHistorico);
+                const margenHistoricoHtml = tieneSnapshotVenta
+                    ? `<small class="ds-ticket-margin">Margen bruto histórico: ${margenHistorico.toFixed(1)}%</small>`
+                    : '<small class="ds-ticket-margin is-legacy">Venta anterior · costo histórico no guardado</small>';
 
                 const ticketDiv = document.createElement('div');
                 ticketDiv.className = 'ticket-item';
@@ -339,6 +347,7 @@ export function setupCajas(app) {
                     <div class="ticket-info">
                         <h4>Hora: ${formatearFecha(venta.fecha).split(',')[1] || ''} ${tagMP}</h4>
                         <p>${itemsTexto}</p>
+                        ${margenHistoricoHtml}
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="ticket-monto">${formatMoneda(venta.total)}</span>
@@ -602,13 +611,80 @@ export function setupCajas(app) {
                     if (nuevoMetodo === 'Efectivo') difEfvo += nuevoTotal;
                     else if (nuevoMetodo === 'MercadoPago') difMP += nuevoTotal;
 
-                    // Actualizamos el ticket
-                    transaction.update(ticketRef, { 
-                        metodoPago: nuevoMetodo, 
+                    const itemsOriginales = Array.isArray(tData.items) ? tData.items : [];
+                    const totalLineasAnterior = itemsOriginales.reduce(
+                        (sum, item) => sum + ((Number(item.precio) || 0) * (Number(item.cantidad) || 0)),
+                        0
+                    );
+                    const factorPrecio = totalLineasAnterior > 0
+                        ? nuevoTotal / totalLineasAnterior
+                        : 1;
+
+                    const itemsActualizados = itemsOriginales.map(item => {
+                        const cantidad = Number(item.cantidad) || 0;
+                        const precioAnterior = Number(item.precio) || 0;
+                        const nuevoPrecioUnitario = precioAnterior * factorPrecio;
+                        const costoUnitarioVenta = Number(item.costoUnitarioVenta);
+                        const tieneSnapshotItem =
+                            Number(item.costoSnapshotVersion) >= 1
+                            && Number.isFinite(costoUnitarioVenta)
+                            && costoUnitarioVenta >= 0;
+
+                        if (!tieneSnapshotItem) {
+                            return { ...item, precio: nuevoPrecioUnitario };
+                        }
+
+                        const costoTotalItem = costoUnitarioVenta * cantidad;
+                        const facturacionItem = nuevoPrecioUnitario * cantidad;
+                        const utilidadBrutaItem = facturacionItem - costoTotalItem;
+                        const margenBrutoItem = facturacionItem > 0
+                            ? (utilidadBrutaItem / facturacionItem) * 100
+                            : 0;
+
+                        return {
+                            ...item,
+                            precio: nuevoPrecioUnitario,
+                            costoTotalVenta: costoTotalItem,
+                            utilidadBrutaVenta: utilidadBrutaItem,
+                            margenBrutoVentaPct: margenBrutoItem
+                        };
+                    });
+
+                    const itemsConSnapshot = itemsActualizados.filter(item =>
+                        Number(item.costoSnapshotVersion) >= 1
+                        && Number.isFinite(Number(item.costoTotalVenta))
+                    );
+                    const todosConSnapshot =
+                        itemsActualizados.length > 0
+                        && itemsConSnapshot.length === itemsActualizados.length;
+                    const costoTotalVenta = todosConSnapshot
+                        ? itemsConSnapshot.reduce((sum, item) => sum + Number(item.costoTotalVenta || 0), 0)
+                        : null;
+                    const utilidadBrutaVenta = todosConSnapshot
+                        ? nuevoTotal - costoTotalVenta
+                        : null;
+                    const margenBrutoVentaPct = todosConSnapshot && nuevoTotal > 0
+                        ? (utilidadBrutaVenta / nuevoTotal) * 100
+                        : null;
+
+                    // Actualizamos el ticket. El costo histórico no cambia;
+                    // si corregimos el total cobrado, sí cambian utilidad y margen.
+                    const ticketUpdate = {
+                        metodoPago: nuevoMetodo,
                         total: nuevoTotal,
                         pagoEfectivo: nuevoMetodo === 'Efectivo' ? nuevoTotal : 0,
-                        pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? nuevoTotal : 0
-                    });
+                        pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? nuevoTotal : 0,
+                        items: itemsActualizados
+                    };
+
+                    if (todosConSnapshot) {
+                        ticketUpdate.costoTotalVenta = costoTotalVenta;
+                        ticketUpdate.utilidadBrutaVenta = utilidadBrutaVenta;
+                        ticketUpdate.margenBrutoVentaPct = margenBrutoVentaPct;
+                        ticketUpdate.costoSnapshotVersion = 1;
+                    }
+
+                    transaction.update(ticketRef, ticketUpdate);
 
                     // Actualizamos la caja
                     const cajaRef = doc(db, 'cajas', cajaId);
@@ -830,10 +906,11 @@ export function setupCajas(app) {
         if (statsContent) statsContent.style.display = 'none';
 
         try {
-            const [ventasSnap, auditSnap, recetasSnap] = await Promise.all([
+            const [ventasSnap, auditSnap, recetasSnap, materiasSnap] = await Promise.all([
                 getDocs(collection(db, 'ventasMostrador')),
                 getDocs(collection(db, 'auditoriaMostrador')),
-                getDocs(collection(db, 'recetas'))
+                getDocs(collection(db, 'recetas')),
+                getDocs(collection(db, 'materiasPrimas'))
             ]);
 
             // Filtrar ventas huérfanas (cuyas cajas fueron borradas)
@@ -851,24 +928,144 @@ export function setupCajas(app) {
             let auditArray = [];
             auditSnap.forEach(a => auditArray.push(a.data()));
 
+            const materiasMap = new Map();
+            materiasSnap.forEach(m => materiasMap.set(m.id, m.data()));
+
             let recetasMap = new Map();
-            let sumatoriaMargenes = 0;
-            let qtyMargenes = 0;
             recetasSnap.forEach(r => {
                 let rd = r.data();
-                let costoUnit = parseFloat(rd.costoPorcion) || (parseFloat(rd.costoTotal) / parseFloat(rd.porcionesReceta)) || 0;
+                const costoDinamico = calculateRecipeUnitCost(rd, materiasMap);
+                const costoGuardado = parseFloat(rd.costoPorcion) || (parseFloat(rd.costoTotal) / parseFloat(rd.porcionesReceta)) || 0;
+                const costoUnit = costoDinamico > 0 ? costoDinamico : costoGuardado;
                 
                 recetasMap.set(rd.nombreTorta, { 
                     categoria: rd.categoria || 'Otros', 
                     margen: parseFloat(rd.margenIndividual) || 0,
                     costoUnitario: costoUnit
                 });
-                
-                if(rd.margenIndividual) {
-                    sumatoriaMargenes += parseFloat(rd.margenIndividual);
-                    qtyMargenes++;
-                }
+
             });
+
+            const timestampMillis = (value) => {
+                if (!value) return 0;
+                if (typeof value.toMillis === 'function') return value.toMillis();
+                if (value.seconds !== undefined) return Number(value.seconds) * 1000;
+                const date = new Date(value);
+                return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+            };
+
+            const renderizarFluctuacionesCostos = () => {
+                const tbody = document.querySelector('#tabla-fluctuacion-costos tbody');
+                const resumen = document.getElementById('resumen-fluctuacion-costos');
+                if (!tbody) return;
+
+                const ahora = Date.now();
+                const hace30Dias = ahora - (30 * 24 * 60 * 60 * 1000);
+                const filas = [];
+
+                materiasSnap.forEach(snapshotMateria => {
+                    const materia = snapshotMateria.data();
+                    const historial = Array.isArray(materia.historialPreciosProveedor)
+                        ? [...materia.historialPreciosProveedor]
+                        : [];
+                    const costoActual = Number(materia.proveedorCostoUnitarioActual)
+                        || Number(materia.costoReferenciaProveedorUnitario)
+                        || 0;
+
+                    if (!historial.length && costoActual <= 0) return;
+
+                    const cambios = historial
+                        .filter(item => Math.abs(Number(item.variacionPct) || 0) > 0.001)
+                        .sort((a, b) => timestampMillis(b.fecha) - timestampMillis(a.fecha));
+
+                    const ultimoCambio = cambios[0] || historial[0] || null;
+                    const ultimaVariacion = Number(ultimoCambio?.variacionPct);
+                    const cambios30 = cambios.filter(item => timestampMillis(item.fecha) >= hace30Dias).length;
+
+                    let promedioDias = null;
+                    if (cambios.length >= 2) {
+                        const intervalos = [];
+                        for (let index = 0; index < cambios.length - 1; index += 1) {
+                            const actual = timestampMillis(cambios[index].fecha);
+                            const anterior = timestampMillis(cambios[index + 1].fecha);
+                            if (actual > 0 && anterior > 0 && actual > anterior) {
+                                intervalos.push((actual - anterior) / (24 * 60 * 60 * 1000));
+                            }
+                        }
+                        if (intervalos.length) {
+                            promedioDias = intervalos.reduce((sum, value) => sum + value, 0) / intervalos.length;
+                        }
+                    }
+
+                    filas.push({
+                        nombre: materia.nombre || 'Materia prima',
+                        unidad: materia.unidad || 'unidad',
+                        costoActual,
+                        ultimaVariacion: Number.isFinite(ultimaVariacion) ? ultimaVariacion : null,
+                        ultimoCambioFecha: ultimoCambio?.fecha || materia.proveedorUltimaConsulta || null,
+                        cambios30,
+                        promedioDias,
+                        totalCambios: cambios.length
+                    });
+                });
+
+                filas.sort((a, b) => {
+                    const aSignificativa = Math.abs(Number(a.ultimaVariacion) || 0) >= 10 ? 1 : 0;
+                    const bSignificativa = Math.abs(Number(b.ultimaVariacion) || 0) >= 10 ? 1 : 0;
+                    if (aSignificativa !== bSignificativa) return bSignificativa - aSignificativa;
+                    return timestampMillis(b.ultimoCambioFecha) - timestampMillis(a.ultimoCambioFecha);
+                });
+
+                if (!filas.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#94a3b8;">Sin historial de proveedores todavía.</td></tr>';
+                    if (resumen) resumen.textContent = 'Sin datos todavía';
+                    return;
+                }
+
+                const aumentosFuertes30 = filas.filter(fila =>
+                    Number(fila.ultimaVariacion) >= 10
+                    && timestampMillis(fila.ultimoCambioFecha) >= hace30Dias
+                ).length;
+
+                if (resumen) {
+                    resumen.textContent = `${filas.length} materias monitoreadas · ${aumentosFuertes30} aumentos ≥10% en 30 días`;
+                }
+
+                tbody.innerHTML = filas.map(fila => {
+                    const variacion = fila.ultimaVariacion;
+                    const significativa = Number.isFinite(variacion) && Math.abs(variacion) >= 10;
+                    const variacionClase = significativa
+                        ? 'is-alert'
+                        : Number(variacion) > 0
+                            ? 'is-up'
+                            : Number(variacion) < 0
+                                ? 'is-down'
+                                : 'is-same';
+                    const variacionTexto = Number.isFinite(variacion)
+                        ? `${significativa ? '⚠ ' : ''}${variacion > 0 ? '+' : ''}${variacion.toFixed(2)}%`
+                        : 'Inicial';
+                    const fechaTexto = fila.ultimoCambioFecha
+                        ? formatTimestampDateTime(fila.ultimoCambioFecha, { shortYear: true })
+                        : 'Sin cambio registrado';
+                    const frecuenciaTexto = fila.totalCambios >= 2 && fila.promedioDias !== null
+                        ? `${fila.cambios30} cambios / 30d · ~cada ${Math.max(1, Math.round(fila.promedioDias))} días`
+                        : fila.totalCambios === 1
+                            ? '1 cambio registrado'
+                            : 'Sin cambios todavía';
+
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(fila.nombre)}</strong></td>
+                            <td>${formatMoneda(fila.costoActual)} / ${escapeHtml(fila.unidad)}</td>
+                            <td><span class="ds-cost-change ${variacionClase}">${variacionTexto}</span></td>
+                            <td>${escapeHtml(fechaTexto)}</td>
+                            <td>${escapeHtml(frecuenciaTexto)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            };
+
+            renderizarFluctuacionesCostos();
 
             // A. Procesar Distribución Horaria
             let horasDistribucion = Array(24).fill(0);
@@ -932,6 +1129,9 @@ export function setupCajas(app) {
             let rentabilidadCategoria = {};
             let totalUnidadesVendidas = 0;
             let totalPlataVendida = 0;
+            let totalCostoHistoricoVentas = 0;
+            let unidadesConSnapshot = 0;
+            let unidadesLegacy = 0;
             
             let acumuladoDiasRetencion = 0;
             let qtyTicketsConLote = 0;
@@ -948,14 +1148,42 @@ export function setupCajas(app) {
                     totalPlataVendida += bruto;
 
                     if (!dataProductos[item.nombre]) {
-                        dataProductos[item.nombre] = { qty: 0, bruto: 0, costoTotalMatPrima: 0 };
+                        dataProductos[item.nombre] = {
+                            qty: 0,
+                            bruto: 0,
+                            costoTotalMatPrima: 0,
+                            snapshotQty: 0,
+                            legacyQty: 0
+                        };
                     }
                     dataProductos[item.nombre].qty += qty;
                     dataProductos[item.nombre].bruto += bruto;
 
-                    let infoReceta = recetasMap.get(item.nombre);
+                    const infoReceta = recetasMap.get(item.nombre);
+                    const costoSnapshot = Number(item.costoUnitarioVenta);
+                    const tieneSnapshot =
+                        Number(item.costoSnapshotVersion) >= 1
+                        && Number.isFinite(costoSnapshot)
+                        && costoSnapshot >= 0;
+                    const costoUnitarioAplicado = tieneSnapshot
+                        ? costoSnapshot
+                        : Number(infoReceta?.costoUnitario) || 0;
+                    const costoTotalItem = tieneSnapshot && Number.isFinite(Number(item.costoTotalVenta))
+                        ? Number(item.costoTotalVenta)
+                        : costoUnitarioAplicado * qty;
+
+                    dataProductos[item.nombre].costoTotalMatPrima += costoTotalItem;
+                    totalCostoHistoricoVentas += costoTotalItem;
+
+                    if (tieneSnapshot) {
+                        dataProductos[item.nombre].snapshotQty += qty;
+                        unidadesConSnapshot += qty;
+                    } else {
+                        dataProductos[item.nombre].legacyQty += qty;
+                        unidadesLegacy += qty;
+                    }
+
                     if (infoReceta) {
-                        dataProductos[item.nombre].costoTotalMatPrima += (infoReceta.costoUnitario * qty);
                         rentabilidadCategoria[infoReceta.categoria] = (rentabilidadCategoria[infoReceta.categoria] || 0) + bruto;
                     } else {
                         rentabilidadCategoria['Otros'] = (rentabilidadCategoria['Otros'] || 0) + bruto;
@@ -989,9 +1217,13 @@ export function setupCajas(app) {
                 sortedByPlataABC.forEach(([nombre, p]) => {
                     let util = p.bruto - p.costoTotalMatPrima;
                     let porcMargen = p.bruto > 0 ? (util / p.bruto) * 100 : 0;
+                    const baseCostoHtml = p.legacyQty > 0
+                        ? `<small class="ds-margin-estimated">${p.legacyQty} u. anteriores estimadas</small>`
+                        : '<small class="ds-margin-snapshot">Costo congelado en cada venta</small>';
+
                     tbodyMargen.innerHTML += `
                         <tr>
-                            <td><strong>${escapeHtml(nombre)}</strong></td>
+                            <td><strong>${escapeHtml(nombre)}</strong>${baseCostoHtml}</td>
                             <td>${p.qty} u.</td>
                             <td>${formatMoneda(p.bruto)}</td>
                             <td style="color:#64748b;">${formatMoneda(p.costoTotalMatPrima)}</td>
@@ -1157,11 +1389,19 @@ export function setupCajas(app) {
             if(document.getElementById('stat-varianza')) document.getElementById('stat-varianza').textContent = Math.round(varianza).toLocaleString('es-AR');
             if(document.getElementById('stat-stddev')) document.getElementById('stat-stddev').textContent = formatMoneda(stdDev);
 
-            let promedioMargenGlobal = qtyMargenes > 0 ? (sumatoriaMargenes/qtyMargenes).toFixed(1) + "%" : "Sin Datos";
+            const promedioMargenGlobal = totalPlataVendida > 0
+                ? (((totalPlataVendida - totalCostoHistoricoVentas) / totalPlataVendida) * 100).toFixed(1) + "%"
+                : "Sin Datos";
             if(document.getElementById('stat-crecimiento-clientes')) document.getElementById('stat-crecimiento-clientes').textContent = crecClientesText;
             if(document.getElementById('stat-crecimiento-ingresos')) document.getElementById('stat-crecimiento-ingresos').textContent = crecIngresosText;
             if(document.getElementById('stat-rotacion-inventario')) document.getElementById('stat-rotacion-inventario').textContent = indiceRotacion;
-            if(document.getElementById('stat-margen-promedio')) document.getElementById('stat-margen-promedio').textContent = promedioMargenGlobal;
+            if(document.getElementById('stat-margen-promedio')) {
+                const margenEl = document.getElementById('stat-margen-promedio');
+                margenEl.textContent = promedioMargenGlobal + (unidadesLegacy > 0 ? ' *' : '');
+                margenEl.title = unidadesLegacy > 0
+                    ? `Incluye ${unidadesLegacy} unidades de ventas anteriores a esta actualización, estimadas con el costo disponible actualmente. ${unidadesConSnapshot} unidades ya tienen costo histórico congelado.`
+                    : 'Calculado con el costo congelado en el momento de cada venta.';
+            }
             if(document.getElementById('stat-linea-rentable')) document.getElementById('stat-linea-rentable').textContent = mejorLinea;
 
             // Render Gráfico Lineal 

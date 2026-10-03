@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/app-v2.css">
     <link rel="manifest" href="manifest.json">
+
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-192.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="/assets/logo-192.png?v=2">
     <meta name="theme-color" content="#ff96c5">
 
     <!-- ========================================== -->
@@ -209,7 +212,7 @@
                     </div>
 
                     <div class="card" style="margin-bottom: 1.5rem;">
-                        <h3 style="margin-top:0; color:#831843; display:flex; align-items:center; gap:0.5rem;">Margen de Utilidad Neto por Producto <span class="info-icon" data-info="margen_neto_prod">i</span></h3>
+                        <h3 style="margin-top:0; color:#831843; display:flex; align-items:center; gap:0.5rem;">Margen Bruto Histórico por Producto <span class="info-icon" data-info="margen_neto_prod">i</span></h3>
                         <div style="overflow-x:auto;">
                             <table class="stats-table" id="tabla-margen-productos">
                                 <thead>
@@ -217,13 +220,40 @@
                                         <th>Producto</th>
                                         <th>Unidades</th>
                                         <th>Facturación Bruta</th>
-                                        <th>Costo Mat. Prima</th>
-                                        <th>Utilidad Neta ($)</th>
-                                        <th>Margen Neto (%)</th>
+                                        <th>Costo al vender</th>
+                                        <th>Utilidad Bruta ($)</th>
+                                        <th>Margen Bruto (%)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr><td colspan="6" style="text-align:center; color:#94a3b8;">Procesando matriz financiera...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="ds-margin-history-note">Las ventas nuevas conservan el costo exacto del momento de la venta. Las ventas anteriores a esta actualización se muestran como estimadas porque ese costo histórico no estaba guardado.</p>
+                    </div>
+
+                    <div class="card ds-cost-fluctuation-card" style="margin-bottom: 1.5rem;">
+                        <div class="ds-cost-fluctuation-head">
+                            <div>
+                                <h3>Fluctuación de costos de materias primas</h3>
+                                <p>Seguimiento del costo unitario del proveedor para detectar cuándo conviene revisar precios de venta.</p>
+                            </div>
+                            <div id="resumen-fluctuacion-costos" class="ds-cost-fluctuation-summary">Sin datos todavía</div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="stats-table" id="tabla-fluctuacion-costos">
+                                <thead>
+                                    <tr>
+                                        <th>Materia prima</th>
+                                        <th>Costo vigente</th>
+                                        <th>Última variación</th>
+                                        <th>Último cambio</th>
+                                        <th>Frecuencia</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="5" style="text-align:center; color:#94a3b8;">Sin historial de proveedores todavía.</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -297,7 +327,7 @@
                                     <td id="stat-linea-rentable" style="font-weight: bold; color: #15803d;">-</td>
                                 </tr>
                                 <tr>
-                                    <td><strong>Margen Promedio Real</strong></td>
+                                    <td><strong>Margen Bruto Histórico</strong></td>
                                     <td id="stat-margen-promedio" style="font-weight: bold;">-</td>
                                 </tr>
                                 <tr>

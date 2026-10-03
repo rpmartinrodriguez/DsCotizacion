@@ -3,6 +3,8 @@ import {
     updateDoc, getDoc, runTransaction, where, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
+import { setupSupplierPricing } from "./stock/supplier-pricing.js";
+import { getEffectiveUnitCost } from "./core/pricing.js";
 
 export function setupStock(app) {
     const db = getFirestore(app);
@@ -40,10 +42,14 @@ export function setupStock(app) {
     let todoElStock = [];
     let unsubHistorial = null;
 
+    const supplierPricing = setupSupplierPricing(app, db, {
+        getStock: () => todoElStock
+    });
+
     const renderizarTabla = (datos) => {
         tablaStockBody.innerHTML = '';
         if (datos.length === 0) {
-            tablaStockBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No se encontraron productos.</td></tr>';
+            tablaStockBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">No se encontraron productos.</td></tr>';
             return;
         }
         datos.forEach(itemConId => {
@@ -51,15 +57,14 @@ export function setupStock(app) {
                 const item = itemConId.data;
                 const id = itemConId.id;
 
-                if (!item.lotes || !Array.isArray(item.lotes) || item.lotes.length === 0) return;
+                const lotes = Array.isArray(item.lotes) ? item.lotes : [];
+                const stockTotal = lotes.reduce((sum, lote) => sum + (Number(lote.stockRestante) || 0), 0);
                 
-                const stockTotal = item.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
-                
-                const lotesOrdenados = [...item.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
-                const ultimoLote = lotesOrdenados[0];
+                const lotesOrdenados = [...lotes].sort((a, b) => (b.fechaCompra?.seconds || 0) - (a.fechaCompra?.seconds || 0));
+                const ultimoLote = lotesOrdenados[0] || null;
 
-                let fechaUltimaCarga = 'N/A';
-                if (ultimoLote && ultimoLote.fechaCompra && typeof ultimoLote.fechaCompra.toDate === 'function') {
+                let fechaUltimaCarga = 'Sin lotes';
+                if (ultimoLote?.fechaCompra && typeof ultimoLote.fechaCompra.toDate === 'function') {
                     fechaUltimaCarga = ultimoLote.fechaCompra.toDate().toLocaleDateString('es-AR');
                 }
                 
@@ -68,10 +73,61 @@ export function setupStock(app) {
                 const safeNombre = escapeHtml(item.nombre);
                 const safeNombreAttr = escapeAttribute(item.nombre);
                 const safeUnidad = escapeHtml(item.unidad);
+                const proveedorPrecio = Number(item.proveedorPrecioActual) || 0;
+                const proveedorVariacion = Number(item.proveedorVariacionPct);
+                const proveedorPresentacionCantidad = Number(item.proveedorPresentacionCantidad) || 0;
+                const proveedorPresentacionUnidad = escapeHtml(item.proveedorPresentacionUnidad || '');
+                const ultimoCostoUnitario = Number(ultimoLote?.costoUnitario) > 0
+                    ? Number(ultimoLote.costoUnitario)
+                    : ((Number(ultimoLote?.cantidadComprada) || 0) > 0
+                        ? (Number(ultimoLote?.precioCompra) || 0) / Number(ultimoLote.cantidadComprada)
+                        : 0);
+                const costoAplicado = getEffectiveUnitCost(item);
+                const usaCostoProveedor =
+                    Number(item.proveedorCostoUnitarioActual) > 0
+                    || Number(item.costoReferenciaProveedorUnitario) > 0;
+                const tieneCostoCompra = ultimoCostoUnitario > 0;
+                const fuenteCosto = usaCostoProveedor ? 'Proveedor' : (tieneCostoCompra ? 'Última compra' : 'Sin costo cargado');
+                const fuenteClase = usaCostoProveedor ? 'is-provider' : (tieneCostoCompra ? 'is-purchase' : 'is-empty');
+                const costoAplicadoHtml = `
+                    <div class="ds-applied-cost">
+                        <strong>${costoAplicado > 0 ? `${costoAplicado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / ${safeUnidad}` : '—'}</strong>
+                        <span class="${fuenteClase}">${fuenteCosto}</span>
+                    </div>
+                `;
+                const tieneProveedor = Boolean((item.proveedorUrl || '').trim());
+                let proveedorHtml = '<span class="ds-provider-table-empty">Sin configurar</span>';
+
+                if (tieneProveedor && proveedorPrecio <= 0) {
+                    proveedorHtml = '<span class="ds-provider-table-pending">Pendiente de consulta</span>';
+                } else if (proveedorPrecio > 0) {
+                    const variacionValida = Number.isFinite(proveedorVariacion) && Number(item.proveedorCostoUnitarioAnterior) > 0;
+                    const variacionImportante = variacionValida && Math.abs(proveedorVariacion) >= 10;
+                    const cls = variacionImportante
+                        ? 'is-alert'
+                        : variacionValida
+                            ? (proveedorVariacion > 0 ? 'is-up' : proveedorVariacion < 0 ? 'is-down' : 'is-same')
+                            : 'is-same';
+                    const variacionTexto = variacionValida
+                        ? `${variacionImportante ? '⚠ ' : ''}${proveedorVariacion > 0 ? '+' : ''}${proveedorVariacion.toLocaleString('es-AR', { maximumFractionDigits: 2 })}%`
+                        : 'Inicial';
+                    const presentacionTexto = proveedorPresentacionCantidad > 0 && proveedorPresentacionUnidad
+                        ? ` / ${proveedorPresentacionCantidad.toLocaleString('es-AR')} ${proveedorPresentacionUnidad}`
+                        : '';
+
+                    proveedorHtml = `
+                        <div class="ds-provider-table-price">
+                            <strong>${proveedorPrecio.toLocaleString('es-AR')}${presentacionTexto}</strong>
+                            <span class="${cls}">${variacionTexto}</span>
+                        </div>
+                    `;
+                }
+
                 fila.innerHTML = `
                     <td data-label="Nombre">${safeNombre}</td>
                     <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${safeUnidad}</td>
-                    <td data-label="Precio Base">${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${safeUnidad}</td>
+                    <td data-label="Costo Aplicado">${costoAplicadoHtml}</td>
+                    <td data-label="Proveedor">${proveedorHtml}</td>
                     <td data-label="Última Carga">${fechaUltimaCarga}</td>
                     <td class="action-buttons stock-actions">
                         <button class="btn-stock-link ajustar" data-id="${safeId}" title="Ajustar Stock Total">⚖️</button>
@@ -100,6 +156,7 @@ export function setupStock(app) {
             modalCompletoTitle.textContent = `Editando: ${producto.nombre}`;
             nombreCompletoInput.value = producto.nombre;
             unidadCompletoSelect.value = producto.unidad;
+            supplierPricing.loadProduct(producto, id);
 
             lotesEditorContainer.innerHTML = '';
             if (producto.lotes && producto.lotes.length > 0) {
@@ -130,6 +187,7 @@ export function setupStock(app) {
 
     const closeModalCompleta = () => {
         modalCompleto.classList.remove('visible');
+        supplierPricing.reset();
         editandoId = null;
     };
     
@@ -142,7 +200,8 @@ export function setupStock(app) {
             const docSnap = await getDoc(docRef);
             if (!docSnap.exists()) throw new Error("El producto fue eliminado mientras se editaba.");
             const productoOriginal = docSnap.data();
-            const nuevosLotes = new Array(productoOriginal.lotes.length);
+            const lotesOriginales = Array.isArray(productoOriginal.lotes) ? productoOriginal.lotes : [];
+            const nuevosLotes = new Array(lotesOriginales.length);
             const loteItems = lotesEditorContainer.querySelectorAll('.lote-editor-item');
             loteItems.forEach(loteItem => {
                 const index = parseInt(loteItem.querySelector('input').dataset.loteIndex, 10);
@@ -162,10 +221,12 @@ export function setupStock(app) {
                     costoUnitario: cantidad > 0 ? precio / cantidad : 0
                 };
             });
+            const datosProveedor = supplierPricing.getEditorFields();
             const datosParaActualizar = {
                 nombre: nombreCompletoInput.value.trim(),
                 unidad: unidadCompletoSelect.value,
-                lotes: nuevosLotes
+                lotes: nuevosLotes,
+                ...datosProveedor
             };
             await updateDoc(docRef, datosParaActualizar);
             alert('¡Producto actualizado con éxito!');
@@ -175,7 +236,7 @@ export function setupStock(app) {
             alert(`No se pudieron guardar los cambios: ${error.message}`);
         } finally {
             btnGuardarCompleto.disabled = false;
-            btnGuardarCompleto.textContent = 'Guardar Cambios';
+            btnGuardarCompleto.textContent = 'Guardar';
         }
     };
 
@@ -186,7 +247,8 @@ export function setupStock(app) {
         editandoId = id;
         const producto = todoElStock.find(p => p.id === id);
         if (!producto) return;
-        const stockTotal = producto.data.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
+        const lotes = Array.isArray(producto.data.lotes) ? producto.data.lotes : [];
+        const stockTotal = lotes.reduce((sum, lote) => sum + (Number(lote.stockRestante) || 0), 0);
         ajusteNombreProducto.textContent = producto.data.nombre;
         stockCalculadoInput.value = `${stockTotal.toLocaleString('es-AR')} ${producto.data.unidad}`;
         nuevoStockInput.value = '';
@@ -201,7 +263,8 @@ export function setupStock(app) {
     const guardarAjusteStock = async () => {
         if (!editandoId) return;
         const productoData = todoElStock.find(p => p.id === editandoId).data;
-        const stockActual = productoData.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
+        const lotesProducto = Array.isArray(productoData.lotes) ? productoData.lotes : [];
+        const stockActual = lotesProducto.reduce((sum, lote) => sum + (Number(lote.stockRestante) || 0), 0);
         const nuevoStock = parseFloat(nuevoStockInput.value);
         if (isNaN(nuevoStock) || nuevoStock < 0) {
             alert("Por favor, ingresa un número válido para el nuevo stock.");
@@ -220,10 +283,12 @@ export function setupStock(app) {
                 const docSnap = await transaction.get(docRef);
                 if (!docSnap.exists()) throw "El producto ya no existe.";
                 let data = docSnap.data();
-                let lotesActualizados = [...data.lotes];
+                let lotesActualizados = Array.isArray(data.lotes)
+                    ? data.lotes.map(lote => ({ ...lote }))
+                    : [];
                 let cantidadAjustada = Math.abs(diferencia);
                 if (diferencia < 0) {
-                    lotesActualizados.sort((a, b) => a.fechaCompra.seconds - b.fechaCompra.seconds);
+                    lotesActualizados.sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
                     for (const lote of lotesActualizados) {
                         if (cantidadAjustada <= 0) break;
                         const aDescontar = Math.min(lote.stockRestante, cantidadAjustada);
@@ -231,11 +296,18 @@ export function setupStock(app) {
                         cantidadAjustada -= aDescontar;
                     }
                 } else {
-                    lotesActualizados.sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
+                    lotesActualizados.sort((a, b) => (b.fechaCompra?.seconds || 0) - (a.fechaCompra?.seconds || 0));
                     if (lotesActualizados.length > 0) {
                         lotesActualizados[0].stockRestante += cantidadAjustada;
                     } else {
-                        throw "No hay lotes para ajustar. Registra una compra primero.";
+                        lotesActualizados.push({
+                            fechaCompra: Timestamp.now(),
+                            precioCompra: 0,
+                            cantidadComprada: cantidadAjustada,
+                            stockRestante: cantidadAjustada,
+                            costoUnitario: 0,
+                            origen: 'Ajuste inicial de stock'
+                        });
                     }
                 }
                 transaction.update(docRef, { lotes: lotesActualizados });
