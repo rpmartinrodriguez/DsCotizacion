@@ -485,6 +485,56 @@ const extractVisiblePriceCandidates = (html) => {
   return candidates;
 };
 
+
+const normalizePackageUnit = (unit) => {
+  const normalized = String(unit || "").toLowerCase().replace(/\./g, "").trim();
+
+  if (["kg", "kilo", "kilos", "kilogramo", "kilogramos"].includes(normalized)) return "kg";
+  if (["g", "gr", "grs", "gramo", "gramos"].includes(normalized)) return "gr";
+  if (["l", "lt", "lts", "litro", "litros"].includes(normalized)) return "l";
+  if (["ml", "cc"].includes(normalized)) return normalized === "cc" ? "cc" : "ml";
+  if (["u", "un", "uni", "unidad", "unidades"].includes(normalized)) return "unidad";
+
+  return "";
+};
+
+const extractPackageInfo = (title, finalUrl) => {
+  const urlText = (() => {
+    try {
+      return decodeURIComponent(new URL(finalUrl).pathname)
+        .replace(/[-_]+/g, " ");
+    } catch {
+      return "";
+    }
+  })();
+
+  const text = `${String(title || "")} ${urlText}`
+    .replace(/×/g, "x")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Priorizamos expresiones de presentación explícitas como "x 10 kg".
+  const patterns = [
+    /(?:^|\s)x\s*(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kilogramos?|grs?|gramos?|g|lts?|litros?|l|ml|cc|unidades?|unidad|uni|u)(?=\s|$|\/|\))/i,
+    /(?:presentaci[oó]n|contenido|peso\s*neto)\s*[:\-]?\s*(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kilogramos?|grs?|gramos?|g|lts?|litros?|l|ml|cc|unidades?|unidad|uni|u)/i,
+    /(\d+(?:[.,]\d+)?)\s*(kg|kilos?|kilogramos?|grs?|gramos?|g|lts?|litros?|l|ml|cc|unidades?|unidad|uni|u)(?=\s*$|\s*[)\-\/])/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match) continue;
+
+    const quantity = parseLocalizedNumber(match[1]);
+    const unit = normalizePackageUnit(match[2]);
+
+    if (quantity && unit) {
+      return { quantity, unit, source: "title-or-url" };
+    }
+  }
+
+  return null;
+};
+
 const extractTitle = (html) => {
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   if (!titleMatch) return "";
@@ -581,6 +631,9 @@ exports.handler = async (event) => {
       });
     }
 
+    const title = extractTitle(page.text);
+    const packageInfo = extractPackageInfo(title, page.finalUrl);
+
     return json(200, {
       ok: true,
       materiaPrimaId,
@@ -588,7 +641,10 @@ exports.handler = async (event) => {
       source: detected.source,
       finalUrl: page.finalUrl,
       host: new URL(page.finalUrl).hostname,
-      title: extractTitle(page.text),
+      title,
+      packageQuantity: packageInfo?.quantity || null,
+      packageUnit: packageInfo?.unit || null,
+      packageSource: packageInfo?.source || null,
       checkedAt: new Date().toISOString(),
     });
   } catch (error) {
