@@ -153,6 +153,15 @@ service cloud.firestore {
         || hasPermission('configuracion');
     }
 
+    // Historial de consultas de precios de proveedores.
+    // Stock puede leer y registrar consultas; solo administración puede alterarlas o borrarlas.
+    match /historialPreciosProveedor/{registroId} {
+      allow read, create: if hasPermission('stock');
+
+      allow update, delete: if isMaster()
+        || hasPermission('configuracion');
+    }
+
     // Presupuestos alimentan Dashboard, Clientes, Agenda, Finanzas e Historial.
     match /presupuestosGuardados/{presupuestoId} {
       allow read: if hasPermission('indicadores')
