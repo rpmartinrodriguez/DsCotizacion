@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupSupplierPricing } from "./stock/supplier-pricing.js";
+import { getEffectiveUnitCost } from "./core/pricing.js";
 
 export function setupStock(app) {
     const db = getFirestore(app);
@@ -75,23 +76,44 @@ export function setupStock(app) {
                 const safeUnidad = escapeHtml(item.unidad);
                 const proveedorPrecio = Number(item.proveedorPrecioActual) || 0;
                 const proveedorVariacion = Number(item.proveedorVariacionPct);
+                const proveedorPresentacionCantidad = Number(item.proveedorPresentacionCantidad) || 0;
+                const proveedorPresentacionUnidad = escapeHtml(item.proveedorPresentacionUnidad || '');
+                const ultimoCostoUnitario = Number(ultimoLote.costoUnitario) > 0
+                    ? Number(ultimoLote.costoUnitario)
+                    : ((Number(ultimoLote.cantidadComprada) || 0) > 0
+                        ? (Number(ultimoLote.precioCompra) || 0) / Number(ultimoLote.cantidadComprada)
+                        : 0);
+                const costoAplicado = getEffectiveUnitCost(item);
+                const usaCostoProveedor = Number(item.costoReferenciaProveedorUnitario) > ultimoCostoUnitario + 0.000001;
+                const costoAplicadoHtml = `
+                    <div class="ds-applied-cost">
+                        <strong>${costoAplicado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / ${safeUnidad}</strong>
+                        <span class="${usaCostoProveedor ? 'is-provider' : 'is-purchase'}">${usaCostoProveedor ? 'Proveedor' : 'Última compra'}</span>
+                    </div>
+                `;
                 const tieneProveedor = Boolean((item.proveedorUrl || '').trim());
                 let proveedorHtml = '<span class="ds-provider-table-empty">Sin configurar</span>';
 
                 if (tieneProveedor && proveedorPrecio <= 0) {
                     proveedorHtml = '<span class="ds-provider-table-pending">Pendiente de consulta</span>';
                 } else if (proveedorPrecio > 0) {
-                    const variacionValida = Number.isFinite(proveedorVariacion) && item.proveedorPrecioAnterior;
-                    const cls = variacionValida
-                        ? (proveedorVariacion > 0 ? 'is-up' : proveedorVariacion < 0 ? 'is-down' : 'is-same')
-                        : 'is-same';
+                    const variacionValida = Number.isFinite(proveedorVariacion) && Number(item.proveedorCostoUnitarioAnterior) > 0;
+                    const variacionImportante = variacionValida && Math.abs(proveedorVariacion) >= 10;
+                    const cls = variacionImportante
+                        ? 'is-alert'
+                        : variacionValida
+                            ? (proveedorVariacion > 0 ? 'is-up' : proveedorVariacion < 0 ? 'is-down' : 'is-same')
+                            : 'is-same';
                     const variacionTexto = variacionValida
-                        ? `${proveedorVariacion > 0 ? '+' : ''}${proveedorVariacion.toLocaleString('es-AR', { maximumFractionDigits: 2 })}%`
+                        ? `${variacionImportante ? '⚠ ' : ''}${proveedorVariacion > 0 ? '+' : ''}${proveedorVariacion.toLocaleString('es-AR', { maximumFractionDigits: 2 })}%`
                         : 'Inicial';
+                    const presentacionTexto = proveedorPresentacionCantidad > 0 && proveedorPresentacionUnidad
+                        ? ` / ${proveedorPresentacionCantidad.toLocaleString('es-AR')} ${proveedorPresentacionUnidad}`
+                        : '';
 
                     proveedorHtml = `
                         <div class="ds-provider-table-price">
-                            <strong>${proveedorPrecio.toLocaleString('es-AR')}</strong>
+                            <strong>${proveedorPrecio.toLocaleString('es-AR')}${presentacionTexto}</strong>
                             <span class="${cls}">${variacionTexto}</span>
                         </div>
                     `;
@@ -100,7 +122,7 @@ export function setupStock(app) {
                 fila.innerHTML = `
                     <td data-label="Nombre">${safeNombre}</td>
                     <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${safeUnidad}</td>
-                    <td data-label="Precio Base">${(ultimoLote.precioCompra || 0).toLocaleString('es-AR')} / ${(ultimoLote.cantidadComprada || 0)} ${safeUnidad}</td>
+                    <td data-label="Costo Aplicado">${costoAplicadoHtml}</td>
                     <td data-label="Proveedor">${proveedorHtml}</td>
                     <td data-label="Última Carga">${fechaUltimaCarga}</td>
                     <td class="action-buttons stock-actions">
