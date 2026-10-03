@@ -135,7 +135,7 @@ export function setupPOS(app) {
     // CÁLCULO DE COSTOS
     // ==========================================
     const obtenerCostoBase = (receta) => {
-        return calculateRecipeUnitCost(receta, materiasPrimasMap, { preferStoredUnitCost: true });
+        return calculateRecipeUnitCost(receta, materiasPrimasMap);
     };
 
     const calcularPrecioVenta = (prod) => {
