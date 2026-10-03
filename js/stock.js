@@ -1,13 +1,15 @@
 import { 
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    updateDoc, getDoc, runTransaction, where, addDoc, Timestamp
+    updateDoc, getDoc, getDocs, deleteDoc, runTransaction, where, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupSupplierPricing } from "./stock/supplier-pricing.js";
 import { getEffectiveUnitCost } from "./core/pricing.js";
+import { createAuthorization } from "./core/authorization.js";
 
 export function setupStock(app) {
     const db = getFirestore(app);
+    const authorization = createAuthorization(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
     
@@ -23,6 +25,7 @@ export function setupStock(app) {
     const lotesEditorContainer = document.getElementById('lotes-editor-container');
     const btnGuardarCompleto = document.getElementById('producto-completo-modal-btn-guardar');
     const btnCancelarCompleto = document.getElementById('producto-completo-modal-btn-cancelar');
+    const btnEliminarCompleto = document.getElementById('producto-completo-modal-btn-eliminar');
     
     // Referencias para el Modal de Ajuste Rápido
     const modalAjuste = document.getElementById('ajustar-stock-modal-overlay');
@@ -142,46 +145,146 @@ export function setupStock(app) {
         });
     };
     
+    const normalizarFechaLote = (valor) => {
+        if (!valor) return null;
+
+        try {
+            if (typeof valor.toDate === 'function') {
+                const date = valor.toDate();
+                return Number.isNaN(date.getTime()) ? null : date;
+            }
+
+            if (valor.seconds !== undefined) {
+                const date = new Date(Number(valor.seconds) * 1000);
+                return Number.isNaN(date.getTime()) ? null : date;
+            }
+
+            if (valor instanceof Date) {
+                return Number.isNaN(valor.getTime()) ? null : valor;
+            }
+
+            if (typeof valor === 'string' || typeof valor === 'number') {
+                const date = new Date(valor);
+                return Number.isNaN(date.getTime()) ? null : date;
+            }
+        } catch (error) {
+            console.warn('Fecha de lote legacy no interpretable:', valor, error);
+        }
+
+        return null;
+    };
+
+    const formatearFechaInput = (date) => {
+        if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+        const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+        return local.toISOString().split('T')[0];
+    };
+
     const openModalParaEdicionCompleta = async (id) => {
         editandoId = id;
+        let productoCargado = false;
+
         try {
             const docRef = doc(db, 'materiasPrimas', id);
             const docSnap = await getDoc(docRef);
+
             if (!docSnap.exists()) {
                 alert("Este producto ya no existe.");
+                editandoId = null;
                 return;
             }
-            const producto = docSnap.data();
-            
-            modalCompletoTitle.textContent = `Editando: ${producto.nombre}`;
-            nombreCompletoInput.value = producto.nombre;
-            unidadCompletoSelect.value = producto.unidad;
+
+            const producto = docSnap.data() || {};
+            productoCargado = true;
+            const nombreProducto = String(producto.nombre || 'Materia prima sin nombre').trim();
+            const unidadProducto = String(producto.unidad || 'gr').trim();
+
+            modalCompletoTitle.textContent = `Editando: ${nombreProducto}`;
+            nombreCompletoInput.value = nombreProducto;
+
+            const unidadExiste = Array.from(unidadCompletoSelect.options)
+                .some(option => option.value === unidadProducto);
+            unidadCompletoSelect.value = unidadExiste ? unidadProducto : 'gr';
+
             supplierPricing.loadProduct(producto, id);
 
+            const puedeEliminar = await authorization.canAdminister();
+            if (btnEliminarCompleto) btnEliminarCompleto.hidden = !puedeEliminar;
+
             lotesEditorContainer.innerHTML = '';
-            if (producto.lotes && producto.lotes.length > 0) {
-                const lotesOrdenados = [...producto.lotes].sort((a,b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
-                lotesOrdenados.forEach((lote, index) => {
-                    const fechaCompra = lote.fechaCompra.toDate().toISOString().split('T')[0];
+            const lotes = Array.isArray(producto.lotes) ? producto.lotes : [];
+
+            if (!lotes.length) {
+                lotesEditorContainer.innerHTML = '<p>Este producto todavía no tiene lotes de compra. Podés editarlo normalmente.</p>';
+            } else {
+                const lotesConIndice = lotes.map((lote, originalIndex) => ({
+                    lote: lote || {},
+                    originalIndex,
+                    fecha: normalizarFechaLote(lote?.fechaCompra)
+                }));
+
+                lotesConIndice.sort((a, b) =>
+                    (b.fecha?.getTime() || 0) - (a.fecha?.getTime() || 0)
+                );
+
+                let lotesLegacy = 0;
+
+                lotesConIndice.forEach(({ lote, originalIndex, fecha }, index) => {
+                    const fechaCompra = formatearFechaInput(fecha);
+                    const fechaTexto = fecha
+                        ? fecha.toLocaleDateString('es-AR')
+                        : 'fecha pendiente de corregir';
+
+                    if (!fecha) lotesLegacy += 1;
+
                     const loteDiv = document.createElement('div');
                     loteDiv.className = 'lote-editor-item';
-                    const originalIndex = producto.lotes.indexOf(lote);
+
                     loteDiv.innerHTML = `
-                        <p class="fecha-lote">Lote #${index + 1} (Compra del ${lote.fechaCompra.toDate().toLocaleDateString('es-AR')})</p>
-                        <div class="form-group"><label>Fecha Compra</label><input type="date" value="${fechaCompra}" data-lote-index="${originalIndex}" data-field="fechaCompra" class="form-control"></div>
-                        <div class="form-group"><label>Precio Compra ($)</label><input type="number" value="${lote.precioCompra}" data-lote-index="${originalIndex}" data-field="precioCompra" step="any" class="form-control"></div>
-                        <div class="form-group"><label>Cant. Comprada</label><input type="number" value="${lote.cantidadComprada}" data-lote-index="${originalIndex}" data-field="cantidadComprada" step="any" class="form-control"></div>
-                        <div class="form-group"><label>Stock Restante</label><input type="number" value="${lote.stockRestante}" data-lote-index="${originalIndex}" data-field="stockRestante" step="any" class="form-control"></div>
+                        <p class="fecha-lote">Lote #${index + 1} (Compra del ${escapeHtml(fechaTexto)})</p>
+                        <div class="form-group">
+                            <label>Fecha Compra</label>
+                            <input type="date" value="${escapeAttribute(fechaCompra)}" data-lote-index="${originalIndex}" data-field="fechaCompra" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Precio Compra ($)</label>
+                            <input type="number" value="${Number(lote.precioCompra) || 0}" data-lote-index="${originalIndex}" data-field="precioCompra" step="any" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Cant. Comprada</label>
+                            <input type="number" value="${Number(lote.cantidadComprada) || 0}" data-lote-index="${originalIndex}" data-field="cantidadComprada" step="any" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Stock Restante</label>
+                            <input type="number" value="${Number(lote.stockRestante) || 0}" data-lote-index="${originalIndex}" data-field="stockRestante" step="any" class="form-control">
+                        </div>
                     `;
+
                     lotesEditorContainer.appendChild(loteDiv);
                 });
-            } else {
-                lotesEditorContainer.innerHTML = '<p>Este producto no tiene lotes de compra registrados.</p>';
+
+                if (lotesLegacy > 0) {
+                    const aviso = document.createElement('p');
+                    aviso.className = 'ds-stock-legacy-warning';
+                    aviso.textContent = `${lotesLegacy} lote(s) tienen datos antiguos incompletos. El producto se puede editar; corregí la fecha de esos lotes cuando quieras.`;
+                    lotesEditorContainer.prepend(aviso);
+                }
             }
+
             modalCompleto.classList.add('visible');
         } catch (error) {
             console.error("Error al abrir modal de edición completa:", error);
-            alert("No se pudo cargar la información para editar.");
+
+            if (!productoCargado) {
+                editandoId = null;
+                alert("No se pudo acceder a este producto. Probá nuevamente.");
+                return;
+            }
+
+            // Si el documento sí cargó pero algún dato legacy falló,
+            // mantenemos el editor disponible antes que bloquear la gestión.
+            lotesEditorContainer.innerHTML = '<p class="ds-stock-legacy-warning">Hay información antigua que no se pudo interpretar completamente. Podés corregir nombre, unidad y proveedor igualmente.</p>';
+            modalCompleto.classList.add('visible');
         }
     };
 
@@ -206,15 +309,29 @@ export function setupStock(app) {
             loteItems.forEach(loteItem => {
                 const index = parseInt(loteItem.querySelector('input').dataset.loteIndex, 10);
                 const fechaInput = loteItem.querySelector(`[data-lote-index="${index}"][data-field="fechaCompra"]`).value;
-                const [year, month, day] = fechaInput.split('-');
-                const fecha = new Date(year, month - 1, day);
                 const precio = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="precioCompra"]`).value);
                 const cantidad = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="cantidadComprada"]`).value);
                 const restante = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="stockRestante"]`).value);
-                if (isNaN(precio) || isNaN(cantidad) || isNaN(restante)) throw new Error(`Hay valores numéricos inválidos en uno de los lotes.`);
-                if (!fechaInput) throw new Error(`La fecha es inválida en uno de los lotes.`);
+
+                if (isNaN(precio) || isNaN(cantidad) || isNaN(restante)) {
+                    throw new Error(`Hay valores numéricos inválidos en uno de los lotes.`);
+                }
+
+                const loteOriginal = lotesOriginales[index] || {};
+                let fechaCompraGuardada = loteOriginal.fechaCompra || null;
+
+                if (fechaInput) {
+                    const [year, month, day] = fechaInput.split('-').map(Number);
+                    const fecha = new Date(year, month - 1, day);
+
+                    if (!Number.isNaN(fecha.getTime())) {
+                        fechaCompraGuardada = Timestamp.fromDate(fecha);
+                    }
+                }
+
                 nuevosLotes[index] = {
-                    fechaCompra: Timestamp.fromDate(fecha),
+                    ...loteOriginal,
+                    fechaCompra: fechaCompraGuardada,
                     precioCompra: precio,
                     cantidadComprada: cantidad,
                     stockRestante: restante,
@@ -240,8 +357,75 @@ export function setupStock(app) {
         }
     };
 
+    const eliminarProductoActual = async () => {
+        if (!editandoId || !btnEliminarCompleto) return;
+
+        const puedeEliminar = await authorization.canAdminister();
+        if (!puedeEliminar) {
+            alert('Tu usuario no tiene permiso para eliminar materias primas.');
+            return;
+        }
+
+        btnEliminarCompleto.disabled = true;
+        const textoOriginal = btnEliminarCompleto.textContent;
+        btnEliminarCompleto.textContent = 'Verificando…';
+
+        try {
+            const productoRef = doc(db, 'materiasPrimas', editandoId);
+            const productoSnap = await getDoc(productoRef);
+
+            if (!productoSnap.exists()) {
+                closeModalCompleta();
+                return;
+            }
+
+            const producto = productoSnap.data() || {};
+            const nombre = String(producto.nombre || 'esta materia prima');
+
+            const recetasSnap = await getDocs(collection(db, 'recetas'));
+            const recetasVinculadas = [];
+
+            recetasSnap.forEach(recetaDoc => {
+                const receta = recetaDoc.data() || {};
+                const ingredientes = Array.isArray(receta.ingredientes) ? receta.ingredientes : [];
+                const usaProducto = ingredientes.some(ingrediente =>
+                    ingrediente?.idMateriaPrima === editandoId
+                );
+
+                if (usaProducto) {
+                    recetasVinculadas.push(receta.nombreTorta || receta.nombre || 'Receta sin nombre');
+                }
+            });
+
+            if (recetasVinculadas.length) {
+                const primeras = recetasVinculadas.slice(0, 5).join(', ');
+                alert(
+                    `No se puede eliminar "${nombre}" porque está usado en ${recetasVinculadas.length} receta(s): ${primeras}${recetasVinculadas.length > 5 ? '…' : ''}.\n\nCorregí el producto actual en vez de volver a crearlo, así no rompemos las recetas vinculadas.`
+                );
+                return;
+            }
+
+            const confirmado = window.confirm(
+                `¿Eliminar definitivamente "${nombre}"?\n\nEsta acción no se puede deshacer. El historial de movimientos queda como registro, pero la materia prima se eliminará de Stock.`
+            );
+
+            if (!confirmado) return;
+
+            await deleteDoc(productoRef);
+            closeModalCompleta();
+            alert(`"${nombre}" fue eliminado correctamente.`);
+        } catch (error) {
+            console.error('Error eliminando materia prima:', error);
+            alert('No se pudo eliminar el producto. No se realizó ningún cambio.');
+        } finally {
+            btnEliminarCompleto.disabled = false;
+            btnEliminarCompleto.textContent = textoOriginal;
+        }
+    };
+
     btnGuardarCompleto.addEventListener('click', guardarCambiosCompletos);
     btnCancelarCompleto.addEventListener('click', closeModalCompleta);
+    if (btnEliminarCompleto) btnEliminarCompleto.addEventListener('click', eliminarProductoActual);
 
     const openModalParaAjustar = (id) => {
         editandoId = id;

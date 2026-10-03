@@ -3266,3 +3266,57 @@ body.ds-history .historial-card__detalle ul {
   background: #fff7ed;
   color: #9a6231;
 }
+
+
+.ds-stock-modal-actions-spacer {
+  flex: 1 1 auto;
+}
+
+.ds-stock-delete-btn {
+  width: auto !important;
+  min-width: 138px;
+  border: 1px solid #f1c6ca;
+  border-radius: 10px;
+  background: #fff7f8;
+  color: #a52f39;
+  padding: 0 13px;
+  min-height: 40px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ds-stock-delete-btn:hover {
+  background: #feedef;
+}
+
+.ds-stock-delete-btn:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.ds-stock-legacy-warning {
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border: 1px solid #f1d7b9;
+  border-radius: 9px;
+  background: #fff8ef;
+  color: #8a5b2d;
+  font-size: .72rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .ds-stock-modal-actions {
+    flex-wrap: wrap;
+  }
+
+  .ds-stock-delete-btn {
+    order: 3;
+    width: 100% !important;
+    min-width: 100%;
+  }
+
+  .ds-stock-modal-actions-spacer {
+    display: none;
+  }
+}
