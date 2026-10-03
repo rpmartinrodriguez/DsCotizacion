@@ -171,45 +171,84 @@
             </section>
 
             <!-- PANTALLA 2: MOSTRADOR ACTIVO (POS TÁCTIL) -->
-            <section id="pantalla-pos" class="pos-grid" style="display: none;">
+            <section id="pantalla-pos" class="pos-grid ds-pos-workspace" style="display: none;">
                 
-                <div class="card" style="margin-bottom: 0;">
-                    <div class="card-header-actions" style="margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.5rem;">
-                        <h2 class="card__title" style="margin: 0;">Vitrina</h2>
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <button id="btn-ir-stock" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: var(--primary-color); color: var(--primary-color);">📦 Ir a Stock</button>
-                            <button id="btn-ir-promos" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #f59e0b; color: #f59e0b;">🏷️ Promos</button>
-                            
-                            <!-- BOTÓN PARA IR A LA PESTAÑA HISTÓRICA -->
-                            <button id="btn-ir-carga-historica" class="btn-secondary master-only" style="width: auto; padding: 0.5rem 1rem; border-color: #8b5cf6; color: #8b5cf6;">📝 Carga Histórica</button>
-                            
-                            <button id="btn-iniciar-cierre" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; padding: 0.5rem 1rem;">Cerrar Caja</button>
+                <div class="card ds-pos-catalog">
+                    <div class="ds-pos-catalog-head">
+                        <div>
+                            <p class="ds-eyebrow">Venta rápida</p>
+                            <h2 class="card__title">Vitrina</h2>
+                        </div>
+                        <div class="ds-pos-admin-actions">
+                            <button id="btn-ir-stock" class="btn-secondary master-only">📦 Stock</button>
+                            <button id="btn-ir-promos" class="btn-secondary master-only">🏷️ Promos</button>
+                            <button id="btn-ir-carga-historica" class="btn-secondary master-only">📝 Histórica</button>
+                            <button id="btn-iniciar-cierre" class="btn-secondary ds-pos-close-shift">Cerrar Caja</button>
                         </div>
                     </div>
                     
-                    <div class="buscador-container" style="display: flex; gap: 0.5rem;">
-                        <input type="search" id="buscador-pos" placeholder="🔍 Escanear código de barras o buscar..." style="flex-grow: 1; font-size: 1.1rem; padding: 0.8rem;">
+                    <div class="ds-pos-search-wrap">
+                        <span class="ds-pos-search-icon" aria-hidden="true">⌕</span>
+                        <input type="search" id="buscador-pos" placeholder="Buscar producto o escanear código…" autocomplete="off">
+                        <kbd>/</kbd>
                     </div>
 
-                    <div id="grid-productos-pos" class="productos-grid">
+                    <div id="pos-category-filters" class="ds-pos-category-filters" aria-label="Categorías"></div>
+
+                    <section id="pos-favorites-section" class="ds-pos-favorites-section" hidden>
+                        <div class="ds-pos-section-label">
+                            <span>Más vendidos</span>
+                            <small>Acceso rápido</small>
+                        </div>
+                        <div id="pos-favorites-strip" class="ds-pos-favorites-strip"></div>
+                    </section>
+
+                    <div class="ds-pos-section-label ds-pos-all-label">
+                        <span id="pos-grid-title">Todos los productos</span>
+                        <small id="pos-grid-count"></small>
+                    </div>
+
+                    <div id="grid-productos-pos" class="productos-grid ds-pos-products-grid">
                         <!-- Las tarjetas se inyectan desde JS -->
                     </div>
                 </div>
 
-                <div class="card" style="margin-bottom: 0; display: flex; flex-direction: column;">
-                    <h2 class="card__title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; margin-bottom: 1rem;">Detalle de Venta</h2>
-                    
-                    <div style="background: #fdf2f8; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #fbcfe8;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                            <span style="font-size: 1.2rem; color: #831843; font-weight: bold;">Total General:</span>
-                            <span id="pos-total-monto" style="font-size: 2.2rem; font-weight: 900; color: #be185d;">$0.00</span>
+                <aside class="card ds-pos-cart">
+                    <div class="ds-pos-cart-head">
+                        <div>
+                            <p class="ds-eyebrow">Venta actual</p>
+                            <h2 class="card__title">Carrito <span id="pos-cart-count" class="ds-pos-cart-count">0</span></h2>
                         </div>
-                        <button id="btn-cobrar" class="btn-primary" style="width: 100%; padding: 1.2rem; font-size: 1.2rem; font-weight: bold; background: #ec4899; text-transform: uppercase;" disabled>💳 Cobrar</button>
+                        <button id="btn-vaciar-carrito" class="ds-pos-clear-cart" type="button" disabled>Vaciar</button>
                     </div>
 
-                    <div class="cart-lista" id="carrito-pos-container" style="flex-grow: 1; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
-                        <p class="text-light" style="text-align: center; margin-top: 2rem;">No hay productos en la venta actual.</p>
+                    <div class="cart-lista ds-pos-cart-list" id="carrito-pos-container">
+                        <div class="ds-pos-empty-cart">
+                            <span>🧁</span>
+                            <strong>Venta vacía</strong>
+                            <p>Tocá un producto para agregarlo.</p>
+                        </div>
                     </div>
+
+                    <div class="ds-pos-checkout">
+                        <div class="ds-pos-total-row">
+                            <span>Total</span>
+                            <strong id="pos-total-monto">$0.00</strong>
+                        </div>
+                        <button id="btn-cobrar" class="btn-primary ds-pos-charge-btn" disabled>
+                            <span>Cobrar</span>
+                            <strong id="pos-cobrar-monto">$0</strong>
+                            <kbd>F2</kbd>
+                        </button>
+                    </div>
+                </aside>
+
+                <div id="pos-mobile-checkout" class="ds-pos-mobile-checkout" hidden>
+                    <button id="btn-ver-carrito-mobile" type="button" class="ds-pos-mobile-cart-info">
+                        <span id="pos-mobile-count">0 productos</span>
+                        <strong id="pos-mobile-total">$0</strong>
+                    </button>
+                    <button id="btn-cobrar-mobile" type="button" class="ds-pos-mobile-charge" disabled>Cobrar</button>
                 </div>
             </section>
 
