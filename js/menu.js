@@ -193,7 +193,7 @@ async function inicializarMenu() {
         if (p.stock) htmlMenu += `<a href="stock.html" class="nav-menu__link" title="Stock"><span class="nav-menu__glyph">${MENU_ICON.stock}</span><span class="nav-menu__label">Stock</span></a>`;
         if (p.recetas) htmlMenu += `<a href="recetas.html" class="nav-menu__link" title="Productos y recetas"><span class="nav-menu__glyph">${MENU_ICON.recipes}</span><span class="nav-menu__label">Productos y recetas</span></a>`;
         if (p.presupuestos) htmlMenu += `<a href="presupuesto.html" class="nav-menu__link" title="Presupuestos"><span class="nav-menu__glyph">${MENU_ICON.quote}</span><span class="nav-menu__label">Presupuestos</span></a>`;
-        if (p.precios) htmlMenu += `<a href="precios.html" class="nav-menu__link" title="Listas de precios"><span class="nav-menu__glyph">${MENU_ICON.prices}</span><span class="nav-menu__label">Listas de precios</span></a>`;
+        if (p.precios) htmlMenu += `<a href="precios.html" class="nav-menu__link" title="Precios y revisión"><span class="nav-menu__glyph">${MENU_ICON.prices}</span><span class="nav-menu__label">Precios y revisión</span></a>`;
 
         htmlMenu += `</div></div>`;
     }
