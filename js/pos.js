@@ -637,7 +637,9 @@ export function setupPOS(app) {
         }
         renderizarCarrito();
 
-        const card = gridProductos?.querySelector(`.producto-card[data-id="${CSS.escape(prod.id)}"]`);
+        const card = gridProductos
+            ? [...gridProductos.querySelectorAll('.producto-card')].find(el => el.dataset.id === prod.id)
+            : null;
         if (card) {
             card.classList.remove('is-added');
             requestAnimationFrame(() => card.classList.add('is-added'));
@@ -865,7 +867,10 @@ export function setupPOS(app) {
                 button.textContent = value === 'exacto' ? 'Exacto' : formatMoneda(value);
             });
 
-            if (modalCobro) modalCobro.classList.add('visible');
+            if (modalCobro) {
+                modalCobro.classList.add('visible');
+                setTimeout(() => btnPaymentMethods[0]?.focus?.(), 30);
+            }
         };
 
     if (btnCobrar) {
@@ -876,51 +881,47 @@ export function setupPOS(app) {
         btnCobrarMobile.addEventListener('click', abrirCobro);
     }
 
-    /* legacy-open-payment-handler-removed */
-    if (false) {
-        btnCobrar?.addEventListener('click', () => {
-            totalVentaActual = carritoActual.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
-            if (modalCobroTotal) modalCobroTotal.textContent = formatMoneda(totalVentaActual);
-            
-            metodoPagoSeleccionado = null;
-            btnPaymentMethods.forEach(b => b.classList.remove('selected'));
-            btnConfirmarVenta.disabled = true;
-            
-            if (paymentDetailsContainer) paymentDetailsContainer.style.display = 'none';
-            if (fieldMP) fieldMP.style.display = 'none';
-            if (fieldEfectivo) fieldEfectivo.style.display = 'none';
-            if (inputCobroMP) inputCobroMP.value = '';
-            if (inputCobroEfectivo) inputCobroEfectivo.value = '';
-            if (vueltoContainer) vueltoContainer.style.display = 'none';
-
-            if (modalCobro) modalCobro.classList.add('visible');
-        });
-    }
-
     if (btnCancelarCobro) btnCancelarCobro.addEventListener('click', () => {
         if (modalCobro) modalCobro.classList.remove('visible')
     });
 
     btnPaymentMethods.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.setAttribute('role', 'button');
+        btn.setAttribute('tabindex', '0');
+
+        const seleccionarMetodoPago = () => {
             btnPaymentMethods.forEach(b => b.classList.remove('selected'));
             btn.classList.add('selected');
             metodoPagoSeleccionado = btn.dataset.metodo;
-            
+
             if (paymentDetailsContainer) paymentDetailsContainer.style.display = 'block';
+            if (fieldMP) fieldMP.style.display = 'none';
+            if (fieldEfectivo) fieldEfectivo.style.display = 'none';
+            if (inputCobroMP) inputCobroMP.value = '';
+            if (inputCobroEfectivo) inputCobroEfectivo.value = '';
 
             if (metodoPagoSeleccionado === 'MercadoPago') {
-                if(paymentDetailsContainer) paymentDetailsContainer.style.display = 'none';
+                if (paymentDetailsContainer) paymentDetailsContainer.style.display = 'none';
+                calcularVuelto();
             } else if (metodoPagoSeleccionado === 'Efectivo') {
-                if(fieldMP) fieldMP.style.display = 'none';
-                if(fieldEfectivo) fieldEfectivo.style.display = 'block';
+                if (fieldEfectivo) fieldEfectivo.style.display = 'block';
+                calcularVuelto();
+                setTimeout(() => inputCobroEfectivo?.focus(), 30);
             } else if (metodoPagoSeleccionado === 'Ambos') {
-                if(fieldMP) fieldMP.style.display = 'block';
-                if(fieldEfectivo) fieldEfectivo.style.display = 'block';
+                if (fieldMP) fieldMP.style.display = 'block';
+                if (fieldEfectivo) fieldEfectivo.style.display = 'block';
+                if (inputCobroEfectivo) inputCobroEfectivo.value = totalVentaActual;
+                calcularVuelto();
+                setTimeout(() => inputCobroMP?.focus(), 30);
             }
-            if(inputCobroMP) inputCobroMP.value = '';
-            if(inputCobroEfectivo) inputCobroEfectivo.value = '';
-            calcularVuelto();
+        };
+
+        btn.addEventListener('click', seleccionarMetodoPago);
+        btn.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                seleccionarMetodoPago();
+            }
         });
     });
 
