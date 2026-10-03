@@ -235,6 +235,7 @@ export function setupPrecios(app) {
                     unidades: 0,
                     facturacion: 0,
                     costoSnapshot: 0,
+                    facturacionSnapshot: 0,
                     unidadesSnapshot: 0,
                     tickets: new Set(),
                     ultimaVentaMs: 0
@@ -245,6 +246,7 @@ export function setupPrecios(app) {
             target.unidades += payload.unidades;
             target.facturacion += payload.facturacion;
             target.costoSnapshot += payload.costoSnapshot;
+            target.facturacionSnapshot += payload.facturacionSnapshot;
             target.unidadesSnapshot += payload.unidadesSnapshot;
             target.tickets.add(payload.ticketId);
             target.ultimaVentaMs = Math.max(target.ultimaVentaMs, payload.fechaMs);
@@ -267,6 +269,7 @@ export function setupPrecios(app) {
                     unidades,
                     facturacion,
                     costoSnapshot: tieneSnapshot ? Number(item.costoTotalVenta) : 0,
+                    facturacionSnapshot: tieneSnapshot ? facturacion : 0,
                     unidadesSnapshot: tieneSnapshot ? unidades : 0,
                     ticketId: venta.id,
                     fechaMs
@@ -330,20 +333,22 @@ export function setupPrecios(app) {
                     unidades: 0,
                     facturacion: 0,
                     costoSnapshot: 0,
+                    facturacionSnapshot: 0,
                     unidadesSnapshot: 0,
                     tickets: new Set(),
                     ultimaVentaMs: 0
                 };
 
-            const historicalMargin = sales.facturacion > 0 && sales.costoSnapshot > 0
-                ? ((sales.facturacion - sales.costoSnapshot) / sales.facturacion) * 100
+            const historicalMargin = sales.facturacionSnapshot > 0
+                ? ((sales.facturacionSnapshot - sales.costoSnapshot) / sales.facturacionSnapshot) * 100
                 : null;
 
             const lossPoints = Number.isFinite(historicalMargin) && Number.isFinite(currentMargin)
                 ? historicalMargin - currentMargin
                 : null;
 
-            const suggestedPrice = targetPriceForMargin(currentCost, target);
+            const targetPrice = targetPriceForMargin(currentCost, target);
+            const suggestedPrice = Math.max(currentPrice, targetPrice);
             const suggestedDelta = suggestedPrice - currentPrice;
             const suggestedDeltaPct = currentPrice > 0
                 ? (suggestedDelta / currentPrice) * 100
@@ -569,6 +574,7 @@ export function setupPrecios(app) {
                 <div><span>Unidades / 30 días</span><strong>${row.sales.unidades.toLocaleString('es-AR')}</strong></div>
                 <div><span>Facturación / 30 días</span><strong>${formatCurrency(row.sales.facturacion)}</strong></div>
                 <div><span>Margen histórico</span><strong>${marginHistoryText}</strong></div>
+                <div><span>Ventas con costo histórico</span><strong>${row.sales.unidadesSnapshot.toLocaleString('es-AR')} u.</strong></div>
                 <div><span>Impacto estimado</span><strong>${row.monthlyImpact > 0 ? '-' + formatCurrency(row.monthlyImpact) : formatCurrency(0)}</strong></div>
             `;
         }
