@@ -4410,3 +4410,628 @@ body.ds-history .historial-card__detalle ul {
     height: 40px;
   }
 }
+
+
+/* =========================================================
+   Centro de revisión de precios / margen
+   ========================================================= */
+.ds-price-review {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--ds-border);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--ds-shadow-soft);
+}
+
+.ds-price-review-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.ds-price-review-head h2 {
+  margin: 0 0 5px;
+  color: var(--ds-text);
+  font-size: 1.2rem;
+}
+
+.ds-price-review-head p {
+  margin: 0;
+  max-width: 760px;
+  color: var(--ds-muted);
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.ds-price-review-settings {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.ds-price-review-settings label {
+  display: block;
+  min-width: 120px;
+}
+
+.ds-price-review-settings label > span {
+  display: block;
+  margin-bottom: 5px;
+  color: #776d76;
+  font-size: .62rem;
+  font-weight: 800;
+}
+
+.ds-percent-input {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 38px;
+  padding: 0 9px;
+  border: 1px solid var(--ds-border);
+  border-radius: 10px;
+  background: #faf9fa;
+}
+
+.ds-percent-input input {
+  width: 54px;
+  border: 0 !important;
+  outline: 0;
+  background: transparent;
+  padding: 0 !important;
+  color: var(--ds-text);
+  font-weight: 850;
+}
+
+.ds-percent-input span {
+  color: #8b818a;
+  font-size: .68rem;
+  font-weight: 750;
+}
+
+.ds-price-review-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 9px;
+  margin: 14px 0;
+}
+
+.ds-review-kpi {
+  min-height: 106px;
+  padding: 13px;
+  border: 1px solid var(--ds-border);
+  border-radius: 13px;
+  background: #faf9fa;
+}
+
+.ds-review-kpi > span {
+  display: block;
+  color: #756b74;
+  font-size: .67rem;
+  font-weight: 800;
+}
+
+.ds-review-kpi > strong {
+  display: block;
+  margin: 7px 0 3px;
+  color: #443c43;
+  font-size: 1.42rem;
+  letter-spacing: -.025em;
+}
+
+.ds-review-kpi > small {
+  color: #928790;
+  font-size: .61rem;
+  line-height: 1.35;
+}
+
+.ds-review-kpi.is-good {
+  background: #f5fbf8;
+  border-color: #d7eadf;
+}
+
+.ds-review-kpi.is-review {
+  background: #fffaf1;
+  border-color: #f0dfbc;
+}
+
+.ds-review-kpi.is-critical {
+  background: #fff5f5;
+  border-color: #efced1;
+}
+
+.ds-review-kpi.is-impact {
+  background: #faf6fb;
+  border-color: #eaddea;
+}
+
+.ds-review-kpi.is-good > strong { color: #327257; }
+.ds-review-kpi.is-review > strong { color: #9a6a25; }
+.ds-review-kpi.is-critical > strong { color: #aa3d47; }
+.ds-review-kpi.is-impact > strong { color: #9c3f72; }
+
+.ds-price-review-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ds-price-review-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: min(360px, 100%);
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--ds-border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ds-price-review-search > span {
+  color: #978d96;
+}
+
+.ds-price-review-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0 !important;
+  outline: 0;
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  font-size: .76rem !important;
+}
+
+.ds-price-review-filters {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+}
+
+.ds-price-review-filters button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--ds-border);
+  border-radius: 999px;
+  background: #fff;
+  color: #756c74;
+  font-size: .66rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ds-price-review-filters button.is-active {
+  border-color: #e3aac4;
+  background: #fff0f6;
+  color: #a33d6c;
+}
+
+.ds-price-review-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+}
+
+.ds-price-review-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.ds-price-review-table th,
+.ds-price-review-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #eee9ed;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.ds-price-review-table th {
+  background: #faf9fa;
+  color: #867c85;
+  font-size: .61rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
+
+.ds-price-review-table td {
+  color: #514851;
+  font-size: .72rem;
+}
+
+.ds-price-review-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ds-price-review-table tbody tr.is-critical {
+  background: #fffafa;
+}
+
+.ds-price-review-table tbody tr.is-review {
+  background: #fffdf8;
+}
+
+.ds-review-product {
+  min-width: 170px;
+}
+
+.ds-review-product strong,
+.ds-review-product span,
+.ds-review-product small,
+.ds-review-secondary {
+  display: block;
+}
+
+.ds-review-product strong {
+  color: #433b42;
+  font-size: .74rem;
+}
+
+.ds-review-product > span {
+  margin-top: 2px;
+  color: #958b94;
+  font-size: .61rem;
+}
+
+.ds-review-status {
+  width: fit-content;
+  margin-top: 5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: .58rem !important;
+  font-weight: 850;
+}
+
+.ds-review-status.is-good {
+  background: #eaf7ef;
+  color: #347459;
+}
+
+.ds-review-status.is-review {
+  background: #fff1d8;
+  color: #96651f;
+}
+
+.ds-review-status.is-critical {
+  background: #feecee;
+  color: #a53c45;
+}
+
+.ds-review-secondary {
+  margin-top: 3px;
+  color: #9a9098;
+  font-size: .59rem;
+}
+
+.ds-review-change {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: .63rem;
+  font-weight: 850;
+}
+
+.ds-review-change.is-loss {
+  background: #feecee;
+  color: #aa3c46;
+}
+
+.ds-review-change.is-gain {
+  background: #eaf7ef;
+  color: #35775a;
+}
+
+.ds-review-muted {
+  color: #9b9199;
+  font-size: .63rem;
+}
+
+.ds-review-open-btn {
+  min-height: 31px;
+  padding: 0 9px;
+  border: 1px solid #dfc4d0;
+  border-radius: 8px;
+  background: #fff;
+  color: #a04470;
+  font-size: .64rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.ds-review-open-btn:hover {
+  background: #fff1f6;
+}
+
+.ds-review-empty {
+  padding: 22px !important;
+  color: #958b94 !important;
+  text-align: center !important;
+}
+
+/* Modal revisión */
+.ds-price-review-modal {
+  width: min(820px, calc(100vw - 24px));
+  max-width: 820px !important;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 18px !important;
+  border-radius: 18px;
+}
+
+.ds-review-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.ds-review-modal-head h2 {
+  margin: 0 0 3px;
+  color: var(--ds-text);
+  font-size: 1.22rem;
+}
+
+.ds-review-modal-head p:last-child {
+  margin: 0;
+  color: var(--ds-muted);
+  font-size: .7rem;
+}
+
+.ds-modal-close-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--ds-border);
+  border-radius: 9px;
+  background: #fff;
+  color: #756a73;
+  cursor: pointer;
+  font-size: 1.15rem;
+}
+
+.ds-review-modal-numbers {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 8px;
+}
+
+.ds-review-modal-numbers > div {
+  padding: 10px;
+  border: 1px solid var(--ds-border);
+  border-radius: 11px;
+  background: #faf9fa;
+}
+
+.ds-review-modal-numbers span,
+.ds-review-sales-summary span {
+  display: block;
+  color: #8f858d;
+  font-size: .59rem;
+  font-weight: 750;
+}
+
+.ds-review-modal-numbers strong,
+.ds-review-sales-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: #4a4249;
+  font-size: .86rem;
+}
+
+.ds-review-recommendation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 10px 0;
+  padding: 13px;
+  border: 1px solid #ead8e1;
+  border-radius: 12px;
+  background: #fff7fa;
+}
+
+.ds-review-recommendation span {
+  display: block;
+  color: #806f79;
+  font-size: .64rem;
+  font-weight: 800;
+}
+
+.ds-review-recommendation strong {
+  display: block;
+  margin: 4px 0 2px;
+  color: #9f396a;
+  font-size: 1.22rem;
+}
+
+.ds-review-recommendation small {
+  color: #9a8791;
+  font-size: .62rem;
+}
+
+.ds-review-target-pill {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: #9d3e6d;
+  border: 1px solid #e5bfd1;
+  font-size: .64rem;
+  font-weight: 850;
+}
+
+.ds-review-detail-grid {
+  display: grid;
+  grid-template-columns: 1.35fr .85fr;
+  gap: 10px;
+}
+
+.ds-review-detail-grid > section {
+  padding: 12px;
+  border: 1px solid var(--ds-border);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ds-review-detail-grid h3 {
+  margin: 0 0 9px;
+  color: #635a62;
+  font-size: .72rem;
+}
+
+.ds-review-materials {
+  display: grid;
+  gap: 6px;
+}
+
+.ds-review-material {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f0ebee;
+}
+
+.ds-review-material:last-child {
+  border-bottom: 0;
+}
+
+.ds-review-material strong,
+.ds-review-material span {
+  display: block;
+}
+
+.ds-review-material strong {
+  color: #514951;
+  font-size: .68rem;
+}
+
+.ds-review-material div > span {
+  margin-top: 2px;
+  color: #958b93;
+  font-size: .58rem;
+}
+
+.ds-review-sales-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.ds-review-sales-summary > div {
+  padding: 8px;
+  border-radius: 9px;
+  background: #faf9fa;
+}
+
+.ds-review-last-decision {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: #f7f5f7;
+  color: #766c74;
+  font-size: .63rem;
+}
+
+.ds-review-last-decision strong,
+.ds-review-last-decision span {
+  display: block;
+}
+
+.ds-review-last-decision span {
+  margin-top: 2px;
+  color: #978d95;
+}
+
+.ds-review-modal-actions {
+  gap: 7px;
+  margin-top: 12px !important;
+}
+
+.ds-review-modal-actions button {
+  width: auto !important;
+  flex: 1;
+  min-height: 42px;
+}
+
+@media (max-width: 860px) {
+  .ds-price-review-head {
+    flex-direction: column;
+  }
+
+  .ds-price-review-settings {
+    width: 100%;
+  }
+
+  .ds-price-review-settings label {
+    flex: 1;
+  }
+
+  .ds-price-review-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ds-price-review-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ds-price-review-search {
+    width: 100%;
+  }
+
+  .ds-review-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .ds-price-review {
+    padding: 13px;
+  }
+
+  .ds-price-review-kpis {
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+
+  .ds-review-kpi {
+    min-height: 96px;
+    padding: 10px;
+  }
+
+  .ds-review-kpi > strong {
+    font-size: 1.12rem;
+  }
+
+  .ds-review-modal-numbers {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ds-review-recommendation {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ds-review-sales-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-review-modal-actions {
+    flex-direction: column;
+  }
+
+  .ds-review-modal-actions button {
+    width: 100% !important;
+  }
+}
