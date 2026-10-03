@@ -200,7 +200,10 @@ export function setupHistorial(app) {
                     return `<li class="lote-item">${(lote.cantidadUsada || 0).toLocaleString('es-AR')} ${escapeHtml(ing.unidad || '')} @ ${(lote.costoUnitario || 0).toFixed(2)} c/u (Lote del ${escapeHtml(fechaLoteStr)})</li>`;
                 }).join('') + '</ul>';
             }
-            return `<li><strong>${escapeHtml(ing.nombre || ing.nombreMateriaPrima || 'Ingrediente')}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${escapeHtml(ing.unidad || '')} (${(ing.costoTotal || 0).toFixed(2)})</strong>${detalleLotesHtml}</li>`;
+            const referenciaHtml = ing.costoReferenciaAplicado
+                ? `<div class="ds-replacement-cost-note">Costo de reposición aplicado: ${formatCurrency(Number(ing.costoReposicion) || 0)} · FIFO real: ${formatCurrency(Number(ing.costoFIFO) || 0)}</div>`
+                : '';
+            return `<li><strong>${escapeHtml(ing.nombre || ing.nombreMateriaPrima || 'Ingrediente')}: ${(ing.cantidadTotal || 0).toLocaleString('es-AR')} ${escapeHtml(ing.unidad || '')} (${formatCurrency(Number(ing.costoTotal) || 0)})</strong>${referenciaHtml}${detalleLotesHtml}</li>`;
         }).join('');
         let detalleCostosHtml = '';
         if (presupuestoData.precioVenta) {
