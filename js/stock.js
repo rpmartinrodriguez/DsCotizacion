@@ -57,15 +57,14 @@ export function setupStock(app) {
                 const item = itemConId.data;
                 const id = itemConId.id;
 
-                if (!item.lotes || !Array.isArray(item.lotes) || item.lotes.length === 0) return;
+                const lotes = Array.isArray(item.lotes) ? item.lotes : [];
+                const stockTotal = lotes.reduce((sum, lote) => sum + (Number(lote.stockRestante) || 0), 0);
                 
-                const stockTotal = item.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
-                
-                const lotesOrdenados = [...item.lotes].sort((a, b) => b.fechaCompra.seconds - a.fechaCompra.seconds);
-                const ultimoLote = lotesOrdenados[0];
+                const lotesOrdenados = [...lotes].sort((a, b) => (b.fechaCompra?.seconds || 0) - (a.fechaCompra?.seconds || 0));
+                const ultimoLote = lotesOrdenados[0] || null;
 
-                let fechaUltimaCarga = 'N/A';
-                if (ultimoLote && ultimoLote.fechaCompra && typeof ultimoLote.fechaCompra.toDate === 'function') {
+                let fechaUltimaCarga = 'Sin lotes';
+                if (ultimoLote?.fechaCompra && typeof ultimoLote.fechaCompra.toDate === 'function') {
                     fechaUltimaCarga = ultimoLote.fechaCompra.toDate().toLocaleDateString('es-AR');
                 }
                 
@@ -78,10 +77,10 @@ export function setupStock(app) {
                 const proveedorVariacion = Number(item.proveedorVariacionPct);
                 const proveedorPresentacionCantidad = Number(item.proveedorPresentacionCantidad) || 0;
                 const proveedorPresentacionUnidad = escapeHtml(item.proveedorPresentacionUnidad || '');
-                const ultimoCostoUnitario = Number(ultimoLote.costoUnitario) > 0
+                const ultimoCostoUnitario = Number(ultimoLote?.costoUnitario) > 0
                     ? Number(ultimoLote.costoUnitario)
-                    : ((Number(ultimoLote.cantidadComprada) || 0) > 0
-                        ? (Number(ultimoLote.precioCompra) || 0) / Number(ultimoLote.cantidadComprada)
+                    : ((Number(ultimoLote?.cantidadComprada) || 0) > 0
+                        ? (Number(ultimoLote?.precioCompra) || 0) / Number(ultimoLote.cantidadComprada)
                         : 0);
                 const costoAplicado = getEffectiveUnitCost(item);
                 const usaCostoProveedor = Number(item.costoReferenciaProveedorUnitario) > ultimoCostoUnitario + 0.000001;
@@ -196,7 +195,8 @@ export function setupStock(app) {
             const docSnap = await getDoc(docRef);
             if (!docSnap.exists()) throw new Error("El producto fue eliminado mientras se editaba.");
             const productoOriginal = docSnap.data();
-            const nuevosLotes = new Array(productoOriginal.lotes.length);
+            const lotesOriginales = Array.isArray(productoOriginal.lotes) ? productoOriginal.lotes : [];
+            const nuevosLotes = new Array(lotesOriginales.length);
             const loteItems = lotesEditorContainer.querySelectorAll('.lote-editor-item');
             loteItems.forEach(loteItem => {
                 const index = parseInt(loteItem.querySelector('input').dataset.loteIndex, 10);
@@ -242,7 +242,8 @@ export function setupStock(app) {
         editandoId = id;
         const producto = todoElStock.find(p => p.id === id);
         if (!producto) return;
-        const stockTotal = producto.data.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
+        const lotes = Array.isArray(producto.data.lotes) ? producto.data.lotes : [];
+        const stockTotal = lotes.reduce((sum, lote) => sum + (Number(lote.stockRestante) || 0), 0);
         ajusteNombreProducto.textContent = producto.data.nombre;
         stockCalculadoInput.value = `${stockTotal.toLocaleString('es-AR')} ${producto.data.unidad}`;
         nuevoStockInput.value = '';
@@ -257,7 +258,8 @@ export function setupStock(app) {
     const guardarAjusteStock = async () => {
         if (!editandoId) return;
         const productoData = todoElStock.find(p => p.id === editandoId).data;
-        const stockActual = productoData.lotes.reduce((sum, lote) => sum + (lote.stockRestante || 0), 0);
+        const lotesProducto = Array.isArray(productoData.lotes) ? productoData.lotes : [];
+        const stockActual = lotesProducto.reduce((sum, lote) => sum + (Number(lote.stockRestante) || 0), 0);
         const nuevoStock = parseFloat(nuevoStockInput.value);
         if (isNaN(nuevoStock) || nuevoStock < 0) {
             alert("Por favor, ingresa un número válido para el nuevo stock.");
@@ -291,7 +293,14 @@ export function setupStock(app) {
                     if (lotesActualizados.length > 0) {
                         lotesActualizados[0].stockRestante += cantidadAjustada;
                     } else {
-                        throw "No hay lotes para ajustar. Registra una compra primero.";
+                        lotesActualizados.push({
+                            fechaCompra: Timestamp.now(),
+                            precioCompra: 0,
+                            cantidadComprada: cantidadAjustada,
+                            stockRestante: cantidadAjustada,
+                            costoUnitario: 0,
+                            origen: 'Ajuste inicial de stock'
+                        });
                     }
                 }
                 transaction.update(docRef, { lotes: lotesActualizados });
