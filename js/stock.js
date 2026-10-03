@@ -84,10 +84,13 @@ export function setupStock(app) {
                         : 0);
                 const costoAplicado = getEffectiveUnitCost(item);
                 const usaCostoProveedor = Number(item.costoReferenciaProveedorUnitario) > ultimoCostoUnitario + 0.000001;
+                const tieneCostoCompra = ultimoCostoUnitario > 0;
+                const fuenteCosto = usaCostoProveedor ? 'Proveedor' : (tieneCostoCompra ? 'Última compra' : 'Sin costo cargado');
+                const fuenteClase = usaCostoProveedor ? 'is-provider' : (tieneCostoCompra ? 'is-purchase' : 'is-empty');
                 const costoAplicadoHtml = `
                     <div class="ds-applied-cost">
-                        <strong>${costoAplicado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / ${safeUnidad}</strong>
-                        <span class="${usaCostoProveedor ? 'is-provider' : 'is-purchase'}">${usaCostoProveedor ? 'Proveedor' : 'Última compra'}</span>
+                        <strong>${costoAplicado > 0 ? `${costoAplicado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / ${safeUnidad}` : '—'}</strong>
+                        <span class="${fuenteClase}">${fuenteCosto}</span>
                     </div>
                 `;
                 const tieneProveedor = Boolean((item.proveedorUrl || '').trim());
