@@ -4314,3 +4314,99 @@ body.ds-history .historial-card__detalle ul {
     font-size: 1.05rem;
   }
 }
+
+
+/* Sidebar header control + identifiable SVG icons */
+.ds-sidebar-header {
+  gap: 9px !important;
+  padding: 12px 10px !important;
+}
+
+.ds-sidebar-menu-btn {
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #e4dde2;
+  border-radius: 10px;
+  background: #fff;
+  color: #665d65;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.ds-sidebar-menu-btn:hover {
+  border-color: #ddb1c5;
+  background: #fff2f7;
+  color: #a63e6e;
+}
+
+.ds-sidebar-menu-btn svg {
+  width: 19px;
+  height: 19px;
+}
+
+.ds-sidebar-logo {
+  flex: 0 0 auto;
+  width: 46px;
+  object-fit: contain;
+}
+
+.nav-menu__glyph {
+  display: grid;
+  place-items: center;
+}
+
+.nav-menu__glyph svg,
+.nav-menu__logout-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.nav-menu__logout-icon {
+  display: grid;
+  place-items: center;
+}
+
+@media (min-width: 1024px) {
+  /* Ya no usamos la flecha flotante anterior. */
+  .ds-sidebar-collapse-btn {
+    display: none !important;
+  }
+
+  body.ds-sidebar-collapsed .ds-sidebar-header {
+    justify-content: center;
+    min-height: 68px;
+    padding: 12px 8px !important;
+  }
+
+  body.ds-sidebar-collapsed .ds-sidebar-logo {
+    display: none !important;
+  }
+
+  body.ds-sidebar-collapsed .ds-sidebar-menu-btn {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+  }
+
+  body.ds-sidebar-collapsed .nav-menu__glyph svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .ds-sidebar-header {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .ds-sidebar-menu-btn {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
