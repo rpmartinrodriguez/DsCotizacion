@@ -64,12 +64,24 @@ export const calculateRecipeUnitCost = (
 export const calculateRoundedSalePrice = (
     cost,
     marginPercent,
-    { roundTo = 10 } = {}
+    { roundTo = 10, midpointDown = false } = {}
 ) => {
     const baseCost = Number(cost) || 0;
     const margin = Number(marginPercent) || 0;
     const rawPrice = baseCost * (1 + margin / 100);
 
     if (!roundTo || roundTo <= 0) return rawPrice;
+
+    if (midpointDown) {
+        const lower = Math.floor(rawPrice / roundTo) * roundTo;
+        const remainder = rawPrice - lower;
+        const rounded = remainder <= (roundTo / 2)
+            ? lower
+            : lower + roundTo;
+
+        if (rawPrice > 0 && rounded <= 0) return roundTo;
+        return rounded;
+    }
+
     return Math.round(rawPrice / roundTo) * roundTo;
 };
