@@ -2,6 +2,7 @@ import {
     getFirestore, collection, getDocs, query, orderBy, addDoc, 
     Timestamp, doc, getDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import { getEffectiveUnitCost } from "./core/pricing.js";
 
 export function setupPresupuesto(app) {
     const db = getFirestore(app);
@@ -119,20 +120,44 @@ export function setupPresupuesto(app) {
         let desgloseLotes = [];
         let cantidadRestante = cantidadRequerida;
         const lotesOrdenados = [...materiaPrima.lotes].sort((a, b) => (a.fechaCompra?.seconds || 0) - (b.fechaCompra?.seconds || 0));
+
         for (const lote of lotesOrdenados) {
             if (cantidadRestante <= 0) break;
             const cantidadAUsar = Math.min(lote.stockRestante, cantidadRestante);
-            costoAcumulado += cantidadAUsar * lote.costoUnitario;
-            desgloseLotes.push({ cantidadUsada: cantidadAUsar, costoUnitario: lote.costoUnitario, fechaLote: lote.fechaCompra });
+            const costoUnitarioLote = Number(lote.costoUnitario) || 0;
+            costoAcumulado += cantidadAUsar * costoUnitarioLote;
+            desgloseLotes.push({
+                cantidadUsada: cantidadAUsar,
+                costoUnitario: costoUnitarioLote,
+                fechaLote: lote.fechaCompra
+            });
             cantidadRestante -= cantidadAUsar;
         }
+
         if (cantidadRestante > 0 && lotesOrdenados.length > 0) {
             const ultimoLote = lotesOrdenados[lotesOrdenados.length - 1];
-            const costoProyectado = cantidadRestante * ultimoLote.costoUnitario;
+            const costoUnitarioLote = Number(ultimoLote.costoUnitario) || 0;
+            const costoProyectado = cantidadRestante * costoUnitarioLote;
             costoAcumulado += costoProyectado;
-            desgloseLotes.push({ cantidadUsada: cantidadRestante, costoUnitario: ultimoLote.costoUnitario, fechaLote: null, esProyectado: true });
+            desgloseLotes.push({
+                cantidadUsada: cantidadRestante,
+                costoUnitario: costoUnitarioLote,
+                fechaLote: null,
+                esProyectado: true
+            });
         }
-        return { costo: costoAcumulado, desglose: desgloseLotes };
+
+        const costoReposicionUnitario = getEffectiveUnitCost(materiaPrima);
+        const costoReposicion = costoReposicionUnitario * cantidadRequerida;
+        const costoAplicado = Math.max(costoAcumulado, costoReposicion);
+
+        return {
+            costo: costoAplicado,
+            desglose: desgloseLotes,
+            costoFIFO: costoAcumulado,
+            costoReposicion,
+            costoReferenciaAplicado: costoReposicion > costoAcumulado + 0.0001
+        };
     };
 
     const actualizarPresupuesto = () => {
@@ -146,8 +171,18 @@ export function setupPresupuesto(app) {
             if (cantidadRequerida > 0) {
                 const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === checkbox.id);
                 if (materiaPrima) {
-                    const { costo: costoIngrediente, desglose: lotesUtilizados } = calcularCostoFIFO(materiaPrima, cantidadRequerida);
-                    presupuestoActual.push({ id: checkbox.id, nombre: materiaPrima.nombre, cantidadTotal: cantidadRequerida, unidad: materiaPrima.unidad, costoTotal: costoIngrediente, lotesUtilizados: lotesUtilizados });
+                    const costoCalculado = calcularCostoFIFO(materiaPrima, cantidadRequerida);
+                    presupuestoActual.push({
+                        id: checkbox.id,
+                        nombre: materiaPrima.nombre,
+                        cantidadTotal: cantidadRequerida,
+                        unidad: materiaPrima.unidad,
+                        costoTotal: costoCalculado.costo,
+                        costoFIFO: costoCalculado.costoFIFO,
+                        costoReposicion: costoCalculado.costoReposicion,
+                        costoReferenciaAplicado: costoCalculado.costoReferenciaAplicado,
+                        lotesUtilizados: costoCalculado.desglose
+                    });
                     costoTotal += costoIngrediente;
                 }
             }
@@ -171,7 +206,10 @@ export function setupPresupuesto(app) {
                 const materiaPrimaOriginal = materiasPrimasDisponibles.find(mp => mp.id === item.id);
                 const stockTotal = materiaPrimaOriginal.lotes.reduce((sum, lote) => sum + lote.stockRestante, 0);
                 const advertenciaIcono = item.cantidadTotal > stockTotal ? '<span class="warning-icon" title="Stock insuficiente, el costo es una proyección.">⚠️</span>' : '';
-                fila.innerHTML = `<td data-label="Ingrediente">${item.nombre} ${advertenciaIcono}</td><td data-label="Cantidad">${item.cantidadTotal.toLocaleString('es-AR')} ${item.unidad}</td><td data-label="Costo">$${item.costoTotal.toFixed(2)}</td>`;
+                const reposicionBadge = item.costoReferenciaAplicado
+                    ? '<span class="ds-replacement-cost-badge" title="Se aplicó el costo de reposición del proveedor porque es mayor al costo FIFO actual.">Reposición</span>'
+                    : '';
+                fila.innerHTML = `<td data-label="Ingrediente">${item.nombre} ${advertenciaIcono} ${reposicionBadge}</td><td data-label="Cantidad">${item.cantidadTotal.toLocaleString('es-AR')} ${item.unidad}</td><td data-label="Costo">${item.costoTotal.toFixed(2)}</td>`;
                 tablaPresupuestoBody.appendChild(fila);
             });
         }
