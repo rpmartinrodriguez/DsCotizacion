@@ -445,14 +445,16 @@ export function setupPOS(app) {
             const precioCalculado = prod.precioCalculado;
             
             const card = document.createElement('div');
-            card.className = `producto-card ${stock <= 0 ? 'sin-stock' : ''}`;
+            card.className = 'producto-card';
             card.dataset.id = prod.id;
             
             card.innerHTML = `
                 <div class="prod-nombre">${escapeHtml(prod.nombreTorta)}</div>
                 <div>
                     <div class="prod-precio">${formatMoneda(precioCalculado)}</div>
-                    <div class="prod-stock">${stock} disp.</div>
+                    <div class="prod-stock ${stock <= 0 ? 'stock-informativo' : ''}">
+                        ${stock > 0 ? `${stock} registradas` : 'Venta habilitada · stock sin cargar'}
+                    </div>
                 </div>
             `;
             gridProductos.appendChild(card);
@@ -460,18 +462,8 @@ export function setupPOS(app) {
     };
 
     const agregarProductoAlCarrito = (prod, cantidadIngresada = 1) => {
-        const stockMax = prod.stockMostrador || 0;
-        if (cantidadIngresada > stockMax) {
-            alert(`Solo hay ${stockMax} unidades en stock de ${prod.nombreTorta}.`);
-            return;
-        }
-
         const existe = carritoActual.find(i => i.id === prod.id);
         if (existe) {
-            if (existe.cantidad + cantidadIngresada > stockMax) {
-                alert(`Superas el stock físico disponible (${stockMax}) de ${prod.nombreTorta}.`);
-                return;
-            }
             existe.cantidad += cantidadIngresada;
         } else {
             carritoActual.push({ 
@@ -536,7 +528,7 @@ export function setupPOS(app) {
     if (gridProductos) {
         gridProductos.addEventListener('click', (e) => {
             const card = e.target.closest('.producto-card');
-            if (!card || card.classList.contains('sin-stock')) return;
+            if (!card) return;
             
             const prod = productosDisponibles.find(p => p.id === card.dataset.id);
             if (prod) {
@@ -602,12 +594,8 @@ export function setupPOS(app) {
                 renderizarCarrito();
             } else if (btnSumar) {
                 const idx = btnSumar.dataset.index;
-                const item = carritoActual[idx];
-                const prod = productosDisponibles.find(p => p.id === item.id);
-                if (prod && item.cantidad < (prod.stockMostrador || 0)) {
+                if (carritoActual[idx]) {
                     carritoActual[idx].cantidad++;
-                } else {
-                    alert("No hay más stock físico.");
                 }
                 renderizarCarrito();
             }
@@ -768,7 +756,10 @@ export function setupPOS(app) {
                         const auditRef = doc(auditoriaCollection);
                         transaction.set(auditRef, {
                             productoId: item.id, productoNombre: item.nombre, tipo: 'RESTA', cantidad: item.cantidad,
-                            stockResultante: nuevoStock, motivo: `Venta (${metodoPagoSeleccionado})`,
+                            stockResultante: nuevoStock,
+                            motivo: item.cantidad > stockActual
+                                ? `Venta (${metodoPagoSeleccionado}) · stock informativo/no bloqueante`
+                                : `Venta (${metodoPagoSeleccionado})`,
                             usuario: userName, usuarioId: currentUser.uid, fecha: Timestamp.now()
                         });
                     });
