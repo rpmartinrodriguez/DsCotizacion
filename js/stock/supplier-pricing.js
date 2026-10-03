@@ -495,12 +495,14 @@ export function setupSupplierPricing(app, db, { getStock }) {
             }
 
             const result = entry.result;
-            item.classList.add(`is-${result.movement}`);
+            const significant = isSignificantVariation(result.variation);
+            item.classList.add(significant ? 'is-alert' : `is-${result.movement}`);
 
             let detail = 'Primera consulta';
             if (result.movement === 'up') detail = `Aumentó ${formatPercent(result.variation)}`;
             if (result.movement === 'down') detail = `Bajó ${formatPercent(result.variation)} · costo conservado`;
             if (result.movement === 'same') detail = 'Sin cambios';
+            if (significant) detail = `⚠ Variación importante ${formatPercent(result.variation)} · ${result.movement === 'down' ? 'costo conservado' : 'revisar margen'}`;
 
             item.innerHTML = `
                 <div class="ds-supplier-result-main">
