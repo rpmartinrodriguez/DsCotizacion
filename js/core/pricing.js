@@ -23,9 +23,12 @@ export const getEffectiveUnitCost = (rawMaterial) => {
         }
     }
 
+    const supplierCurrentUnitCost = Number(rawMaterial?.proveedorCostoUnitarioActual) || 0;
     const supplierReference = Number(rawMaterial?.costoReferenciaProveedorUnitario) || 0;
 
-    return Math.max(purchaseUnitCost, supplierReference);
+    if (supplierCurrentUnitCost > 0) return supplierCurrentUnitCost;
+    if (supplierReference > 0) return supplierReference;
+    return purchaseUnitCost;
 };
 
 export const calculateRecipeUnitCost = (
