@@ -3249,3 +3249,20 @@ body.ds-history .historial-card__detalle ul {
     white-space: normal;
   }
 }
+
+
+.ds-ticket-margin {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #eef8f3;
+  color: #2f7656;
+  font-size: .64rem;
+  font-weight: 750;
+}
+
+.ds-ticket-margin.is-legacy {
+  background: #fff7ed;
+  color: #9a6231;
+}
