@@ -149,14 +149,18 @@ export function setupPresupuesto(app) {
 
         const costoReposicionUnitario = getEffectiveUnitCost(materiaPrima);
         const costoReposicion = costoReposicionUnitario * cantidadRequerida;
-        const costoAplicado = Math.max(costoAcumulado, costoReposicion);
+        const tieneCostoProveedor =
+            Number(materiaPrima.proveedorCostoUnitarioActual) > 0
+            || Number(materiaPrima.costoReferenciaProveedorUnitario) > 0;
+        const costoAplicado = tieneCostoProveedor ? costoReposicion : costoAcumulado;
 
         return {
             costo: costoAplicado,
             desglose: desgloseLotes,
             costoFIFO: costoAcumulado,
             costoReposicion,
-            costoReferenciaAplicado: costoReposicion > costoAcumulado + 0.0001
+            costoReferenciaAplicado: tieneCostoProveedor
+                && Math.abs(costoReposicion - costoAcumulado) > 0.0001
         };
     };
 
