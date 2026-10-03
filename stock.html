@@ -36,7 +36,7 @@
                     <div>
                         <p class="ds-eyebrow">Operación</p>
                         <h1>Stock e inventario</h1>
-                        <p>Controlá existencias, costos de compra, lotes y movimientos de materias primas.</p>
+                        <p>Costos y proveedores primero; el stock físico queda como control opcional y no bloquea la operación.</p>
                     </div>
                     <div class="ds-content-actions">
                         <button type="button" id="btn-actualizar-precios-proveedor" class="ds-action-secondary">↻ Actualizar proveedores</button>
@@ -72,45 +72,52 @@
     </div>
 
     <div id="edit-producto-completo-modal-overlay" class="modal-overlay">
-        <div class="modal-content card">
-            <h2 class="card__title" id="producto-completo-modal-title">Editar producto</h2>
-            <div class="modal-body">
-                <div class="form-modern" style="grid-template-columns:2fr 1fr;">
-                    <div class="form-group">
-                        <label for="producto-nombre-completo-input">Nombre del producto</label>
-                        <input type="text" id="producto-nombre-completo-input">
-                    </div>
-                    <div class="form-group">
-                        <label for="producto-unidad-completo-select">Unidad</label>
-                        <select id="producto-unidad-completo-select">
-                            <option value="gr">Gramos (gr)</option>
-                            <option value="kg">Kilos (kg)</option>
-                            <option value="unidad">Unidad</option>
-                            <option value="cc">cc</option>
-                            <option value="ml">ml</option>
-                            <option value="l">Litros (l)</option>
-                        </select>
-                    </div>
+        <div class="modal-content card ds-stock-edit-modal">
+            <div class="ds-stock-modal-head">
+                <div>
+                    <p class="ds-eyebrow">Materia prima</p>
+                    <h2 class="card__title" id="producto-completo-modal-title">Editar producto</h2>
+                    <p>Definí lo esencial para costos. El stock físico es informativo y puede cargarse más adelante.</p>
                 </div>
+            </div>
 
-                <section class="ds-supplier-editor">
+            <div class="modal-body ds-stock-modal-body">
+                <section class="ds-stock-essential">
+                    <div class="form-modern ds-stock-basic-grid">
+                        <div class="form-group">
+                            <label for="producto-nombre-completo-input">Nombre</label>
+                            <input type="text" id="producto-nombre-completo-input" placeholder="Ej. Fécula de mandioca">
+                        </div>
+                        <div class="form-group">
+                            <label for="producto-unidad-completo-select">Unidad de costeo</label>
+                            <select id="producto-unidad-completo-select">
+                                <option value="gr">Gramos (gr)</option>
+                                <option value="kg">Kilos (kg)</option>
+                                <option value="unidad">Unidad</option>
+                                <option value="cc">cc</option>
+                                <option value="ml">ml</option>
+                                <option value="l">Litros (l)</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="ds-supplier-editor ds-supplier-editor--compact">
                     <div class="ds-supplier-editor-head">
                         <div>
                             <span class="ds-mini-eyebrow">Proveedor</span>
-                            <h4>Precio de reposición</h4>
-                            <p>Guardá el enlace exacto del producto. Dulce Sall consulta el precio sin modificar tus lotes de compra.</p>
+                            <h4>Costo de reposición</h4>
+                            <p>Pegá el producto y definí su presentación. Si puede detectarse desde la web, la completamos automáticamente.</p>
                         </div>
-                        <span class="ds-supplier-shield">Consulta segura</span>
                     </div>
 
                     <div class="ds-supplier-form">
                         <div class="form-group ds-supplier-url-field">
-                            <label for="proveedor-url-input">URL del producto</label>
+                            <label for="proveedor-url-input">Link del producto</label>
                             <input type="url" id="proveedor-url-input" placeholder="https://proveedor.com/producto/..." autocomplete="off">
-                            <small>Pegá la página exacta del producto del proveedor.</small>
                         </div>
                         <div class="form-group">
-                            <label>Presentación del proveedor</label>
+                            <label>Presentación</label>
                             <div class="ds-supplier-package-row">
                                 <input type="number" id="proveedor-cantidad-input" min="0" step="any" placeholder="Ej. 10">
                                 <select id="proveedor-unidad-select" aria-label="Unidad de presentación del proveedor">
@@ -123,40 +130,48 @@
                                     <option value="unidad">unidad</option>
                                 </select>
                             </div>
-                            <small>Ej.: bolsa de 10 kg. Si lo dejás vacío, intentamos detectarlo desde la página.</small>
                         </div>
                     </div>
 
-                    <div class="ds-supplier-kpis">
+                    <div class="ds-supplier-kpis ds-supplier-kpis--compact">
                         <div>
-                            <span>Precio proveedor</span>
+                            <span>Precio web</span>
                             <strong id="proveedor-precio-actual">Sin consultar</strong>
                         </div>
                         <div>
-                            <span>Costo referencia</span>
+                            <span>Costo aplicado</span>
                             <strong id="proveedor-costo-referencia">Sin referencia</strong>
                         </div>
                         <div>
-                            <span>Última consulta</span>
+                            <span>Actualizado</span>
                             <strong id="proveedor-ultima-consulta">Nunca</strong>
                         </div>
                     </div>
 
                     <div class="ds-supplier-actions">
-                        <button type="button" id="btn-consultar-precio-proveedor" class="btn-primary">Guardar y consultar ahora</button>
-                        <button type="button" id="btn-ver-historial-precios" class="btn-secondary">Historial de precios</button>
+                        <button type="button" id="btn-consultar-precio-proveedor" class="btn-primary">Consultar precio</button>
+                        <button type="button" id="btn-ver-historial-precios" class="btn-secondary">Ver historial</button>
                     </div>
                     <p id="proveedor-status" class="ds-supplier-status"></p>
                 </section>
 
-                <h4 class="card__subtitle">Lotes de compra</h4>
-                <div id="lotes-editor-container" class="lotes-editor-container">
-                    <p>Cargando lotes…</p>
-                </div>
+                <details class="ds-stock-advanced">
+                    <summary>
+                        <span>Stock y lotes manuales</span>
+                        <small>Opcional por ahora</small>
+                    </summary>
+                    <div class="ds-stock-advanced-content">
+                        <p>Usalo cuando quieras empezar a controlar cantidades físicas y compras por lote. No limita ventas ni el uso del sistema.</p>
+                        <div id="lotes-editor-container" class="lotes-editor-container">
+                            <p>Cargando lotes…</p>
+                        </div>
+                    </div>
+                </details>
             </div>
-            <div class="modal-actions">
+
+            <div class="modal-actions ds-stock-modal-actions">
                 <button id="producto-completo-modal-btn-cancelar" class="btn-secondary">Cancelar</button>
-                <button id="producto-completo-modal-btn-guardar" class="btn-primary">Guardar cambios</button>
+                <button id="producto-completo-modal-btn-guardar" class="btn-primary">Guardar</button>
             </div>
         </div>
     </div>
