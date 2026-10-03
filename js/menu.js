@@ -148,9 +148,9 @@ async function inicializarMenu() {
     let htmlMenu = `
         <div class="nav-menu__header">
             <img src="assets/logo.png" alt="Dulce Sall" class="header__logo" style="height:40px;">
-            <div>
+            <div class="nav-menu__brand-copy">
                 <span class="nav-menu__title">Dulce Sall</span>
-                <small style="display:block;color:#8b8189;font-size:.72rem;margin-top:2px;">${nombre}</small>
+                <small class="nav-menu__user-name">${nombre}</small>
             </div>
         </div>
     `;
@@ -158,12 +158,12 @@ async function inicializarMenu() {
     if (p.mostrador || p.indicadores || p.recetas || p.stock || p.presupuestos || p.precios) {
         htmlMenu += `<div class="nav-category"><button class="nav-category-btn">Operación <span class="nav-icon">+</span></button><div class="nav-category-content">`;
 
-        if (p.indicadores) htmlMenu += `<a href="index.html" class="nav-menu__link"><span>⌂</span> Inicio</a>`;
-        if (p.mostrador) htmlMenu += `<a href="pos.html" class="nav-menu__link"><span>▣</span> Mostrador</a>`;
-        if (p.stock) htmlMenu += `<a href="stock.html" class="nav-menu__link"><span>◇</span> Stock</a>`;
-        if (p.recetas) htmlMenu += `<a href="recetas.html" class="nav-menu__link"><span>○</span> Productos y recetas</a>`;
-        if (p.presupuestos) htmlMenu += `<a href="presupuesto.html" class="nav-menu__link"><span>▤</span> Presupuestos</a>`;
-        if (p.precios) htmlMenu += `<a href="precios.html" class="nav-menu__link"><span>＄</span> Listas de precios</a>`;
+        if (p.indicadores) htmlMenu += `<a href="index.html" class="nav-menu__link" title="Inicio"><span class="nav-menu__glyph">⌂</span><span class="nav-menu__label">Inicio</span></a>`;
+        if (p.mostrador) htmlMenu += `<a href="pos.html" class="nav-menu__link" title="Mostrador"><span class="nav-menu__glyph">▣</span><span class="nav-menu__label">Mostrador</span></a>`;
+        if (p.stock) htmlMenu += `<a href="stock.html" class="nav-menu__link" title="Stock"><span class="nav-menu__glyph">◇</span><span class="nav-menu__label">Stock</span></a>`;
+        if (p.recetas) htmlMenu += `<a href="recetas.html" class="nav-menu__link" title="Productos y recetas"><span class="nav-menu__glyph">○</span><span class="nav-menu__label">Productos y recetas</span></a>`;
+        if (p.presupuestos) htmlMenu += `<a href="presupuesto.html" class="nav-menu__link" title="Presupuestos"><span class="nav-menu__glyph">▤</span><span class="nav-menu__label">Presupuestos</span></a>`;
+        if (p.precios) htmlMenu += `<a href="precios.html" class="nav-menu__link" title="Listas de precios"><span class="nav-menu__glyph">＄</span><span class="nav-menu__label">Listas de precios</span></a>`;
 
         htmlMenu += `</div></div>`;
     }
@@ -171,9 +171,9 @@ async function inicializarMenu() {
     if (p.clientes || p.agenda || p.modelos) {
         htmlMenu += `<div class="nav-category"><button class="nav-category-btn">Comercial <span class="nav-icon">+</span></button><div class="nav-category-content">`;
 
-        if (p.clientes) htmlMenu += `<a href="clientes.html" class="nav-menu__link"><span>◎</span> Clientes</a>`;
-        if (p.agenda) htmlMenu += `<a href="agenda.html" class="nav-menu__link"><span>□</span> Agenda y entregas</a>`;
-        if (p.modelos) htmlMenu += `<a href="modelos.html" class="nav-menu__link"><span>△</span> Modelos 3D</a>`;
+        if (p.clientes) htmlMenu += `<a href="clientes.html" class="nav-menu__link" title="Clientes"><span class="nav-menu__glyph">◎</span><span class="nav-menu__label">Clientes</span></a>`;
+        if (p.agenda) htmlMenu += `<a href="agenda.html" class="nav-menu__link" title="Agenda y entregas"><span class="nav-menu__glyph">□</span><span class="nav-menu__label">Agenda y entregas</span></a>`;
+        if (p.modelos) htmlMenu += `<a href="modelos.html" class="nav-menu__link" title="Modelos 3D"><span class="nav-menu__glyph">△</span><span class="nav-menu__label">Modelos 3D</span></a>`;
 
         htmlMenu += `</div></div>`;
     }
@@ -181,23 +181,68 @@ async function inicializarMenu() {
     if (p.cajas || p.finanzas || p.historial || p.compras || p.compras_lista || p.configuracion || userRol === 'master') {
         htmlMenu += `<div class="nav-category"><button class="nav-category-btn">Administración <span class="nav-icon">+</span></button><div class="nav-category-content">`;
 
-        if (p.cajas) htmlMenu += `<a href="cajas.html" class="nav-menu__link"><span>▱</span> Cajas</a>`;
-        if (p.finanzas) htmlMenu += `<a href="finanzas.html" class="nav-menu__link"><span>◫</span> Finanzas</a>`;
-        if (p.compras) htmlMenu += `<a href="compras.html" class="nav-menu__link"><span>＋</span> Registrar compra</a>`;
-        if (p.compras_lista) htmlMenu += `<a href="compras-lista.html" class="nav-menu__link"><span>≡</span> Lista de compras</a>`;
-        if (p.historial) htmlMenu += `<a href="historial.html" class="nav-menu__link"><span>↺</span> Historial</a>`;
-        if (p.configuracion || userRol === 'master') htmlMenu += `<a href="usuarios.html" class="nav-menu__link"><span>⚙</span> Usuarios y permisos</a>`;
+        if (p.cajas) htmlMenu += `<a href="cajas.html" class="nav-menu__link" title="Cajas"><span class="nav-menu__glyph">▱</span><span class="nav-menu__label">Cajas</span></a>`;
+        if (p.finanzas) htmlMenu += `<a href="finanzas.html" class="nav-menu__link" title="Finanzas"><span class="nav-menu__glyph">◫</span><span class="nav-menu__label">Finanzas</span></a>`;
+        if (p.compras) htmlMenu += `<a href="compras.html" class="nav-menu__link" title="Registrar compra"><span class="nav-menu__glyph">＋</span><span class="nav-menu__label">Registrar compra</span></a>`;
+        if (p.compras_lista) htmlMenu += `<a href="compras-lista.html" class="nav-menu__link" title="Lista de compras"><span class="nav-menu__glyph">≡</span><span class="nav-menu__label">Lista de compras</span></a>`;
+        if (p.historial) htmlMenu += `<a href="historial.html" class="nav-menu__link" title="Historial"><span class="nav-menu__glyph">↺</span><span class="nav-menu__label">Historial</span></a>`;
+        if (p.configuracion || userRol === 'master') htmlMenu += `<a href="usuarios.html" class="nav-menu__link" title="Usuarios y permisos"><span class="nav-menu__glyph">⚙</span><span class="nav-menu__label">Usuarios y permisos</span></a>`;
 
         htmlMenu += `</div></div>`;
     }
 
     htmlMenu += `
-        <div style="padding:1rem;border-top:1px solid #eee8ef;margin-top:auto;">
-            <button id="btn-cerrar-sesion-menu" class="btn-secondary" style="width:100%;color:#b4232c;background:#fff;border:1px solid #f2d7da;box-shadow:none;">Cerrar sesión</button>
+        <div class="nav-menu__footer">
+            <button id="btn-cerrar-sesion-menu" class="btn-secondary nav-menu__logout" title="Cerrar sesión">
+                <span class="nav-menu__logout-icon">↪</span>
+                <span class="nav-menu__logout-label">Cerrar sesión</span>
+            </button>
         </div>
+        <button
+            id="sidebar-collapse-btn"
+            class="ds-sidebar-collapse-btn"
+            type="button"
+            aria-label="Contraer menú lateral"
+            title="Contraer menú lateral"
+        >
+            <span aria-hidden="true">‹</span>
+        </button>
     `;
 
     navMenu.innerHTML = htmlMenu;
+
+    const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
+    const SIDEBAR_STORAGE_KEY = 'dsSidebarCollapsed';
+
+    const aplicarEstadoSidebar = (collapsed, { persist = false } = {}) => {
+        document.body.classList.toggle('ds-sidebar-collapsed', collapsed);
+
+        if (sidebarCollapseBtn) {
+            const icon = sidebarCollapseBtn.querySelector('span');
+            if (icon) icon.textContent = collapsed ? '›' : '‹';
+
+            const label = collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral';
+            sidebarCollapseBtn.setAttribute('aria-label', label);
+            sidebarCollapseBtn.title = label;
+            sidebarCollapseBtn.setAttribute('aria-expanded', String(!collapsed));
+        }
+
+        if (persist) {
+            localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? '1' : '0');
+        }
+    };
+
+    aplicarEstadoSidebar(localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1');
+
+    if (sidebarCollapseBtn) {
+        sidebarCollapseBtn.addEventListener('click', () => {
+            if (window.innerWidth < 1024) return;
+            aplicarEstadoSidebar(
+                !document.body.classList.contains('ds-sidebar-collapsed'),
+                { persist: true }
+            );
+        });
+    }
 
     const closeMenu = () => {
         navMenu.classList.remove('active');
@@ -251,7 +296,7 @@ async function inicializarMenu() {
     if (btnCerrarSesion) {
         btnCerrarSesion.addEventListener('click', async () => {
             btnCerrarSesion.disabled = true;
-            btnCerrarSesion.textContent = 'Cerrando…';
+            btnCerrarSesion.innerHTML = '<span class="nav-menu__logout-icon">↪</span><span class="nav-menu__logout-label">Cerrando…</span>';
 
             try {
                 if (session.auth && session.signOut) {
