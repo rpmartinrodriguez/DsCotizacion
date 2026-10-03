@@ -907,7 +907,7 @@ export function setupPOS(app) {
     const actualizarBotonesDineroRapido = () => {
         if (!btnsQuickMoney.length || totalVentaActual <= 0) return;
 
-        const base = Math.max(5000, Math.ceil(totalVentaActual / 5000) * 5000);
+        const base = Math.max(5000, (Math.floor(totalVentaActual / 5000) + 1) * 5000);
         const valores = ['exacto', base, base + 5000, base + 10000];
 
         btnsQuickMoney.forEach((btn, index) => {
