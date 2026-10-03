@@ -203,7 +203,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
                 variation > 0
                     ? `Última variación: ${formatPercent(variation)}`
                     : variation < 0
-                        ? `Última variación: ${formatPercent(variation)} · se conservó el costo más alto`
+                        ? `Última variación: ${formatPercent(variation)} · costo vigente actualizado`
                         : 'Sin cambios en la última consulta.',
                 variation > 0 ? 'up' : variation < 0 ? 'down' : 'same'
             );
@@ -495,8 +495,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
                     <strong>${formatCurrency(result.newPrice)}</strong>
                 </div>
                 <div class="ds-supplier-result-reference">
-                    <span>Costo ref.</span>
-                    <strong>${formatCurrency(result.newReferenceUnitCost)} / ${escapeHtml(result.unit || 'unidad')}</strong>
+                    <span>Costo vigente</span>
+                    <strong>${formatCurrency(result.oldReferenceUnitCost)} → ${formatCurrency(result.newReferenceUnitCost)} / ${escapeHtml(result.unit || 'unidad')}</strong>
                 </div>
             `;
 
