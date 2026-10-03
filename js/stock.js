@@ -182,6 +182,7 @@ export function setupStock(app) {
 
     const openModalParaEdicionCompleta = async (id) => {
         editandoId = id;
+        let productoCargado = false;
 
         try {
             const docRef = doc(db, 'materiasPrimas', id);
@@ -194,6 +195,7 @@ export function setupStock(app) {
             }
 
             const producto = docSnap.data() || {};
+            productoCargado = true;
             const nombreProducto = String(producto.nombre || 'Materia prima sin nombre').trim();
             const unidadProducto = String(producto.unidad || 'gr').trim();
 
@@ -273,8 +275,14 @@ export function setupStock(app) {
         } catch (error) {
             console.error("Error al abrir modal de edición completa:", error);
 
-            // Si el documento pudo cargarse pero algún dato legacy falló,
-            // preferimos mantener el editor disponible antes que bloquear la gestión.
+            if (!productoCargado) {
+                editandoId = null;
+                alert("No se pudo acceder a este producto. Probá nuevamente.");
+                return;
+            }
+
+            // Si el documento sí cargó pero algún dato legacy falló,
+            // mantenemos el editor disponible antes que bloquear la gestión.
             lotesEditorContainer.innerHTML = '<p class="ds-stock-legacy-warning">Hay información antigua que no se pudo interpretar completamente. Podés corregir nombre, unidad y proveedor igualmente.</p>';
             modalCompleto.classList.add('visible');
         }
@@ -301,15 +309,29 @@ export function setupStock(app) {
             loteItems.forEach(loteItem => {
                 const index = parseInt(loteItem.querySelector('input').dataset.loteIndex, 10);
                 const fechaInput = loteItem.querySelector(`[data-lote-index="${index}"][data-field="fechaCompra"]`).value;
-                const [year, month, day] = fechaInput.split('-');
-                const fecha = new Date(year, month - 1, day);
                 const precio = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="precioCompra"]`).value);
                 const cantidad = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="cantidadComprada"]`).value);
                 const restante = parseFloat(loteItem.querySelector(`[data-lote-index="${index}"][data-field="stockRestante"]`).value);
-                if (isNaN(precio) || isNaN(cantidad) || isNaN(restante)) throw new Error(`Hay valores numéricos inválidos en uno de los lotes.`);
-                if (!fechaInput) throw new Error(`La fecha es inválida en uno de los lotes.`);
+
+                if (isNaN(precio) || isNaN(cantidad) || isNaN(restante)) {
+                    throw new Error(`Hay valores numéricos inválidos en uno de los lotes.`);
+                }
+
+                const loteOriginal = lotesOriginales[index] || {};
+                let fechaCompraGuardada = loteOriginal.fechaCompra || null;
+
+                if (fechaInput) {
+                    const [year, month, day] = fechaInput.split('-').map(Number);
+                    const fecha = new Date(year, month - 1, day);
+
+                    if (!Number.isNaN(fecha.getTime())) {
+                        fechaCompraGuardada = Timestamp.fromDate(fecha);
+                    }
+                }
+
                 nuevosLotes[index] = {
-                    fechaCompra: Timestamp.fromDate(fecha),
+                    ...loteOriginal,
+                    fechaCompra: fechaCompraGuardada,
                     precioCompra: precio,
                     cantidadComprada: cantidad,
                     stockRestante: restante,
