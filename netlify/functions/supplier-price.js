@@ -3,7 +3,7 @@ const dns = require("dns").promises;
 const net = require("net");
 
 const PROJECT_ID = "dscotizacion";
-const FIRESTORE_BASE = \`https://firestore.googleapis.com/v1/projects/\${PROJECT_ID}/databases/(default)/documents\`;
+const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 const CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
 
 const json = (statusCode, body) => ({
@@ -62,7 +62,7 @@ const verifyFirebaseIdToken = async (token) => {
   if (!cert) throw new Error("No se pudo validar la firma de la sesión.");
 
   const verifier = crypto.createVerify("RSA-SHA256");
-  verifier.update(\`\${parts[0]}.\${parts[1]}\`);
+  verifier.update(`${parts[0]}.${parts[1]}`);
   verifier.end();
 
   const isValid = verifier.verify(cert, base64UrlDecode(parts[2]));
@@ -71,7 +71,7 @@ const verifyFirebaseIdToken = async (token) => {
   const now = Math.floor(Date.now() / 1000);
 
   if (payload.aud !== PROJECT_ID) throw new Error("Sesión destinada a otro proyecto.");
-  if (payload.iss !== \`https://securetoken.google.com/\${PROJECT_ID}\`) throw new Error("Emisor de sesión inválido.");
+  if (payload.iss !== `https://securetoken.google.com/${PROJECT_ID}`) throw new Error("Emisor de sesión inválido.");
   if (!payload.sub || typeof payload.sub !== "string") throw new Error("Sesión sin usuario.");
   if (!payload.exp || payload.exp <= now) throw new Error("La sesión expiró.");
   if (payload.iat && payload.iat > now + 60) throw new Error("Fecha de sesión inválida.");
@@ -80,15 +80,15 @@ const verifyFirebaseIdToken = async (token) => {
 };
 
 const firestoreGet = async (path, token) => {
-  const response = await fetch(\`\${FIRESTORE_BASE}/\${path}\`, {
-    headers: { Authorization: \`Bearer \${token}\` },
+  const response = await fetch(`${FIRESTORE_BASE}/${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
     redirect: "error",
   });
 
   if (response.status === 404) return null;
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(\`Firestore respondió \${response.status}: \${text.slice(0, 180)}\`);
+    throw new Error(`Firestore respondió ${response.status}: ${text.slice(0, 180)}`);
   }
 
   return response.json();
@@ -101,7 +101,7 @@ const fieldBool = (fields, key, fallback = false) =>
   fields?.[key]?.booleanValue ?? fallback;
 
 const assertStockPermission = async (uid, token) => {
-  const userDoc = await firestoreGet(\`usuarios/\${encodeURIComponent(uid)}\`, token);
+  const userDoc = await firestoreGet(`usuarios/${encodeURIComponent(uid)}`, token);
   if (!userDoc?.fields) throw new Error("No existe un perfil autorizado.");
 
   const fields = userDoc.fields;
@@ -234,7 +234,7 @@ const fetchSupplierPage = async (initialUrl) => {
         throw error;
       }
 
-      throw new Error(\`El proveedor respondió HTTP \${response.status}.\`);
+      throw new Error(`El proveedor respondió HTTP ${response.status}.`);
     }
 
     const contentType = (response.headers.get("content-type") || "").toLowerCase();
@@ -394,7 +394,7 @@ const extractMetaCandidates = (html) => {
       ].includes(key)
     ) {
       const price = parseLocalizedNumber(attrs.content);
-      if (price) candidates.push({ price, source: \`meta:\${key}\` });
+      if (price) candidates.push({ price, source: `meta:${key}` });
     }
   }
 
@@ -499,7 +499,7 @@ exports.handler = async (event) => {
     }
 
     const material = await firestoreGet(
-      \`materiasPrimas/\${encodeURIComponent(materiaPrimaId)}\`,
+      `materiasPrimas/${encodeURIComponent(materiaPrimaId)}`,
       token
     );
 
