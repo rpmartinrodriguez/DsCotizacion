@@ -3,7 +3,7 @@ import {
     deleteDoc, doc, Timestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { calculateEERR, monthFromDate, EERR_CATEGORIES } from "./eerr-engine.js";
+import { calculateEERR, monthFromDate, EERR_CATEGORIES } from "./eerr-engine.js?v=2";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
 
