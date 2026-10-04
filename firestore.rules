@@ -71,11 +71,24 @@ service cloud.firestore {
         || hasPermission('finanzas')
         || hasPermission('indicadores');
 
-      allow create, update: if hasPermission('mostrador')
+      allow create: if hasPermission('mostrador')
         || hasPermission('cajas');
 
-      allow delete: if isMaster()
-        || hasPermission('configuracion');
+      allow update: if (hasPermission('mostrador') || hasPermission('cajas'))
+        && !(
+          request.resource.data.get('eliminada', false) == true
+          && resource.data.get('eliminada', false) != true
+          && (
+            resource.data.get('anticiposCC_Efectivo', 0) > 0
+            || resource.data.get('anticiposCC_MercadoPago', 0) > 0
+            || resource.data.get('ventasCuentaCorriente', 0) > 0
+          )
+        );
+
+      allow delete: if (isMaster() || hasPermission('configuracion'))
+        && resource.data.get('anticiposCC_Efectivo', 0) == 0
+        && resource.data.get('anticiposCC_MercadoPago', 0) == 0
+        && resource.data.get('ventasCuentaCorriente', 0) == 0;
     }
 
     // Tickets del mostrador. Cajas también necesita corregir movimientos.
@@ -226,6 +239,13 @@ service cloud.firestore {
         && request.resource.data.monto > 0
         && request.resource.data.monto <= 100000000000
         && request.resource.data.tipo in ['fijo', 'variable']
+        && (
+          resource == null
+          || (
+            request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.createdBy == resource.data.createdBy
+          )
+        )
         && request.resource.data.categoria in [
           'Personal', 'Alquiler y ocupación', 'Servicios',
           'Impuestos y tasas', 'Administración',
