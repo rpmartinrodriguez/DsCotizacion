@@ -213,7 +213,10 @@ export function setupEstadoResultados(app) {
             ${line('(-) Costo de ventas documentado', result.documentedCost)}
             ${line('(-) Costo de ventas estimado (histórico)', result.estimatedCost)}
             ${line('(=) Resultado bruto', result.grossResult, 'is-subtotal')}
-            <h3 class="ds-eerr-expenses-header">Gastos del mes</h3>
+            <h3 class="ds-eerr-expenses-header">
+                Gastos del mes
+                <small>Fijos: ${amountText(result.fixedExpenses)} · Variables: ${amountText(result.variableExpenses)}</small>
+            </h3>
             ${result.categoryGroups.length
                 ? result.categoryGroups.map(group => `
                     <details class="ds-eerr-category">
