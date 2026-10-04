@@ -382,7 +382,10 @@ export function setupCajas(app) {
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="ticket-monto">${formatMoneda(venta.total)}</span>
-                        <button class="btn-editar-ticket-individual" data-id="${safeVentaId}" data-caja="${safeCajaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>
+                        ${venta.metodoPago === 'CuentaCorriente'
+                            ? '<small class="ds-ticket-margin">Cuenta corriente · no editable desde Cajas</small>'
+                            : `<button class="btn-editar-ticket-individual" data-id="${safeVentaId}" data-caja="${safeCajaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>`
+                        }
                     </div>
                 `;
                 container.appendChild(ticketDiv);
@@ -452,6 +455,16 @@ export function setupCajas(app) {
             const btn = e.target.closest('.btn-eliminar-caja');
             const cajaId = btn.dataset.id;
             
+            const cajaConAnticipos = [...todasLasCajas, ...cajasEliminadas]
+                .find(caja => caja.id === cajaId);
+            if (cajaConAnticipos &&
+                ((Number(cajaConAnticipos.anticiposCC_Efectivo) || 0) > 0
+                  || (Number(cajaConAnticipos.anticiposCC_MercadoPago) || 0) > 0
+                  || (Number(cajaConAnticipos.ventasCuentaCorriente) || 0) > 0)) {
+                alert('No se puede ocultar una caja que tiene anticipos o consumos de cuenta corriente. Se preserva la trazabilidad del saldo.');
+                return;
+            }
+
             if (!(await usuarioPuedeAdministrar())) {
                 alert("Tu usuario no tiene permisos para eliminar una caja.");
                 return;
@@ -617,10 +630,15 @@ export function setupCajas(app) {
             try {
                 await runTransaction(db, async (transaction) => {
                     const ticketRef = doc(db, 'ventasMostrador', ticketId);
+                    const cajaRef = doc(db, 'cajas', cajaId);
                     const ticketDoc = await transaction.get(ticketRef);
+                    const cajaDoc = await transaction.get(cajaRef);
                     if (!ticketDoc.exists()) throw "Ticket no encontrado";
-                    
+
                     const tData = ticketDoc.data();
+                    if (tData.metodoPago === 'CuentaCorriente') {
+                        throw new Error('Los consumos de saldo no se pueden editar desde Cajas.');
+                    }
                     const viejoMetodo = tData.metodoPago;
                     const viejoTotal = tData.total || 0;
 
@@ -718,8 +736,6 @@ export function setupCajas(app) {
                     transaction.update(ticketRef, ticketUpdate);
 
                     // Actualizamos la caja
-                    const cajaRef = doc(db, 'cajas', cajaId);
-                    const cajaDoc = await transaction.get(cajaRef);
                     if(cajaDoc.exists()) {
                         const cData = cajaDoc.data();
                         transaction.update(cajaRef, {
@@ -764,7 +780,10 @@ export function setupCajas(app) {
                     if (!ticketDoc.exists()) throw "El ticket ya no existe.";
                     
                     const tData = ticketDoc.data();
-                    
+                    if (tData.metodoPago === 'CuentaCorriente') {
+                        throw new Error('Los consumos de saldo no se pueden eliminar desde Cajas.');
+                    }
+
                     let aRestarEfvo = 0; let aRestarMP = 0;
                     if (tData.metodoPago === 'Efectivo') aRestarEfvo = tData.total;
                     else if (tData.metodoPago === 'MercadoPago') aRestarMP = tData.total;
@@ -906,7 +925,10 @@ export function setupCajas(app) {
                     const dCaja = caja.fechaApertura.toDate();
                     
                     if (dCaja >= dInicio && dCaja <= dFin) {
-                        const mp = caja.totalMercadoPago || 0;
+                        const mp = Math.max(0,
+                            (Number(caja.totalMercadoPago) || 0)
+                            - (Number(caja.anticiposCC_MercadoPago) || 0)
+                        );
                         acumuladoTotalMP += mp;
                         
                         if (caja.facturadoMP === true) {
@@ -1121,7 +1143,13 @@ export function setupCajas(app) {
                 if(c.fechaApertura) {
                     let diaCorta = formatearFechaCorta(c.fechaApertura);
                     let diaSemana = c.fechaApertura.toDate().getDay();
-                    let totalDia = (c.totalEfectivo || 0) + (c.totalMercadoPago || 0);
+                    // La caja física incluye anticipos. En ventas se resta el
+                    // ingreso diferido y se agrega el consumo de saldo.
+                    let totalDia = (Number(c.totalEfectivo) || 0)
+                        + (Number(c.totalMercadoPago) || 0)
+                        - (Number(c.anticiposCC_Efectivo) || 0)
+                        - (Number(c.anticiposCC_MercadoPago) || 0)
+                        + (Number(c.ventasCuentaCorriente) || 0);
                     
                     ventasDiariasMap[diaCorta] = (ventasDiariasMap[diaCorta] || 0) + totalDia;
                     diasSemanaConteo[diaSemana]++;
