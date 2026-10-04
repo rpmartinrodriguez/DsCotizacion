@@ -6070,3 +6070,19 @@ body.ds-cash .ds-cash-table-scroll > table {
     overflow-wrap:anywhere;
   }
 }
+
+
+/* Forms remain legible at 320-390px, and iOS won't zoom the whole viewport
+   when a compact text field receives focus. */
+@media (max-width: 600px) {
+  body.ds-app :is(input,select,textarea) {
+    font-size: 16px;
+  }
+  body.ds-users .permisos-grid {
+    grid-template-columns: minmax(0,1fr);
+  }
+  body.ds-app .card__title {
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+}
