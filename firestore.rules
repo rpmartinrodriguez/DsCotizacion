@@ -95,7 +95,8 @@ service cloud.firestore {
     match /ventasMostrador/{ventaId} {
       allow read: if hasPermission('mostrador')
         || hasPermission('cajas')
-        || hasPermission('precios');
+        || hasPermission('precios')
+        || hasPermission('finanzas');
 
       allow create: if hasPermission('mostrador')
         && (
@@ -132,6 +133,7 @@ service cloud.firestore {
         || hasPermission('presupuestos')
         || hasPermission('precios')
         || hasPermission('cajas')
+        || hasPermission('finanzas')
         || hasPermission('modelos')
         || hasPermission('stock');
 
