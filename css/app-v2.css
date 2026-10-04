@@ -3330,7 +3330,9 @@ body.ds-history .historial-card__detalle ul {
 }
 
 .ds-pos-shell {
-  display: grid !important;
+  /* No forzar display: la navegación de Stock, Promos y Carga histórica
+     debe poder ocultar Mostrador con style.display = 'none'. */
+  display: grid;
   grid-template-columns: minmax(0, 1.85fr) minmax(330px, .95fr) !important;
   gap: 14px !important;
   align-items: start;
