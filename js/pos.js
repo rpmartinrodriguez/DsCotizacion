@@ -10,7 +10,7 @@ import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
 import { setupPOSInventory } from "./pos/inventory.js";
-import { setupCurrentAccount } from "./pos/current-account.js?v=3";
+import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
 
 export function setupPOS(app) {
