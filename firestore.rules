@@ -296,6 +296,12 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.anticiposCC_MercadoPago
               == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('anticiposCC_MercadoPago', 0)
                 + (request.resource.data.medioPago == 'MercadoPago' ? request.resource.data.montoCentavos / 100.0 : 0)
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.totalEfectivo
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('totalEfectivo', 0)
+                + (request.resource.data.medioPago == 'Efectivo' ? request.resource.data.montoCentavos / 100.0 : 0)
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.totalMercadoPago
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('totalMercadoPago', 0)
+                + (request.resource.data.medioPago == 'MercadoPago' ? request.resource.data.montoCentavos / 100.0 : 0)
           )
           || (
             request.resource.data.tipo == 'consumo'
@@ -306,7 +312,12 @@ service cloud.firestore {
             && getAfter(/databases/$(database)/documents/ventasMostrador/$(request.resource.data.ventaId)).data.metodoPago
               == 'CuentaCorriente'
             && getAfter(/databases/$(database)/documents/ventasMostrador/$(request.resource.data.ventaId)).data.total * 100
-              == request.resource.data.montoCentavos
+              >= request.resource.data.montoCentavos - 0.1
+            && getAfter(/databases/$(database)/documents/ventasMostrador/$(request.resource.data.ventaId)).data.total * 100
+              <= request.resource.data.montoCentavos + 0.1
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.ventasCuentaCorriente
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('ventasCuentaCorriente', 0)
+                + request.resource.data.montoCentavos / 100.0
           )
         );
 
