@@ -316,6 +316,44 @@ async function inicializarMenu() {
         }
     });
 
+    // Anticipar el HTML de la sección que el usuario está por abrir.
+    // No ejecuta scripts ni consulta datos de Firebase; sólo precarga HTML.
+    const rutasPrecargadas = new Set();
+    const ahorroDeDatos = navigator.connection?.saveData === true;
+    const progreso = document.createElement('div');
+    progreso.setAttribute('aria-hidden', 'true');
+    progreso.style.cssText = 'position:fixed;top:0;left:0;height:3px;width:0;background:#be477a;z-index:99999;pointer-events:none;transition:width .18s ease;opacity:0;';
+    document.body.appendChild(progreso);
+
+    document.querySelectorAll('.nav-menu__link').forEach(link => {
+        const destino = new URL(link.href, window.location.href);
+        if (destino.origin !== window.location.origin) return;
+
+        const precargar = () => {
+            if (ahorroDeDatos || rutasPrecargadas.has(destino.pathname)
+                || destino.pathname === window.location.pathname) return;
+            rutasPrecargadas.add(destino.pathname);
+            const recurso = document.createElement('link');
+            recurso.rel = 'prefetch';
+            recurso.href = destino.pathname;
+            document.head.appendChild(recurso);
+        };
+        link.addEventListener('pointerenter', precargar, { once: true });
+        link.addEventListener('focus', precargar, { once: true });
+        link.addEventListener('click', event => {
+            if (event.defaultPrevented || event.button !== 0
+                || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+                || destino.pathname === window.location.pathname) return;
+            // Respuesta visual inmediata, sin demorar ni interceptar navegación.
+            progreso.style.opacity = '1';
+            progreso.style.width = '65%';
+        });
+    });
+    window.addEventListener('pageshow', () => {
+        progreso.style.opacity = '0';
+        progreso.style.width = '0';
+    });
+
     const btnCerrarSesion = document.getElementById('btn-cerrar-sesion-menu');
     if (btnCerrarSesion) {
         btnCerrarSesion.addEventListener('click', async () => {
