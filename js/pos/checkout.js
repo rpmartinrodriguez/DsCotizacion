@@ -37,7 +37,8 @@ export const savePOSCheckout = async ({
     amountMP = 0,
     clientId = null,
     userId,
-    userName
+    userName,
+    operationId = null
 }) => {
     if (!cajaId || !Array.isArray(items) || !items.length || !userId) {
         throw new Error('Faltan datos para guardar la venta.');
@@ -84,8 +85,11 @@ export const savePOSCheckout = async ({
         throw new Error('Los medios de pago no suman el total de la venta.');
     }
 
-    const saleRef = doc(collection(db, 'ventasMostrador'));
-    const movementRef = isPrepaid ? doc(collection(db, 'ccMovimientos')) : null;
+    // Se mantiene el mismo ID ante reintentos por respuestas de red ambiguas.
+    const saleRef = operationId
+        ? doc(db, 'ventasMostrador', operationId)
+        : doc(collection(db, 'ventasMostrador'));
+    const movementRef = isPrepaid ? doc(db, 'ccMovimientos', saleRef.id) : null;
     const cajaRef = doc(db, 'cajas', cajaId);
     const clientRef = clientId ? doc(db, 'ccClientes', clientId) : null;
     const unique = [...new Set(lines.map(line => line.id))];
@@ -105,8 +109,34 @@ export const savePOSCheckout = async ({
         const recipeSnaps = [];
         for (const recipeRef of recipeRefs) recipeSnaps.push(await tx.get(recipeRef));
 
-        if (existingSale.exists() || existingMovement?.exists()) {
-            throw new Error('Esta operación ya fue registrada.');
+        if (existingSale.exists()) {
+            const saved = existingSale.data();
+            const sameItems = Array.isArray(saved.items)
+                && saved.items.length === lines.length
+                && saved.items.every((savedLine, index) =>
+                    savedLine.id === lines[index].id
+                    && savedLine.cantidad === lines[index].cantidad
+                    && savedLine.precio === lines[index].precio
+                );
+            if (saved.cajaId !== cajaId
+                || saved.metodoPago !== method
+                || saved.total !== total
+                || (saved.cuentaCorrienteClienteId || null) !== clientId
+                || !sameItems) {
+                throw new Error('El identificador de la operación ya corresponde a otra venta.');
+            }
+
+            return {
+                ventaId: saleRef.id,
+                movimientoId: saved.movimientoCuentaCorrienteId || null,
+                saldoPosteriorCentavos: existingMovement?.exists()
+                    ? existingMovement.data().saldoPosteriorCentavos : null,
+                ticket: saved,
+                alreadyRegistered: true
+            };
+        }
+        if (existingMovement?.exists()) {
+            throw new Error('Movimiento de saldo sin venta vinculada. Se requiere revisión administrativa.');
         }
         if (!cajaSnap.exists() || cajaSnap.data().estado !== 'abierta') {
             throw new Error('La caja ya no está abierta. Recargá el Mostrador.');
