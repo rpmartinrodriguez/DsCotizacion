@@ -63,6 +63,9 @@ export function setupCurrentAccount({
 
     let clients = [];
     let selectedId = null;
+    const previewReadOnly = window.location.hostname.startsWith('deploy-preview-');
+    const previewNotice = document.getElementById('cc-preview-notice');
+    if (previewNotice) previewNotice.hidden = !previewReadOnly;
     let unsubscribe = null;
     let pendingDeposit = null;
 
@@ -172,6 +175,10 @@ export function setupCurrentAccount({
     };
 
     const openClientForm = client => {
+        if (previewReadOnly) {
+            setMessage('Vista previa: la edición de clientes está deshabilitada.');
+            return;
+        }
         if (!clientForm || !clientModal) return;
         clientForm.reset();
         clientIdInput.value = client?.id || '';
@@ -197,11 +204,24 @@ export function setupCurrentAccount({
     });
     closeDetail?.addEventListener('click', () => setSelected(null));
     search?.addEventListener('input', renderClients);
-    document.getElementById('cc-nuevo-cliente')?.addEventListener('click', () => openClientForm(null));
+    const newClientButton = document.getElementById('cc-nuevo-cliente');
+    if (previewReadOnly) {
+        [newClientButton, consume, creditSave].forEach(button => {
+            if (button) {
+                button.disabled = true;
+                button.title = 'Deshabilitado en vista previa para proteger la base real';
+            }
+        });
+    }
+    newClientButton?.addEventListener('click', () => openClientForm(null));
     clientCancel?.addEventListener('click', closeClientModal);
 
     clientForm?.addEventListener('submit', async event => {
         event.preventDefault();
+        if (previewReadOnly) {
+            alert('Vista previa: no se pueden modificar clientes reales.');
+            return;
+        }
         const nombre = clientName.value.trim();
         if (!nombre) return;
         clientSave.disabled = true;
@@ -252,6 +272,10 @@ export function setupCurrentAccount({
 
     creditForm?.addEventListener('submit', async event => {
         event.preventDefault();
+        if (previewReadOnly) {
+            alert('Vista previa: no se pueden cargar anticipos en la caja real.');
+            return;
+        }
         const client = activeClient();
         const caja = getCaja();
         const user = getUser();
@@ -305,6 +329,10 @@ export function setupCurrentAccount({
     });
 
     consume?.addEventListener('click', () => {
+        if (previewReadOnly) {
+            setMessage('Vista previa: los consumos con saldo están deshabilitados para proteger las cuentas reales.');
+            return;
+        }
         const client = activeClient();
         if (!client) return;
         const accepted = onSelectForSale(client);
