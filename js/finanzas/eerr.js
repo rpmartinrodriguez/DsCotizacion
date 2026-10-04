@@ -6,6 +6,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth
 import { calculateEERR, monthFromDate, EERR_CATEGORIES } from "./eerr-engine.js?v=2";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
+import { parseARS } from "../core/money.js?v=1";
 
 export function setupEstadoResultados(app) {
     const db = getFirestore(app);
@@ -308,7 +309,7 @@ export function setupEstadoResultados(app) {
             return;
         }
         const month = monthExpenses?.value;
-        const value = Number(amount.value);
+        const value = parseARS(amount.value);
 
         if (!validMonth(month)
             || !concept.value.trim()
