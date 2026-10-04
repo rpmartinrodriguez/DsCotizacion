@@ -65,7 +65,11 @@ export function setupCurrentAccount({
 
     let clients = [];
     let selectedId = null;
-    const previewReadOnly = window.location.hostname.startsWith('deploy-preview-');
+    // Activar SOLO cuando se hayan desplegado y probado las reglas
+    // Firestore y se haya ejecutado una prueba con caja/saldos controlados.
+    const FIREBASE_FINANCIAL_RULES_VERIFIED = false;
+    const previewReadOnly = !FIREBASE_FINANCIAL_RULES_VERIFIED
+        || window.location.hostname.startsWith('deploy-preview-');
     const previewNotice = document.getElementById('cc-preview-notice');
     if (previewNotice) previewNotice.hidden = !previewReadOnly;
     let unsubscribe = null;
