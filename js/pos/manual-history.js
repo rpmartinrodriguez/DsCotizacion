@@ -9,7 +9,8 @@ export function setupManualHistory({
     cajasCollection,
     ventasCollection,
     getCurrentUser,
-    getUserName
+    getUserName,
+    onViewChange = () => {}
 }) {
     const pantallaPOS = document.getElementById('pantalla-pos');
     const pantallaStock = document.getElementById('pantalla-stock-mostrador');
@@ -130,6 +131,8 @@ export function setupManualHistory({
         if (pantallaStock) pantallaStock.style.display = 'none';
         if (pantallaPromociones) pantallaPromociones.style.display = 'none';
         if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'block';
+        onViewChange();
+        window.scrollTo(0, 0);
 
         if (manualFecha) manualFecha.value = dateToYMD(new Date());
         cart = [];
@@ -139,6 +142,8 @@ export function setupManualHistory({
     btnVolverMostradorHistorico?.addEventListener('click', () => {
         if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
         if (pantallaPOS) pantallaPOS.style.display = 'grid';
+        onViewChange();
+        window.scrollTo(0, 0);
         buscadorPOS?.focus();
     });
 
