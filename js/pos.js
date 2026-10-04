@@ -144,10 +144,8 @@ export function setupPOS(app) {
         getUser: () => currentUser,
         getUserName: () => userName,
         onOpen: () => {
-            if (!cajaActiva?.id) {
-                alert('Primero abrí una caja.');
-                return;
-            }
+            // La consulta de saldos/historial no requiere caja abierta.
+            if (pantallaApertura) pantallaApertura.style.display = 'none';
             if (pantallaPOS) pantallaPOS.style.display = 'none';
             if (pantallaStock) pantallaStock.style.display = 'none';
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
@@ -157,7 +155,8 @@ export function setupPOS(app) {
         },
         onReturn: () => {
             if (ccScreen) ccScreen.style.display = 'none';
-            if (pantallaPOS) pantallaPOS.style.display = 'grid';
+            if (pantallaPOS) pantallaPOS.style.display = cajaActiva?.id ? 'grid' : 'none';
+            if (pantallaApertura) pantallaApertura.style.display = cajaActiva?.id ? 'none' : 'block';
             actualizarMobileBarVisibility();
         },
         onAccountsUpdated: () => {
@@ -336,12 +335,13 @@ export function setupPOS(app) {
                 cajaActiva = null;
                 datosCargados = false;
                 cuentaCorrienteClienteId = null;
-                if (ccScreen) ccScreen.style.display = 'none';
+                const viendoCuenta = ccScreen?.style.display === 'block';
+                if (ccScreen && !viendoCuenta) ccScreen.style.display = 'none';
                 if (pantallaPOS) pantallaPOS.style.display = 'none';
                 if (pantallaStock) pantallaStock.style.display = 'none';
                 if (pantallaPromociones) pantallaPromociones.style.display = 'none';
                 if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
-                if (pantallaApertura) pantallaApertura.style.display = 'block';
+                if (pantallaApertura) pantallaApertura.style.display = viendoCuenta ? 'none' : 'block';
                 actualizarMobileBarVisibility();
                 buscarSaldoTurnoAnterior(); 
             }
