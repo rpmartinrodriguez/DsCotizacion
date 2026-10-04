@@ -18,7 +18,36 @@
     <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .ds-home-hub { max-width: 1180px; margin-inline: auto; }
+        .ds-home-hub .ds-page-head { align-items: center; }
+        .ds-home-date { color: #827780; font-size: .87rem; margin: 8px 0 0; }
+        .ds-home-primary { text-decoration: none; white-space: nowrap; }
+        .ds-home-layout { display:grid; grid-template-columns: 1.15fr 1fr; gap:16px; margin: 20px 0 26px; }
+        .ds-home-feature { padding:24px; border-radius:18px; border:1px solid #eadde4; background:linear-gradient(135deg,#fff8fb,#fff); }
+        .ds-home-feature--secondary { background:#fff; }
+        .ds-home-feature h2,.ds-home-section h2,.ds-home-bottom h2 { margin: 3px 0 12px; font-size:1.12rem; color:#3d3239; }
+        .ds-home-feature-head {display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+        .ds-home-pill {border:1px solid #ecd3df;color:#935377;border-radius:100px;padding:5px 10px;font-size:.78rem;white-space:nowrap;}
+        .ds-home-pill.is-open {background:#eef9f0;color:#287347;border-color:#c6e8cc;}
+        .ds-home-pill.is-closed {background:#f6f1f4;color:#675861;}
+        .ds-home-feature-message {font-size:1.02rem;font-weight:700;margin:12px 0 5px;color:#53414a;}
+        .ds-home-feature-detail {font-size:.9rem;color:#766d75;line-height:1.6;}
+        .ds-home-feature-actions {display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;}
+        .ds-home-mini-link {color:#ab4678;font-size:.88rem;font-weight:700;text-decoration:none}
+        .ds-home-section-head {margin-bottom:14px;}
+        .ds-home-actions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+        .ds-home-action {position:relative;display:flex;flex-direction:column;gap:7px;padding:20px 18px;border:1px solid #eae1e6;border-radius:15px;background:#fff;color:inherit;text-decoration:none;min-height:146px;}
+        .ds-home-action:hover {border-color:#dca5bf;box-shadow:0 7px 24px rgba(126,55,93,.07)}
+        .ds-home-action-emoji {font-size:1.5rem;}
+        .ds-home-action strong {font-size:.96rem;color:#483b44}
+        .ds-home-action small {font-size:.83rem;color:#887d84;line-height:1.45}
+        .ds-home-arrow {position:absolute;right:18px;top:17px;color:#a6537a}
+        .ds-home-bottom {display:flex;justify-content:space-between;gap:18px;align-items:center;margin:24px 0;padding:20px 4px;border-top:1px solid #eae2e6}
+        .ds-home-bottom p {margin:0;color:#897d86;font-size:.85rem}
+        @media(max-width:760px){.ds-home-layout{grid-template-columns:1fr}.ds-home-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.ds-home-bottom{display:block}.ds-home-hub .ds-page-head{align-items:flex-start}.ds-home-primary{display:inline-flex;margin-top:10px}}
+        @media(max-width:420px){.ds-home-actions{grid-template-columns:1fr 1fr;gap:9px}.ds-home-action{min-height:140px;padding:15px 12px}.ds-home-action strong{font-size:.88rem}.ds-home-action small{font-size:.75rem}.ds-home-arrow{right:12px;top:12px}}
+    </style>
 </head>
 <body class="ds-app">
     <div class="main-container">
@@ -51,172 +80,59 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-main">
-            <div class="ds-dashboard">
+            <div class="ds-dashboard ds-home-hub">
                 <section class="ds-page-head">
                     <div>
-                        <p class="ds-eyebrow">Dulce Sall · Administración</p>
+                        <p class="ds-eyebrow">Dulce Sall · Centro operativo</p>
                         <h1 class="ds-page-title">Hola, <span id="ds-user-name">equipo</span>.</h1>
-                        <p class="ds-page-subtitle">Un resumen rápido de lo que está pasando en el negocio.</p>
+                        <p class="ds-page-subtitle">Todo listo para trabajar. Elegí qué necesitás hacer hoy.</p>
+                        <p id="ds-home-date" class="ds-home-date"></p>
                     </div>
+                    <a href="pos.html" class="btn-primary ds-home-primary" data-permission="mostrador">Abrir Mostrador →</a>
+                </section>
 
-                    <div class="ds-page-actions">
-                        <div class="ds-select-wrap">
-                            <select id="filtro-mes" class="ds-select" aria-label="Período de indicadores">
-                                <option value="todos">Todos los tiempos</option>
-                            </select>
+                <section class="ds-home-layout">
+                    <article class="ds-home-feature">
+                        <div class="ds-home-feature-head">
+                            <div><p class="ds-eyebrow">Estado actual</p><h2>Caja de mostrador</h2></div>
+                            <span id="ds-home-caja-indicator" class="ds-home-pill">Consultando…</span>
                         </div>
+                        <p id="ds-home-caja-message" class="ds-home-feature-message" role="status">Verificando el estado de la caja.</p>
+                        <p id="ds-home-caja-detail" class="ds-home-feature-detail"></p>
+                        <div class="ds-home-feature-actions">
+                            <a href="pos.html" class="ds-home-mini-link" data-permission="mostrador">Ir a Mostrador →</a>
+                            <a href="cajas.html" class="ds-home-mini-link" data-permission="cajas">Ver cajas →</a>
+                        </div>
+                    </article>
+                    <article class="ds-home-feature ds-home-feature--secondary">
+                        <p class="ds-eyebrow">Organización</p>
+                        <h2>Tu jornada en un lugar</h2>
+                        <p class="ds-home-feature-detail">Consultá los compromisos de entrega, el stock y las compras pendientes sin abrir estadísticas duplicadas.</p>
+                        <div class="ds-home-feature-actions">
+                            <a href="agenda.html" class="ds-home-mini-link" data-permission="agenda">Ver agenda →</a>
+                            <a href="compras-lista.html" class="ds-home-mini-link" data-permission="compras_lista">Lista de compras →</a>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="ds-home-section">
+                    <div class="ds-home-section-head"><p class="ds-eyebrow">Accesos rápidos</p><h2>¿Qué necesitás hacer?</h2></div>
+                    <div class="ds-home-actions">
+                        <a href="pos.html" class="ds-home-action" data-permission="mostrador"><span class="ds-home-action-emoji">🛍️</span><strong>Mostrador</strong><small>Vender, cobrar y cuenta corriente</small><span class="ds-home-arrow">↗</span></a>
+                        <a href="agenda.html" class="ds-home-action" data-permission="agenda"><span class="ds-home-action-emoji">📅</span><strong>Agenda</strong><small>Entregas y compromisos</small><span class="ds-home-arrow">↗</span></a>
+                        <a href="recetas.html" class="ds-home-action" data-permission="recetas"><span class="ds-home-action-emoji">🍰</span><strong>Productos y recetas</strong><small>Ingredientes, costos y rendimiento</small><span class="ds-home-arrow">↗</span></a>
+                        <a href="stock.html" class="ds-home-action" data-permission="stock"><span class="ds-home-action-emoji">📦</span><strong>Stock</strong><small>Existencias y materias primas</small><span class="ds-home-arrow">↗</span></a>
+                        <a href="presupuesto.html" class="ds-home-action" data-permission="presupuestos"><span class="ds-home-action-emoji">🧾</span><strong>Presupuestos</strong><small>Preparar nuevas cotizaciones</small><span class="ds-home-arrow">↗</span></a>
+                        <a href="compras-lista.html" class="ds-home-action" data-permission="compras_lista"><span class="ds-home-action-emoji">📝</span><strong>Lista de compras</strong><small>Organizar reposiciones</small><span class="ds-home-arrow">↗</span></a>
                     </div>
                 </section>
-
-                <section class="ds-quick-actions" aria-label="Acciones rápidas">
-                    <a href="pos.html" class="ds-quick">
-                        <span class="ds-quick-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9h16l-1-5H5L4 9Z"></path><path d="M5 9v11h14V9M9 20v-6h6v6"></path></svg>
-                        </span>
-                        <span><strong>Mostrador</strong><small>Vender y cobrar</small></span>
-                    </a>
-                    <a href="agenda.html" class="ds-quick">
-                        <span class="ds-quick-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>
-                        </span>
-                        <span><strong>Agenda</strong><small>Ver entregas</small></span>
-                    </a>
-                    <a href="stock.html" class="ds-quick">
-                        <span class="ds-quick-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 7 8 4 8-4M4 12l8 4 8-4M4 17l8 4 8-4"></path></svg>
-                        </span>
-                        <span><strong>Stock</strong><small>Control de insumos</small></span>
-                    </a>
-                    <a href="presupuesto.html" class="ds-quick">
-                        <span class="ds-quick-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h9l4 4v16H6V2Z"></path><path d="M14 2v5h5M9 12h6M9 16h6"></path></svg>
-                        </span>
-                        <span><strong>Presupuesto</strong><small>Nueva cotización</small></span>
-                    </a>
-                </section>
-
-                <section class="ds-kpis">
-                    <article class="ds-kpi">
-                        <div class="ds-kpi-top">
-                            <p class="ds-kpi-label">Ingresos por ventas</p>
-                            <span class="ds-kpi-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg>
-                            </span>
-                        </div>
-                        <p class="ds-kpi-value" id="kpi-ingresos-ventas">$0,00</p>
-                    </article>
-
-                    <article class="ds-kpi">
-                        <div class="ds-kpi-top">
-                            <p class="ds-kpi-label">Ganancia bruta</p>
-                            <span class="ds-kpi-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17 9 11l4 4 8-9"></path><path d="M15 6h6v6"></path></svg>
-                            </span>
-                        </div>
-                        <p class="ds-kpi-value" id="kpi-ganancia-bruta">$0,00</p>
-                    </article>
-
-                    <article class="ds-kpi">
-                        <div class="ds-kpi-top">
-                            <p class="ds-kpi-label">Valor cotizado</p>
-                            <span class="ds-kpi-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z"></path><path d="M9 8h6M9 12h6"></path></svg>
-                            </span>
-                        </div>
-                        <p class="ds-kpi-value" id="kpi-valor-cotizado">$0,00</p>
-                    </article>
-
-                    <article class="ds-kpi">
-                        <div class="ds-kpi-top">
-                            <p class="ds-kpi-label">Presupuestos</p>
-                            <span class="ds-kpi-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg>
-                            </span>
-                        </div>
-                        <p class="ds-kpi-value" id="kpi-presupuestos-creados">0</p>
-                    </article>
-                </section>
-
-                <section class="ds-grid ds-grid--2">
-                    <article class="ds-panel">
-                        <div class="ds-panel-head">
-                            <div>
-                                <h2 class="ds-panel-title">Evolución de ingresos</h2>
-                                <p class="ds-panel-subtitle">Ventas confirmadas agrupadas por mes</p>
-                            </div>
-                        </div>
-                        <div class="ds-chart-wrap">
-                            <canvas id="grafico-ingresos"></canvas>
-                        </div>
-                    </article>
-
-                    <a href="agenda.html" class="ds-panel ds-panel-link">
-                        <div class="ds-panel-head">
-                            <div>
-                                <h2 class="ds-panel-title">Próximas entregas</h2>
-                                <p class="ds-panel-subtitle">Los próximos pedidos comprometidos</p>
-                            </div>
-                            <span class="ds-panel-action">Ver agenda →</span>
-                        </div>
-                        <div id="lista-proximas-entregas"><p>Cargando…</p></div>
-                    </a>
-                </section>
-
-                <section class="ds-grid ds-grid--3">
-                    <article class="ds-panel">
-                        <div class="ds-panel-head">
-                            <div>
-                                <h2 class="ds-panel-title">Valor del stock</h2>
-                                <p class="ds-panel-subtitle">Capital actualmente inmovilizado en insumos</p>
-                            </div>
-                        </div>
-                        <p class="ds-stock-value" id="kpi-valor-stock">$0,00</p>
-                        <a class="ds-panel-action" href="stock.html">Gestionar stock →</a>
-                    </article>
-
-                    <a href="compras-lista.html" class="ds-panel ds-panel-link">
-                        <div class="ds-panel-head">
-                            <div>
-                                <h2 class="ds-panel-title">Faltantes próximos</h2>
-                                <p class="ds-panel-subtitle">Insumos necesarios para ventas próximas</p>
-                            </div>
-                            <span class="ds-panel-action">Compras →</span>
-                        </div>
-                        <div id="lista-faltantes-dashboard"><p>Cargando…</p></div>
-                    </a>
-
-                    <a href="clientes.html" class="ds-panel ds-panel-link">
-                        <div class="ds-panel-head">
-                            <div>
-                                <h2 class="ds-panel-title">Principales clientes</h2>
-                                <p class="ds-panel-subtitle">Top 5 por monto vendido</p>
-                            </div>
-                            <span class="ds-panel-action">Clientes →</span>
-                        </div>
-                        <div id="lista-top-clientes"><p>Cargando…</p></div>
-                    </a>
-                </section>
-
-                <section class="ds-grid ds-grid--2">
-                    <article class="ds-panel">
-                        <div class="ds-panel-head">
-                            <div>
-                                <h2 class="ds-panel-title">Productos más vendidos</h2>
-                                <p class="ds-panel-subtitle">Ranking por cantidad de ventas</p>
-                            </div>
-                        </div>
-                        <div id="reporte-mas-vendidos"><p>Cargando…</p></div>
-                    </article>
-
-                    <article class="ds-panel">
-                        <div class="ds-panel-head">
-                            <div>
-                                <h2 class="ds-panel-title">Productos más rentables</h2>
-                                <p class="ds-panel-subtitle">Ganancia acumulada estimada</p>
-                            </div>
-                        </div>
-                        <div id="reporte-mas-rentables"><p>Cargando…</p></div>
-                    </article>
+                <section class="ds-home-bottom">
+                    <div><h2>Administración y análisis</h2><p>Los informes completos están en sus módulos, sin duplicar cifras en Inicio.</p></div>
+                    <div class="ds-home-feature-actions">
+                        <a href="cajas.html#estadisticas" class="ds-home-mini-link" data-permission="cajas">Estadísticas de negocio →</a>
+                        <a href="finanzas.html" class="ds-home-mini-link" data-permission="finanzas">Estado de resultados →</a>
+                        <a href="clientes.html" class="ds-home-mini-link" data-permission="clientes">Clientes →</a>
+                    </div>
                 </section>
             </div>
         </main>
@@ -250,7 +166,7 @@
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupDashboard } from './js/dashboard.js';
+        import { setupInicio } from './js/home.js?v=1';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -291,7 +207,7 @@
                     userNameEl.textContent = (perfil.nombre || user.email || 'equipo').trim().split(/\s+/)[0];
                 }
 
-                setupDashboard(app);
+                setupInicio(app);
             } catch (error) {
                 console.error("No se pudo validar la sesión:", error);
                 await signOut(auth);
