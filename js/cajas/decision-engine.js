@@ -44,8 +44,15 @@ export const analyzeDecisionData = ({
 } = {}) => {
     const days = [7, 30, 90].includes(Number(periodDays)) ? Number(periodDays) : 30;
     const clock = now instanceof Date ? now.getTime() : dateMillis(now);
-    const start = clock - days * 86400000;
-    const previousStart = clock - (days * 2) * 86400000;
+    // Períodos por días de calendario: el gráfico y los totales usan
+    // el mismo inicio local, incluso con cambios de horario.
+    const startDate = new Date(clock);
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - (days - 1));
+    const start = startDate.getTime();
+    const previousDate = new Date(startDate);
+    previousDate.setDate(previousDate.getDate() - days);
+    const previousStart = previousDate.getTime();
     const excludedBoxes = new Set(boxes.filter(box => box.eliminada === true).map(box => box.id));
     const validSales = sales
         .filter(sale => !excludedBoxes.has(sale.cajaId) && sale.eliminada !== true)
@@ -90,7 +97,10 @@ export const analyzeDecisionData = ({
     recent.forEach(sale => {
         cashRevenue += asNumber(sale.pagoEfectivo);
         mpRevenue += asNumber(sale.pagoMercadoPago);
-        if (Math.abs(asNumber(sale.pagoEfectivo) + asNumber(sale.pagoMercadoPago) - saleRevenue(sale)) > 1.5) {
+        const hasPaymentBreakdown = sale.pagoEfectivo !== undefined
+            || sale.pagoMercadoPago !== undefined;
+        if (hasPaymentBreakdown &&
+            Math.abs(asNumber(sale.pagoEfectivo) + asNumber(sale.pagoMercadoPago) - saleRevenue(sale)) > 1.5) {
             paymentMismatch += 1;
         }
 
@@ -218,11 +228,14 @@ export const analyzeDecisionData = ({
 
     const newProviderCosts = materials.filter(material => {
         const change = asNumber(material.proveedorVariacionPct);
-        const lastChange = (Array.isArray(material.historialPreciosProveedor)
-            ? material.historialPreciosProveedor.find(entry => asNumber(entry.variacionPct) >= 10)
-            : null);
-        const when = dateMillis(lastChange?.fecha || material.proveedorUltimaConsulta);
-        return change >= 10 && when >= start && when <= clock;
+        const events = Array.isArray(material.historialPreciosProveedor)
+            ? [...material.historialPreciosProveedor].filter(entry => Math.abs(asNumber(entry.variacionPct)) > 0.001)
+            : [];
+        events.sort((a, b) => dateMillis(b.fecha) - dateMillis(a.fecha));
+        const latest = events[0] || null;
+        const when = dateMillis(latest?.fecha || material.proveedorUltimaConsulta);
+        return change >= 10 && (!latest || asNumber(latest.variacionPct) >= 10)
+            && when >= start && when <= clock;
     }).sort((a, b) => asNumber(b.proveedorVariacionPct) - asNumber(a.proveedorVariacionPct));
     if (newProviderCosts.length) {
         addAlert('review', `${newProviderCosts.length} insumo(s) con aumentos importantes`,
