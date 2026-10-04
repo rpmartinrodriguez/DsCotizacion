@@ -246,3 +246,93 @@ export const savePOSCheckout = async ({
         };
     });
 };
+
+
+/**
+ * Registra un anticipo exactamente una vez. Actualiza, en una transacción,
+ * el saldo del cliente, la caja física y el asiento inmutable.
+ * NO crea una venta ni reconoce ingreso comercial.
+ */
+export const recordAccountDeposit = async ({
+    db, cajaId, clienteId, cents, method, userId, userName, operationId = null
+}) => {
+    if (!cajaId || !clienteId || !userId
+        || !Number.isSafeInteger(cents) || cents <= 0
+        || !['Efectivo', 'MercadoPago'].includes(method)) {
+        throw new Error('Los datos del anticipo son inválidos.');
+    }
+
+    const clientRef = doc(db, 'ccClientes', clienteId);
+    const drawerRef = doc(db, 'cajas', cajaId);
+    const movementRef = operationId
+        ? doc(db, 'ccMovimientos', operationId)
+        : doc(collection(db, 'ccMovimientos'));
+
+    return runTransaction(db, async tx => {
+        const client = await tx.get(clientRef);
+        const drawer = await tx.get(drawerRef);
+        const existing = await tx.get(movementRef);
+
+        if (existing.exists()) {
+            const saved = existing.data();
+            if (saved.clienteId === clienteId && saved.cajaId === cajaId
+                && saved.montoCentavos === cents && saved.medioPago === method
+                && saved.tipo === 'anticipo') {
+                return { movementId: movementRef.id, alreadyRegistered: true };
+            }
+            throw new Error('El identificador corresponde a otra operación.');
+        }
+        if (!client.exists() || client.data().activo === false) {
+            throw new Error('El cliente ya no existe o está inactivo.');
+        }
+        if (!drawer.exists() || drawer.data().estado !== 'abierta') {
+            throw new Error('La caja ya no está abierta.');
+        }
+
+        const before = Number(client.data().saldoCentavos);
+        if (!Number.isSafeInteger(before) || before < 0) {
+            throw new Error('El saldo registrado necesita revisión administrativa.');
+        }
+
+        const after = before + cents;
+        if (!Number.isSafeInteger(after) || after > 1000000000000) {
+            throw new Error('El importe supera el saldo máximo permitido.');
+        }
+
+        const cash = method === 'Efectivo' ? fromCents(cents) : 0;
+        const mp = method === 'MercadoPago' ? fromCents(cents) : 0;
+        const cajaData = drawer.data();
+        const now = Timestamp.now();
+
+        tx.update(clientRef, {
+            saldoCentavos: after,
+            ultimoMovimientoId: movementRef.id,
+            ultimoMovimientoAt: now,
+            updatedAt: now
+        });
+        tx.update(drawerRef, {
+            totalEfectivo: number(cajaData.totalEfectivo) + cash,
+            totalMercadoPago: number(cajaData.totalMercadoPago) + mp,
+            anticiposCC_Efectivo: number(cajaData.anticiposCC_Efectivo) + cash,
+            anticiposCC_MercadoPago: number(cajaData.anticiposCC_MercadoPago) + mp
+        });
+        tx.set(movementRef, {
+            clienteId,
+            clienteNombre: client.data().nombre || '',
+            tipo: 'anticipo',
+            montoCentavos: cents,
+            saldoAnteriorCentavos: before,
+            saldoPosteriorCentavos: after,
+            cajaId,
+            medioPago: method,
+            fecha: now,
+            usuarioId: userId,
+            usuarioNombre: userName
+        });
+        return {
+            movementId: movementRef.id,
+            saldoPosteriorCentavos: after,
+            alreadyRegistered: false
+        };
+    });
+};
