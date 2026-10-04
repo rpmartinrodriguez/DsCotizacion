@@ -41,13 +41,7 @@
                         <h1>Finanzas</h1>
                         <p>Resultado mensual del negocio y carga manual de costos fijos y variables.</p>
                     </div>
-                    <div class="ds-content-actions">
-                        <div class="ds-select-wrap">
-                            <select id="filtro-mes-finanzas" class="ds-select">
-                                <option value="todos">Todos los tiempos</option>
-                            </select>
-                        </div>
-                    </div>
+
                 </section>
 
                 <div class="ds-finance-tabs" role="tablist" aria-label="Secciones financieras">
@@ -131,6 +125,16 @@
                 </section>
 
                 <section id="eerr-tab-anterior" class="ds-finance-section" hidden>
+                    <div class="ds-finance-report-head">
+                        <h2>Reporte heredado de presupuestos y compras</h2>
+                        <div class="ds-content-actions">
+                        <div class="ds-select-wrap">
+                            <select id="filtro-mes-finanzas" class="ds-select">
+                                <option value="todos">Todos los tiempos</option>
+                            </select>
+                        </div>
+                    </div>
+                    </div>
                     <p class="ds-eerr-disclaimer">Informe heredado. Mezcla presupuestos y compras de stock: no debe interpretarse como utilidad neta, porque puede duplicar costos de producción. Usá el nuevo EERR para decisiones.</p>
                     <section class="card ds-finance-report">
                         <div class="reporte-financiero" id="reporte-financiero-container">
