@@ -100,8 +100,14 @@ export const calculateEERR = ({
                         ingredientes: [ingredient]
                     }, rawMap) > 0
                 );
+            const storedLegacyCost = Number(recipe?.costoPorcion) > 0
+                ? Number(recipe.costoPorcion)
+                : Number(recipe?.costoTotal) > 0 && Number(recipe?.porcionesReceta) > 0
+                    ? Number(recipe.costoTotal) / Number(recipe.porcionesReceta)
+                    : 0;
             const currentCost = validIngredients
-                ? calculateRecipeUnitCost(recipe, rawMap) : 0;
+                ? calculateRecipeUnitCost(recipe, rawMap)
+                : storedLegacyCost;
 
             if (currentCost > 0) {
                 estimatedCost += currentCost * units;
