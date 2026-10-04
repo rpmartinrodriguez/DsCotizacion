@@ -2,7 +2,7 @@ import {
     collection, doc, addDoc, updateDoc, getDocs, onSnapshot,
     query, where, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { toCents, fromCents, recordAccountDeposit } from "./checkout.js";
+import { toCents, fromCents, recordAccountDeposit } from "./checkout.js?v=2";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
 
