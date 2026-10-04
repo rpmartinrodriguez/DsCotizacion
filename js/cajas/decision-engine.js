@@ -44,11 +44,10 @@ export const analyzeDecisionData = ({
 } = {}) => {
     const days = [7, 30, 90].includes(Number(periodDays)) ? Number(periodDays) : 30;
     const clock = now instanceof Date ? now.getTime() : dateMillis(now);
-    // Períodos por días de calendario: el gráfico y los totales usan
-    // el mismo inicio local, incluso con cambios de horario.
+    // Ventanas móviles equivalentes de N días al mismo horario,
+    // para no comparar una mañana parcial con días enteros.
     const startDate = new Date(clock);
-    startDate.setHours(0, 0, 0, 0);
-    startDate.setDate(startDate.getDate() - (days - 1));
+    startDate.setDate(startDate.getDate() - days);
     const start = startDate.getTime();
     const previousDate = new Date(startDate);
     previousDate.setDate(previousDate.getDate() - days);
@@ -297,15 +296,26 @@ export const analyzeDecisionData = ({
     const chartDays = [];
     const weekdayTotals = Array(7).fill(0);
     const weekdayOccurrences = Array(7).fill(0);
-    for (let offset = days - 1; offset >= 0; offset -= 1) {
+    // La ventana móvil puede comenzar a mitad de un día; se muestra
+    // ese día parcial para que gráfico e indicadores cuadren.
+    for (let offset = days; offset >= 0; offset -= 1) {
         const date = new Date(clock);
         date.setHours(0, 0, 0, 0);
         date.setDate(date.getDate() - offset);
+        const nextDay = new Date(date);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const visibleMs = Math.max(
+            0,
+            Math.min(clock, nextDay.getTime()) - Math.max(start, date.getTime())
+        );
+        if (!visibleMs) continue;
+
+        const fraction = visibleMs / (nextDay.getTime() - date.getTime());
         const key = localDay(date);
         const value = daySales.get(key) || 0;
         chartDays.push({ key, label: `${date.getDate()}/${date.getMonth() + 1}`, value });
         weekdayTotals[date.getDay()] += value;
-        weekdayOccurrences[date.getDay()] += 1;
+        weekdayOccurrences[date.getDay()] += fraction;
     }
 
     const weekdays = weekdayTotals.map((total, day) => ({
