@@ -937,10 +937,10 @@ export function setupCajas(app) {
                     const dCaja = caja.fechaApertura.toDate();
                     
                     if (dCaja >= dInicio && dCaja <= dFin) {
-                        const mp = Math.max(0,
-                            (Number(caja.totalMercadoPago) || 0)
-                            - (Number(caja.anticiposCC_MercadoPago) || 0)
-                        );
+                        // Conciliación de fondos MP: incluye anticipos de cuenta
+                        // corriente. Su obligación de facturación fiscal debe
+                        // determinarse según el comprobante y asesoramiento contable.
+                        const mp = Number(caja.totalMercadoPago) || 0;
                         acumuladoTotalMP += mp;
                         
                         if (caja.facturadoMP === true) {
