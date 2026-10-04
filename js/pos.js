@@ -1289,7 +1289,10 @@ export function setupPOS(app) {
                             <p style="margin: 0.2rem 0; font-size: 0.9rem;">${descItems}</p>
                             <span style="font-weight: bold; color: #be185d;">${formatMoneda(venta.total)}</span>
                         </div>
-                        <button class="btn-editar-ticket-auditoria" data-id="${safeVentaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; margin-left:1rem;" title="Editar Método de Pago">✏️</button>
+                        ${venta.metodoPago === 'CuentaCorriente'
+                            ? '<small>Cuenta corriente · inalterable</small>'
+                            : `<button class="btn-editar-ticket-auditoria" data-id="${safeVentaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; margin-left:1rem;" title="Editar Método de Pago">✏️</button>`
+                        }
                     `;
                     listaTicketsRevision.appendChild(div);
                 });
@@ -1343,10 +1346,15 @@ export function setupPOS(app) {
             try {
                 await runTransaction(db, async (transaction) => {
                     const ticketRef = doc(db, 'ventasMostrador', ticketId);
+                    const cajaRef = doc(db, 'cajas', cajaActiva.id);
                     const ticketDoc = await transaction.get(ticketRef);
-                    if (!ticketDoc.exists()) throw "Ticket no encontrado";
-                    
+                    const cajaDoc = await transaction.get(cajaRef);
+                    if (!ticketDoc.exists() || !cajaDoc.exists()) throw new Error("Ticket o caja no encontrados.");
+
                     const tData = ticketDoc.data();
+                    if (tData.metodoPago === 'CuentaCorriente') {
+                        throw new Error('No se puede cambiar el método de un consumo de cuenta corriente.');
+                    }
                     if (tData.metodoPago === nuevoMetodo) throw "El método es el mismo, no hay cambios.";
                     if (tData.metodoPago === 'Ambos') throw "No se puede editar un ticket con pago mixto (Ambos). Anúlalo manualmente.";
 
@@ -1365,17 +1373,16 @@ export function setupPOS(app) {
                         pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? monto : 0
                     });
 
-                    const cajaRef = doc(db, 'cajas', cajaActiva.id);
-                    const nuevaCajaEfvo = (cajaActiva.totalEfectivo || 0) + difEfectivo;
-                    const nuevaCajaMP = (cajaActiva.totalMercadoPago || 0) + difMP;
+                    const cajaData = cajaDoc.data();
+                    const nuevaCajaEfvo = (Number(cajaData.totalEfectivo) || 0) + difEfectivo;
+                    const nuevaCajaMP = (Number(cajaData.totalMercadoPago) || 0) + difMP;
                     
                     transaction.update(cajaRef, {
                         totalEfectivo: nuevaCajaEfvo,
                         totalMercadoPago: nuevaCajaMP
                     });
 
-                    cajaActiva.totalEfectivo = nuevaCajaEfvo;
-                    cajaActiva.totalMercadoPago = nuevaCajaMP;
+                    // onSnapshot actualiza la caja tras confirmar la transacción.
                 });
 
                 alert("Ticket corregido con éxito.");
