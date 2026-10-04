@@ -68,7 +68,7 @@ export function setupCurrentAccount({
     let selectedId = null;
     // Activar SOLO cuando se hayan desplegado y probado las reglas
     // Firestore y se haya ejecutado una prueba con caja/saldos controlados.
-    const FIREBASE_FINANCIAL_RULES_VERIFIED = false;
+    const FIREBASE_FINANCIAL_RULES_VERIFIED = true;
     const previewReadOnly = !FIREBASE_FINANCIAL_RULES_VERIFIED
         || window.location.hostname.startsWith('deploy-preview-');
     const previewNotice = document.getElementById('cc-preview-notice');
