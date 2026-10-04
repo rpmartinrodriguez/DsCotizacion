@@ -194,12 +194,16 @@ export function setupCurrentAccount({
 
     const closeClientModal = () => clientModal?.classList.remove('visible');
 
-    openButton?.addEventListener('click', () => {
+    const accountOpenButtons = [
+        openButton,
+        document.getElementById('btn-cc-desde-apertura')
+    ];
+    accountOpenButtons.forEach(button => button?.addEventListener('click', () => {
         start();
         setMessage('');
         onOpen();
         window.scrollTo(0, 0);
-    });
+    }));
     returnButton?.addEventListener('click', () => {
         onReturn();
         window.scrollTo(0, 0);
