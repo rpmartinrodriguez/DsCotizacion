@@ -61,6 +61,53 @@
         #ingredientes-en-receta-container::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* Vista de costos mientras se arma la receta */
+        #receta-modal-overlay #ingredientes-en-receta-container { max-height: 340px; }
+        .ds-receta-preview {
+            margin-top: 12px; padding: 10px 12px; border-radius: 10px;
+            background: #fcf4f8; color: #79415d; font-size: .85rem;
+            border: 1px solid #efdae4; line-height: 1.5;
+        }
+        .ds-receta-cost-list { list-style: none; margin: 0; padding: 0; }
+        .ds-receta-cost-head, .ds-receta-cost-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 115px 125px 30px;
+            gap: 12px; align-items: center;
+        }
+        .ds-receta-cost-head { padding: 8px 10px; color: #766c75; font-size: .72rem; font-weight: 700; }
+        .ds-receta-cost-row { padding: 11px 10px; border-bottom: 1px solid #e9e2e7; }
+        .ds-receta-cost-row:last-child { border-bottom: 0; }
+        .ds-receta-cost-name { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .ds-receta-cost-name strong { color: #494149; overflow-wrap: anywhere; font-size: .84rem; }
+        .ds-receta-cost-name span { color: #807782; font-size: .76rem; }
+        .ds-receta-cost-unit, .ds-receta-cost-subtotal { font-size: .82rem; text-align: right; }
+        .ds-receta-cost-subtotal { color: #a13f70; font-weight: 800; }
+        .ds-receta-cost-row.is-missing .ds-receta-cost-unit,
+        .ds-receta-cost-row.is-missing .ds-receta-cost-subtotal { color: #ad5817; }
+        .ds-receta-cost-row .btn-quitar-ingrediente {
+            width: 28px; height: 28px; margin: 0; padding: 0; border: 0;
+            background: transparent; color: #a63d55; font-size: 1.15rem; cursor: pointer;
+        }
+        .ds-receta-cost-summary {
+            margin-top: 12px; padding: 14px; border: 1px solid #ead8e0;
+            border-radius: 12px; background: #fcf8fa;
+        }
+        .ds-receta-cost-summary > div {
+            display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+            padding: 5px 0; color: #625561; font-size: .85rem;
+        }
+        .ds-receta-cost-summary > div strong { color: #9e3769; font-size: 1.05rem; }
+        .ds-receta-cost-summary small { display: block; margin-top: 8px; color: #80717b; line-height: 1.45; }
+        .ds-receta-cost-summary small.ds-receta-costo-alerta { color: #a04c12; font-weight: 700; }
+        @media (max-width: 640px) {
+            .ds-receta-cost-head { display: none; }
+            .ds-receta-cost-row { grid-template-columns: minmax(0, 1fr) auto 28px; gap: 5px 10px; }
+            .ds-receta-cost-name { grid-column: 1; grid-row: 1; }
+            .ds-receta-cost-unit { grid-column: 1; grid-row: 2; text-align: left; color: #8a7d86; font-size: .74rem; }
+            .ds-receta-cost-subtotal { grid-column: 2; grid-row: 1 / 3; }
+            .ds-receta-cost-row .btn-quitar-ingrediente { grid-column: 3; grid-row: 1 / 3; }
+        }
     </style>
 </head>
 <body class="ds-app ds-content ds-recipes">
@@ -124,7 +171,7 @@
     
     <!-- MODAL PARA CREAR/EDITAR RECETAS -->
     <div id="receta-modal-overlay" class="modal-overlay">
-        <div class="modal-content card" style="max-height: 95vh; overflow-y: auto;">
+        <div class="modal-content card" style="max-width: min(850px, 96vw); max-height: 95vh; overflow-y: auto;">
             <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
             
             <div class="modal-body">
@@ -159,11 +206,16 @@
                     <button id="btn-anadir-ingrediente" class="btn-secondary" style="align-self: flex-end; padding: 0.8rem;">Añadir</button>
                 </div>
                 
-                <hr class="calculo-divisor">
+                <div id="receta-costo-vista-previa" class="ds-receta-preview" aria-live="polite">
+                    Seleccioná un ingrediente e ingresá la cantidad para consultar su costo.
+                </div>
 
+                <hr class="calculo-divisor">
+                <h4 class="card__subtitle">Detalle de costos por ingrediente</h4>
                 <div id="ingredientes-en-receta-container">
                     <p>Aún no has añadido ingredientes.</p>
                 </div>
+                <div id="receta-resumen-costos" class="ds-receta-cost-summary" aria-live="polite"></div>
             </div>
 
             <div class="modal-actions" style="margin-top: 1.5rem;">
@@ -206,7 +258,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupRecetas } from './js/recetas.js';
+        import { setupRecetas } from './js/recetas.js?v=2';
         try {
             const app = initializeApp(firebaseConfig);
             setupRecetas(app);

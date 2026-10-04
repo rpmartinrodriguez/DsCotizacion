@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { addToCart, updateCartIcon } from './cart.js';
 import { getEffectiveUnitCost } from './core/pricing.js';
+import { escapeHtml } from './core/html.js';
 
 export function setupRecetas(app) {
     const db = getFirestore(app);
@@ -30,6 +31,8 @@ export function setupRecetas(app) {
     const cantidadIngredienteInput = document.getElementById('cantidad-ingrediente-receta');
     const btnAnadirIngrediente = document.getElementById('btn-anadir-ingrediente');
     const ingredientesEnRecetaContainer = document.getElementById('ingredientes-en-receta-container');
+    const vistaPreviaCosto = document.getElementById('receta-costo-vista-previa');
+    const resumenCostos = document.getElementById('receta-resumen-costos');
     const btnGuardarReceta = document.getElementById('receta-modal-btn-guardar');
     const btnCancelarReceta = document.getElementById('receta-modal-btn-cancelar');
 
@@ -127,25 +130,51 @@ export function setupRecetas(app) {
     // 4. GESTIÓN DE RECETAS Y COSTOS (EL EFECTO CASCADA)
     // ==================================================================
 
-    // Función auxiliar: Calcular costo total de una receta dinámicamente
-    const calcularCostoTotalReceta = (recetaData) => {
-        let costoTotal = 0;
-        if (!recetaData.ingredientes || recetaData.ingredientes.length === 0) return 0;
-        
-        recetaData.ingredientes.forEach(ing => {
-            // Buscamos la materia prima en el stock actual por ID
-            const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === ing.idMateriaPrima);
-            
-            if (materiaPrima) {
-                // Para decisiones de precio usamos el costo más conservador:
-                // último costo real de compra o costo de reposición del proveedor.
-                const costoUnitarioMP = getEffectiveUnitCost(materiaPrima);
-                costoTotal += costoUnitarioMP * ing.cantidad;
-            }
+    // Misma referencia económica usada para guardar la receta (Stock vigente).
+    const formatearCosto = (valor, decimales = 2) =>
+        '$' + Number(valor || 0).toLocaleString('es-AR', {
+            minimumFractionDigits: 2, maximumFractionDigits: decimales
         });
-        return costoTotal;
+
+    const detalleCostoIngrediente = ingrediente => {
+        const materia = materiasPrimasDisponibles.find(mp => mp.id === ingrediente.idMateriaPrima);
+        const costoUnitario = materia ? getEffectiveUnitCost(materia) : 0;
+        return {
+            costoUnitario,
+            costoCantidad: costoUnitario * (Number(ingrediente.cantidad) || 0),
+            tieneCosto: !!materia && Number.isFinite(costoUnitario) && costoUnitario > 0
+        };
     };
 
+    const calcularCostoTotalReceta = recetaData =>
+        (recetaData.ingredientes || []).reduce(
+            (total, ing) => total + detalleCostoIngrediente(ing).costoCantidad, 0
+        );
+
+    const renderizarVistaPreviaCosto = () => {
+        if (!vistaPreviaCosto) return;
+        const nombre = ingredienteInput.value.trim();
+        const cantidad = Number(cantidadIngredienteInput.value);
+        if (!nombre) {
+            vistaPreviaCosto.textContent = 'Seleccioná un ingrediente e ingresá la cantidad para consultar su costo.';
+            return;
+        }
+        const materia = materiasPrimasDisponibles.find(mp => mp.nombre === nombre);
+        if (!materia) {
+            vistaPreviaCosto.textContent = 'Ingrediente no encontrado en Stock.';
+            return;
+        }
+        const detalle = detalleCostoIngrediente({ idMateriaPrima: materia.id, cantidad });
+        if (!detalle.tieneCosto) {
+            vistaPreviaCosto.textContent = 'Atención: este ingrediente no tiene costo válido registrado en Stock.';
+            return;
+        }
+        if (!Number.isFinite(cantidad) || cantidad <= 0) {
+            vistaPreviaCosto.textContent = 'Costo de Stock: ' + formatearCosto(detalle.costoUnitario, 4) + ' por ' + (materia.unidad || 'unidad') + '. Ingresá una cantidad.';
+            return;
+        }
+        vistaPreviaCosto.textContent = 'Costo de ' + cantidad.toLocaleString('es-AR') + ' ' + (materia.unidad || 'unidades') + ': ' + formatearCosto(detalle.costoCantidad) + ' (' + formatearCosto(detalle.costoUnitario, 4) + ' por unidad de Stock).';
+    };
     // Escuchador en TIEMPO REAL del Stock General (Actualiza ingredientes al instante)
     onSnapshot(query(materiasPrimasCollection, orderBy('nombre')), (snapshot) => {
         materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -159,6 +188,12 @@ export function setupRecetas(app) {
                 ingredientesDatalist.appendChild(option);
             }
         });
+
+        // Actualizar también los importes de la receta abierta cuando cambia Stock.
+        if (modal.classList.contains('visible')) {
+            renderizarIngredientesEnReceta();
+            renderizarVistaPreviaCosto();
+        }
 
         // Si ya hay recetas cargadas, las re-renderizamos para que actualicen sus precios
         if (todasLasRecetas.length > 0) {
@@ -182,7 +217,10 @@ export function setupRecetas(app) {
             rendimientoInput.value = '';
             ingredientesRecetaActual = [];
         }
+        ingredienteInput.value = '';
+        cantidadIngredienteInput.value = '';
         renderizarIngredientesEnReceta();
+        renderizarVistaPreviaCosto();
         modal.classList.add('visible');
     };
 
@@ -190,23 +228,47 @@ export function setupRecetas(app) {
 
     const renderizarIngredientesEnReceta = () => {
         ingredientesEnRecetaContainer.innerHTML = '';
-        if (ingredientesRecetaActual.length === 0) {
+        let faltantes = 0;
+        if (!ingredientesRecetaActual.length) {
             ingredientesEnRecetaContainer.innerHTML = '<p>Aún no has añadido ingredientes.</p>';
-            return;
+        } else {
+            const encabezado = document.createElement('div');
+            encabezado.className = 'ds-receta-cost-head';
+            encabezado.innerHTML = '<span>Ingrediente y cantidad</span><span>Costo en Stock</span><span>Costo utilizado</span><span></span>';
+            ingredientesEnRecetaContainer.appendChild(encabezado);
+            const ul = document.createElement('ul');
+            ul.className = 'ds-receta-cost-list';
+            ingredientesRecetaActual.forEach((ing, index) => {
+                const detalle = detalleCostoIngrediente(ing);
+                if (!detalle.tieneCosto) faltantes++;
+                const li = document.createElement('li');
+                li.className = 'ds-receta-cost-row' + (detalle.tieneCosto ? '' : ' is-missing');
+                li.innerHTML = `
+                    <div class="ds-receta-cost-name">
+                        <strong>${escapeHtml(ing.nombreMateriaPrima || 'Ingrediente')}</strong>
+                        <span>${Number(ing.cantidad || 0).toLocaleString('es-AR')} ${escapeHtml(ing.unidad || '')}</span>
+                    </div>
+                    <span class="ds-receta-cost-unit">${detalle.tieneCosto ? formatearCosto(detalle.costoUnitario, 4) : 'Sin costo'}</span>
+                    <strong class="ds-receta-cost-subtotal">${detalle.tieneCosto ? formatearCosto(detalle.costoCantidad) : '—'}</strong>
+                    <button type="button" class="btn-quitar-ingrediente" data-index="${index}" aria-label="Quitar ingrediente">×</button>
+                `;
+                ul.appendChild(li);
+            });
+            ingredientesEnRecetaContainer.appendChild(ul);
         }
-        const ul = document.createElement('ul');
-        ul.className = 'lista-sencilla';
-        ingredientesRecetaActual.forEach((ing, index) => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                ${ing.nombreMateriaPrima} <span>${ing.cantidad.toLocaleString('es-AR')} ${ing.unidad}</span>
-                <button class="btn-quitar-ingrediente" data-index="${index}">🗑️</button>
-            `;
-            ul.appendChild(li);
-        });
-        ingredientesEnRecetaContainer.appendChild(ul);
+        const total = calcularCostoTotalReceta({ ingredientes: ingredientesRecetaActual });
+        const rendimiento = Number(rendimientoInput.value);
+        const unitario = rendimiento > 0 ? formatearCosto(total / rendimiento) : 'Ingresá el rendimiento';
+        resumenCostos.innerHTML = `
+            <div><span>Costo del lote${faltantes ? ' (parcial)' : ''}</span><strong>${formatearCosto(total)}</strong></div>
+            <div><span>Costo por unidad / porción</span><strong>${faltantes ? '—' : unitario}</strong></div>
+            <small class="${faltantes ? 'ds-receta-costo-alerta' : ''}">
+                ${faltantes
+                    ? 'Atención: ' + faltantes + ' ingrediente(s) sin costo válido en Stock. Este total es parcial; revisá sus precios.'
+                    : 'Valores vigentes de Stock. Se actualizan automáticamente cuando cambia el costo del ingrediente.'}
+            </small>
+        `;
     };
-
     const anadirIngrediente = () => {
         const nombreIngrediente = ingredienteInput.value;
         const cantidad = parseFloat(cantidadIngredienteInput.value);
@@ -233,6 +295,7 @@ export function setupRecetas(app) {
         renderizarIngredientesEnReceta();
         ingredienteInput.value = '';
         cantidadIngredienteInput.value = '';
+        renderizarVistaPreviaCosto();
     };
 
     // Al guardar, ahora inyectamos el Costo Exacto en la Base de Datos
@@ -439,6 +502,9 @@ export function setupRecetas(app) {
     btnCancelarReceta.addEventListener('click', closeModal);
     btnGuardarReceta.addEventListener('click', guardarReceta);
     btnAnadirIngrediente.addEventListener('click', anadirIngrediente);
+    ingredienteInput.addEventListener('input', renderizarVistaPreviaCosto);
+    cantidadIngredienteInput.addEventListener('input', renderizarVistaPreviaCosto);
+    rendimientoInput.addEventListener('input', renderizarIngredientesEnReceta);
     
     updateCartIcon();
 }
