@@ -3,6 +3,7 @@ import {
     query, where, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { toCents, fromCents, recordAccountDeposit } from "./checkout.js?v=2";
+import { parseARS } from "../core/money.js?v=1";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
 
@@ -290,7 +291,8 @@ export function setupCurrentAccount({
         const client = activeClient();
         const caja = getCaja();
         const user = getUser();
-        const cents = toCents(creditAmount?.value);
+        const parsedAmount = parseARS(creditAmount?.value);
+        const cents = Number.isFinite(parsedAmount) ? toCents(parsedAmount) : NaN;
         const method = creditMethod?.value;
         if (!client || !caja?.id || !user?.uid) {
             alert('Debés seleccionar un cliente y tener una caja abierta.');
