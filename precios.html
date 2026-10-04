@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Listas de precios · Dulce Sall Admin</title>
+    <title>Precios y revisión · Dulce Sall Admin</title>
     
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/app-v2.css">
@@ -46,7 +46,89 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-content-main"><div class="ds-content-wrap">
-                <section class="ds-content-head"><div><p class="ds-eyebrow">Operación</p><h1>Listas de precios</h1><p>Calculá costos y generá listas mayoristas o minoristas en PDF.</p></div></section>
+                <section class="ds-content-head"><div><p class="ds-eyebrow">Operación</p><h1>Precios y revisión</h1><p>Revisá rentabilidad, detectá pérdida de margen y después generá tus listas de precios.</p></div></section>
+
+            <!-- Centro de revisión de rentabilidad -->
+            <section class="ds-price-review" id="revision-precios">
+                <div class="ds-price-review-head">
+                    <div>
+                        <p class="ds-mini-eyebrow">Decisión de precios</p>
+                        <h2>Revisión de rentabilidad</h2>
+                        <p>Detecta productos cuyo costo cambió, compara el margen histórico real con el margen actual y prioriza qué precios conviene revisar.</p>
+                    </div>
+                    <div class="ds-price-review-settings">
+                        <label>
+                            <span>Margen bruto objetivo</span>
+                            <div class="ds-percent-input">
+                                <input type="number" id="revision-margen-objetivo" min="1" max="95" step="1" value="40">
+                                <span>%</span>
+                            </div>
+                        </label>
+                        <label>
+                            <span>Alerta desde</span>
+                            <div class="ds-percent-input">
+                                <input type="number" id="revision-caida-alerta" min="1" max="50" step="1" value="5">
+                                <span>pts</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="ds-price-review-kpis">
+                    <article class="ds-review-kpi is-good">
+                        <span>Correctos</span>
+                        <strong id="revision-kpi-correctos">—</strong>
+                        <small>En objetivo o sin deterioro relevante</small>
+                    </article>
+                    <article class="ds-review-kpi is-review">
+                        <span>Para revisar</span>
+                        <strong id="revision-kpi-revisar">—</strong>
+                        <small>Margen por debajo del objetivo</small>
+                    </article>
+                    <article class="ds-review-kpi is-critical">
+                        <span>Críticos</span>
+                        <strong id="revision-kpi-criticos">—</strong>
+                        <small>Caída fuerte o margen muy bajo</small>
+                    </article>
+                    <article class="ds-review-kpi is-impact">
+                        <span>Impacto mensual estimado</span>
+                        <strong id="revision-kpi-impacto">—</strong>
+                        <small>Erosión de utilidad con el volumen reciente</small>
+                    </article>
+                </div>
+
+                <div class="ds-price-review-toolbar">
+                    <div class="ds-price-review-search">
+                        <span aria-hidden="true">⌕</span>
+                        <input type="search" id="revision-busqueda" placeholder="Buscar producto…" autocomplete="off">
+                    </div>
+                    <div class="ds-price-review-filters" id="revision-filtros">
+                        <button type="button" class="is-active" data-review-filter="todos">Todos</button>
+                        <button type="button" data-review-filter="critical">Críticos</button>
+                        <button type="button" data-review-filter="review">Revisar</button>
+                        <button type="button" data-review-filter="good">Correctos</button>
+                    </div>
+                </div>
+
+                <div class="ds-price-review-table-wrap">
+                    <table class="ds-price-review-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Precio actual</th>
+                                <th>Margen histórico</th>
+                                <th>Margen actual</th>
+                                <th>Cambio</th>
+                                <th>Impacto 30d</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="revision-precios-body">
+                            <tr><td colspan="7" class="ds-review-empty">Analizando costos y ventas…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
             <!-- Panel de Control para Descargas PDF -->
             <section class="card">
@@ -84,6 +166,66 @@
         </main>
     </div>
     
+    <div id="revision-precio-modal" class="modal-overlay">
+        <div class="modal-content card ds-price-review-modal">
+            <div class="ds-review-modal-head">
+                <div>
+                    <p class="ds-mini-eyebrow">Análisis de producto</p>
+                    <h2 id="revision-modal-producto">Producto</h2>
+                    <p id="revision-modal-categoria">—</p>
+                </div>
+                <button type="button" id="revision-modal-cerrar" class="ds-modal-close-btn" aria-label="Cerrar">×</button>
+            </div>
+
+            <div class="ds-review-modal-numbers">
+                <div>
+                    <span>Precio actual</span>
+                    <strong id="revision-modal-precio">—</strong>
+                </div>
+                <div>
+                    <span>Costo actual</span>
+                    <strong id="revision-modal-costo">—</strong>
+                </div>
+                <div>
+                    <span>Margen actual</span>
+                    <strong id="revision-modal-margen-actual">—</strong>
+                </div>
+                <div>
+                    <span>Margen histórico</span>
+                    <strong id="revision-modal-margen-historico">—</strong>
+                </div>
+            </div>
+
+            <div class="ds-review-recommendation">
+                <div>
+                    <span>Precio sugerido para recuperar el objetivo</span>
+                    <strong id="revision-modal-sugerido">—</strong>
+                    <small id="revision-modal-diferencia">—</small>
+                </div>
+                <div class="ds-review-target-pill" id="revision-modal-objetivo">Objetivo —</div>
+            </div>
+
+            <div class="ds-review-detail-grid">
+                <section>
+                    <h3>Qué movió el costo</h3>
+                    <div id="revision-modal-insumos" class="ds-review-materials"></div>
+                </section>
+                <section>
+                    <h3>Ventas recientes</h3>
+                    <div id="revision-modal-ventas" class="ds-review-sales-summary"></div>
+                </section>
+            </div>
+
+            <div class="ds-review-last-decision" id="revision-modal-ultima-decision" hidden></div>
+
+            <div class="modal-actions ds-review-modal-actions">
+                <button type="button" id="revision-btn-mantener" class="btn-secondary">Mantener precio</button>
+                <button type="button" id="revision-btn-personalizado" class="btn-secondary">Definir otro precio</button>
+                <button type="button" id="revision-btn-aplicar" class="btn-primary">Aplicar sugerencia</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";

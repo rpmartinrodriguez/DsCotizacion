@@ -6,7 +6,7 @@
     <title>Finanzas · Dulce Sall Admin</title>
 
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="stylesheet" href="css/app-v2.css?v=26">
     <link rel="manifest" href="manifest.json">
 
     <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-192.png?v=2">
@@ -39,21 +39,112 @@
                     <div>
                         <p class="ds-eyebrow">Administración</p>
                         <h1>Finanzas</h1>
-                        <p>Ingresos, costos de producción, compras de stock y resultado estimado por período.</p>
+                        <p>Resultado mensual del negocio y carga manual de costos fijos y variables.</p>
                     </div>
-                    <div class="ds-content-actions">
+
+                </section>
+
+                <div class="ds-finance-tabs" role="tablist" aria-label="Secciones financieras">
+                    <button type="button" class="is-active" data-eerr-tab="resultados">Estado de resultados</button>
+                    <button type="button" data-eerr-tab="gastos">Gastos operativos</button>
+                    <button type="button" data-eerr-tab="anterior">Informe anterior</button>
+                </div>
+
+                <section id="eerr-tab-resultados" class="ds-finance-section">
+                    <div class="ds-finance-report-head">
+                        <div>
+                            <h2>Estado de resultados mensual</h2>
+                            <p>Ingresos por ventas, costo de lo vendido y gastos del período. Tocá una categoría para ver los conceptos.</p>
+                        </div>
+                        <label for="eerr-mes">Mes
+                            <input id="eerr-mes" type="month">
+                        </label>
+                    </div>
+                    <p id="eerr-estado" class="ds-finance-hint" role="status">Cargando movimientos…</p>
+                    <div id="eerr-kpis" class="ds-eerr-kpis"></div>
+                    <div id="eerr-reporte" class="ds-eerr-report"></div>
+                    <p id="eerr-calidad" class="ds-eerr-quality"></p>
+                    <div class="ds-eerr-disclaimer">
+                        El resultado refleja las ventas registradas en Mostrador. Los anticipos de cuenta corriente no son ventas.
+                        No se duplican compras de inventario como gasto al mismo tiempo que el costo de producción de los productos vendidos.
+                        Ventas históricas sin costo congelado pueden requerir una estimación o impedir calcular el resultado completo.
+                        El IVA y las diferencias impositivas requieren conciliación contable antes de interpretar estas cifras como estado contable definitivo.
+                    </div>
+                </section>
+
+                <section id="eerr-tab-gastos" class="ds-finance-section" hidden>
+                    <div class="ds-finance-report-head">
+                        <div>
+                            <h2>Gastos mensuales</h2>
+                            <p>Cargá cada concepto según el mes al que corresponde, independientemente de cuándo se pague.</p>
+                        </div>
+                        <label for="eerr-mes-gastos">Mes
+                            <input id="eerr-mes-gastos" type="month">
+                        </label>
+                    </div>
+                    <p id="eerr-preview-notice" class="ds-cc-preview-notice" hidden>
+                        La carga, edición, eliminación y copia de gastos están temporalmente deshabilitadas
+                        hasta validar y activar las reglas financieras de Firebase.
+                    </p>
+                    <form id="eerr-gasto-form" class="ds-expense-form">
+                        <input type="hidden" id="eerr-gasto-id">
+                        <label>Concepto
+                            <input id="eerr-gasto-concepto" placeholder="Ej. Sueldos, Alquiler, electricidad…" maxlength="120" required>
+                        </label>
+                        <label>Categoría
+                            <select id="eerr-gasto-categoria" required>
+                                <option>Personal</option>
+                                <option>Alquiler y ocupación</option>
+                                <option>Servicios</option>
+                                <option>Impuestos y tasas</option>
+                                <option>Administración</option>
+                                <option>Comercialización</option>
+                                <option>Variables</option>
+                                <option>Otros</option>
+                            </select>
+                        </label>
+                        <label>Tipo
+                            <select id="eerr-gasto-tipo">
+                                <option value="fijo">Fijo</option>
+                                <option value="variable">Variable</option>
+                            </select>
+                        </label>
+                        <label>Importe (ARS)
+                            <input id="eerr-gasto-monto" type="text" inputmode="decimal" autocomplete="off" required placeholder="Ej. 2.100.000,00">
+                        </label>
+                        <label>Observación (opcional)
+                            <input id="eerr-gasto-nota" maxlength="250" placeholder="Detalle del mes">
+                        </label>
+                        <div class="ds-expense-actions">
+                            <button type="submit" id="eerr-gasto-guardar" class="btn-primary">Agregar gasto</button>
+                            <button type="button" id="eerr-gasto-cancelar" class="btn-secondary" hidden>Cancelar edición</button>
+                        </div>
+                    </form>
+                    <div class="ds-expense-toolbar">
+                        <h3>Conceptos cargados</h3>
+                        <button type="button" id="eerr-copiar-anterior" class="btn-secondary">Copiar gastos del mes anterior</button>
+                    </div>
+                    <div id="eerr-gastos-lista"></div>
+                    <p id="eerr-gastos-estado" class="ds-finance-hint" role="status"></p>
+                </section>
+
+                <section id="eerr-tab-anterior" class="ds-finance-section" hidden>
+                    <div class="ds-finance-report-head">
+                        <h2>Reporte heredado de presupuestos y compras</h2>
+                        <div class="ds-content-actions">
                         <div class="ds-select-wrap">
                             <select id="filtro-mes-finanzas" class="ds-select">
                                 <option value="todos">Todos los tiempos</option>
                             </select>
                         </div>
                     </div>
-                </section>
-
-                <section class="card ds-finance-report">
-                    <div class="reporte-financiero" id="reporte-financiero-container">
-                        <p>Calculando reporte…</p>
                     </div>
+                    <p class="ds-eerr-disclaimer">Informe heredado. Mezcla presupuestos y compras de stock: no debe interpretarse como utilidad neta, porque puede duplicar costos de producción. Usá el nuevo EERR para decisiones.</p>
+                    <section class="card ds-finance-report">
+                        <div class="reporte-financiero" id="reporte-financiero-container">
+                            <p>Calculando reporte anterior…</p>
+                        </div>
+                    </section>
                 </section>
             </div>
         </main>
@@ -63,10 +154,12 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupFinanzas } from './js/finanzas.js';
+        import { setupEstadoResultados } from './js/finanzas/eerr.js?v=3';
 
         try {
             const app = initializeApp(firebaseConfig);
             setupFinanzas(app);
+            setupEstadoResultados(app);
         } catch (error) {
             console.error(error);
         }

@@ -6,7 +6,7 @@
     <title>Cajas · Dulce Sall Admin</title>
     
     <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="stylesheet" href="css/app-v2.css?v=26">
     <link rel="manifest" href="manifest.json">
 
     <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-192.png?v=2">
@@ -100,6 +100,7 @@
             <div class="tabs-container">
                 <button class="tab-btn active" id="tab-btn-historial">🗃️ Historial y Facturación</button>
                 <button class="tab-btn" id="tab-btn-estadisticas">📊 Estadísticas del Negocio</button>
+                <button class="tab-btn" id="tab-btn-decisiones">✦ Centro de decisiones</button>
             </div>
 
             <!-- SECCIÓN 1: HISTORIAL Y FACTURACIÓN -->
@@ -108,7 +109,7 @@
                     <div class="ds-billing-head">
                         <div>
                             <h2>Facturación de Mercado Pago</h2>
-                            <p>Calculá lo ingresado, lo ya facturado y el saldo pendiente del período.</p>
+                            <p>Conciliá todo el dinero recibido por Mercado Pago, incluidos anticipos de cuenta corriente. Los anticipos pueden tener tratamiento fiscal propio: verificá su facturación con tu contador antes de marcar un turno como facturado.</p>
                         </div>
                         <span class="ds-billing-badge">MP</span>
                     </div>
@@ -366,6 +367,67 @@
 
                 </div>
             </div>
+
+            <!-- SECCIÓN 3: CENTRO DE DECISIONES -->
+            <section id="section-decisiones" class="ds-decision-center" style="display: none;">
+                <div class="ds-decision-head">
+                    <div>
+                        <p class="ds-eyebrow">Inteligencia comercial · Dulce Sall</p>
+                        <h2>Centro de decisiones</h2>
+                        <p>Señales, riesgos y oportunidades basadas en operaciones registradas. Las recomendaciones son orientativas: no modifican datos ni precios.</p>
+                    </div>
+                    <div class="ds-decision-controls">
+                        <label for="decision-periodo">Período</label>
+                        <select id="decision-periodo">
+                            <option value="7">Últimos 7 días</option>
+                            <option value="30" selected>Últimos 30 días</option>
+                            <option value="90">Últimos 90 días</option>
+                        </select>
+                        <button type="button" id="decision-recalcular" class="ds-action-primary">Actualizar análisis</button>
+                    </div>
+                </div>
+                <p id="decision-estado" class="ds-decision-status" role="status">Seleccioná esta pestaña para analizar los datos del negocio.</p>
+                <div id="decision-contenido" hidden>
+                    <section class="ds-decision-kpis" aria-label="Indicadores principales">
+                        <article><span>Ventas registradas</span><strong id="decision-ventas">—</strong><small id="decision-ventas-cambio">vs. período anterior</small></article>
+                        <article><span>Tickets</span><strong id="decision-tickets">—</strong><small id="decision-tickets-cambio">vs. período anterior</small></article>
+                        <article><span>Ticket promedio</span><strong id="decision-ticket-promedio">—</strong><small id="decision-ticket-cambio">vs. período anterior</small></article>
+                        <article><span>Margen bruto documentado</span><strong id="decision-margen">—</strong><small id="decision-cobertura">Cobertura del costo histórico</small></article>
+                    </section>
+
+                    <section class="ds-decision-main-grid">
+                        <article class="ds-decision-panel">
+                            <div class="ds-decision-panel-head">
+                                <div><h3>Recomendaciones priorizadas</h3><p>Qué pasó, evidencia y siguiente paso sugerido</p></div>
+                                <span id="decision-alertas-contador" class="ds-decision-count">—</span>
+                            </div>
+                            <div id="decision-alertas" class="ds-decision-alerts"></div>
+                        </article>
+                        <article class="ds-decision-panel">
+                            <div class="ds-decision-panel-head">
+                                <div><h3>Evolución y demanda</h3><p>Facturación diaria del período seleccionado</p></div>
+                            </div>
+                            <div class="ds-decision-chart-wrap"><canvas id="decision-chart-ventas" aria-label="Evolución diaria de ventas" role="img"></canvas></div>
+                            <div id="decision-chart-fallback" class="ds-decision-muted" hidden>Gráfico no disponible.</div>
+                            <div class="ds-decision-subheading">Promedio por día de la semana</div>
+                            <div id="decision-dias" class="ds-decision-weekdays"></div>
+                        </article>
+                    </section>
+
+                    <section class="ds-decision-bottom-grid">
+                        <article class="ds-decision-panel">
+                            <div class="ds-decision-panel-head"><div><h3>Productos que sostienen las ventas</h3><p>Ranking por facturación, con concentración de ingresos</p></div></div>
+                            <div id="decision-top-productos" class="ds-decision-ranking"></div>
+                            <p id="decision-concentracion" class="ds-decision-muted"></p>
+                        </article>
+                        <article class="ds-decision-panel">
+                            <div class="ds-decision-panel-head"><div><h3>Calidad de los datos</h3><p>Qué podemos afirmar y qué todavía debemos medir</p></div></div>
+                            <div id="decision-calidad" class="ds-decision-quality"></div>
+                            <p class="ds-decision-footnote">El margen mostrado es bruto sobre ventas con costo guardado, no ganancia neta. No incluye necesariamente sueldos, alquileres, impuestos, servicios ni mermas. Las cifras de Cajas y los presupuestos pueden pertenecer a flujos distintos.</p>
+                        </article>
+                    </section>
+                </div>
+            </section>
             </div>
         </main>
     </div>
@@ -455,7 +517,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=14';
+        import { setupCajas } from './js/cajas.js?v=16';
         
         try {
             const app = initializeApp(firebaseConfig);

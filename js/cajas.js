@@ -13,6 +13,7 @@ import {
 import { cashMetricsInfo as infoDiccionario } from "./data/cash-metrics-info.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { calculateRecipeUnitCost } from "./core/pricing.js";
+import { setupDecisionCenter } from "./cajas/decision-center.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
@@ -35,8 +36,11 @@ export function setupCajas(app) {
 
     const tabBtnHistorial = document.getElementById('tab-btn-historial');
     const tabBtnEstadisticas = document.getElementById('tab-btn-estadisticas');
+    const tabBtnDecisiones = document.getElementById('tab-btn-decisiones');
     const sectionHistorial = document.getElementById('section-historial');
     const sectionEstadisticas = document.getElementById('section-estadisticas');
+    const sectionDecisiones = document.getElementById('section-decisiones');
+    const decisionCenter = setupDecisionCenter(db);
 
     const modalInfo = document.getElementById('modal-info');
     const infoTitle = document.getElementById('info-title');
@@ -121,25 +125,52 @@ export function setupCajas(app) {
     // ==========================================
     // 2. GESTIÓN DE PESTAÑAS (TABS)
     // ==========================================
-    if (tabBtnHistorial && tabBtnEstadisticas) {
-        tabBtnHistorial.addEventListener('click', () => {
-            tabBtnHistorial.classList.add('active');
-            tabBtnEstadisticas.classList.remove('active');
-            if (sectionHistorial) sectionHistorial.style.display = 'block';
-            if (sectionEstadisticas) sectionEstadisticas.style.display = 'none';
-        });
+    const setActiveTab = (tab, { updateHash = true } = {}) => {
+        const safeTab = ['historial', 'estadisticas', 'decisiones'].includes(tab)
+            ? tab
+            : 'historial';
 
-        tabBtnEstadisticas.addEventListener('click', () => {
-            tabBtnEstadisticas.classList.add('active');
-            tabBtnHistorial.classList.remove('active');
-            if (sectionHistorial) sectionHistorial.style.display = 'none';
-            if (sectionEstadisticas) sectionEstadisticas.style.display = 'block';
+        const options = [
+            { key: 'historial', button: tabBtnHistorial, section: sectionHistorial },
+            { key: 'estadisticas', button: tabBtnEstadisticas, section: sectionEstadisticas },
+            { key: 'decisiones', button: tabBtnDecisiones, section: sectionDecisiones }
+        ];
 
-            if(!statsYaCargadas) {
-                generarDashboard();
-                statsYaCargadas = true;
+        options.forEach(option => {
+            option.button?.classList.toggle('active', option.key === safeTab);
+            option.button?.setAttribute('aria-selected', String(option.key === safeTab));
+            if (option.section) {
+                option.section.style.display = option.key === safeTab ? 'block' : 'none';
             }
         });
+
+        if (safeTab === 'estadisticas' && !statsYaCargadas) {
+            generarDashboard();
+            statsYaCargadas = true;
+        }
+        if (safeTab === 'decisiones') {
+            decisionCenter.show();
+        }
+
+        if (updateHash && window.history?.replaceState) {
+            window.history.replaceState(null, '', `#${safeTab}`);
+        }
+    };
+
+    tabBtnHistorial?.addEventListener('click', () => setActiveTab('historial'));
+    tabBtnEstadisticas?.addEventListener('click', () => setActiveTab('estadisticas'));
+    tabBtnDecisiones?.addEventListener('click', () => setActiveTab('decisiones'));
+
+    window.addEventListener('hashchange', () => {
+        const tab = window.location.hash.slice(1);
+        if (['historial', 'estadisticas', 'decisiones'].includes(tab)) {
+            setActiveTab(tab, { updateHash: false });
+        }
+    });
+
+    const initialTab = window.location.hash.slice(1);
+    if (['estadisticas', 'decisiones'].includes(initialTab)) {
+        setActiveTab(initialTab, { updateHash: false });
     }
 
     const btnCargarStats = document.getElementById('btn-cargar-stats');
@@ -217,11 +248,11 @@ export function setupCajas(app) {
                                 <span>${formatMoneda(fondo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas Efvo.</span>
+                                <span>Ingresos efvo. (incluye anticipos)</span>
                                 <span style="color: var(--success-color);">${formatMoneda(efvo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas MP</span>
+                                <span>Ingresos MP (incluye anticipos)</span>
                                 <div>
                                     <span style="color: var(--success-color); display: block; margin-bottom: 0.3rem;">${formatMoneda(mp)}</span>
                                     <button class="btn-facturado ${btnFacturadoClass}" data-id="${safeCajaId}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
@@ -229,6 +260,18 @@ export function setupCajas(app) {
                                     </button>
                                 </div>
                             </div>
+                            ${((Number(caja.anticiposCC_Efectivo) || 0)
+                                + (Number(caja.anticiposCC_MercadoPago) || 0)
+                                + (Number(caja.ventasCuentaCorriente) || 0)) > 0 ? `
+                                <div class="caja-resumen-item">
+                                    <span>Anticipos C/C recibidos</span>
+                                    <span>${formatMoneda((Number(caja.anticiposCC_Efectivo) || 0) + (Number(caja.anticiposCC_MercadoPago) || 0))}</span>
+                                </div>
+                                <div class="caja-resumen-item">
+                                    <span>Ventas abonadas con saldo C/C</span>
+                                    <span>${formatMoneda(Number(caja.ventasCuentaCorriente) || 0)}</span>
+                                </div>
+                            ` : ''}
                             <div class="caja-resumen-item" style="border-left: 2px solid var(--border-color); padding-left: 1rem;">
                                 <span>Efectivo Físico</span>
                                 <span style="color: var(--primary-color);">${formatMoneda(cajaFisica)}</span>
@@ -351,7 +394,10 @@ export function setupCajas(app) {
                     </div>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <span class="ticket-monto">${formatMoneda(venta.total)}</span>
-                        <button class="btn-editar-ticket-individual" data-id="${safeVentaId}" data-caja="${safeCajaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>
+                        ${venta.metodoPago === 'CuentaCorriente'
+                            ? '<small class="ds-ticket-margin">Cuenta corriente · no editable desde Cajas</small>'
+                            : `<button class="btn-editar-ticket-individual" data-id="${safeVentaId}" data-caja="${safeCajaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; color: #8b5cf6;" title="Editar o Eliminar Movimiento">✏️</button>`
+                        }
                     </div>
                 `;
                 container.appendChild(ticketDiv);
@@ -421,6 +467,16 @@ export function setupCajas(app) {
             const btn = e.target.closest('.btn-eliminar-caja');
             const cajaId = btn.dataset.id;
             
+            const cajaConAnticipos = [...todasLasCajas, ...cajasEliminadas]
+                .find(caja => caja.id === cajaId);
+            if (cajaConAnticipos &&
+                ((Number(cajaConAnticipos.anticiposCC_Efectivo) || 0) > 0
+                  || (Number(cajaConAnticipos.anticiposCC_MercadoPago) || 0) > 0
+                  || (Number(cajaConAnticipos.ventasCuentaCorriente) || 0) > 0)) {
+                alert('No se puede ocultar una caja que tiene anticipos o consumos de cuenta corriente. Se preserva la trazabilidad del saldo.');
+                return;
+            }
+
             if (!(await usuarioPuedeAdministrar())) {
                 alert("Tu usuario no tiene permisos para eliminar una caja.");
                 return;
@@ -586,10 +642,15 @@ export function setupCajas(app) {
             try {
                 await runTransaction(db, async (transaction) => {
                     const ticketRef = doc(db, 'ventasMostrador', ticketId);
+                    const cajaRef = doc(db, 'cajas', cajaId);
                     const ticketDoc = await transaction.get(ticketRef);
+                    const cajaDoc = await transaction.get(cajaRef);
                     if (!ticketDoc.exists()) throw "Ticket no encontrado";
-                    
+
                     const tData = ticketDoc.data();
+                    if (tData.metodoPago === 'CuentaCorriente') {
+                        throw new Error('Los consumos de saldo no se pueden editar desde Cajas.');
+                    }
                     const viejoMetodo = tData.metodoPago;
                     const viejoTotal = tData.total || 0;
 
@@ -687,8 +748,6 @@ export function setupCajas(app) {
                     transaction.update(ticketRef, ticketUpdate);
 
                     // Actualizamos la caja
-                    const cajaRef = doc(db, 'cajas', cajaId);
-                    const cajaDoc = await transaction.get(cajaRef);
                     if(cajaDoc.exists()) {
                         const cData = cajaDoc.data();
                         transaction.update(cajaRef, {
@@ -733,7 +792,10 @@ export function setupCajas(app) {
                     if (!ticketDoc.exists()) throw "El ticket ya no existe.";
                     
                     const tData = ticketDoc.data();
-                    
+                    if (tData.metodoPago === 'CuentaCorriente') {
+                        throw new Error('Los consumos de saldo no se pueden eliminar desde Cajas.');
+                    }
+
                     let aRestarEfvo = 0; let aRestarMP = 0;
                     if (tData.metodoPago === 'Efectivo') aRestarEfvo = tData.total;
                     else if (tData.metodoPago === 'MercadoPago') aRestarMP = tData.total;
@@ -875,7 +937,10 @@ export function setupCajas(app) {
                     const dCaja = caja.fechaApertura.toDate();
                     
                     if (dCaja >= dInicio && dCaja <= dFin) {
-                        const mp = caja.totalMercadoPago || 0;
+                        // Conciliación de fondos MP: incluye anticipos de cuenta
+                        // corriente. Su obligación de facturación fiscal debe
+                        // determinarse según el comprobante y asesoramiento contable.
+                        const mp = Number(caja.totalMercadoPago) || 0;
                         acumuladoTotalMP += mp;
                         
                         if (caja.facturadoMP === true) {
@@ -1090,7 +1155,13 @@ export function setupCajas(app) {
                 if(c.fechaApertura) {
                     let diaCorta = formatearFechaCorta(c.fechaApertura);
                     let diaSemana = c.fechaApertura.toDate().getDay();
-                    let totalDia = (c.totalEfectivo || 0) + (c.totalMercadoPago || 0);
+                    // La caja física incluye anticipos. En ventas se resta el
+                    // ingreso diferido y se agrega el consumo de saldo.
+                    let totalDia = (Number(c.totalEfectivo) || 0)
+                        + (Number(c.totalMercadoPago) || 0)
+                        - (Number(c.anticiposCC_Efectivo) || 0)
+                        - (Number(c.anticiposCC_MercadoPago) || 0)
+                        + (Number(c.ventasCuentaCorriente) || 0);
                     
                     ventasDiariasMap[diaCorta] = (ventasDiariasMap[diaCorta] || 0) + totalDia;
                     diasSemanaConteo[diaSemana]++;

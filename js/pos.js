@@ -10,6 +10,8 @@ import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
 import { setupPOSInventory } from "./pos/inventory.js";
+import { setupCurrentAccount } from "./pos/current-account.js?v=4";
+import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -44,6 +46,14 @@ export function setupPOS(app) {
     const carritoContainer = document.getElementById('carrito-pos-container');
     const posTotalMonto = document.getElementById('pos-total-monto');
     const btnCobrar = document.getElementById('btn-cobrar');
+    const posCobrarMonto = document.getElementById('pos-cobrar-monto');
+    const posCartCount = document.getElementById('pos-cart-count');
+    const btnVaciarCarrito = document.getElementById('btn-vaciar-carrito');
+    const categoryChips = document.getElementById('pos-category-chips');
+    const mobileBar = document.getElementById('pos-mobile-bar');
+    const btnMobileProductos = document.getElementById('btn-mobile-productos');
+    const btnMobileCarrito = document.getElementById('btn-mobile-carrito');
+    const mobileCartSummary = document.getElementById('pos-mobile-cart-summary');
 
     const modalCobro = document.getElementById('modal-cobro');
     const modalCobroTotal = document.getElementById('modal-cobro-total');
@@ -111,13 +121,80 @@ export function setupPOS(app) {
     let margenGlobal = 0; 
     let totalVentaActual = 0;
     let saldoTurnoAnteriorDetectado = 0;
+    let categoriaActivaPOS = 'todos';
+    let terminoBusquedaPOS = '';
+    let topVendidosKeys = new Set();
+    let topVendidosCargados = false;
+    let cuentaCorrienteClienteId = null;
+    let pendingCheckout = null;
+    const ccScreen = document.getElementById('pantalla-cuenta-corriente');
+    const ccBanner = document.getElementById('cc-venta-banner');
+    const ccBannerName = document.getElementById('cc-venta-cliente');
+    const ccBannerBalance = document.getElementById('cc-venta-saldo');
+    const ccExitMode = document.getElementById('cc-salir-modo');
+    const ccPaymentInfo = document.getElementById('cc-confirmacion');
+    const ccPaymentName = document.getElementById('cc-confirmar-nombre');
+    const ccPaymentBalance = document.getElementById('cc-confirmar-saldo');
+    const paymentMethodsContainer = document.getElementById('pos-payment-methods');
+    const paymentHeading = document.getElementById('pos-payment-heading');
+
+    const currentAccount = setupCurrentAccount({
+        db,
+        getCaja: () => cajaActiva,
+        getUser: () => currentUser,
+        getUserName: () => userName,
+        onOpen: () => {
+            // La consulta de saldos/historial no requiere caja abierta.
+            if (pantallaApertura) pantallaApertura.style.display = 'none';
+            if (pantallaPOS) pantallaPOS.style.display = 'none';
+            if (pantallaStock) pantallaStock.style.display = 'none';
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
+            if (ccScreen) ccScreen.style.display = 'block';
+            actualizarMobileBarVisibility();
+        },
+        onReturn: () => {
+            if (ccScreen) ccScreen.style.display = 'none';
+            if (pantallaPOS) pantallaPOS.style.display = cajaActiva?.id ? 'grid' : 'none';
+            if (pantallaApertura) pantallaApertura.style.display = cajaActiva?.id ? 'none' : 'block';
+            actualizarMobileBarVisibility();
+        },
+        onAccountsUpdated: () => {
+            actualizarMobileBarVisibility();
+            if (modalCobro?.classList.contains('visible')
+                && metodoPagoSeleccionado === 'CuentaCorriente') {
+                calcularVuelto();
+            }
+        },
+        onSelectForSale: client => {
+            if (carritoActual.length > 0 && cuentaCorrienteClienteId !== client.id) {
+                alert('Ya existe una venta en preparación. Finalizala o vaciala antes de cambiar de cliente.');
+                return false;
+            }
+            cuentaCorrienteClienteId = client.id;
+            renderizarCarrito();
+            actualizarMobileBarVisibility();
+            return true;
+        }
+    });
+    const getCuentaCorrienteActiva = () =>
+        cuentaCorrienteClienteId
+            ? currentAccount.currentById(cuentaCorrienteClienteId)
+            : null;
+
+    ccExitMode?.addEventListener('click', () => {
+        cuentaCorrienteClienteId = null;
+        renderizarCarrito();
+        actualizarMobileBarVisibility();
+    });
 
     const manualHistory = setupManualHistory({
         db,
         cajasCollection,
         ventasCollection,
         getCurrentUser: () => currentUser,
-        getUserName: () => userName
+        getUserName: () => userName,
+        onViewChange: () => actualizarMobileBarVisibility()
     });
 
     const inventory = setupPOSInventory({
@@ -236,9 +313,10 @@ export function setupPOS(app) {
                 cajaActiva = { id: cajaDoc.id, ...cajaDoc.data() };
                 if (pantallaApertura) pantallaApertura.style.display = 'none';
                 
-                if (pantallaStock && pantallaStock.style.display === 'block' || 
+                if ((pantallaStock && pantallaStock.style.display === 'block') ||
                    (pantallaPromociones && pantallaPromociones.style.display === 'block') ||
-                   (pantallaCargaHistorica && pantallaCargaHistorica.style.display === 'block')) {
+                   (pantallaCargaHistorica && pantallaCargaHistorica.style.display === 'block') ||
+                   (ccScreen && ccScreen.style.display === 'block')) {
                     if (pantallaPOS) pantallaPOS.style.display = 'none';
                 } else {
                     if (pantallaPOS) pantallaPOS.style.display = 'grid';
@@ -247,6 +325,8 @@ export function setupPOS(app) {
                     if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
                 }
                 
+                actualizarMobileBarVisibility();
+
                 if (!datosCargados) {
                     cargarDataYCostos();
                     datosCargados = true;
@@ -254,11 +334,15 @@ export function setupPOS(app) {
             } else {
                 cajaActiva = null;
                 datosCargados = false;
+                cuentaCorrienteClienteId = null;
+                const viendoCuenta = ccScreen?.style.display === 'block';
+                if (ccScreen && !viendoCuenta) ccScreen.style.display = 'none';
                 if (pantallaPOS) pantallaPOS.style.display = 'none';
                 if (pantallaStock) pantallaStock.style.display = 'none';
                 if (pantallaPromociones) pantallaPromociones.style.display = 'none';
                 if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
-                if (pantallaApertura) pantallaApertura.style.display = 'block';
+                if (pantallaApertura) pantallaApertura.style.display = viendoCuenta ? 'none' : 'block';
+                actualizarMobileBarVisibility();
                 buscarSaldoTurnoAnterior(); 
             }
         });
@@ -357,9 +441,11 @@ export function setupPOS(app) {
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
+            actualizarMobileBarVisibility();
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
             pantallaStock.style.display = 'block';
+            window.scrollTo(0, 0);
             procesarYRenderizar();
         });
     }
@@ -367,10 +453,12 @@ export function setupPOS(app) {
     if (btnIrPromos) {
         btnIrPromos.addEventListener('click', () => {
             pantallaPOS.style.display = 'none';
+            actualizarMobileBarVisibility();
             pantallaStock.style.display = 'none';
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
             if (pantallaPromociones) {
                 pantallaPromociones.style.display = 'block';
+                window.scrollTo(0, 0);
                 if (selectPromoProd) {
                     selectPromoProd.innerHTML = '';
                     productosDisponibles.forEach((product) => {
@@ -390,6 +478,8 @@ export function setupPOS(app) {
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
             pantallaPOS.style.display = 'grid';
+            actualizarMobileBarVisibility();
+            window.scrollTo(0, 0);
             procesarYRenderizar();
             if (buscadorPOS) buscadorPOS.focus();
         });
@@ -399,6 +489,8 @@ export function setupPOS(app) {
         btnVolverMostradorPromos.addEventListener('click', () => {
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaPOS.style.display = 'grid';
+            actualizarMobileBarVisibility();
+            window.scrollTo(0, 0);
             if (buscadorPOS) buscadorPOS.focus();
         });
     }
@@ -406,7 +498,162 @@ export function setupPOS(app) {
     // ==========================================
     // CARGA Y RENDERIZADO
     // ==========================================
+    const normalizarTextoPOS = (value) =>
+        String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+
+    const claveProductoPOS = (prod) => {
+        if (prod?.id) return `id:${prod.id}`;
+        return `name:${normalizarTextoPOS(prod?.nombreTorta)}`;
+    };
+
+    const esTopVendido = (prod) => topVendidosKeys.has(claveProductoPOS(prod));
+
+    const obtenerCategoriaPOS = (prod) =>
+        String(prod?.categoria || 'Otros').trim() || 'Otros';
+
+    const coincideBusquedaPOS = (prod, termino) => {
+        if (!termino) return true;
+
+        const aliases = Array.isArray(prod?.aliases)
+            ? prod.aliases.join(' ')
+            : String(prod?.aliases || prod?.alias || '');
+
+        const haystack = normalizarTextoPOS([
+            prod?.nombreTorta,
+            prod?.codigoBarras,
+            prod?.categoria,
+            aliases
+        ].filter(Boolean).join(' '));
+
+        return haystack.includes(termino);
+    };
+
+    const renderizarFiltrosCategorias = () => {
+        if (!categoryChips) return;
+
+        const categorias = [...new Set(
+            productosDisponibles
+                .map(obtenerCategoriaPOS)
+                .filter(Boolean)
+        )].sort((a, b) => a.localeCompare(b, 'es'));
+
+        const botones = [
+            { value: 'todos', label: 'Todos' }
+        ];
+
+        if (topVendidosKeys.size > 0) {
+            botones.push({ value: 'top', label: 'Más vendidos', top: true });
+        }
+
+        categorias.forEach(categoria => {
+            botones.push({ value: `cat:${categoria}`, label: categoria });
+        });
+
+        const valoresDisponibles = new Set(botones.map(item => item.value));
+        if (!valoresDisponibles.has(categoriaActivaPOS)) {
+            categoriaActivaPOS = 'todos';
+        }
+
+        categoryChips.innerHTML = botones.map(item => `
+            <button
+                type="button"
+                class="ds-pos-category-chip ${item.top ? 'is-top' : ''} ${categoriaActivaPOS === item.value ? 'is-active' : ''}"
+                data-pos-category="${escapeAttribute(item.value)}"
+            >${escapeHtml(item.label)}</button>
+        `).join('');
+    };
+
+    const obtenerProductosFiltradosPOS = () => {
+        const termino = normalizarTextoPOS(terminoBusquedaPOS);
+
+        return productosDisponibles.filter(prod => {
+            const coincideCategoria =
+                categoriaActivaPOS === 'todos'
+                || (categoriaActivaPOS === 'top' && esTopVendido(prod))
+                || (
+                    categoriaActivaPOS.startsWith('cat:')
+                    && obtenerCategoriaPOS(prod) === categoriaActivaPOS.slice(4)
+                );
+
+            return coincideCategoria && coincideBusquedaPOS(prod, termino);
+        });
+    };
+
+    const aplicarFiltrosPOS = () => {
+        renderizarFiltrosCategorias();
+        renderizarGridPOS(obtenerProductosFiltradosPOS());
+    };
+
+    const cargarMasVendidos = async () => {
+        try {
+            const ventasSnap = await getDocs(
+                query(ventasCollection, orderBy('fecha', 'desc'), limit(200))
+            );
+
+            const conteo = new Map();
+
+            ventasSnap.forEach(ventaDoc => {
+                const venta = ventaDoc.data() || {};
+                const items = Array.isArray(venta.items) ? venta.items : [];
+
+                items.forEach(item => {
+                    const key = item?.id
+                        ? `id:${item.id}`
+                        : `name:${normalizarTextoPOS(item?.nombre)}`;
+
+                    if (!key || key === 'name:') return;
+                    conteo.set(key, (conteo.get(key) || 0) + (Number(item.cantidad) || 0));
+                });
+            });
+
+            topVendidosKeys = new Set(
+                [...conteo.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 8)
+                    .map(([key]) => key)
+            );
+        } catch (error) {
+            console.warn('No se pudieron calcular los más vendidos:', error);
+            topVendidosKeys = new Set();
+        }
+
+        if (pantallaPOS && pantallaPOS.style.display !== 'none') {
+            aplicarFiltrosPOS();
+        }
+    };
+
+    const setMobilePOSPanel = (panel) => {
+        if (!pantallaPOS) return;
+        const mostrarCarrito = panel === 'carrito';
+        pantallaPOS.classList.toggle('is-mobile-cart', mostrarCarrito);
+        btnMobileProductos?.classList.toggle('is-active', !mostrarCarrito);
+        btnMobileCarrito?.classList.toggle('is-active', mostrarCarrito);
+    };
+
+    const actualizarMobileBarVisibility = () => {
+        if (pantallaPOS) {
+            const onPOS = pantallaPOS.style.display !== 'none';
+            const client = getCuentaCorrienteActiva();
+            if (mobileBar) mobileBar.hidden = !onPOS;
+            if (ccBanner) ccBanner.hidden = !onPOS || !client;
+            if (client) {
+                if (ccBannerName) ccBannerName.textContent = client.nombre || 'Cliente';
+                if (ccBannerBalance) ccBannerBalance.textContent =
+                    `Saldo disponible: ${formatMoneda((Number(client.saldoCentavos) || 0) / 100)}`;
+            }
+        }
+    };
+
     const cargarDataYCostos = () => {
+        if (!topVendidosCargados) {
+            topVendidosCargados = true;
+            cargarMasVendidos();
+        }
+
         onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
             snapshot.forEach(doc => materiasPrimasMap.set(doc.id, doc.data()));
@@ -437,7 +684,8 @@ export function setupPOS(app) {
         });
 
         if (pantallaPOS && pantallaPOS.style.display !== 'none') {
-            renderizarGridPOS(productosDisponibles);
+            aplicarFiltrosPOS();
+            actualizarMobileBarVisibility();
         } 
         inventory.setProducts(productosDisponibles);
         manualHistory.setProducts(productosDisponibles);
@@ -449,22 +697,36 @@ export function setupPOS(app) {
     const renderizarGridPOS = (productos) => {
         if (!gridProductos) return;
         gridProductos.innerHTML = '';
+
+        if (!productos.length) {
+            gridProductos.innerHTML = `
+                <div class="ds-pos-no-results">
+                    <strong>No encontré productos</strong>
+                    <span>Probá con otra búsqueda o categoría.</span>
+                </div>
+            `;
+            return;
+        }
         
         productos.forEach(prod => {
-            const stock = prod.stockMostrador || 0;
             const precioCalculado = prod.precioCalculado;
+            const categoria = obtenerCategoriaPOS(prod);
+            const popular = esTopVendido(prod);
             
-            const card = document.createElement('div');
+            const card = document.createElement('button');
+            card.type = 'button';
             card.className = 'producto-card';
             card.dataset.id = prod.id;
+            card.setAttribute('aria-label', `Agregar ${prod.nombreTorta} por ${formatMoneda(precioCalculado)}`);
             
             card.innerHTML = `
-                <div class="prod-nombre">${escapeHtml(prod.nombreTorta)}</div>
+                <div class="ds-pos-card-top">
+                    <div class="prod-nombre">${escapeHtml(prod.nombreTorta)}</div>
+                    ${popular ? '<span class="ds-pos-card-popular" title="Más vendido">★</span>' : ''}
+                </div>
                 <div>
                     <div class="prod-precio">${formatMoneda(precioCalculado)}</div>
-                    <div class="prod-stock ${stock <= 0 ? 'stock-informativo' : ''}">
-                        ${stock > 0 ? `${stock} registradas` : 'Venta habilitada · stock sin cargar'}
-                    </div>
+                    <span class="ds-pos-card-category">${escapeHtml(categoria)}</span>
                 </div>
             `;
             gridProductos.appendChild(card);
@@ -484,17 +746,22 @@ export function setupPOS(app) {
             });
         }
         renderizarCarrito();
+
+        const card = gridProductos
+            ? [...gridProductos.querySelectorAll('.producto-card')]
+                .find(item => item.dataset.id === String(prod.id))
+            : null;
+        if (card) {
+            card.classList.add('is-added');
+            window.setTimeout(() => card.classList.remove('is-added'), 260);
+        }
     };
 
     // Búsqueda
     if (buscadorPOS) {
         buscadorPOS.addEventListener('input', (e) => {
-            const termino = e.target.value.toLowerCase();
-            const filtrados = productosDisponibles.filter(p => 
-                (p.nombreTorta && p.nombreTorta.toLowerCase().includes(termino)) ||
-                (p.codigoBarras && String(p.codigoBarras).includes(termino))
-            );
-            renderizarGridPOS(filtrados);
+            terminoBusquedaPOS = e.target.value || '';
+            aplicarFiltrosPOS();
         });
 
         buscadorPOS.addEventListener('keydown', (e) => {
@@ -527,12 +794,24 @@ export function setupPOS(app) {
                 }
                 scanBuffer = '';
                 if (buscadorPOS) buscadorPOS.value = '';
-                renderizarGridPOS(productosDisponibles); 
+                terminoBusquedaPOS = '';
+                categoriaActivaPOS = 'todos';
+                aplicarFiltrosPOS(); 
             }
         } else {
             scanBuffer += e.key;
         }
     });
+
+    if (categoryChips) {
+        categoryChips.addEventListener('click', (event) => {
+            const button = event.target.closest('[data-pos-category]');
+            if (!button) return;
+
+            categoriaActivaPOS = button.dataset.posCategory || 'todos';
+            aplicarFiltrosPOS();
+        });
+    }
 
     // Clic en Tarjeta (Touch POS)
     if (gridProductos) {
@@ -547,41 +826,73 @@ export function setupPOS(app) {
         });
     }
 
-    // Renderizar Carrito y controles +/-
+    // Renderizar Carrito compacto y controles
     const renderizarCarrito = () => {
         if (!carritoContainer) return;
         carritoContainer.innerHTML = '';
+
+        const cantidadItems = carritoActual.reduce(
+            (sum, item) => sum + (Number(item.cantidad) || 0),
+            0
+        );
+
+        let total = 0;
+        carritoActual.forEach(item => {
+            total += (Number(item.precio) || 0) * (Number(item.cantidad) || 0);
+        });
+
+        if (posTotalMonto) posTotalMonto.textContent = formatMoneda(total);
+        if (posCobrarMonto) posCobrarMonto.textContent = formatMoneda(total);
+        const chargeLabel = btnCobrar?.querySelector('span');
+        if (chargeLabel) {
+            chargeLabel.textContent = cuentaCorrienteClienteId ? 'Descontar saldo' : 'Cobrar';
+        }
+        if (posCartCount) posCartCount.textContent = cantidadItems;
+        if (mobileCartSummary) mobileCartSummary.textContent = `${cantidadItems} · ${formatMoneda(total)}`;
+        if (btnVaciarCarrito) btnVaciarCarrito.hidden = carritoActual.length === 0;
+
         if (carritoActual.length === 0) {
-            carritoContainer.innerHTML = '<p class="text-light" style="text-align: center; margin-top: 2rem;">Tocá un producto para agregarlo.</p>';
-            if (posTotalMonto) posTotalMonto.textContent = formatMoneda(0);
+            carritoContainer.innerHTML = `
+                <div class="ds-cart-empty">
+                    <span>🧁</span>
+                    <strong>Venta vacía</strong>
+                    <p>Tocá un producto para agregarlo.</p>
+                </div>
+            `;
             if (btnCobrar) btnCobrar.disabled = true;
             return;
         }
 
-        let total = 0;
         carritoActual.forEach((item, index) => {
             const subtotal = item.precio * item.cantidad;
-            total += subtotal;
 
             const div = document.createElement('div');
             div.className = 'cart-item';
             div.innerHTML = `
                 <div class="cart-item-info">
-                    <h4>${escapeHtml(item.nombre)}</h4>
-                    <div class="cantidad-control">
-                        <button class="btn-restar-cant" data-index="${index}" style="padding:0.2rem 0.5rem; border:1px solid #ccc; border-radius:4px; background:#f8fafc; cursor:pointer;">-</button>
-                        <span style="font-weight:bold; min-width:20px; text-align:center;">${item.cantidad}</span>
-                        <button class="btn-sumar-cant" data-index="${index}" style="padding:0.2rem 0.5rem; border:1px solid #ccc; border-radius:4px; background:#f8fafc; cursor:pointer;">+</button>
-                        <span class="cart-item-precio-unit" style="margin-left:0.5rem;">x ${formatMoneda(item.precio)}</span>
-                    </div>
+                    <h4 title="${escapeAttribute(item.nombre)}">${escapeHtml(item.nombre)}</h4>
+                    <span class="ds-cart-line-meta">${formatMoneda(item.precio)} c/u</span>
+                </div>
+                <div class="ds-cart-qty-control">
+                    <button type="button" class="btn-restar-cant" data-index="${index}" aria-label="Restar unidad">−</button>
+                    <input
+                        class="ds-cart-qty-input"
+                        type="number"
+                        min="1"
+                        step="1"
+                        inputmode="numeric"
+                        value="${item.cantidad}"
+                        data-index="${index}"
+                        aria-label="Cantidad de ${escapeAttribute(item.nombre)}"
+                    >
+                    <button type="button" class="btn-sumar-cant" data-index="${index}" aria-label="Sumar unidad">+</button>
                 </div>
                 <div class="cart-item-total">${formatMoneda(subtotal)}</div>
-                <button class="btn-remove-cart" data-index="${index}" style="background:none; border:none; color:var(--danger-color); cursor:pointer; font-size:1.2rem;">🗑️</button>
+                <button type="button" class="ds-cart-remove-btn btn-remove-cart" data-index="${index}" aria-label="Quitar ${escapeAttribute(item.nombre)}">×</button>
             `;
             carritoContainer.appendChild(div);
         });
 
-        if (posTotalMonto) posTotalMonto.textContent = formatMoneda(total);
         if (btnCobrar) btnCobrar.disabled = false;
     };
 
@@ -592,10 +903,12 @@ export function setupPOS(app) {
             const btnSumar = e.target.closest('.btn-sumar-cant');
 
             if (btnRemove) { 
-                carritoActual.splice(btnRemove.dataset.index, 1); 
-                renderizarCarrito(); 
+                carritoActual.splice(Number(btnRemove.dataset.index), 1);
+                renderizarCarrito();
             } else if (btnRestar) {
-                const idx = btnRestar.dataset.index;
+                const idx = Number(btnRestar.dataset.index);
+                if (!carritoActual[idx]) return;
+
                 if (carritoActual[idx].cantidad > 1) {
                     carritoActual[idx].cantidad--;
                 } else {
@@ -603,26 +916,118 @@ export function setupPOS(app) {
                 }
                 renderizarCarrito();
             } else if (btnSumar) {
-                const idx = btnSumar.dataset.index;
+                const idx = Number(btnSumar.dataset.index);
                 if (carritoActual[idx]) {
                     carritoActual[idx].cantidad++;
                 }
                 renderizarCarrito();
             }
         });
+
+        carritoContainer.addEventListener('change', (e) => {
+            const input = e.target.closest('.ds-cart-qty-input');
+            if (!input) return;
+
+            const idx = Number(input.dataset.index);
+            if (!carritoActual[idx]) return;
+
+            const cantidad = Math.max(1, Math.floor(Number(input.value) || 1));
+            carritoActual[idx].cantidad = cantidad;
+            renderizarCarrito();
+        });
     }
+
+    if (btnVaciarCarrito) {
+        btnVaciarCarrito.addEventListener('click', () => {
+            if (!carritoActual.length) return;
+
+            if (window.confirm('¿Vaciar toda la venta actual?')) {
+                carritoActual = [];
+                renderizarCarrito();
+                setMobilePOSPanel('productos');
+            }
+        });
+    }
+
+    if (btnMobileProductos) {
+        btnMobileProductos.addEventListener('click', () => setMobilePOSPanel('productos'));
+    }
+
+    if (btnMobileCarrito) {
+        btnMobileCarrito.addEventListener('click', () => setMobilePOSPanel('carrito'));
+    }
+
+    document.addEventListener('keydown', (event) => {
+        const target = event.target;
+        const isTyping = target instanceof HTMLInputElement
+            || target instanceof HTMLTextAreaElement
+            || target instanceof HTMLSelectElement;
+
+        if (event.key === '/' && !isTyping && pantallaPOS?.style.display !== 'none') {
+            event.preventDefault();
+            buscadorPOS?.focus();
+            return;
+        }
+
+        if (event.key === 'F2' && pantallaPOS?.style.display !== 'none') {
+            event.preventDefault();
+            if (btnCobrar && !btnCobrar.disabled) btnCobrar.click();
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            if (modalCobro?.classList.contains('visible')) {
+                modalCobro.classList.remove('visible');
+                return;
+            }
+
+            if (window.matchMedia('(max-width: 991px)').matches && pantallaPOS?.classList.contains('is-mobile-cart')) {
+                setMobilePOSPanel('productos');
+            }
+        }
+    });
 
     // ==========================================
     // COBRO INTELIGENTE Y BILLETERA
     // ==========================================
+    const actualizarBotonesDineroRapido = () => {
+        if (!btnsQuickMoney.length || totalVentaActual <= 0) return;
+
+        const base = Math.max(5000, (Math.floor(totalVentaActual / 5000) + 1) * 5000);
+        const valores = ['exacto', base, base + 5000, base + 10000];
+
+        btnsQuickMoney.forEach((btn, index) => {
+            const valor = valores[index];
+            if (valor === undefined) return;
+
+            btn.dataset.val = String(valor);
+            btn.textContent = valor === 'exacto'
+                ? 'Exacto'
+                : formatMoneda(valor);
+        });
+    };
+
     if (btnCobrar) {
         btnCobrar.addEventListener('click', () => {
             totalVentaActual = carritoActual.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
             if (modalCobroTotal) modalCobroTotal.textContent = formatMoneda(totalVentaActual);
+            actualizarBotonesDineroRapido();
             
-            metodoPagoSeleccionado = null;
+            const prepaidClient = getCuentaCorrienteActiva();
+            metodoPagoSeleccionado = prepaidClient ? 'CuentaCorriente' : null;
             btnPaymentMethods.forEach(b => b.classList.remove('selected'));
             btnConfirmarVenta.disabled = true;
+
+            if (ccPaymentInfo) ccPaymentInfo.hidden = !prepaidClient;
+            if (paymentMethodsContainer) paymentMethodsContainer.hidden = Boolean(prepaidClient);
+            if (paymentHeading) paymentHeading.hidden = Boolean(prepaidClient);
+            if (prepaidClient) {
+                if (ccPaymentName) ccPaymentName.textContent = prepaidClient.nombre;
+                if (ccPaymentBalance) ccPaymentBalance.textContent =
+                    `Saldo disponible: ${formatMoneda((Number(prepaidClient.saldoCentavos) || 0) / 100)}`;
+                calcularVuelto();
+            }
+
             
             if (paymentDetailsContainer) paymentDetailsContainer.style.display = 'none';
             if (fieldMP) fieldMP.style.display = 'none';
@@ -682,6 +1087,19 @@ export function setupPOS(app) {
 
     const calcularVuelto = () => {
         if (!metodoPagoSeleccionado) return;
+        if (metodoPagoSeleccionado === 'CuentaCorriente') {
+            const saldo = Number(getCuentaCorrienteActiva()?.saldoCentavos || 0);
+            const enough = saldo >= toCents(totalVentaActual);
+            if (ccPaymentBalance) {
+                ccPaymentBalance.textContent = enough
+                    ? `Saldo disponible: ${formatMoneda(saldo / 100)} · Después: ${formatMoneda((saldo - toCents(totalVentaActual)) / 100)}`
+                    : `Saldo insuficiente: ${formatMoneda(saldo / 100)}. Cargá un anticipo antes de continuar.`;
+            }
+            if (btnConfirmarVenta) {
+                btnConfirmarVenta.disabled = !enough || totalVentaActual <= 0;
+            }
+            return;
+        }
         let mp = parseFloat(inputCobroMP.value) || 0;
         let efvo = parseFloat(inputCobroEfectivo.value) || 0;
         let vuelto = 0; let esValido = false;
@@ -715,7 +1133,15 @@ export function setupPOS(app) {
         btnConfirmarVenta.disabled = !esValido;
     };
 
-    if (inputCobroMP) inputCobroMP.addEventListener('input', calcularVuelto);
+    if (inputCobroMP) {
+        inputCobroMP.addEventListener('input', () => {
+            if (metodoPagoSeleccionado === 'Ambos' && inputCobroEfectivo) {
+                const mp = Math.max(0, parseFloat(inputCobroMP.value) || 0);
+                inputCobroEfectivo.value = Math.max(0, totalVentaActual - mp);
+            }
+            calcularVuelto();
+        });
+    }
     if (inputCobroEfectivo) inputCobroEfectivo.addEventListener('input', calcularVuelto);
 
     if (btnConfirmarVenta) {
@@ -729,113 +1155,63 @@ export function setupPOS(app) {
                 let mpTipeado = parseFloat(inputCobroMP.value) || 0;
                 mpReal = mpTipeado; efectivoReal = totalVentaActual - mpTipeado;
             }
+            // Cuenta corriente: el efectivo/MP ya ingresó en el anticipo.
+            // Su consumo no genera otro ingreso físico en caja.
 
             btnConfirmarVenta.disabled = true;
             btnConfirmarVenta.textContent = 'Procesando...';
 
             try {
-                const itemsParaGuardar = carritoActual.map(i => {
-                    const producto = productosDisponibles.find(p => p.id === i.id);
-                    const cantidad = Number(i.cantidad) || 0;
-                    const precioUnitario = Number(i.precio) || 0;
-                    const costoUnitarioVenta = Number(producto?.costoBaseCalculado) || 0;
-                    const costoTotalItem = costoUnitarioVenta * cantidad;
-                    const facturacionItem = precioUnitario * cantidad;
-                    const utilidadBrutaItem = facturacionItem - costoTotalItem;
-                    const margenBrutoVentaPct = facturacionItem > 0
-                        ? (utilidadBrutaItem / facturacionItem) * 100
-                        : 0;
-
-                    return {
-                        id: i.id,
-                        nombre: i.nombre,
-                        precio: precioUnitario,
-                        cantidad,
-                        costoUnitarioVenta,
-                        costoTotalVenta: costoTotalItem,
-                        utilidadBrutaVenta: utilidadBrutaItem,
-                        margenBrutoVentaPct,
-                        porcentajeGananciaAplicado: Number(producto?.porcentajeGananciaAplicado) || 0,
-                        costoSnapshotVersion: 1
-                    };
-                });
-
-                const costoTotalVenta = itemsParaGuardar.reduce(
-                    (sum, item) => sum + (Number(item.costoTotalVenta) || 0),
-                    0
-                );
-                const utilidadBrutaVenta = totalVentaActual - costoTotalVenta;
-                const margenBrutoVentaPct = totalVentaActual > 0
-                    ? (utilidadBrutaVenta / totalVentaActual) * 100
-                    : 0;
-
-                // Deducción de Stock
-                for (const item of carritoActual) {
-                    const docRef = doc(db, 'recetas', item.id);
-                    await runTransaction(db, async (transaction) => {
-                        const sfDoc = await transaction.get(docRef);
-                        if (!sfDoc.exists()) throw "El producto no existe.";
-                        
-                        let stockActual = sfDoc.data().stockMostrador || 0;
-                        let lotesActuales = sfDoc.data().lotes || [];
-                        let nuevoStock = stockActual - item.cantidad;
-                        if (nuevoStock < 0) nuevoStock = 0;
-                        
-                        let qtyToDeduct = item.cantidad;
-                        lotesActuales.sort((a, b) => new Date(a.fechaVto) - new Date(b.fechaVto));
-                        
-                        let nuevosLotesPostResta = [];
-                        for (let lote of lotesActuales) {
-                            if (qtyToDeduct > 0) {
-                                if (lote.cantidad <= qtyToDeduct) { qtyToDeduct -= lote.cantidad; } 
-                                else { lote.cantidad -= qtyToDeduct; qtyToDeduct = 0; nuevosLotesPostResta.push(lote); }
-                            } else { nuevosLotesPostResta.push(lote); }
-                        }
-                        
-                        transaction.update(docRef, { stockMostrador: nuevoStock, lotes: nuevosLotesPostResta });
-
-                        const auditRef = doc(auditoriaCollection);
-                        transaction.set(auditRef, {
-                            productoId: item.id, productoNombre: item.nombre, tipo: 'RESTA', cantidad: item.cantidad,
-                            stockResultante: nuevoStock,
-                            motivo: item.cantidad > stockActual
-                                ? `Venta (${metodoPagoSeleccionado}) · stock informativo/no bloqueante`
-                                : `Venta (${metodoPagoSeleccionado})`,
-                            usuario: userName, usuarioId: currentUser.uid, fecha: Timestamp.now()
-                        });
-                    });
+                const selectedCC = metodoPagoSeleccionado === 'CuentaCorriente'
+                    ? getCuentaCorrienteActiva() : null;
+                if (metodoPagoSeleccionado === 'CuentaCorriente' && !selectedCC) {
+                    throw new Error('El cliente ya no está seleccionado.');
                 }
 
-                await addDoc(ventasCollection, {
+                const checkoutFingerprint = JSON.stringify({
                     cajaId: cajaActiva.id,
-                    fecha: Timestamp.now(),
-                    metodoPago: metodoPagoSeleccionado,
-                    total: totalVentaActual,
-                    pagoEfectivo: efectivoReal,
-                    pagoMercadoPago: mpReal,
-                    items: itemsParaGuardar,
-                    costoTotalVenta,
-                    utilidadBrutaVenta,
-                    margenBrutoVentaPct,
-                    costoSnapshotVersion: 1,
-                    vendedor: cajaActiva.usuarioNombre || userName
+                    method: metodoPagoSeleccionado,
+                    cash: efectivoReal,
+                    mp: mpReal,
+                    clientId: selectedCC?.id || null,
+                    items: carritoActual.map(item => ({
+                        id: item.id, cantidad: item.cantidad, precio: item.precio
+                    }))
+                });
+                if (!pendingCheckout || pendingCheckout.fingerprint !== checkoutFingerprint) {
+                    pendingCheckout = {
+                        fingerprint: checkoutFingerprint,
+                        id: doc(ventasCollection).id
+                    };
+                }
+
+                await savePOSCheckout({
+                    db,
+                    cajaId: cajaActiva.id,
+                    items: carritoActual,
+                    products: productosDisponibles,
+                    method: metodoPagoSeleccionado,
+                    amountCash: efectivoReal,
+                    amountMP: mpReal,
+                    clientId: selectedCC?.id || null,
+                    userId: currentUser.uid,
+                    userName,
+                    operationId: pendingCheckout.id
                 });
 
-                cajaActiva.totalEfectivo = (cajaActiva.totalEfectivo || 0) + efectivoReal;
-                cajaActiva.totalMercadoPago = (cajaActiva.totalMercadoPago || 0) + mpReal;
-                await updateDoc(doc(db, 'cajas', cajaActiva.id), {
-                    totalEfectivo: cajaActiva.totalEfectivo,
-                    totalMercadoPago: cajaActiva.totalMercadoPago
-                });
-
-                carritoActual = []; renderizarCarrito();
+                pendingCheckout = null;
+                carritoActual = [];
+                cuentaCorrienteClienteId = null;
+                renderizarCarrito();
+                actualizarMobileBarVisibility();
+                setMobilePOSPanel('productos');
                 if (modalCobro) modalCobro.classList.remove('visible');
                 btnConfirmarVenta.textContent = 'Confirmar Venta';
                 if (buscadorPOS) buscadorPOS.focus();
 
             } catch (error) {
                 console.error("Error al procesar la venta:", error);
-                alert("Hubo un error de red al procesar el cobro.");
+                alert(`No se pudo registrar la venta: ${error.message || 'revisá los datos y tu conexión'}. No se modificó la caja ni el saldo si la operación fue rechazada.`);
                 btnConfirmarVenta.disabled = false; btnConfirmarVenta.textContent = 'Confirmar Venta';
             }
         });
@@ -944,7 +1320,10 @@ export function setupPOS(app) {
                             <p style="margin: 0.2rem 0; font-size: 0.9rem;">${descItems}</p>
                             <span style="font-weight: bold; color: #be185d;">${formatMoneda(venta.total)}</span>
                         </div>
-                        <button class="btn-editar-ticket-auditoria" data-id="${safeVentaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; margin-left:1rem;" title="Editar Método de Pago">✏️</button>
+                        ${venta.metodoPago === 'CuentaCorriente'
+                            ? '<small>Cuenta corriente · inalterable</small>'
+                            : `<button class="btn-editar-ticket-auditoria" data-id="${safeVentaId}" data-total="${venta.total}" data-metodo="${safeMetodoAttr}" style="background:none; border:none; cursor:pointer; font-size: 1.2rem; margin-left:1rem;" title="Editar Método de Pago">✏️</button>`
+                        }
                     `;
                     listaTicketsRevision.appendChild(div);
                 });
@@ -998,10 +1377,15 @@ export function setupPOS(app) {
             try {
                 await runTransaction(db, async (transaction) => {
                     const ticketRef = doc(db, 'ventasMostrador', ticketId);
+                    const cajaRef = doc(db, 'cajas', cajaActiva.id);
                     const ticketDoc = await transaction.get(ticketRef);
-                    if (!ticketDoc.exists()) throw "Ticket no encontrado";
-                    
+                    const cajaDoc = await transaction.get(cajaRef);
+                    if (!ticketDoc.exists() || !cajaDoc.exists()) throw new Error("Ticket o caja no encontrados.");
+
                     const tData = ticketDoc.data();
+                    if (tData.metodoPago === 'CuentaCorriente') {
+                        throw new Error('No se puede cambiar el método de un consumo de cuenta corriente.');
+                    }
                     if (tData.metodoPago === nuevoMetodo) throw "El método es el mismo, no hay cambios.";
                     if (tData.metodoPago === 'Ambos') throw "No se puede editar un ticket con pago mixto (Ambos). Anúlalo manualmente.";
 
@@ -1020,17 +1404,16 @@ export function setupPOS(app) {
                         pagoMercadoPago: nuevoMetodo === 'MercadoPago' ? monto : 0
                     });
 
-                    const cajaRef = doc(db, 'cajas', cajaActiva.id);
-                    const nuevaCajaEfvo = (cajaActiva.totalEfectivo || 0) + difEfectivo;
-                    const nuevaCajaMP = (cajaActiva.totalMercadoPago || 0) + difMP;
+                    const cajaData = cajaDoc.data();
+                    const nuevaCajaEfvo = (Number(cajaData.totalEfectivo) || 0) + difEfectivo;
+                    const nuevaCajaMP = (Number(cajaData.totalMercadoPago) || 0) + difMP;
                     
                     transaction.update(cajaRef, {
                         totalEfectivo: nuevaCajaEfvo,
                         totalMercadoPago: nuevaCajaMP
                     });
 
-                    cajaActiva.totalEfectivo = nuevaCajaEfvo;
-                    cajaActiva.totalMercadoPago = nuevaCajaMP;
+                    // onSnapshot actualiza la caja tras confirmar la transacción.
                 });
 
                 alert("Ticket corregido con éxito.");

@@ -3,9 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // DRAFT PARA DULCE SALL ADMIN 2.0
-    // Este archivo todavía NO está desplegado en Firebase.
-    // Debe probarse contra todos los flujos del Deploy Preview antes de producción.
+    // Dulce Sall Admin — reglas por usuario y permisos.
+    // Guardá una copia de tus reglas actuales antes de reemplazarlas.
 
     function signedIn() {
       return request.auth != null;
@@ -57,7 +56,8 @@ service cloud.firestore {
     // Configuración sensible del mostrador (ej. margen global).
     match /config/{documentId} {
       allow read: if hasPermission('mostrador')
-        || hasPermission('configuracion');
+        || hasPermission('configuracion')
+        || (hasPermission('precios') && documentId == 'mostrador');
 
       allow write: if isMaster()
         || hasPermission('configuracion');
@@ -70,22 +70,52 @@ service cloud.firestore {
         || hasPermission('finanzas')
         || hasPermission('indicadores');
 
-      allow create, update: if hasPermission('mostrador')
+      allow create: if hasPermission('mostrador')
         || hasPermission('cajas');
 
-      allow delete: if isMaster()
-        || hasPermission('configuracion');
+      allow update: if (hasPermission('mostrador') || hasPermission('cajas'))
+        && !(
+          request.resource.data.get('eliminada', false) == true
+          && resource.data.get('eliminada', false) != true
+          && (
+            resource.data.get('anticiposCC_Efectivo', 0) > 0
+            || resource.data.get('anticiposCC_MercadoPago', 0) > 0
+            || resource.data.get('ventasCuentaCorriente', 0) > 0
+          )
+        );
+
+      allow delete: if (isMaster() || hasPermission('configuracion'))
+        && resource.data.get('anticiposCC_Efectivo', 0) == 0
+        && resource.data.get('anticiposCC_MercadoPago', 0) == 0
+        && resource.data.get('ventasCuentaCorriente', 0) == 0;
     }
 
     // Tickets del mostrador. Cajas también necesita corregir movimientos.
     match /ventasMostrador/{ventaId} {
       allow read: if hasPermission('mostrador')
-        || hasPermission('cajas');
+        || hasPermission('cajas')
+        || hasPermission('precios')
+        || hasPermission('finanzas');
 
-      allow create: if hasPermission('mostrador');
+      allow create: if hasPermission('mostrador')
+        && (
+          request.resource.data.get('metodoPago', '') != 'CuentaCorriente'
+          || (
+            request.resource.data.get('pagoEfectivo', -1) == 0
+            && request.resource.data.get('pagoMercadoPago', -1) == 0
+            && getAfter(/databases/$(database)/documents/ccMovimientos/$(request.resource.data.movimientoCuentaCorrienteId)).data.ventaId == ventaId
+            && getAfter(/databases/$(database)/documents/ccMovimientos/$(request.resource.data.movimientoCuentaCorrienteId)).data.clienteId == request.resource.data.cuentaCorrienteClienteId
+          )
+        );
 
-      allow update, delete: if hasPermission('mostrador')
-        || hasPermission('cajas');
+      // Los consumos prepagos no se editan ni eliminan como tickets comunes;
+      // requieren reversión contable atómica del saldo y stock.
+      allow update: if resource.data.get('metodoPago', '') != 'CuentaCorriente'
+        && request.resource.data.get('metodoPago', '') != 'CuentaCorriente'
+        && (hasPermission('mostrador') || hasPermission('cajas'));
+
+      allow delete: if resource.data.get('metodoPago', '') != 'CuentaCorriente'
+        && (hasPermission('mostrador') || hasPermission('cajas'));
     }
 
     // Auditoría de movimientos del stock del mostrador.
@@ -106,11 +136,145 @@ service cloud.firestore {
         || hasPermission('presupuestos')
         || hasPermission('precios')
         || hasPermission('cajas')
+        || hasPermission('finanzas')
         || hasPermission('modelos')
         || hasPermission('stock');
 
-      allow create, update, delete: if hasPermission('recetas')
+      allow create, delete: if hasPermission('recetas')
         || hasPermission('mostrador');
+
+      allow update: if hasPermission('recetas')
+        || hasPermission('mostrador')
+        || (
+          hasPermission('precios')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'margenIndividual',
+            'historialCambiosPrecio',
+            'ultimaRevisionPrecio',
+            'ultimaDecisionPrecio'
+          ])
+        );
+    }
+
+    // Gastos operativos: período de devengamiento (mes), no de pago.
+    match /gastosOperativos/{gastoId} {
+      function isValidExpense(data) {
+        return data.mes is string
+          && data.mes.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+          && data.concepto is string
+          && data.concepto.size() > 0
+          && data.concepto.size() <= 120
+          && data.monto is number
+          && data.monto > 0
+          && data.monto <= 100000000000
+          && data.tipo in ['fijo', 'variable']
+          && data.categoria in [
+            'Personal', 'Alquiler y ocupación', 'Servicios',
+            'Impuestos y tasas', 'Administración',
+            'Comercialización', 'Variables', 'Otros'
+          ];
+      }
+
+      allow read: if hasPermission('finanzas');
+
+      allow create: if hasPermission('finanzas')
+        && isValidExpense(request.resource.data);
+
+      allow update: if hasPermission('finanzas')
+        && isValidExpense(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
+
+      allow delete: if hasPermission('finanzas');
+    }
+
+    // Cuenta corriente prepaga: el saldo no se puede modificar directamente.
+    match /ccClientes/{clienteId} {
+      allow read: if hasPermission('mostrador') || hasPermission('cajas');
+
+      allow create: if hasPermission('mostrador')
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() > 0
+        && request.resource.data.saldoCentavos == 0
+        && request.resource.data.activo == true;
+
+      allow update: if hasPermission('mostrador')
+        && (
+          (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'nombre', 'telefono', 'notas', 'updatedAt'
+            ])
+            && request.resource.data.nombre is string
+            && request.resource.data.nombre.size() > 0
+          )
+          || (
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'saldoCentavos', 'ultimoMovimientoId', 'ultimoMovimientoAt', 'updatedAt'
+            ])
+            && request.resource.data.ultimoMovimientoId != resource.data.get('ultimoMovimientoId', '')
+            && request.resource.data.saldoCentavos is int
+            && request.resource.data.saldoCentavos >= 0
+            && getAfter(/databases/$(database)/documents/ccMovimientos/$(request.resource.data.ultimoMovimientoId)).data.clienteId == clienteId
+            && getAfter(/databases/$(database)/documents/ccMovimientos/$(request.resource.data.ultimoMovimientoId)).data.saldoAnteriorCentavos == resource.data.saldoCentavos
+            && getAfter(/databases/$(database)/documents/ccMovimientos/$(request.resource.data.ultimoMovimientoId)).data.saldoPosteriorCentavos == request.resource.data.saldoCentavos
+          )
+        );
+
+      allow delete: if false;
+    }
+
+    // Libro inmutable de anticipos y consumos. La caja se afecta
+    // al recibir el anticipo; el consumo requiere un ticket relacionado.
+    match /ccMovimientos/{movimientoId} {
+      allow read: if hasPermission('mostrador') || hasPermission('cajas');
+
+      allow create: if hasPermission('mostrador')
+        && request.resource.data.tipo in ['anticipo', 'consumo']
+        && request.resource.data.montoCentavos is int
+        && request.resource.data.montoCentavos > 0
+        && request.resource.data.saldoAnteriorCentavos is int
+        && request.resource.data.saldoPosteriorCentavos is int
+        && request.resource.data.saldoPosteriorCentavos >= 0
+        && getAfter(/databases/$(database)/documents/ccClientes/$(request.resource.data.clienteId)).data.ultimoMovimientoId == movimientoId
+        && getAfter(/databases/$(database)/documents/ccClientes/$(request.resource.data.clienteId)).data.saldoCentavos == request.resource.data.saldoPosteriorCentavos
+        && (
+          (
+            request.resource.data.tipo == 'anticipo'
+            && request.resource.data.saldoPosteriorCentavos == request.resource.data.saldoAnteriorCentavos + request.resource.data.montoCentavos
+            && request.resource.data.medioPago in ['Efectivo', 'MercadoPago']
+            && get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.estado == 'abierta'
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.anticiposCC_Efectivo
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('anticiposCC_Efectivo', 0)
+                + (request.resource.data.medioPago == 'Efectivo' ? request.resource.data.montoCentavos / 100.0 : 0)
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.anticiposCC_MercadoPago
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('anticiposCC_MercadoPago', 0)
+                + (request.resource.data.medioPago == 'MercadoPago' ? request.resource.data.montoCentavos / 100.0 : 0)
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.totalEfectivo
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('totalEfectivo', 0)
+                + (request.resource.data.medioPago == 'Efectivo' ? request.resource.data.montoCentavos / 100.0 : 0)
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.totalMercadoPago
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('totalMercadoPago', 0)
+                + (request.resource.data.medioPago == 'MercadoPago' ? request.resource.data.montoCentavos / 100.0 : 0)
+          )
+          || (
+            request.resource.data.tipo == 'consumo'
+            && request.resource.data.saldoPosteriorCentavos
+              == request.resource.data.saldoAnteriorCentavos - request.resource.data.montoCentavos
+            && getAfter(/databases/$(database)/documents/ventasMostrador/$(request.resource.data.ventaId)).data.cuentaCorrienteClienteId
+              == request.resource.data.clienteId
+            && getAfter(/databases/$(database)/documents/ventasMostrador/$(request.resource.data.ventaId)).data.metodoPago
+              == 'CuentaCorriente'
+            && getAfter(/databases/$(database)/documents/ventasMostrador/$(request.resource.data.ventaId)).data.total * 100
+              >= request.resource.data.montoCentavos - 0.1
+            && getAfter(/databases/$(database)/documents/ventasMostrador/$(request.resource.data.ventaId)).data.total * 100
+              <= request.resource.data.montoCentavos + 0.1
+            && getAfter(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.ventasCuentaCorriente
+              == get(/databases/$(database)/documents/cajas/$(request.resource.data.cajaId)).data.get('ventasCuentaCorriente', 0)
+                + request.resource.data.montoCentavos / 100.0
+          )
+        );
+
+      allow update, delete: if false;
     }
 
     match /categorias/{categoriaId} {
