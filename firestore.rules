@@ -110,7 +110,11 @@ service cloud.firestore {
 
       // Los consumos prepagos no se editan ni eliminan como tickets comunes;
       // requieren reversión contable atómica del saldo y stock.
-      allow update, delete: if resource.data.get('metodoPago', '') != 'CuentaCorriente'
+      allow update: if resource.data.get('metodoPago', '') != 'CuentaCorriente'
+        && request.resource.data.get('metodoPago', '') != 'CuentaCorriente'
+        && (hasPermission('mostrador') || hasPermission('cajas'));
+
+      allow delete: if resource.data.get('metodoPago', '') != 'CuentaCorriente'
         && (hasPermission('mostrador') || hasPermission('cajas'));
     }
 
