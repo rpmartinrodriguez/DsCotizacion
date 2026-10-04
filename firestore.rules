@@ -3,9 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // DRAFT PARA DULCE SALL ADMIN 2.0
-    // Este archivo todavía NO está desplegado en Firebase.
-    // Debe probarse contra todos los flujos del Deploy Preview antes de producción.
+    // Dulce Sall Admin — reglas por usuario y permisos.
+    // Guardá una copia de tus reglas actuales antes de reemplazarlas.
 
     function signedIn() {
       return request.auth != null;
@@ -153,106 +152,34 @@ service cloud.firestore {
         );
     }
 
-    // Gastos por período de devengamiento, no por fecha de pago.
+    // Gastos operativos: período de devengamiento (mes), no de pago.
     match /gastosOperativos/{gastoId} {
+      function isValidExpense(data) {
+        return data.mes is string
+          && data.mes.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+          && data.concepto is string
+          && data.concepto.size() > 0
+          && data.concepto.size() <= 120
+          && data.monto is number
+          && data.monto > 0
+          && data.monto <= 100000000000
+          && data.tipo in ['fijo', 'variable']
+          && data.categoria in [
+            'Personal', 'Alquiler y ocupación', 'Servicios',
+            'Impuestos y tasas', 'Administración',
+            'Comercialización', 'Variables', 'Otros'
+          ];
+      }
+
       allow read: if hasPermission('finanzas');
 
-      allow create, update: if hasPermission('finanzas')
-        && request.resource.data.mes is string
-        && request.resource.data.mes.matches('^[0-9]{4}-(0[1-9]|1[0-2])
-      allow read: if hasPermission('recetas');
-      allow create, update, delete: if hasPermission('recetas');
-    }
+      allow create: if hasPermission('finanzas')
+        && isValidExpense(request.resource.data);
 
-    // Materias primas: varios módulos necesitan leer costos/stock.
-    // Historial necesita escribir cuando convierte un presupuesto en venta.
-    match /materiasPrimas/{materiaPrimaId} {
-      allow read: if hasPermission('indicadores')
-        || hasPermission('mostrador')
-        || hasPermission('recetas')
-        || hasPermission('stock')
-        || hasPermission('presupuestos')
-        || hasPermission('precios')
-        || hasPermission('cajas')
-        || hasPermission('finanzas')
-        || hasPermission('compras')
-        || hasPermission('compras_lista')
-        || hasPermission('historial');
-
-      allow create, update: if hasPermission('stock')
-        || hasPermission('compras')
-        || hasPermission('historial');
-
-      allow delete: if isMaster()
-        || hasPermission('configuracion');
-    }
-
-    match /movimientosStock/{movimientoId} {
-      allow read: if hasPermission('stock')
-        || hasPermission('compras')
-        || hasPermission('historial');
-
-      allow create: if hasPermission('stock')
-        || hasPermission('compras')
-        || hasPermission('historial');
-
-      allow update, delete: if isMaster()
-        || hasPermission('configuracion');
-    }
-
-    // Presupuestos alimentan Dashboard, Clientes, Agenda, Finanzas e Historial.
-    match /presupuestosGuardados/{presupuestoId} {
-      allow read: if hasPermission('indicadores')
-        || hasPermission('presupuestos')
-        || hasPermission('historial')
-        || hasPermission('clientes')
-        || hasPermission('agenda')
-        || hasPermission('compras_lista')
-        || hasPermission('finanzas');
-
-      allow create: if hasPermission('presupuestos');
-
-      allow update, delete: if hasPermission('presupuestos')
-        || hasPermission('historial');
-    }
-
-    match /clientes/{clienteId} {
-      allow read, create, update: if hasPermission('clientes');
-
-      allow delete: if isMaster()
-        || hasPermission('configuracion');
-    }
-
-    match /modelos3D/{modeloId} {
-      allow read, create, update, delete: if hasPermission('modelos');
-    }
-
-    // Todo lo que no esté expresamente contemplado queda bloqueado.
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-)
-        && request.resource.data.concepto is string
-        && request.resource.data.concepto.size() > 0
-        && request.resource.data.concepto.size() <= 120
-        && request.resource.data.monto is number
-        && request.resource.data.monto > 0
-        && request.resource.data.monto <= 100000000000
-        && request.resource.data.tipo in ['fijo', 'variable']
-        && (
-          resource == null
-          || (
-            request.resource.data.createdAt == resource.data.createdAt
-            && request.resource.data.createdBy == resource.data.createdBy
-          )
-        )
-        && request.resource.data.categoria in [
-          'Personal', 'Alquiler y ocupación', 'Servicios',
-          'Impuestos y tasas', 'Administración',
-          'Comercialización', 'Variables', 'Otros'
-        ];
+      allow update: if hasPermission('finanzas')
+        && isValidExpense(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
 
       allow delete: if hasPermission('finanzas');
     }
