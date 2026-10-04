@@ -25,7 +25,8 @@ export function setupCurrentAccount({
     getUserName,
     onOpen,
     onReturn,
-    onSelectForSale
+    onSelectForSale,
+    onAccountsUpdated = () => {}
 }) {
     const clientCollection = collection(db, 'ccClientes');
     const movementCollection = collection(db, 'ccMovimientos');
@@ -122,6 +123,7 @@ export function setupCurrentAccount({
                 String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es')
             );
             renderClients();
+            onAccountsUpdated();
         }, error => {
             console.error('Error leyendo cuentas corrientes:', error);
             setMessage('No se pudieron cargar los clientes. Revisá permisos de Mostrador y conexión.');
