@@ -64,7 +64,7 @@ export function setupCurrentAccount({
     let clients = [];
     let selectedId = null;
     let unsubscribe = null;
-    let refreshHistoryAfterChange = false;
+    let pendingDeposit = null;
 
     const activeClient = () => clients.find(client => client.id === selectedId) || null;
     const setMessage = text => {
@@ -273,13 +273,30 @@ export function setupCurrentAccount({
         try {
             const clientRef = doc(db, 'ccClientes', client.id);
             const cajaRef = doc(db, 'cajas', caja.id);
-            const movementRef = doc(movementCollection);
+            const fingerprint = JSON.stringify({
+                clientId: client.id, cajaId: caja.id, cents, method
+            });
+            if (!pendingDeposit || pendingDeposit.fingerprint !== fingerprint) {
+                pendingDeposit = {
+                    fingerprint,
+                    movementId: doc(movementCollection).id
+                };
+            }
+            const movementRef = doc(db, 'ccMovimientos', pendingDeposit.movementId);
 
             await runTransaction(db, async tx => {
                 const account = await tx.get(clientRef);
                 const drawer = await tx.get(cajaRef);
                 const duplicate = await tx.get(movementRef);
-                if (duplicate.exists()) throw new Error('Operación ya registrada.');
+                if (duplicate.exists()) {
+                    const saved = duplicate.data();
+                    if (saved.clienteId !== client.id || saved.cajaId !== caja.id
+                        || saved.montoCentavos !== cents || saved.medioPago !== method
+                        || saved.tipo !== 'anticipo') {
+                        throw new Error('El identificador corresponde a otra operación.');
+                    }
+                    return { alreadyRegistered: true };
+                }
                 if (!account.exists() || account.data().activo === false) {
                     throw new Error('La cuenta ya no existe o está inactiva.');
                 }
@@ -324,6 +341,7 @@ export function setupCurrentAccount({
                 });
             });
 
+            pendingDeposit = null;
             creditAmount.value = '';
             if (historyWrap && !historyWrap.hidden) await renderHistory();
             setMessage(`Anticipo de ${formatMoney(cents)} registrado en caja. No se reconoció como una venta.`);
