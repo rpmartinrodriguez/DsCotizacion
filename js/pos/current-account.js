@@ -200,7 +200,12 @@ export function setupCurrentAccount({
     ];
     accountOpenButtons.forEach(button => button?.addEventListener('click', () => {
         start();
-        setMessage('');
+        const hasOpenDrawer = Boolean(getCaja()?.id);
+        if (creditSave) creditSave.disabled = previewReadOnly || !hasOpenDrawer;
+        if (consume) consume.disabled = previewReadOnly || !hasOpenDrawer;
+        setMessage(!hasOpenDrawer
+            ? 'Caja cerrada: podés consultar los clientes y sus saldos, pero no registrar anticipos ni consumos.'
+            : '');
         onOpen();
         window.scrollTo(0, 0);
     }));
@@ -335,6 +340,10 @@ export function setupCurrentAccount({
     });
 
     consume?.addEventListener('click', () => {
+        if (!getCaja()?.id) {
+            setMessage('Abrí una caja antes de realizar un consumo.');
+            return;
+        }
         if (previewReadOnly) {
             setMessage('Vista previa: los consumos con saldo están deshabilitados para proteger las cuentas reales.');
             return;
