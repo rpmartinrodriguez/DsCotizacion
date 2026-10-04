@@ -5805,3 +5805,36 @@ body.ds-history .historial-card__detalle ul {
   .ds-expense-form label:nth-of-type(5) { grid-column: 1; }
   .ds-cc-summary { grid-template-columns: 1fr; }
 }
+
+
+.ds-eerr-expenses-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 7px;
+}
+.ds-eerr-expenses-header small {
+  color: #988390;
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+}
+.ds-cc-preview-notice {
+  padding: 12px 14px;
+  margin: 11px 0;
+  border: 1px solid #ead4bd;
+  border-radius: 11px;
+  background: #fff8f0;
+  color: #8b643c;
+  font-size: .71rem;
+  line-height: 1.5;
+}
+.ds-cc-preview-notice[hidden] { display: none !important; }
+.ds-cc-screen button:disabled,
+.ds-expense-form button:disabled,
+#eerr-copiar-anterior:disabled {
+  opacity: .58;
+  cursor: not-allowed;
+}
