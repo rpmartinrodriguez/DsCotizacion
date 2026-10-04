@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
     // actualizan en segundo plano. JS y páginas siguen siendo network-first
     // para no ejecutar lógica de caja o reglas financieras desactualizadas.
     const pathname = new URL(request.url).pathname;
-    if (/\\.(?:css|png|jpe?g|webp|svg|ico|woff2?)$/i.test(pathname)) {
+    if (/\.(?:css|png|jpe?g|webp|svg|ico|woff2?)$/i.test(pathname)) {
         const refresh = fetch(request).then(async response => {
             if (shouldCacheResponse(response)) {
                 const copy = response.clone();
