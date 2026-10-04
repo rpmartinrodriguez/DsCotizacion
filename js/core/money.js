@@ -50,7 +50,7 @@ export const parseARS = (value) => {
     const [whole, fraction] = parts;
     if (!/^[0-9]+$/.test(whole) || !/^[0-9]+$/.test(fraction)) return NaN;
 
-    if (fraction.length === 3 && whole.length <= 3) {
+    if (fraction.length === 3 && whole.length <= 3 && !/^0/.test(whole)) {
         return Number(whole + fraction);
     }
     if (fraction.length > 2) return NaN;
