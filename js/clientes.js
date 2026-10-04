@@ -132,11 +132,29 @@ export function setupClientes(app) {
         buscadorInput.dispatchEvent(new Event('input'));
     };
 
-    onSnapshot(query(presupuestosCollection), (presupuestosSnap) => {
-        onSnapshot(query(clientesCollection), (clientesSnap) => {
-            sincronizarYRenderizar(presupuestosSnap.docs, clientesSnap.docs);
+    // Una sola escucha por colección. Antes se abría otra escucha de clientes
+    // cada vez que cambiaban los presupuestos, acumulando listeners.
+    let presupuestosDocs = null;
+    let clientesDocs = null;
+    let renderPendiente = false;
+    const programarRender = () => {
+        if (!presupuestosDocs || !clientesDocs || renderPendiente) return;
+        renderPendiente = true;
+        requestAnimationFrame(() => {
+            renderPendiente = false;
+            sincronizarYRenderizar(presupuestosDocs, clientesDocs).catch(error => {
+                console.error('Error sincronizando clientes:', error);
+            });
         });
-    });
+    };
+    onSnapshot(query(presupuestosCollection), snapshot => {
+        presupuestosDocs = snapshot.docs;
+        programarRender();
+    }, error => console.error('Error leyendo presupuestos de clientes:', error));
+    onSnapshot(query(clientesCollection), snapshot => {
+        clientesDocs = snapshot.docs;
+        programarRender();
+    }, error => console.error('Error leyendo fichas de clientes:', error));
 
     buscadorInput.addEventListener('input', (e) => {
         const termino = e.target.value.toLowerCase();
