@@ -248,11 +248,11 @@ export function setupCajas(app) {
                                 <span>${formatMoneda(fondo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas Efvo.</span>
+                                <span>Ingresos efvo. (incluye anticipos)</span>
                                 <span style="color: var(--success-color);">${formatMoneda(efvo)}</span>
                             </div>
                             <div class="caja-resumen-item">
-                                <span>Ventas MP</span>
+                                <span>Ingresos MP (incluye anticipos)</span>
                                 <div>
                                     <span style="color: var(--success-color); display: block; margin-bottom: 0.3rem;">${formatMoneda(mp)}</span>
                                     <button class="btn-facturado ${btnFacturadoClass}" data-id="${safeCajaId}" data-estado="${isFacturado}" style="padding: 0.2rem 0.5rem; font-size: 0.75rem; border-radius: 4px; cursor:pointer;">
@@ -260,6 +260,18 @@ export function setupCajas(app) {
                                     </button>
                                 </div>
                             </div>
+                            ${((Number(caja.anticiposCC_Efectivo) || 0)
+                                + (Number(caja.anticiposCC_MercadoPago) || 0)
+                                + (Number(caja.ventasCuentaCorriente) || 0)) > 0 ? `
+                                <div class="caja-resumen-item">
+                                    <span>Anticipos C/C recibidos</span>
+                                    <span>${formatMoneda((Number(caja.anticiposCC_Efectivo) || 0) + (Number(caja.anticiposCC_MercadoPago) || 0))}</span>
+                                </div>
+                                <div class="caja-resumen-item">
+                                    <span>Ventas abonadas con saldo C/C</span>
+                                    <span>${formatMoneda(Number(caja.ventasCuentaCorriente) || 0)}</span>
+                                </div>
+                            ` : ''}
                             <div class="caja-resumen-item" style="border-left: 2px solid var(--border-color); padding-left: 1rem;">
                                 <span>Efectivo Físico</span>
                                 <span style="color: var(--primary-color);">${formatMoneda(cajaFisica)}</span>
