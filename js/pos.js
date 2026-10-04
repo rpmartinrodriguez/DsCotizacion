@@ -126,6 +126,7 @@ export function setupPOS(app) {
     let topVendidosKeys = new Set();
     let topVendidosCargados = false;
     let cuentaCorrienteClienteId = null;
+    let pendingCheckout = null;
     const ccScreen = document.getElementById('pantalla-cuenta-corriente');
     const ccBanner = document.getElementById('cc-venta-banner');
     const ccBannerName = document.getElementById('cc-venta-cliente');
@@ -160,8 +161,8 @@ export function setupPOS(app) {
             actualizarMobileBarVisibility();
         },
         onSelectForSale: client => {
-            if (carritoActual.length > 0) {
-                alert('Primero finalizá o vaciá la venta en preparación. Después elegí esta cuenta corriente.');
+            if (carritoActual.length > 0 && cuentaCorrienteClienteId !== client.id) {
+                alert('Ya existe una venta en preparación. Finalizala o vaciala antes de cambiar de cliente.');
                 return false;
             }
             cuentaCorrienteClienteId = client.id;
@@ -1156,6 +1157,23 @@ export function setupPOS(app) {
                     throw new Error('El cliente ya no está seleccionado.');
                 }
 
+                const checkoutFingerprint = JSON.stringify({
+                    cajaId: cajaActiva.id,
+                    method: metodoPagoSeleccionado,
+                    cash: efectivoReal,
+                    mp: mpReal,
+                    clientId: selectedCC?.id || null,
+                    items: carritoActual.map(item => ({
+                        id: item.id, cantidad: item.cantidad, precio: item.precio
+                    }))
+                });
+                if (!pendingCheckout || pendingCheckout.fingerprint !== checkoutFingerprint) {
+                    pendingCheckout = {
+                        fingerprint: checkoutFingerprint,
+                        id: doc(ventasCollection).id
+                    };
+                }
+
                 await savePOSCheckout({
                     db,
                     cajaId: cajaActiva.id,
@@ -1166,9 +1184,11 @@ export function setupPOS(app) {
                     amountMP: mpReal,
                     clientId: selectedCC?.id || null,
                     userId: currentUser.uid,
-                    userName
+                    userName,
+                    operationId: pendingCheckout.id
                 });
 
+                pendingCheckout = null;
                 carritoActual = [];
                 cuentaCorrienteClienteId = null;
                 renderizarCarrito();
