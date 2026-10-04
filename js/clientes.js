@@ -90,7 +90,9 @@ export function setupClientes(app) {
         detalleDiv.innerHTML = `<h4>Historial de Presupuestos</h4><ul>${detalleHtml}</ul>`;
     };
 
-    const sincronizarYRenderizar = async (presupuestosDocs, clientesDocs) => {
+    const altasPendientes = new Set();
+    let colaDeAltas = Promise.resolve();
+    const sincronizarYRenderizar = (presupuestosDocs, clientesDocs) => {
         const presupuestos = presupuestosDocs.map(doc => doc.data());
         const clientesData = {};
         clientesDocs.forEach(doc => {
@@ -122,10 +124,16 @@ export function setupClientes(app) {
 
         for (const nombreCliente in clientesTemp) {
             const clienteId = clientesTemp[nombreCliente].id;
-            if (!clientesData[clienteId]) {
-                try {
-                    await setDoc(doc(db, "clientes", clienteId), { nombre: nombreCliente });
-                } catch(e) { console.error("Error creando ficha de cliente:", e)}
+            if (!clientesData[clienteId] && !altasPendientes.has(clienteId)) {
+                // Mantener el alta automática sin bloquear la visualización.
+                altasPendientes.add(clienteId);
+                colaDeAltas = colaDeAltas.then(() =>
+                    setDoc(doc(db, 'clientes', clienteId), { nombre: nombreCliente })
+                ).catch(error => {
+                    console.error('Error creando ficha de cliente:', error);
+                }).finally(() => {
+                    altasPendientes.delete(clienteId);
+                });
             }
         }
         todosLosClientesAgrupados = clientesTemp;
@@ -142,9 +150,7 @@ export function setupClientes(app) {
         renderPendiente = true;
         requestAnimationFrame(() => {
             renderPendiente = false;
-            sincronizarYRenderizar(presupuestosDocs, clientesDocs).catch(error => {
-                console.error('Error sincronizando clientes:', error);
-            });
+            sincronizarYRenderizar(presupuestosDocs, clientesDocs);
         });
     };
     onSnapshot(query(presupuestosCollection), snapshot => {
