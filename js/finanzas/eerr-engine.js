@@ -136,6 +136,10 @@ export const calculateEERR = ({
         .filter(name => categoryMap.has(name))
         .map(name => categoryMap.get(name));
     const expenseTotal = categoryGroups.reduce((sum, group) => sum + group.total, 0);
+    const fixedExpenses = expensesInMonth
+        .filter(expense => expense.tipo !== 'variable')
+        .reduce((sum, expense) => sum + Math.max(0, number(expense.monto)), 0);
+    const variableExpenses = expenseTotal - fixedExpenses;
     const totalCost = documentedCost + estimatedCost;
     const grossResult = revenue - totalCost;
     const operatingResult = grossResult - expenseTotal;
@@ -161,6 +165,8 @@ export const calculateEERR = ({
         provisionalOperatingResult: operatingResult,
         totalCost,
         expenseTotal,
+        fixedExpenses,
+        variableExpenses,
         categoryGroups,
         coverage: revenue > 0 ? documentedRevenue / revenue * 100 : null,
         dataQuality,
