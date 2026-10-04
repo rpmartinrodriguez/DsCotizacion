@@ -1,8 +1,8 @@
 import {
     collection, doc, addDoc, updateDoc, getDocs, onSnapshot,
-    query, where, runTransaction, Timestamp
+    query, where, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { toCents, fromCents } from "./checkout.js";
+import { toCents, fromCents, recordAccountDeposit } from "./checkout.js";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
 
@@ -271,8 +271,6 @@ export function setupCurrentAccount({
         creditSave.disabled = true;
         creditSave.textContent = 'Registrando…';
         try {
-            const clientRef = doc(db, 'ccClientes', client.id);
-            const cajaRef = doc(db, 'cajas', caja.id);
             const fingerprint = JSON.stringify({
                 clientId: client.id, cajaId: caja.id, cents, method
             });
@@ -282,63 +280,15 @@ export function setupCurrentAccount({
                     movementId: doc(movementCollection).id
                 };
             }
-            const movementRef = doc(db, 'ccMovimientos', pendingDeposit.movementId);
-
-            await runTransaction(db, async tx => {
-                const account = await tx.get(clientRef);
-                const drawer = await tx.get(cajaRef);
-                const duplicate = await tx.get(movementRef);
-                if (duplicate.exists()) {
-                    const saved = duplicate.data();
-                    if (saved.clienteId !== client.id || saved.cajaId !== caja.id
-                        || saved.montoCentavos !== cents || saved.medioPago !== method
-                        || saved.tipo !== 'anticipo') {
-                        throw new Error('El identificador corresponde a otra operación.');
-                    }
-                    return { alreadyRegistered: true };
-                }
-                if (!account.exists() || account.data().activo === false) {
-                    throw new Error('La cuenta ya no existe o está inactiva.');
-                }
-                if (!drawer.exists() || drawer.data().estado !== 'abierta') {
-                    throw new Error('La caja ya no está abierta.');
-                }
-                const before = Number(account.data().saldoCentavos);
-                if (!Number.isSafeInteger(before) || before < 0) {
-                    throw new Error('El saldo del cliente necesita revisión.');
-                }
-                const after = before + cents;
-                if (!Number.isSafeInteger(after)) throw new Error('Saldo fuera del rango permitido.');
-                const cash = method === 'Efectivo' ? fromCents(cents) : 0;
-                const mp = method === 'MercadoPago' ? fromCents(cents) : 0;
-                const drawerData = drawer.data();
-                const now = Timestamp.now();
-
-                tx.update(clientRef, {
-                    saldoCentavos: after,
-                    ultimoMovimientoId: movementRef.id,
-                    ultimoMovimientoAt: now,
-                    updatedAt: now
-                });
-                tx.update(cajaRef, {
-                    totalEfectivo: (Number(drawerData.totalEfectivo) || 0) + cash,
-                    totalMercadoPago: (Number(drawerData.totalMercadoPago) || 0) + mp,
-                    anticiposCC_Efectivo: (Number(drawerData.anticiposCC_Efectivo) || 0) + cash,
-                    anticiposCC_MercadoPago: (Number(drawerData.anticiposCC_MercadoPago) || 0) + mp
-                });
-                tx.set(movementRef, {
-                    clienteId: client.id,
-                    clienteNombre: account.data().nombre || '',
-                    tipo: 'anticipo',
-                    montoCentavos: cents,
-                    saldoAnteriorCentavos: before,
-                    saldoPosteriorCentavos: after,
-                    cajaId: caja.id,
-                    medioPago: method,
-                    fecha: now,
-                    usuarioId: user.uid,
-                    usuarioNombre: getUserName()
-                });
+            await recordAccountDeposit({
+                db,
+                cajaId: caja.id,
+                clienteId: client.id,
+                cents,
+                method,
+                userId: user.uid,
+                userName: getUserName(),
+                operationId: pendingDeposit.movementId
             });
 
             pendingDeposit = null;
