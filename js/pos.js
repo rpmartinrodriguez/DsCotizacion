@@ -129,7 +129,8 @@ export function setupPOS(app) {
         cajasCollection,
         ventasCollection,
         getCurrentUser: () => currentUser,
-        getUserName: () => userName
+        getUserName: () => userName,
+        onViewChange: () => actualizarMobileBarVisibility()
     });
 
     const inventory = setupPOSInventory({
@@ -376,6 +377,7 @@ export function setupPOS(app) {
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
             pantallaStock.style.display = 'block';
+            window.scrollTo(0, 0);
             procesarYRenderizar();
         });
     }
@@ -388,6 +390,7 @@ export function setupPOS(app) {
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
             if (pantallaPromociones) {
                 pantallaPromociones.style.display = 'block';
+                window.scrollTo(0, 0);
                 if (selectPromoProd) {
                     selectPromoProd.innerHTML = '';
                     productosDisponibles.forEach((product) => {
@@ -408,6 +411,7 @@ export function setupPOS(app) {
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             actualizarMobileBarVisibility();
+            window.scrollTo(0, 0);
             procesarYRenderizar();
             if (buscadorPOS) buscadorPOS.focus();
         });
@@ -418,6 +422,7 @@ export function setupPOS(app) {
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             pantallaPOS.style.display = 'grid';
             actualizarMobileBarVisibility();
+            window.scrollTo(0, 0);
             if (buscadorPOS) buscadorPOS.focus();
         });
     }
