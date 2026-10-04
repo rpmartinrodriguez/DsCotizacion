@@ -13,6 +13,7 @@ import {
 import { cashMetricsInfo as infoDiccionario } from "./data/cash-metrics-info.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { calculateRecipeUnitCost } from "./core/pricing.js";
+import { setupDecisionCenter } from "./cajas/decision-center.js";
 
 export function setupCajas(app) {
     const db = getFirestore(app);
@@ -35,8 +36,11 @@ export function setupCajas(app) {
 
     const tabBtnHistorial = document.getElementById('tab-btn-historial');
     const tabBtnEstadisticas = document.getElementById('tab-btn-estadisticas');
+    const tabBtnDecisiones = document.getElementById('tab-btn-decisiones');
     const sectionHistorial = document.getElementById('section-historial');
     const sectionEstadisticas = document.getElementById('section-estadisticas');
+    const sectionDecisiones = document.getElementById('section-decisiones');
+    const decisionCenter = setupDecisionCenter(db);
 
     const modalInfo = document.getElementById('modal-info');
     const infoTitle = document.getElementById('info-title');
@@ -121,25 +125,52 @@ export function setupCajas(app) {
     // ==========================================
     // 2. GESTIÓN DE PESTAÑAS (TABS)
     // ==========================================
-    if (tabBtnHistorial && tabBtnEstadisticas) {
-        tabBtnHistorial.addEventListener('click', () => {
-            tabBtnHistorial.classList.add('active');
-            tabBtnEstadisticas.classList.remove('active');
-            if (sectionHistorial) sectionHistorial.style.display = 'block';
-            if (sectionEstadisticas) sectionEstadisticas.style.display = 'none';
-        });
+    const setActiveTab = (tab, { updateHash = true } = {}) => {
+        const safeTab = ['historial', 'estadisticas', 'decisiones'].includes(tab)
+            ? tab
+            : 'historial';
 
-        tabBtnEstadisticas.addEventListener('click', () => {
-            tabBtnEstadisticas.classList.add('active');
-            tabBtnHistorial.classList.remove('active');
-            if (sectionHistorial) sectionHistorial.style.display = 'none';
-            if (sectionEstadisticas) sectionEstadisticas.style.display = 'block';
+        const options = [
+            { key: 'historial', button: tabBtnHistorial, section: sectionHistorial },
+            { key: 'estadisticas', button: tabBtnEstadisticas, section: sectionEstadisticas },
+            { key: 'decisiones', button: tabBtnDecisiones, section: sectionDecisiones }
+        ];
 
-            if(!statsYaCargadas) {
-                generarDashboard();
-                statsYaCargadas = true;
+        options.forEach(option => {
+            option.button?.classList.toggle('active', option.key === safeTab);
+            option.button?.setAttribute('aria-selected', String(option.key === safeTab));
+            if (option.section) {
+                option.section.style.display = option.key === safeTab ? 'block' : 'none';
             }
         });
+
+        if (safeTab === 'estadisticas' && !statsYaCargadas) {
+            generarDashboard();
+            statsYaCargadas = true;
+        }
+        if (safeTab === 'decisiones') {
+            decisionCenter.show();
+        }
+
+        if (updateHash && window.history?.replaceState) {
+            window.history.replaceState(null, '', `#${safeTab}`);
+        }
+    };
+
+    tabBtnHistorial?.addEventListener('click', () => setActiveTab('historial'));
+    tabBtnEstadisticas?.addEventListener('click', () => setActiveTab('estadisticas'));
+    tabBtnDecisiones?.addEventListener('click', () => setActiveTab('decisiones'));
+
+    window.addEventListener('hashchange', () => {
+        const tab = window.location.hash.slice(1);
+        if (['historial', 'estadisticas', 'decisiones'].includes(tab)) {
+            setActiveTab(tab, { updateHash: false });
+        }
+    });
+
+    const initialTab = window.location.hash.slice(1);
+    if (['estadisticas', 'decisiones'].includes(initialTab)) {
+        setActiveTab(initialTab, { updateHash: false });
     }
 
     const btnCargarStats = document.getElementById('btn-cargar-stats');
