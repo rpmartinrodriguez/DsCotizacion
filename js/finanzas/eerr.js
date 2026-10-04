@@ -32,6 +32,16 @@ export function setupEstadoResultados(app) {
     const cancel = document.getElementById('eerr-gasto-cancelar');
     const copy = document.getElementById('eerr-copiar-anterior');
 
+    const previewReadOnly = window.location.hostname.startsWith('deploy-preview-');
+    const previewNotice = document.getElementById('eerr-preview-notice');
+    if (previewNotice) previewNotice.hidden = !previewReadOnly;
+    if (previewReadOnly) {
+        form?.querySelectorAll('input, select, button').forEach(control => {
+            control.disabled = true;
+        });
+        if (copy) copy.disabled = true;
+    }
+
     let loadedExpenses = [];
     let requestId = 0;
 
@@ -101,8 +111,10 @@ export function setupEstadoResultados(app) {
                                     <small>${escapeHtml(expense.tipo || 'fijo')} ${expense.nota ? '· ' + escapeHtml(expense.nota) : ''}</small>
                                 </div>
                                 <b>${amountText(expense.monto)}</b>
-                                <button type="button" data-expense-action="edit" data-id="${escapeAttribute(expense.id)}">Editar</button>
-                                <button type="button" data-expense-action="delete" data-id="${escapeAttribute(expense.id)}" class="is-danger">Eliminar</button>
+                                ${previewReadOnly ? '' : `
+                                    <button type="button" data-expense-action="edit" data-id="${escapeAttribute(expense.id)}">Editar</button>
+                                    <button type="button" data-expense-action="delete" data-id="${escapeAttribute(expense.id)}" class="is-danger">Eliminar</button>
+                                `}
                             </div>
                         `).join('')}
                     </div>
@@ -256,6 +268,7 @@ export function setupEstadoResultados(app) {
 
     cancel?.addEventListener('click', resetExpenseForm);
     list?.addEventListener('click', async event => {
+        if (previewReadOnly) return;
         const button = event.target.closest('[data-expense-action]');
         if (!button) return;
         const row = loadedExpenses.find(item => item.id === button.dataset.id);
@@ -287,6 +300,10 @@ export function setupEstadoResultados(app) {
 
     form?.addEventListener('submit', async event => {
         event.preventDefault();
+        if (previewReadOnly) {
+            alert('Vista previa de solo lectura: no se modificarán los gastos reales.');
+            return;
+        }
         const month = monthExpenses?.value;
         const value = Number(amount.value);
 
@@ -332,6 +349,7 @@ export function setupEstadoResultados(app) {
     });
 
     copy?.addEventListener('click', async () => {
+        if (previewReadOnly) return;
         if (!validMonth(monthExpenses?.value)) return;
         const targetMonth = monthExpenses.value;
         const sourceMonth = previousMonth(targetMonth);
