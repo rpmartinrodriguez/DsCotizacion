@@ -10,6 +10,8 @@ import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
 import { setupPOSInventory } from "./pos/inventory.js";
+import { setupCurrentAccount } from "./pos/current-account.js";
+import { savePOSCheckout, toCents } from "./pos/checkout.js";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -123,6 +125,61 @@ export function setupPOS(app) {
     let terminoBusquedaPOS = '';
     let topVendidosKeys = new Set();
     let topVendidosCargados = false;
+    let cuentaCorrienteClienteId = null;
+    const ccScreen = document.getElementById('pantalla-cuenta-corriente');
+    const ccBanner = document.getElementById('cc-venta-banner');
+    const ccBannerName = document.getElementById('cc-venta-cliente');
+    const ccBannerBalance = document.getElementById('cc-venta-saldo');
+    const ccExitMode = document.getElementById('cc-salir-modo');
+    const ccPaymentInfo = document.getElementById('cc-confirmacion');
+    const ccPaymentName = document.getElementById('cc-confirmar-nombre');
+    const ccPaymentBalance = document.getElementById('cc-confirmar-saldo');
+    const paymentMethodsContainer = document.getElementById('pos-payment-methods');
+    const paymentHeading = document.getElementById('pos-payment-heading');
+
+    const currentAccount = setupCurrentAccount({
+        db,
+        getCaja: () => cajaActiva,
+        getUser: () => currentUser,
+        getUserName: () => userName,
+        onOpen: () => {
+            if (!cajaActiva?.id) {
+                alert('Primero abrí una caja.');
+                return;
+            }
+            if (pantallaPOS) pantallaPOS.style.display = 'none';
+            if (pantallaStock) pantallaStock.style.display = 'none';
+            if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+            if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
+            if (ccScreen) ccScreen.style.display = 'block';
+            actualizarMobileBarVisibility();
+        },
+        onReturn: () => {
+            if (ccScreen) ccScreen.style.display = 'none';
+            if (pantallaPOS) pantallaPOS.style.display = 'grid';
+            actualizarMobileBarVisibility();
+        },
+        onSelectForSale: client => {
+            if (carritoActual.length > 0) {
+                alert('Primero finalizá o vaciá la venta en preparación. Después elegí esta cuenta corriente.');
+                return false;
+            }
+            cuentaCorrienteClienteId = client.id;
+            renderizarCarrito();
+            actualizarMobileBarVisibility();
+            return true;
+        }
+    });
+    const getCuentaCorrienteActiva = () =>
+        cuentaCorrienteClienteId
+            ? currentAccount.currentById(cuentaCorrienteClienteId)
+            : null;
+
+    ccExitMode?.addEventListener('click', () => {
+        cuentaCorrienteClienteId = null;
+        renderizarCarrito();
+        actualizarMobileBarVisibility();
+    });
 
     const manualHistory = setupManualHistory({
         db,
@@ -249,9 +306,10 @@ export function setupPOS(app) {
                 cajaActiva = { id: cajaDoc.id, ...cajaDoc.data() };
                 if (pantallaApertura) pantallaApertura.style.display = 'none';
                 
-                if (pantallaStock && pantallaStock.style.display === 'block' || 
+                if ((pantallaStock && pantallaStock.style.display === 'block') ||
                    (pantallaPromociones && pantallaPromociones.style.display === 'block') ||
-                   (pantallaCargaHistorica && pantallaCargaHistorica.style.display === 'block')) {
+                   (pantallaCargaHistorica && pantallaCargaHistorica.style.display === 'block') ||
+                   (ccScreen && ccScreen.style.display === 'block')) {
                     if (pantallaPOS) pantallaPOS.style.display = 'none';
                 } else {
                     if (pantallaPOS) pantallaPOS.style.display = 'grid';
@@ -269,6 +327,8 @@ export function setupPOS(app) {
             } else {
                 cajaActiva = null;
                 datosCargados = false;
+                cuentaCorrienteClienteId = null;
+                if (ccScreen) ccScreen.style.display = 'none';
                 if (pantallaPOS) pantallaPOS.style.display = 'none';
                 if (pantallaStock) pantallaStock.style.display = 'none';
                 if (pantallaPromociones) pantallaPromociones.style.display = 'none';
@@ -567,8 +627,17 @@ export function setupPOS(app) {
     };
 
     const actualizarMobileBarVisibility = () => {
-        if (!mobileBar || !pantallaPOS) return;
-        mobileBar.hidden = pantallaPOS.style.display === 'none';
+        if (pantallaPOS) {
+            const onPOS = pantallaPOS.style.display !== 'none';
+            const client = getCuentaCorrienteActiva();
+            if (mobileBar) mobileBar.hidden = !onPOS;
+            if (ccBanner) ccBanner.hidden = !onPOS || !client;
+            if (client) {
+                if (ccBannerName) ccBannerName.textContent = client.nombre || 'Cliente';
+                if (ccBannerBalance) ccBannerBalance.textContent =
+                    `Saldo disponible: ${formatMoneda((Number(client.saldoCentavos) || 0) / 100)}`;
+            }
+        }
     };
 
     const cargarDataYCostos = () => {
@@ -932,9 +1001,21 @@ export function setupPOS(app) {
             if (modalCobroTotal) modalCobroTotal.textContent = formatMoneda(totalVentaActual);
             actualizarBotonesDineroRapido();
             
-            metodoPagoSeleccionado = null;
+            const prepaidClient = getCuentaCorrienteActiva();
+            metodoPagoSeleccionado = prepaidClient ? 'CuentaCorriente' : null;
             btnPaymentMethods.forEach(b => b.classList.remove('selected'));
             btnConfirmarVenta.disabled = true;
+
+            if (ccPaymentInfo) ccPaymentInfo.hidden = !prepaidClient;
+            if (paymentMethodsContainer) paymentMethodsContainer.hidden = Boolean(prepaidClient);
+            if (paymentHeading) paymentHeading.hidden = Boolean(prepaidClient);
+            if (prepaidClient) {
+                if (ccPaymentName) ccPaymentName.textContent = prepaidClient.nombre;
+                if (ccPaymentBalance) ccPaymentBalance.textContent =
+                    `Saldo disponible: ${formatMoneda((Number(prepaidClient.saldoCentavos) || 0) / 100)}`;
+                calcularVuelto();
+            }
+
             
             if (paymentDetailsContainer) paymentDetailsContainer.style.display = 'none';
             if (fieldMP) fieldMP.style.display = 'none';
@@ -994,6 +1075,19 @@ export function setupPOS(app) {
 
     const calcularVuelto = () => {
         if (!metodoPagoSeleccionado) return;
+        if (metodoPagoSeleccionado === 'CuentaCorriente') {
+            const saldo = Number(getCuentaCorrienteActiva()?.saldoCentavos || 0);
+            const enough = saldo >= toCents(totalVentaActual);
+            if (ccPaymentBalance) {
+                ccPaymentBalance.textContent = enough
+                    ? `Saldo disponible: ${formatMoneda(saldo / 100)} · Después: ${formatMoneda((saldo - toCents(totalVentaActual)) / 100)}`
+                    : `Saldo insuficiente: ${formatMoneda(saldo / 100)}. Cargá un anticipo antes de continuar.`;
+            }
+            if (btnConfirmarVenta) {
+                btnConfirmarVenta.disabled = !enough || totalVentaActual <= 0;
+            }
+            return;
+        }
         let mp = parseFloat(inputCobroMP.value) || 0;
         let efvo = parseFloat(inputCobroEfectivo.value) || 0;
         let vuelto = 0; let esValido = false;
@@ -1049,107 +1143,36 @@ export function setupPOS(app) {
                 let mpTipeado = parseFloat(inputCobroMP.value) || 0;
                 mpReal = mpTipeado; efectivoReal = totalVentaActual - mpTipeado;
             }
+            // Cuenta corriente: el efectivo/MP ya ingresó en el anticipo.
+            // Su consumo no genera otro ingreso físico en caja.
 
             btnConfirmarVenta.disabled = true;
             btnConfirmarVenta.textContent = 'Procesando...';
 
             try {
-                const itemsParaGuardar = carritoActual.map(i => {
-                    const producto = productosDisponibles.find(p => p.id === i.id);
-                    const cantidad = Number(i.cantidad) || 0;
-                    const precioUnitario = Number(i.precio) || 0;
-                    const costoUnitarioVenta = Number(producto?.costoBaseCalculado) || 0;
-                    const costoTotalItem = costoUnitarioVenta * cantidad;
-                    const facturacionItem = precioUnitario * cantidad;
-                    const utilidadBrutaItem = facturacionItem - costoTotalItem;
-                    const margenBrutoVentaPct = facturacionItem > 0
-                        ? (utilidadBrutaItem / facturacionItem) * 100
-                        : 0;
-
-                    return {
-                        id: i.id,
-                        nombre: i.nombre,
-                        precio: precioUnitario,
-                        cantidad,
-                        costoUnitarioVenta,
-                        costoTotalVenta: costoTotalItem,
-                        utilidadBrutaVenta: utilidadBrutaItem,
-                        margenBrutoVentaPct,
-                        porcentajeGananciaAplicado: Number(producto?.porcentajeGananciaAplicado) || 0,
-                        costoSnapshotVersion: 1
-                    };
-                });
-
-                const costoTotalVenta = itemsParaGuardar.reduce(
-                    (sum, item) => sum + (Number(item.costoTotalVenta) || 0),
-                    0
-                );
-                const utilidadBrutaVenta = totalVentaActual - costoTotalVenta;
-                const margenBrutoVentaPct = totalVentaActual > 0
-                    ? (utilidadBrutaVenta / totalVentaActual) * 100
-                    : 0;
-
-                // Deducción de Stock
-                for (const item of carritoActual) {
-                    const docRef = doc(db, 'recetas', item.id);
-                    await runTransaction(db, async (transaction) => {
-                        const sfDoc = await transaction.get(docRef);
-                        if (!sfDoc.exists()) throw "El producto no existe.";
-                        
-                        let stockActual = sfDoc.data().stockMostrador || 0;
-                        let lotesActuales = sfDoc.data().lotes || [];
-                        let nuevoStock = stockActual - item.cantidad;
-                        if (nuevoStock < 0) nuevoStock = 0;
-                        
-                        let qtyToDeduct = item.cantidad;
-                        lotesActuales.sort((a, b) => new Date(a.fechaVto) - new Date(b.fechaVto));
-                        
-                        let nuevosLotesPostResta = [];
-                        for (let lote of lotesActuales) {
-                            if (qtyToDeduct > 0) {
-                                if (lote.cantidad <= qtyToDeduct) { qtyToDeduct -= lote.cantidad; } 
-                                else { lote.cantidad -= qtyToDeduct; qtyToDeduct = 0; nuevosLotesPostResta.push(lote); }
-                            } else { nuevosLotesPostResta.push(lote); }
-                        }
-                        
-                        transaction.update(docRef, { stockMostrador: nuevoStock, lotes: nuevosLotesPostResta });
-
-                        const auditRef = doc(auditoriaCollection);
-                        transaction.set(auditRef, {
-                            productoId: item.id, productoNombre: item.nombre, tipo: 'RESTA', cantidad: item.cantidad,
-                            stockResultante: nuevoStock,
-                            motivo: item.cantidad > stockActual
-                                ? `Venta (${metodoPagoSeleccionado}) · stock informativo/no bloqueante`
-                                : `Venta (${metodoPagoSeleccionado})`,
-                            usuario: userName, usuarioId: currentUser.uid, fecha: Timestamp.now()
-                        });
-                    });
+                const selectedCC = metodoPagoSeleccionado === 'CuentaCorriente'
+                    ? getCuentaCorrienteActiva() : null;
+                if (metodoPagoSeleccionado === 'CuentaCorriente' && !selectedCC) {
+                    throw new Error('El cliente ya no está seleccionado.');
                 }
 
-                await addDoc(ventasCollection, {
+                await savePOSCheckout({
+                    db,
                     cajaId: cajaActiva.id,
-                    fecha: Timestamp.now(),
-                    metodoPago: metodoPagoSeleccionado,
-                    total: totalVentaActual,
-                    pagoEfectivo: efectivoReal,
-                    pagoMercadoPago: mpReal,
-                    items: itemsParaGuardar,
-                    costoTotalVenta,
-                    utilidadBrutaVenta,
-                    margenBrutoVentaPct,
-                    costoSnapshotVersion: 1,
-                    vendedor: cajaActiva.usuarioNombre || userName
-                });
-
-                cajaActiva.totalEfectivo = (cajaActiva.totalEfectivo || 0) + efectivoReal;
-                cajaActiva.totalMercadoPago = (cajaActiva.totalMercadoPago || 0) + mpReal;
-                await updateDoc(doc(db, 'cajas', cajaActiva.id), {
-                    totalEfectivo: cajaActiva.totalEfectivo,
-                    totalMercadoPago: cajaActiva.totalMercadoPago
+                    items: carritoActual,
+                    products: productosDisponibles,
+                    method: metodoPagoSeleccionado,
+                    amountCash: efectivoReal,
+                    amountMP: mpReal,
+                    clientId: selectedCC?.id || null,
+                    userId: currentUser.uid,
+                    userName
                 });
 
                 carritoActual = [];
+                cuentaCorrienteClienteId = null;
                 renderizarCarrito();
+                actualizarMobileBarVisibility();
                 setMobilePOSPanel('productos');
                 if (modalCobro) modalCobro.classList.remove('visible');
                 btnConfirmarVenta.textContent = 'Confirmar Venta';
@@ -1157,7 +1180,7 @@ export function setupPOS(app) {
 
             } catch (error) {
                 console.error("Error al procesar la venta:", error);
-                alert("Hubo un error de red al procesar el cobro.");
+                alert(`No se pudo registrar la venta: ${error.message || 'revisá los datos y tu conexión'}. No se modificó la caja ni el saldo si la operación fue rechazada.`);
                 btnConfirmarVenta.disabled = false; btnConfirmarVenta.textContent = 'Confirmar Venta';
             }
         });
