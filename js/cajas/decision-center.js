@@ -1,4 +1,6 @@
-import { getDocs, collection } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+import {
+    getDocs, collection, query, where, Timestamp
+} from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml } from "../core/html.js";
 import { analyzeDecisionData } from "./decision-engine.js";
@@ -286,8 +288,11 @@ export function setupDecisionCenter(db) {
 
         requestInProgress = (async () => {
             try {
+                // 90 días actuales + 90 anteriores como máximo; incluimos
+                // margen adicional para horario local/verano y días parciales.
+                const horizon = Timestamp.fromDate(new Date(Date.now() - 185 * 86400000));
                 const [sales, boxes, recipes, materials] = await Promise.all([
-                    getDocs(collection(db, 'ventasMostrador')),
+                    getDocs(query(collection(db, 'ventasMostrador'), where('fecha', '>=', horizon))),
                     getDocs(collection(db, 'cajas')),
                     getDocs(collection(db, 'recetas')),
                     getDocs(collection(db, 'materiasPrimas'))
