@@ -160,6 +160,13 @@ export function setupPOS(app) {
             if (pantallaPOS) pantallaPOS.style.display = 'grid';
             actualizarMobileBarVisibility();
         },
+        onAccountsUpdated: () => {
+            actualizarMobileBarVisibility();
+            if (modalCobro?.classList.contains('visible')
+                && metodoPagoSeleccionado === 'CuentaCorriente') {
+                calcularVuelto();
+            }
+        },
         onSelectForSale: client => {
             if (carritoActual.length > 0 && cuentaCorrienteClienteId !== client.id) {
                 alert('Ya existe una venta en preparación. Finalizala o vaciala antes de cambiar de cliente.');
@@ -836,6 +843,10 @@ export function setupPOS(app) {
 
         if (posTotalMonto) posTotalMonto.textContent = formatMoneda(total);
         if (posCobrarMonto) posCobrarMonto.textContent = formatMoneda(total);
+        const chargeLabel = btnCobrar?.querySelector('span');
+        if (chargeLabel) {
+            chargeLabel.textContent = cuentaCorrienteClienteId ? 'Descontar saldo' : 'Cobrar';
+        }
         if (posCartCount) posCartCount.textContent = cantidadItems;
         if (mobileCartSummary) mobileCartSummary.textContent = `${cantidadItems} · ${formatMoneda(total)}`;
         if (btnVaciarCarrito) btnVaciarCarrito.hidden = carritoActual.length === 0;
