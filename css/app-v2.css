@@ -5838,3 +5838,251 @@ body.ds-history .historial-card__detalle ul {
   opacity: .58;
   cursor: not-allowed;
 }
+
+
+
+/* =========================================================
+   Mobile layout QA — prevent page-wide sideways scrolling.
+   Wide analytical tables remain locally scrollable when necessary;
+   operational grids and customer lists reflow instead.
+   ========================================================= */
+body.ds-app,
+body.ds-app .main-container,
+body.ds-app main,
+body.ds-app .ds-content-wrap,
+body.ds-app .ds-dashboard,
+body.ds-app .ds-pos-shell,
+body.ds-app .ds-cc-screen,
+body.ds-app .ds-cc-main {
+  min-width: 0;
+}
+body.ds-app { max-width: 100%; }
+body.ds-app *, body.ds-app *::before, body.ds-app *::after { box-sizing: border-box; }
+body.ds-app :is(h1,h2,h3,h4,p,small,span,strong,label,a,button,td,th) {
+  overflow-wrap: anywhere;
+}
+body.ds-app :is(.ds-content-head,.ds-page-head,.ds-content-head > div,.ds-page-head > div,
+ .ds-pos-page-head,.ds-billing-head,.ds-cc-section-head,.ds-modal-heading) {
+  min-width: 0;
+}
+body.ds-app :is(img,svg,canvas) { max-width: 100%; }
+body.ds-app :is(input,select,textarea) { max-width: 100%; min-width: 0; }
+body.ds-app :is(.card,.ds-panel,.categoria-acordeon,.ds-pos-catalog-panel,
+ .ds-pos-cart-panel,.ds-cc-detail,.ds-cc-main > .card) { min-width: 0; max-width: 100%; }
+
+/* Horizontal navigation for page sections is intentional, and must stay
+   inside its own viewport rather than stretching the whole document. */
+body.ds-app :is(.tabs-container,.ds-finance-tabs,.ds-cc-table-wrap,
+ .ds-price-review-table-wrap) { min-width: 0; max-width: 100%; }
+body.ds-app :is(.ds-finance-tabs,.tabs-container) > button { flex-shrink: 0; }
+
+@media (max-width: 767px) {
+  body.ds-app .main-container { width: 100%; }
+  body.ds-app :is(.ds-main,.ds-cash-main,.ds-pos-main,.ds-finance-main,
+   .ds-recipes-main,.ds-quotes-main,.ds-purchases-main,.ds-content-main) {
+    max-width: 100%;
+  }
+  body.ds-app .ds-content-head h1,
+  body.ds-app .ds-page-head h1,
+  body.ds-app .page-title,
+  body.ds-app .ds-pos-page-head h1 {
+    font-size: clamp(1.35rem, 6.2vw, 1.9rem);
+    line-height: 1.2;
+    letter-spacing: -.025em;
+    max-width: 100%;
+    white-space: normal;
+  }
+  body.ds-app .ds-page-head,
+  body.ds-app .ds-pos-page-head { flex-wrap: wrap; gap: 10px; }
+  body.ds-app :is(.ds-page-actions,.ds-content-actions,.card-header-actions,
+   .ds-billing-head,.ds-billing-form,.ds-cc-section-head) {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  body.ds-app .modal-overlay {
+    padding: 12px;
+    width: 100%;
+    max-width: 100%;
+  }
+  body.ds-app .modal-overlay .modal-content {
+    width: 100% !important;
+    max-width: min(100%, 640px) !important;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  body.ds-app .modal-actions { flex-wrap: wrap; }
+  body.ds-app .modal-actions > :is(button,a) {
+    min-width: 0;
+    flex: 1 1 130px;
+    white-space: normal;
+  }
+  body.ds-app :is(.form-modern,.receta-editor-grid) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  /* Inline desktop grids in category, expenses and quote forms. */
+  body.ds-recipes #form-categoria,
+  body.ds-recipes #receta-modal-overlay .form-modern,
+  body.ds-purchases #form-nueva-compra .form-modern {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  body.ds-recipes #form-categoria > *,
+  body.ds-recipes #receta-modal-overlay .form-modern > * {
+    grid-column: 1 / -1 !important;
+    min-width: 0;
+  }
+  body.ds-cash [style*="minmax(320px"] {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  body.ds-cash :is(.caja-resumen,.dashboard-grid) {
+    grid-template-columns: repeat(auto-fit,minmax(min(100%,140px),1fr));
+  }
+  body.ds-cash .dash-card { min-width: 0; padding: 14px 11px; }
+  body.ds-cash .dash-card .valor { font-size: clamp(1rem,4.5vw,1.5rem); overflow-wrap: anywhere; }
+  body.ds-cash .chart-box { min-width: 0; max-width: 100%; }
+  body.ds-cash .caja-header { min-width:0; flex-wrap:wrap; }
+  body.ds-cash .caja-header > div { min-width: 0; }
+  body.ds-cash .ticket-item { gap: 8px; flex-wrap: wrap; }
+  body.ds-cash :is(.stats-table,#tabla-produccion-optima) {
+    max-width: 100%;
+  }
+  /* All wide analytics tables scroll inside their card, not across the page.
+     Do not squeeze or hide financial columns. */
+  body.ds-cash :is(.ds-content-wrap,.card,.chart-box) { min-width: 0; }
+  body.ds-cash .ds-content-wrap > section,
+  body.ds-cash #section-estadisticas > div { min-width: 0; max-width: 100%; }
+  body.ds-pos .ds-pos-shell,
+  body.ds-pos .ds-cc-main { grid-template-columns: minmax(0,1fr) !important; }
+  body.ds-pos :is(.ds-pos-catalog-panel,.ds-pos-cart-panel,.ds-cc-main > .card) {
+    min-width:0;
+  }
+  body.ds-pos .ds-pos-operator-badge {
+    max-width: 100%;
+    white-space: normal;
+  }
+  body.ds-pos .ds-cc-section-head button {
+    flex-shrink: 1;
+    white-space: normal;
+  }
+  body.ds-pos .ds-cc-actions button { white-space: normal; }
+  body.ds-pos .ds-pos-mobile-bar { min-width: 0; }
+  body.ds-pos .ds-pos-mobile-bar button {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  body.ds-finance :is(.ds-finance-shell,.ds-finance-report) { min-width:0; }
+}
+
+/* On narrow phones, clients shouldn't need to scroll sideways just to view
+   balance or select an action. A card layout preserves all four data fields. */
+@media (max-width: 600px) {
+  body.ds-pos .ds-cc-table-wrap { overflow-x: visible; }
+  body.ds-pos .ds-cc-table { display:block; width:100%; min-width:0; }
+  body.ds-pos .ds-cc-table thead { display:none; }
+  body.ds-pos .ds-cc-table tbody { display:grid; gap:9px; }
+  body.ds-pos .ds-cc-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    border: 1px solid #e9dee5;
+    border-radius: 12px;
+    background: #fff;
+    padding: 10px;
+    min-width: 0;
+  }
+  body.ds-pos .ds-cc-table tbody td {
+    display: block;
+    min-width: 0;
+    border: 0;
+    padding: 5px 6px;
+  }
+  body.ds-pos .ds-cc-table tbody td:nth-child(1) { grid-column: 1;grid-row:1; }
+  body.ds-pos .ds-cc-table tbody td:nth-child(2) { grid-column: 2;grid-row:1;text-align:right; }
+  body.ds-pos .ds-cc-table tbody td:nth-child(3) {
+    grid-column:1 / -1;grid-row:2;font-size:.7rem;
+  }
+  body.ds-pos .ds-cc-table tbody td:nth-child(3)::before {
+    content:'Último movimiento: ';font-weight:700;
+  }
+  body.ds-pos .ds-cc-table tbody td:nth-child(4) {grid-column:1 / -1;grid-row:3;}
+  body.ds-pos .ds-cc-cell-actions button {
+    flex:1 1 auto;
+    min-height:36px;
+  }
+  body.ds-pos .ds-cc-table tbody td[colspan] {
+    grid-column:1 / -1;
+    grid-row:1;
+    text-align:left;
+  }
+  body.ds-pos .ds-cc-summary { grid-template-columns: minmax(0,1fr); }
+  body.ds-pos .ds-cc-movement { flex-wrap:wrap; }
+  body.ds-pos .ds-cc-movement > div {min-width:0;}
+  body.ds-recipes .ds-receta-cost-row {
+    grid-template-columns: minmax(0,1fr) minmax(0,auto) 28px;
+  }
+  body.ds-recipes .ds-receta-cost-name {min-width:0;}
+  body.ds-recipes .ds-receta-cost-subtotal {overflow-wrap:anywhere;}
+  body.ds-app :is(.ds-price-review-table-wrap,.tabs-container,.ds-finance-tabs) {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+/* Mobile charts and analytics: overflow is limited to individual tables,
+   not the entire view. Tab labels are fully visible without swipe. */
+body.ds-cash .ds-cash-table-scroll {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body.ds-cash .ds-cash-table-scroll > table {
+  min-width: 440px;
+}
+@media (max-width: 600px) {
+  body.ds-cash .tabs-container {
+    overflow: visible;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  body.ds-cash .tabs-container > .tab-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    font-size: .86rem;
+    line-height: 1.3;
+    padding: 10px 8px;
+  }
+  body.ds-finance .ds-finance-tabs { flex-wrap: wrap; overflow: visible; }
+  body.ds-finance .ds-finance-tabs > button {
+    flex: 1 1 calc(50% - 8px);
+    white-space: normal;
+    min-width: 0;
+  }
+  body.ds-cash :is(.ds-billing-head,.ds-cost-fluctuation-head,.ds-decision-head) {
+    min-width:0;
+    max-width:100%;
+  }
+  body.ds-cash :is(.list-top-productos li,.caja-resumen-item) {
+    min-width:0;
+    overflow-wrap:anywhere;
+  }
+}
+
+
+/* Forms remain legible at 320-390px, and iOS won't zoom the whole viewport
+   when a compact text field receives focus. */
+@media (max-width: 600px) {
+  body.ds-app :is(input,select,textarea) {
+    font-size: 16px;
+  }
+  body.ds-users .permisos-grid {
+    grid-template-columns: minmax(0,1fr);
+  }
+  body.ds-app .card__title {
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+}
