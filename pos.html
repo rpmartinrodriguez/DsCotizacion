@@ -172,6 +172,16 @@
                 <button id="btn-abrir-caja" class="btn-primary">Abrir Caja y Comenzar Turno</button>
             </section>
 
+
+            <div id="cc-venta-banner" class="ds-cc-sale-banner" hidden>
+                <div>
+                    <span>Venta con saldo a favor</span>
+                    <strong id="cc-venta-cliente">—</strong>
+                    <small id="cc-venta-saldo">Saldo disponible: —</small>
+                </div>
+                <button type="button" id="cc-salir-modo" class="btn-secondary">Salir de cuenta corriente</button>
+            </div>
+
             <!-- PANTALLA 2: MOSTRADOR ACTIVO (POS TÁCTIL) -->
             <section id="pantalla-pos" class="pos-grid ds-pos-shell" style="display: none;">
                 <div class="card ds-pos-catalog-panel">
@@ -181,6 +191,7 @@
                             <h2>Productos</h2>
                         </div>
                         <div class="ds-pos-admin-actions">
+                            <button id="btn-ir-cuenta-corriente" class="btn-secondary" type="button">👥 Cuenta corriente</button>
                             <button id="btn-ir-stock" class="btn-secondary master-only">📦 Stock</button>
                             <button id="btn-ir-promos" class="btn-secondary master-only">🏷️ Promos</button>
                             <button id="btn-ir-carga-historica" class="btn-secondary master-only">📝 Histórica</button>
@@ -240,6 +251,88 @@
                     <span>Carrito</span>
                     <strong id="pos-mobile-cart-summary">0 · $0</strong>
                 </button>
+            </div>
+
+            <!-- CUENTA CORRIENTE: ANTICIPOS Y CONSUMOS -->
+            <section id="pantalla-cuenta-corriente" class="ds-cc-screen" style="display: none;">
+                <div class="ds-cc-top card">
+                    <div>
+                        <span class="ds-mini-eyebrow">Mostrador · Anticipos de clientes</span>
+                        <h2>Cuenta corriente</h2>
+                        <p>El dinero anticipado entra a caja una sola vez. Los productos retirados se registran como venta y descuentan el saldo sin un segundo cobro.</p>
+                    </div>
+                    <button id="cc-volver-ventas" class="btn-secondary" type="button">← Volver a ventas</button>
+                </div>
+                <div class="ds-cc-summary">
+                    <div><span>Clientes registrados</span><strong id="cc-total-clientes">0</strong></div>
+                    <div><span>Saldo total comprometido</span><strong id="cc-total-saldos">$0</strong></div>
+                </div>
+                <div class="ds-cc-main">
+                    <section class="card">
+                        <div class="ds-cc-section-head">
+                            <div><h3>Clientes</h3><p>Elegí un cliente para operar.</p></div>
+                            <button id="cc-nuevo-cliente" class="btn-primary" type="button">+ Nuevo cliente</button>
+                        </div>
+                        <input id="cc-buscar" type="search" class="ds-cc-search" autocomplete="off" placeholder="Buscar cliente o teléfono">
+                        <div class="ds-cc-table-wrap">
+                            <table class="ds-cc-table">
+                                <thead><tr><th>Cliente</th><th>Saldo</th><th>Último movimiento</th><th>Acciones</th></tr></thead>
+                                <tbody id="cc-lista-clientes"><tr><td colspan="4">Cargando clientes…</td></tr></tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <section id="cc-cliente-detalle" class="card ds-cc-detail" hidden>
+                        <div class="ds-cc-section-head">
+                            <div><span class="ds-mini-eyebrow">Cuenta seleccionada</span><h3 id="cc-detalle-nombre">—</h3></div>
+                            <button id="cc-cerrar-cliente" type="button" class="btn-secondary">Cerrar</button>
+                        </div>
+                        <div class="ds-cc-balance"><span>Saldo disponible</span><strong id="cc-detalle-saldo">$0</strong></div>
+                        <div class="ds-cc-actions">
+                            <button id="cc-consumir" class="btn-primary" type="button">Elegir productos y descontar</button>
+                            <button id="cc-ver-historial" class="btn-secondary" type="button">Ver historial</button>
+                        </div>
+                        <form id="cc-cargar-saldo-form" class="ds-cc-credit-form">
+                            <h4>Cargar anticipo</h4>
+                            <label>Importe (ARS)
+                                <input type="number" id="cc-anticipo-monto" step="0.01" min="0.01" max="100000000" required placeholder="60000">
+                            </label>
+                            <label>Forma de pago
+                                <select id="cc-anticipo-medio">
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="MercadoPago">Mercado Pago</option>
+                                </select>
+                            </label>
+                            <button type="submit" id="cc-anticipo-confirmar" class="btn-primary">Registrar anticipo en caja</button>
+                        </form>
+                        <div id="cc-historial-contenedor" hidden>
+                            <h4>Historial del cliente</h4>
+                            <div id="cc-historial" class="ds-cc-history"></div>
+                        </div>
+                    </section>
+                </div>
+                <p id="cc-mensaje" class="ds-cc-message" role="status"></p>
+            </section>
+
+            <div id="cc-cliente-modal" class="modal-overlay">
+                <div class="modal-content card ds-cc-client-modal">
+                    <h2 id="cc-modal-titulo">Nuevo cliente</h2>
+                    <form id="cc-cliente-form">
+                        <input type="hidden" id="cc-cliente-id">
+                        <label>Nombre y apellido
+                            <input type="text" id="cc-cliente-nombre" maxlength="120" required autocomplete="name">
+                        </label>
+                        <label>Teléfono (opcional)
+                            <input type="tel" id="cc-cliente-telefono" maxlength="40" autocomplete="tel">
+                        </label>
+                        <label>Observaciones (opcional)
+                            <input type="text" id="cc-cliente-notas" maxlength="200">
+                        </label>
+                        <div class="modal-actions">
+                            <button id="cc-cliente-cancelar" class="btn-secondary" type="button">Cancelar</button>
+                            <button id="cc-cliente-guardar" class="btn-primary" type="submit">Guardar cliente</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
             <!-- PANTALLA 3: ADMINISTRACIÓN DE STOCK Y BARRAS -->
@@ -418,12 +511,17 @@
     <div id="modal-cobro" class="modal-overlay">
         <div class="modal-content card" style="max-width: 600px;">
             <h2 class="card__title" style="text-align: center; color: #ec4899; font-size: 1.8rem;">Confirmar Venta</h2>
+            <div id="cc-confirmacion" class="ds-cc-confirmacion" hidden>
+                <strong id="cc-confirmar-nombre">—</strong>
+                <span id="cc-confirmar-saldo">Saldo disponible: —</span>
+                <small>El consumo se descontará del anticipo. No se suma dinero nuevo a caja.</small>
+            </div>
             <p style="text-align: center; font-size: 1.2rem; margin-bottom: 0.5rem;" class="text-light">
                 Total a cobrar: <strong style="font-size: 2.2rem; color: #be185d; display: block;" id="modal-cobro-total">$0.00</strong>
             </p>
             
-            <h3 class="card__subtitle" style="text-align: left; margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">Método de pago</h3>
-            <div class="payment-methods">
+            <h3 class="card__subtitle" id="pos-payment-heading" style="text-align: left; margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.5rem;">Método de pago</h3>
+            <div class="payment-methods" id="pos-payment-methods">
                 <div class="btn-payment" data-metodo="Efectivo">
                     <div class="check-icon">✓</div>
                     <span style="font-size: 2rem;">💵</span>
