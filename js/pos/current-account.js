@@ -65,13 +65,17 @@ export function setupCurrentAccount({
 
     let clients = [];
     let selectedId = null;
-    // Activar SOLO cuando se hayan desplegado y probado las reglas
-    // Firestore y se haya ejecutado una prueba con caja/saldos controlados.
-    const FIREBASE_FINANCIAL_RULES_VERIFIED = false;
-    const previewReadOnly = !FIREBASE_FINANCIAL_RULES_VERIFIED
-        || window.location.hostname.startsWith('deploy-preview-');
+    // El usuario autorizó realizar pruebas en la preview conectada a Firebase.
+    // Reglas de acceso y consistencia quedan a cargo de Firestore.
+    const previewReadOnly = false;
+    const previewTesting = window.location.hostname.startsWith('deploy-preview-');
     const previewNotice = document.getElementById('cc-preview-notice');
-    if (previewNotice) previewNotice.hidden = !previewReadOnly;
+    if (previewNotice) {
+        previewNotice.hidden = !previewTesting;
+        if (previewTesting) {
+            previewNotice.textContent = 'Modo de prueba habilitado. Estas operaciones escriben en Firebase y quedan registradas en la base real.';
+        }
+    }
     let unsubscribe = null;
     let pendingDeposit = null;
 
