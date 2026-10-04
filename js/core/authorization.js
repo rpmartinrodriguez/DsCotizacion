@@ -5,10 +5,16 @@ export function createAuthorization(app) {
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // Compartir únicamente solicitudes simultáneas; no guardar permisos
+    // entre navegaciones ni reutilizar perfiles obsoletos.
+    let consultaEnCurso = null;
+    let consultaUid = null;
     const getActiveProfile = async () => {
         const user = auth.currentUser;
         if (!user || user.isAnonymous) return null;
+        if (consultaEnCurso && consultaUid === user.uid) return consultaEnCurso;
 
+        const consultar = async () => {
         try {
             const snapshot = await getDoc(doc(db, 'usuarios', user.uid));
             if (!snapshot.exists()) return null;
@@ -24,6 +30,15 @@ export function createAuthorization(app) {
         } catch (error) {
             console.error("No se pudo validar el perfil del usuario:", error);
             return null;
+        }
+        };
+        consultaUid = user.uid;
+        const pending = consultar();
+        consultaEnCurso = pending;
+        try {
+            return await pending;
+        } finally {
+            if (consultaEnCurso === pending) consultaEnCurso = null;
         }
     };
 
