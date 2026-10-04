@@ -187,7 +187,10 @@ export function setupCajas(app) {
     // ==========================================
     // 3. RENDERIZAR LA LISTA DE CAJAS
     // ==========================================
+    // Render progresivo: evita bloquear el hilo principal con historiales largos.
+    let generacionRenderCajas = 0;
     function renderizarCajas() {
+        const generacion = ++generacionRenderCajas;
         const mesFiltro = filtroMesSelect.value;
         listaCajasContainer.innerHTML = '';
 
@@ -201,7 +204,9 @@ export function setupCajas(app) {
             return;
         }
 
-        cajasFiltradas.forEach(caja => {
+        const pintarLote = (inicio = 0) => {
+            if (generacion !== generacionRenderCajas) return;
+            cajasFiltradas.slice(inicio, inicio + 25).forEach(caja => {
             const estadoClase = caja.estado === 'abierta' ? 'estado-abierta' : 'estado-cerrada';
             const estadoTexto = caja.estado === 'abierta' ? '🟢 EN CURSO' : '⚪ CERRADA';
             
@@ -291,7 +296,12 @@ export function setupCajas(app) {
                 </div>
             `;
             listaCajasContainer.appendChild(div);
-        });
+            });
+            if (inicio + 25 < cajasFiltradas.length) {
+                requestAnimationFrame(() => pintarLote(inicio + 25));
+            }
+        };
+        pintarLote();
     }
 
     function actualizarFiltros() {
