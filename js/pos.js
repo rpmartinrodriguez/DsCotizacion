@@ -648,6 +648,18 @@ export function setupPOS(app) {
         }
     };
 
+    // Agrupar actualizaciones de materias primas y recetas en un solo
+    // recálculo por fotograma; ambas escuchas suelen disparar al iniciar.
+    let procesadoPendiente = false;
+    const programarProcesamiento = () => {
+        if (procesadoPendiente) return;
+        procesadoPendiente = true;
+        requestAnimationFrame(() => {
+            procesadoPendiente = false;
+            procesarYRenderizar();
+        });
+    };
+
     const cargarDataYCostos = () => {
         if (!topVendidosCargados) {
             topVendidosCargados = true;
@@ -657,7 +669,7 @@ export function setupPOS(app) {
         onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
             snapshot.forEach(doc => materiasPrimasMap.set(doc.id, doc.data()));
-            procesarYRenderizar();
+            programarProcesamiento();
         });
 
         onSnapshot(recetasCollection, (snapshot) => {
@@ -665,7 +677,7 @@ export function setupPOS(app) {
             snapshot.forEach(doc => tempArr.push({ id: doc.id, ...doc.data() }));
             tempArr.sort((a,b) => (a.nombreTorta || "").localeCompare(b.nombreTorta || ""));
             recetasBrutas = tempArr;
-            procesarYRenderizar();
+            programarProcesamiento();
         });
     };
 

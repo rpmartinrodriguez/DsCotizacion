@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.29';
+const CACHE_NAME = 'dulce-sall-admin-v2.30';
 
 const CORE_ASSETS = [
     '/',
@@ -51,6 +51,26 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
 
     if (request.method !== 'GET' || !isSameOrigin(request)) {
+        return;
+    }
+
+    // Imágenes, fuentes y estilos muestran el caché de inmediato y se
+    // actualizan en segundo plano. JS y páginas siguen siendo network-first
+    // para no ejecutar lógica de caja o reglas financieras desactualizadas.
+    const pathname = new URL(request.url).pathname;
+    if (/\.(?:css|png|jpe?g|webp|svg|ico|woff2?)$/i.test(pathname)) {
+        const refresh = fetch(request).then(async response => {
+            if (shouldCacheResponse(response)) {
+                const copy = response.clone();
+                const cache = await caches.open(CACHE_NAME);
+                await cache.put(request, copy);
+            }
+            return response;
+        });
+        event.waitUntil(refresh.catch(() => {}));
+        event.respondWith(
+            caches.match(request).then(cached => cached || refresh)
+        );
         return;
     }
 
