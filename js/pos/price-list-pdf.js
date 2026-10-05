@@ -30,8 +30,9 @@ const displayPrice = value => '$ ' + Number(value || 0).toLocaleString('es-AR', 
 const barcodeImage = (code, drawBarcode, canvasFactory) => {
     const canvas = canvasFactory();
     const opts = {
-        width: 3, height: 55, displayValue: true,
-        margin: 7, fontSize: 17, textMargin: 2, lineColor: '#111111',
+        width: 3, height: 100, displayValue: true,
+        // Zona blanca reservada alrededor de la imagen en la tarjeta.
+        margin: 0, fontSize: 19, textMargin: 2, lineColor: '#111111',
         background: '#ffffff'
     };
     try {
@@ -115,24 +116,23 @@ export function createPriceListPdf(products, {
         let fontSize = 8.5;
         let lines = [];
         const name = String(item.nombreTorta || '').trim().replace(/[\u{1F300}-\u{1FAFF}]/gu, '');
+        // Hasta 16 mm para el nombre, sin invadir el precio ni el código.
         do {
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(fontSize);
             lines = pdf.splitTextToSize(name, cellSize - 6);
-            if (lines.length <= 4) break;
-            fontSize -= 0.5;
-        } while (fontSize >= 5.5);
-        // Aun en productos muy extensos, no recortamos la identificación:
-        // el texto se comprime para que el código y precio sigan visibles.
-        if (lines.length > 4) {
-            fontSize = 5.1;
-            pdf.setFontSize(fontSize);
-            lines = pdf.splitTextToSize(name, cellSize - 6);
+            const heightMM = lines.length * fontSize * 0.3528 * 1.08;
+            if (heightMM <= 16) break;
+            fontSize -= 0.4;
+        } while (fontSize >= 5);
+        if (lines.length * fontSize * 0.3528 * 1.08 > 16) {
+            const maxLines = Math.max(1, Math.floor(16 / (fontSize * 0.3528 * 1.08)));
+            lines = lines.slice(0, maxLines);
+            lines[lines.length - 1] = lines[lines.length - 1].trimEnd().slice(0, -3) + '…';
         }
         pdf.setTextColor(61, 53, 61);
         pdf.text(lines, x + cellSize / 2, y + 6.5, {
-            align: 'center',
-            lineHeightFactor: Math.min(1.14, 4 / Math.max(lines.length, 1))
+            align: 'center', lineHeightFactor: 1.08
         });
 
         pdf.setFont('helvetica', 'bold');
@@ -141,9 +141,15 @@ export function createPriceListPdf(products, {
         pdf.text(displayPrice(item.precioCalculado), x + cellSize / 2, y + 26, { align: 'center' });
 
         const barcode = barcodeImage(item.codigoBarras, drawBarcode, canvasFactory);
-        const imageWidth = cellSize - 6;
-        const imageHeight = Math.min(13.3, imageWidth / barcode.aspect);
-        pdf.addImage(barcode.data, 'PNG', x + 3, y + 29.5, imageWidth, imageHeight);
+        // EAN13 con barras de ancho legible y márgenes de calma en ambos lados.
+        const maxImageWidth = cellSize - 8;
+        const maxImageHeight = 15;
+        const imageWidth = Math.min(maxImageWidth, maxImageHeight * barcode.aspect);
+        const imageHeight = imageWidth / barcode.aspect;
+        pdf.addImage(barcode.data, 'PNG',
+            x + (cellSize - imageWidth) / 2, y + 29,
+            imageWidth, imageHeight
+        );
     }
 
     for (let page = 1; page <= pages; page++) {
