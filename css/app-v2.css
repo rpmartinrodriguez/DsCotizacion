@@ -6086,3 +6086,74 @@ body.ds-cash .ds-cash-table-scroll > table {
     overflow-wrap: anywhere;
   }
 }
+
+
+/* =========================================================
+   Mostrador — carrito accesible en pantallas de PC bajas
+   El botón Cobrar sube con pocos productos; sólo la lista
+   de artículos crece hasta un límite y luego scrollea.
+   ========================================================= */
+@media (min-width: 992px) {
+  body.ds-pos #pantalla-pos.ds-pos-shell > .ds-pos-cart-panel {
+    position: sticky;
+    top: 86px;
+    height: auto;
+    min-height: 0 !important;
+    max-height: calc(100dvh - 104px) !important;
+    overflow: hidden;
+    display: flex !important;
+    flex-direction: column;
+  }
+  body.ds-pos #pantalla-pos .ds-pos-cart-list {
+    flex: 0 1 auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - 258px) !important;
+    overflow-y: auto;
+  }
+  body.ds-pos #pantalla-pos .ds-cart-empty {
+    min-height: 95px;
+  }
+  body.ds-pos #pantalla-pos .ds-pos-cart-footer,
+  body.ds-pos #pantalla-pos .ds-pos-cart-head {
+    flex-shrink: 0;
+  }
+}
+@media (max-width: 991px) {
+  body.ds-pos #pantalla-pos.ds-pos-shell > .ds-pos-cart-panel {
+    position: static;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto;
+  }
+  body.ds-pos #pantalla-pos .ds-pos-cart-list {
+    flex: 0 1 auto !important;
+    min-height: 0 !important;
+    max-height: min(56dvh, 540px) !important;
+    overflow-y: auto;
+  }
+  body.ds-pos #pantalla-pos .ds-cart-empty {
+    min-height: 100px;
+  }
+}
+
+/* En la confirmación real del pago, los botones permanecen
+   disponibles incluso con importes mixtos o poco alto de pantalla. */
+body.ds-pos #modal-cobro .modal-content {
+  max-height: calc(100dvh - 24px) !important;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+body.ds-pos #modal-cobro .modal-actions {
+  position: sticky;
+  bottom: -18px;
+  z-index: 2;
+  padding: 12px 0 2px;
+  background: #fff;
+  border-top: 1px solid #f0e6ed;
+}
+@media (max-height: 700px) and (min-width: 561px) {
+  body.ds-pos #modal-cobro .btn-payment { min-height: 60px; padding: 5px !important; }
+  body.ds-pos #modal-cobro .payment-methods { margin-bottom: 7px !important; }
+  body.ds-pos #modal-cobro #payment-details-container { padding: 8px !important; }
+}

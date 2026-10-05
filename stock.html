@@ -17,6 +17,18 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+    <style>
+        /* Uso de materias primas en recetas: desplegable dentro de cada fila. */
+        .ds-stock-material-name { display:block; }
+        .ds-stock-recipe-usage { display:block; margin-top:5px; max-width:390px; font-size:.76rem; color:#765065; }
+        .ds-stock-recipe-usage.is-muted { color:#8b8990; }
+        .ds-stock-recipe-usage summary { display: list-item; list-style:inside disclosure-closed; cursor:pointer; font-weight:650; color:#985078; }
+        .ds-stock-recipe-usage[open] summary { list-style:inside disclosure-open; }
+        .ds-stock-recipe-usage summary:hover { text-decoration:underline; }
+        .ds-stock-recipe-usage ul { margin:6px 0 0; padding:7px 10px 7px 24px; border-radius:8px; background:#fff7fa; color:#51444d; border:1px solid #efdce6; }
+        .ds-stock-recipe-usage li + li { margin-top:3px; }
+    </style>
 </head>
 <body class="ds-app ds-content ds-stock">
     <div class="main-container">
@@ -247,7 +259,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupStock } from './js/stock.js';
+        import { setupStock } from './js/stock.js?v=2';
 
         try {
             const app = initializeApp(firebaseConfig);

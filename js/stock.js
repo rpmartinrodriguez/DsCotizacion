@@ -11,6 +11,7 @@ export function setupStock(app) {
     const db = getFirestore(app);
     const authorization = createAuthorization(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
+    const recetasCollection = collection(db, 'recetas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
     
     // Referencias DOM principales
@@ -44,6 +45,8 @@ export function setupStock(app) {
     let editandoId = null;
     let todoElStock = [];
     let unsubHistorial = null;
+    let recetasPorMateria = new Map();
+    let estadoRelaciones = 'cargando'; // cargando | listo | error
 
     const supplierPricing = setupSupplierPricing(app, db, {
         getStock: () => todoElStock
@@ -126,8 +129,17 @@ export function setupStock(app) {
                     `;
                 }
 
+                const recetasVinculadas = recetasPorMateria.get(id) || [];
+                const usoHtml = estadoRelaciones !== 'listo'
+                    ? `<span class="ds-stock-recipe-usage is-muted">${estadoRelaciones === 'error' ? 'No se pudo consultar recetas' : 'Consultando recetas…'}</span>`
+                    : recetasVinculadas.length
+                        ? `<details class="ds-stock-recipe-usage">
+                            <summary>En ${recetasVinculadas.length} receta${recetasVinculadas.length === 1 ? '' : 's'} · Ver cuáles</summary>
+                            <ul>${recetasVinculadas.map(nombre => `<li>${escapeHtml(nombre)}</li>`).join('')}</ul>
+                           </details>`
+                        : '<span class="ds-stock-recipe-usage is-muted">No se usa en recetas</span>';
                 fila.innerHTML = `
-                    <td data-label="Nombre">${safeNombre}</td>
+                    <td data-label="Nombre"><strong class="ds-stock-material-name">${safeNombre}</strong>${usoHtml}</td>
                     <td data-label="Stock Actual">${stockTotal.toLocaleString('es-AR')} ${safeUnidad}</td>
                     <td data-label="Costo Aplicado">${costoAplicadoHtml}</td>
                     <td data-label="Proveedor">${proveedorHtml}</td>
@@ -551,6 +563,32 @@ export function setupStock(app) {
 
     btnCerrarHistorial.addEventListener('click', closeHistorialModal);
     
+    // Relación por ID, no por nombre: un cambio de nombre no rompe el vínculo.
+    // Se construye un índice en memoria, evitando una consulta por cada insumo.
+    onSnapshot(recetasCollection, snapshot => {
+        const mapa = new Map();
+        snapshot.forEach(recetaDoc => {
+            const receta = recetaDoc.data();
+            const nombre = String(receta.nombreTorta || receta.nombre || 'Receta sin nombre');
+            const insumosUsados = new Set(
+                (Array.isArray(receta.ingredientes) ? receta.ingredientes : [])
+                    .map(ing => ing.idMateriaPrima).filter(Boolean)
+            );
+            insumosUsados.forEach(id => {
+                if (!mapa.has(id)) mapa.set(id, []);
+                mapa.get(id).push(nombre);
+            });
+        });
+        mapa.forEach(nombres => nombres.sort((a, b) => a.localeCompare(b, 'es')));
+        recetasPorMateria = mapa;
+        estadoRelaciones = 'listo';
+        buscadorInput.dispatchEvent(new Event('input'));
+    }, error => {
+        console.error('No fue posible cargar relaciones con recetas:', error);
+        estadoRelaciones = 'error';
+        buscadorInput.dispatchEvent(new Event('input'));
+    });
+
     onSnapshot(query(materiasPrimasCollection, orderBy("nombre")), (snapshot) => {
         todoElStock = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         buscadorInput.dispatchEvent(new Event('input'));

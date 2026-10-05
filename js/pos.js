@@ -9,7 +9,8 @@ import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/prici
 import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
-import { setupPOSInventory } from "./pos/inventory.js";
+import { setupPOSInventory } from "./pos/inventory.js?v=2";
+import { createPriceListPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
 import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
 
@@ -91,6 +92,7 @@ export function setupPOS(app) {
     const btnGuardarEditTicket = document.getElementById('btn-guardar-edit-ticket');
 
     const btnIrStock = document.getElementById('btn-ir-stock');
+    const btnExportarListaPrecios = document.getElementById('btn-exportar-lista-precios');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
@@ -203,6 +205,49 @@ export function setupPOS(app) {
         getCurrentUser: () => currentUser,
         getUserName: () => userName,
         getGlobalMargin: () => margenGlobal
+    });
+
+    // La lista toma exactamente los mismos precios calculados del Mostrador.
+    // Si falta un código se guarda antes en Recetas para que sea escaneable
+    // luego: nunca imprimimos códigos efímeros o no persistidos.
+    btnExportarListaPrecios?.addEventListener('click', async () => {
+        const original = btnExportarListaPrecios.textContent;
+        btnExportarListaPrecios.disabled = true;
+        try {
+            if (!currentUser || !(await authorization.canAdminister())) {
+                throw new Error('Sólo el administrador puede exportar listas de precios.');
+            }
+            if (!productosDisponibles.length) {
+                throw new Error('El catálogo todavía no está disponible. Revisá la conexión.');
+            }
+            btnExportarListaPrecios.textContent = 'Cargando PDF…';
+            await loadPriceListPdfLibrary();
+            if (typeof globalThis.JsBarcode !== 'function') {
+                throw new Error('No se pudo cargar el generador de códigos de barras.');
+            }
+
+            const products = productosDisponibles.map(product => ({ ...product }));
+            const usedCodes = new Set(products.map(p => String(p.codigoBarras || '')).filter(Boolean));
+            const missing = products.filter(p => !p.codigoBarras);
+            // Lotes pequeños: aceleran la primera descarga sin saturar
+            // Firebase ni recalcular el catálogo con cientos de escrituras juntas.
+            for (let start = 0; start < missing.length; start += 4) {
+                btnExportarListaPrecios.textContent =
+                    `Códigos ${Math.min(start + 4, missing.length)}/${missing.length}…`;
+                await Promise.all(
+                    missing.slice(start, start + 4)
+                        .map(product => inventory.ensureBarcode(product, usedCodes))
+                );
+            }
+            btnExportarListaPrecios.textContent = 'Generando PDF…';
+            createPriceListPdf(products);
+        } catch (error) {
+            console.error('No se pudo generar la lista de precios:', error);
+            alert('No se pudo generar el PDF: ' + (error.message || 'Revisá permisos y conexión.'));
+        } finally {
+            btnExportarListaPrecios.disabled = false;
+            btnExportarListaPrecios.textContent = original;
+        }
     });
 
     // Funciones Helper compartidas

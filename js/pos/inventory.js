@@ -201,21 +201,53 @@ export function setupPOSInventory({
         modalStock?.classList.add('visible');
     };
 
-    const ensureBarcode = async (product) => {
-        if (product.codigoBarras) return product.codigoBarras;
-
-        const first12 = String(Date.now()).substring(0, 12);
-        let sum = 0;
-
-        for (let index = 0; index < 12; index += 1) {
-            sum += parseInt(first12[index], 10) * (index % 2 === 1 ? 3 : 1);
+    // Los códigos se asignan UNA sola vez en Firestore y nunca se generan
+    // únicamente para el PDF (el lector del mostrador usa el mismo valor).
+    // Reservar los códigos del catálogo evita duplicados en exportaciones
+    // múltiples: Date.now() truncado a 12 dígitos puede repetirse entre productos.
+    const makeBarcode = (used) => {
+        let base = Number(String(Date.now()).slice(0, 12));
+        for (let attempts = 0; attempts < 100000; attempts++, base++) {
+            const first12 = String(base % 1000000000000).padStart(12, '0');
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                sum += Number(first12[i]) * (i % 2 ? 3 : 1);
+            }
+            const code = first12 + ((10 - (sum % 10)) % 10);
+            if (!used.has(code)) return code;
         }
+        throw new Error('No quedan códigos de barras disponibles.');
+    };
 
-        const barcode = first12 + String((10 - (sum % 10)) % 10);
-        await updateDoc(doc(db, 'recetas', product.id), { codigoBarras: barcode });
-        product.codigoBarras = barcode;
-
-        return barcode;
+    const ensureBarcode = async (product, reservedCodes) => {
+        const used = reservedCodes || new Set(
+            products.map(p => String(p.codigoBarras || '')).filter(Boolean)
+        );
+        if (product.codigoBarras) {
+            used.add(String(product.codigoBarras));
+            return String(product.codigoBarras);
+        }
+        const proposed = makeBarcode(used);
+        // Reservar antes de la operación async evita colisiones si la
+        // exportación registra varios códigos a la vez.
+        used.add(proposed);
+        const ref = doc(db, 'recetas', product.id);
+        try {
+            const code = await runTransaction(db, async tx => {
+                const snapshot = await tx.get(ref);
+                if (!snapshot.exists()) throw new Error('Producto inexistente en Recetas.');
+                const existing = snapshot.data().codigoBarras;
+                if (existing) return String(existing);
+                tx.update(ref, { codigoBarras: proposed });
+                return proposed;
+            });
+            product.codigoBarras = code;
+            used.add(code);
+            return code;
+        } catch (error) {
+            used.delete(proposed);
+            throw error;
+        }
     };
 
     const openBarcodeModal = async (product) => {
@@ -415,6 +447,7 @@ export function setupPOSInventory({
 
     return {
         setProducts,
+        ensureBarcode,
         render: () => setProducts(products)
     };
 }
