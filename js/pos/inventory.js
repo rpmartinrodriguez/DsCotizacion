@@ -228,18 +228,26 @@ export function setupPOSInventory({
             return String(product.codigoBarras);
         }
         const proposed = makeBarcode(used);
+        // Reservar antes de la operación async evita colisiones si la
+        // exportación registra varios códigos a la vez.
+        used.add(proposed);
         const ref = doc(db, 'recetas', product.id);
-        const code = await runTransaction(db, async tx => {
-            const snapshot = await tx.get(ref);
-            if (!snapshot.exists()) throw new Error('Producto inexistente en Recetas.');
-            const existing = snapshot.data().codigoBarras;
-            if (existing) return String(existing);
-            tx.update(ref, { codigoBarras: proposed });
-            return proposed;
-        });
-        product.codigoBarras = code;
-        used.add(code);
-        return code;
+        try {
+            const code = await runTransaction(db, async tx => {
+                const snapshot = await tx.get(ref);
+                if (!snapshot.exists()) throw new Error('Producto inexistente en Recetas.');
+                const existing = snapshot.data().codigoBarras;
+                if (existing) return String(existing);
+                tx.update(ref, { codigoBarras: proposed });
+                return proposed;
+            });
+            product.codigoBarras = code;
+            used.add(code);
+            return code;
+        } catch (error) {
+            used.delete(proposed);
+            throw error;
+        }
     };
 
     const openBarcodeModal = async (product) => {
