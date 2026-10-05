@@ -228,11 +228,16 @@ export function setupPOS(app) {
 
             const products = productosDisponibles.map(product => ({ ...product }));
             const usedCodes = new Set(products.map(p => String(p.codigoBarras || '')).filter(Boolean));
-            for (let index = 0; index < products.length; index++) {
-                if (!products[index].codigoBarras) {
-                    btnExportarListaPrecios.textContent = `Códigos ${index + 1}/${products.length}…`;
-                    await inventory.ensureBarcode(products[index], usedCodes);
-                }
+            const missing = products.filter(p => !p.codigoBarras);
+            // Lotes pequeños: aceleran la primera descarga sin saturar
+            // Firebase ni recalcular el catálogo con cientos de escrituras juntas.
+            for (let start = 0; start < missing.length; start += 4) {
+                btnExportarListaPrecios.textContent =
+                    `Códigos ${Math.min(start + 4, missing.length)}/${missing.length}…`;
+                await Promise.all(
+                    missing.slice(start, start + 4)
+                        .map(product => inventory.ensureBarcode(product, usedCodes))
+                );
             }
             btnExportarListaPrecios.textContent = 'Generando PDF…';
             createPriceListPdf(products);
