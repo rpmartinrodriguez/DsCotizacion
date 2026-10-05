@@ -1,3 +1,26 @@
+// Cargar jsPDF sólo cuando el administrador pide el archivo: evita peso extra en cada venta.
+let libraryPromise = null;
+export const loadPriceListPdfLibrary = () => {
+    if (globalThis.jspdf?.jsPDF) return Promise.resolve(globalThis.jspdf.jsPDF);
+    if (!libraryPromise) {
+        libraryPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.async = true;
+            script.onload = () => {
+                if (globalThis.jspdf?.jsPDF) resolve(globalThis.jspdf.jsPDF);
+                else reject(new Error('La librería PDF no se inicializó.'));
+            };
+            script.onerror = () => reject(new Error('No se pudo descargar el generador de PDF. Revisá la conexión.'));
+            document.head.appendChild(script);
+        }).catch(error => {
+            libraryPromise = null;
+            throw error;
+        });
+    }
+    return libraryPromise;
+};
+
 // Exportación A4 de precios del Mostrador. Sin consultas ni cambios en Firebase.
 // Los códigos deben estar previamente persistidos en cada receta.
 const displayPrice = value => '$ ' + Number(value || 0).toLocaleString('es-AR', {
