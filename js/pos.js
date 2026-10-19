@@ -204,7 +204,8 @@ export function setupPOS(app) {
         auditoriaCollection,
         getCurrentUser: () => currentUser,
         getUserName: () => userName,
-        getGlobalMargin: () => margenGlobal
+        getGlobalMargin: () => margenGlobal,
+        canAdminister: authorization.canAdminister
     });
 
     // La lista toma exactamente los mismos precios calculados del Mostrador.
