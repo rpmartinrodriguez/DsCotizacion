@@ -5,7 +5,7 @@ import {
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { createAuthorization } from "./core/authorization.js";
 import { formatCurrency as formatMoneda, formatTimestampDateTime } from "./core/format.js";
-import { calculateRecipeUnitCost, calculateRoundedSalePrice } from "./core/pricing.js";
+import { calculateProductSalePrice, calculateWholeCakePricing } from "./core/pricing.js";
 import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
@@ -254,31 +254,10 @@ export function setupPOS(app) {
     const formatFecha = (timestamp) => formatTimestampDateTime(timestamp, { shortYear: true });
 
     // ==========================================
-    // CÁLCULO DE COSTOS
+    // CÁLCULO DE PRECIOS — fuente compartida con servidor
     // ==========================================
-    const obtenerCostoBase = (receta) => {
-        return calculateRecipeUnitCost(receta, materiasPrimasMap);
-    };
-
-    const obtenerPorcentajeGananciaAplicado = (prod) => {
-        const tieneMargenIndiv = prod.margenIndividual !== undefined &&
-            prod.margenIndividual !== null &&
-            prod.margenIndividual !== '';
-
-        return tieneMargenIndiv
-            ? parseFloat(prod.margenIndividual) || 0
-            : Number(margenGlobal) || 0;
-    };
-
-    const calcularPrecioVenta = (prod) => {
-        const porcentajeAplicado = obtenerPorcentajeGananciaAplicado(prod);
-
-        return calculateRoundedSalePrice(
-            prod.costoBaseCalculado || 0,
-            porcentajeAplicado,
-            { roundTo: 100, midpointDown: true }
-        );
-    };
+    const calcularPrecioComercial = receta =>
+        calculateProductSalePrice(receta, materiasPrimasMap, margenGlobal);
 
     // ==========================================
     // AUTENTICACIÓN Y SEGURIDAD (ROLES)
@@ -730,13 +709,23 @@ export function setupPOS(app) {
         if (recetasBrutas.length === 0) return;
 
         productosDisponibles = recetasBrutas.map(receta => {
-            const costoBase = obtenerCostoBase(receta);
-            const productoCalculado = { ...receta, costoBaseCalculado: costoBase };
+            const sale = calcularPrecioComercial(receta);
+            const whole = calculateWholeCakePricing({
+                unitPrice: sale.price,
+                portions: receta.porcionesTortaEntera,
+                manualPrice: receta.precioTortaEnteraManual
+            });
 
             return {
-                ...productoCalculado,
-                porcentajeGananciaAplicado: obtenerPorcentajeGananciaAplicado(productoCalculado),
-                precioCalculado: calcularPrecioVenta(productoCalculado)
+                ...receta,
+                codigoProducto: receta.id,
+                costoBaseCalculado: sale.cost,
+                porcentajeGananciaAplicado: sale.marginPercent,
+                precioCalculado: sale.price,
+                porcionesTortaEntera: whole.portions,
+                precioTortaEnteraAutomatico: whole.automaticPrice,
+                precioTortaEnteraVigente: whole.currentPrice,
+                origenPrecioTortaEntera: whole.source
             };
         });
 
