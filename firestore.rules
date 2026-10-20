@@ -134,6 +134,7 @@ service cloud.firestore {
       function changesCommercialProductConfig() {
         return request.resource.data.diff(resource.data).affectedKeys().hasAny([
           'presentacionVenta',
+          'unidadesPorVenta',
           'porcionesTortaEntera',
           'precioTortaEnteraManual',
           'precioWebHabilitado',
@@ -144,6 +145,7 @@ service cloud.firestore {
       function onlyCommercialProductConfig() {
         return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'presentacionVenta',
+          'unidadesPorVenta',
           'porcionesTortaEntera',
           'precioTortaEnteraManual',
           'precioWebHabilitado',
