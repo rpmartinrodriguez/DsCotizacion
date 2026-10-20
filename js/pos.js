@@ -796,6 +796,9 @@ export function setupPOS(app) {
                 </div>
                 <div>
                     <div class="prod-precio">${formatMoneda(precioCalculado)}</div>
+                    ${Number(prod.unidadesPorVenta) > 1
+                        ? `<span class="ds-pos-sale-pack">Venta x${prod.unidadesPorVenta} u.</span>`
+                        : ''}
                     ${prod.precioTortaEnteraVigente !== null && prod.porcionesTortaEntera
                         ? `<span class="ds-pos-whole-price">Entera: ${formatMoneda(prod.precioTortaEnteraVigente)} · ${prod.porcionesTortaEntera} porciones</span>`
                         : ''}
@@ -811,11 +814,21 @@ export function setupPOS(app) {
         if (existe) {
             existe.cantidad += cantidadIngresada;
         } else {
-            carritoActual.push({ 
-                id: prod.id, 
-                nombre: prod.nombreTorta, 
-                precio: prod.precioCalculado, 
-                cantidad: cantidadIngresada 
+            const unidadesPorVenta = Math.max(1, Math.floor(Number(prod.unidadesPorVenta) || 1));
+            const porcionesTorta = Number.isInteger(prod.porcionesTortaEntera)
+                ? prod.porcionesTortaEntera
+                : null;
+            const precioEntera = Number(prod.precioTortaEnteraVigente);
+            carritoActual.push({
+                id: prod.id,
+                nombre: prod.nombreTorta,
+                precio: prod.precioCalculado,
+                precioUnidadVenta: prod.precioCalculado,
+                precioTortaEntera: Number.isFinite(precioEntera) && precioEntera > 0 ? precioEntera : null,
+                unidadesPorVenta,
+                porcionesTortaEntera: porcionesTorta,
+                modoVenta: 'unidad',
+                cantidad: cantidadIngresada
             });
         }
         renderizarCarrito();
@@ -848,52 +861,6 @@ export function setupPOS(app) {
         && Number.isFinite(Number(product?.precioTortaEnteraVigente))
         && Number(product.precioTortaEnteraVigente) > 0;
 
-    const abrirSelectorPresentacionPrueba = product => {
-        if (!tieneVentaEnteraConfigurable(product)) {
-            agregarProductoAlCarrito(product, 1);
-            return;
-        }
-
-        productoPresentacionPrueba = product;
-        if (presentacionPruebaNombre) presentacionPruebaNombre.textContent = product.nombreTorta || 'Producto';
-        if (presentacionPruebaPrecioPorcion) presentacionPruebaPrecioPorcion.textContent =
-            formatMoneda(product.precioCalculado);
-        if (presentacionPruebaPrecioEntera) presentacionPruebaPrecioEntera.textContent =
-            formatMoneda(product.precioTortaEnteraVigente);
-        if (presentacionPruebaPorciones) presentacionPruebaPorciones.textContent =
-            product.porcionesTortaEntera + ' porciones equivalentes';
-        if (presentacionPruebaResultado) {
-            presentacionPruebaResultado.hidden = true;
-            presentacionPruebaResultado.textContent = '';
-        }
-        modalPresentacionPrueba?.classList.add('visible');
-    };
-
-    btnPresentacionPruebaPorcion?.addEventListener('click', () => {
-        if (!productoPresentacionPrueba) return;
-        agregarProductoAlCarrito(productoPresentacionPrueba, 1);
-        modalPresentacionPrueba?.classList.remove('visible');
-        productoPresentacionPrueba = null;
-    });
-
-    btnPresentacionPruebaEntera?.addEventListener('click', () => {
-        const product = productoPresentacionPrueba;
-        if (!product || !presentacionPruebaResultado) return;
-        // Fase de prueba: mostramos exactamente qué agregaría/cobraría,
-        // pero NO alteramos carrito, ventas, stock ni caja.
-        presentacionPruebaResultado.hidden = false;
-        presentacionPruebaResultado.textContent =
-            'Simulación: se agregaría 1 torta entera por '
-            + formatMoneda(product.precioTortaEnteraVigente)
-            + ', equivalente a ' + product.porcionesTortaEntera
-            + ' porciones para costo/stock. Todavía no se agregó al carrito.';
-    });
-
-    btnPresentacionPruebaCancelar?.addEventListener('click', () => {
-        modalPresentacionPrueba?.classList.remove('visible');
-        productoPresentacionPrueba = null;
-    });
-
     // Escáner de Código de Barras Físico
     let scanBuffer = '';
     let lastKeyTime = Date.now();
@@ -913,7 +880,9 @@ export function setupPOS(app) {
                 const productoEncontrado = productosDisponibles.find(p => p.codigoBarras && String(p.codigoBarras) === codigoEscaneado);
                 
                 if (productoEncontrado) {
-                    abrirSelectorPresentacionPrueba(productoEncontrado);
+                    // Siempre entra primero como porción / unidad de venta.
+                    // La conversión a torta entera se hace desde la línea del carrito.
+                    agregarProductoAlCarrito(productoEncontrado, 1);
                 } else {
                     alert("El código escaneado (" + codigoEscaneado + ") no existe en el sistema.");
                 }
@@ -990,14 +959,39 @@ export function setupPOS(app) {
 
         carritoActual.forEach((item, index) => {
             const subtotal = item.precio * item.cantidad;
+            const esEntera = item.modoVenta === 'entera';
+            const equivalentesPorVenta = esEntera
+                ? (Number(item.porcionesTortaEntera) || 1)
+                : (Number(item.unidadesPorVenta) || 1);
+            const equivalentesTotales = equivalentesPorVenta * item.cantidad;
+            const puedeEntera = Number.isInteger(item.porcionesTortaEntera)
+                && item.porcionesTortaEntera >= 2
+                && Number.isFinite(Number(item.precioTortaEntera))
+                && Number(item.precioTortaEntera) > 0;
+            const meta = esEntera
+                ? `${formatMoneda(item.precio)} por entera · ${equivalentesPorVenta} porciones`
+                : equivalentesPorVenta > 1
+                    ? `${formatMoneda(item.precio)} por venta · x${equivalentesPorVenta} u.`
+                    : `${formatMoneda(item.precio)} c/u`;
+            const selector = puedeEntera
+                ? `<button type="button" class="ds-cart-sale-mode btn-cart-whole-toggle ${esEntera ? 'is-whole' : ''}" data-index="${index}">
+                       ${esEntera ? 'Porción' : 'Entera'}
+                   </button>`
+                : equivalentesPorVenta > 1
+                    ? `<span class="ds-cart-sale-mode is-pack" title="${equivalentesTotales} unidades totales">${equivalentesPorVenta} u.</span>`
+                    : '<span class="ds-cart-sale-mode is-empty" aria-hidden="true"></span>';
 
             const div = document.createElement('div');
             div.className = 'cart-item';
             div.innerHTML = `
                 <div class="cart-item-info">
                     <h4 title="${escapeAttribute(item.nombre)}">${escapeHtml(item.nombre)}</h4>
-                    <span class="ds-cart-line-meta">${formatMoneda(item.precio)} c/u</span>
+                    <span class="ds-cart-line-meta">${meta}</span>
+                    ${equivalentesPorVenta > 1
+                        ? `<small class="ds-cart-equivalent">${item.cantidad} venta${item.cantidad === 1 ? '' : 's'} = ${equivalentesTotales} ${esEntera ? 'porciones' : 'unidades'}</small>`
+                        : ''}
                 </div>
+                ${selector}
                 <div class="ds-cart-qty-control">
                     <button type="button" class="btn-restar-cant" data-index="${index}" aria-label="Restar unidad">−</button>
                     <input
@@ -1026,6 +1020,25 @@ export function setupPOS(app) {
             const btnRemove = e.target.closest('.btn-remove-cart');
             const btnRestar = e.target.closest('.btn-restar-cant');
             const btnSumar = e.target.closest('.btn-sumar-cant');
+            const btnWhole = e.target.closest('.btn-cart-whole-toggle');
+
+            if (btnWhole) {
+                const idx = Number(btnWhole.dataset.index);
+                const item = carritoActual[idx];
+                if (!item) return;
+                if (item.modoVenta === 'entera') {
+                    item.modoVenta = 'unidad';
+                    item.precio = item.precioUnidadVenta;
+                } else if (item.precioTortaEntera && item.porcionesTortaEntera) {
+                    item.modoVenta = 'entera';
+                    item.precio = item.precioTortaEntera;
+                }
+                // El contador representa ventas: 1 entera, 2 enteras, etc.
+                // La equivalencia real (ej. 8 porciones) se conserva aparte.
+                item.cantidad = 1;
+                renderizarCarrito();
+                return;
+            }
 
             if (btnRemove) { 
                 carritoActual.splice(Number(btnRemove.dataset.index), 1);
