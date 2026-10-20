@@ -720,7 +720,19 @@ export function setupPOS(app) {
     const procesarYRenderizar = () => {
         if (recetasBrutas.length === 0) return;
 
-        productosDisponibles = recetasBrutas.map(receta => {
+        let testOverrides = {};
+        if (window.location.hostname !== 'dulce-app.netlify.app') {
+            try {
+                testOverrides = JSON.parse(
+                    sessionStorage.getItem('dulcesallPricingTestOverrides') || '{}'
+                );
+            } catch {}
+        }
+
+        productosDisponibles = recetasBrutas.map(recetaOriginal => {
+            const receta = testOverrides[recetaOriginal.id]
+                ? { ...recetaOriginal, ...testOverrides[recetaOriginal.id] }
+                : recetaOriginal;
             const sale = calcularPrecioComercial(receta);
             const whole = calculateWholeCakePricing({
                 unitPrice: sale.price,
