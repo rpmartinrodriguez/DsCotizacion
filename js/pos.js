@@ -1286,6 +1286,13 @@ export function setupPOS(app) {
         btnConfirmarVenta.addEventListener('click', async () => {
             if (!metodoPagoSeleccionado || carritoActual.length === 0 || !cajaActiva) return;
 
+            if (esVistaPruebaComercial && carritoActual.some(item =>
+                item.modoVenta === 'entera' || Number(item.unidadesPorVenta) > 1
+            )) {
+                alert('Fase de prueba: el total y las cantidades ya se simulan, pero todavía no se registra esta venta para no alterar stock, costos ni caja con la nueva equivalencia.');
+                return;
+            }
+
             let mpReal = 0; let efectivoReal = 0;
             if (metodoPagoSeleccionado === 'MercadoPago') { mpReal = totalVentaActual; } 
             else if (metodoPagoSeleccionado === 'Efectivo') { efectivoReal = totalVentaActual; } 
