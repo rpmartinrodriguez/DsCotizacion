@@ -100,7 +100,7 @@
             gap: 0.5rem;
         }
     </style>
-    <link rel="stylesheet" href="css/app-v2.css?v=28">
+    <link rel="stylesheet" href="css/app-v2.css?v=29">
 </head>
 <body class="rol-empleado ds-app ds-pos">
     <div class="main-container">
@@ -518,31 +518,6 @@
     </div>
 
 
-    <!-- PRUEBA UX: selector al escanear un producto con torta entera configurada -->
-    <div id="modal-presentacion-venta-prueba" class="modal-overlay">
-        <div class="modal-content card ds-sale-presentation-modal">
-            <span class="ds-mini-eyebrow">Prueba de escaneo · No modifica ventas</span>
-            <h2 id="presentacion-prueba-nombre" class="card__title">Producto</h2>
-            <p class="ds-sale-presentation-copy">Este producto puede venderse por porción/unidad o como torta entera.</p>
-            <div class="ds-sale-presentation-options">
-                <button id="presentacion-prueba-porcion" type="button" class="ds-sale-presentation-option">
-                    <span>Porción / unidad</span>
-                    <strong id="presentacion-prueba-precio-porcion">$0</strong>
-                    <small>Comportamiento actual</small>
-                </button>
-                <button id="presentacion-prueba-entera" type="button" class="ds-sale-presentation-option is-whole">
-                    <span>Torta entera</span>
-                    <strong id="presentacion-prueba-precio-entera">$0</strong>
-                    <small id="presentacion-prueba-porciones">— porciones</small>
-                </button>
-            </div>
-            <p id="presentacion-prueba-resultado" class="ds-commercial-notice" hidden></p>
-            <div class="modal-actions">
-                <button id="presentacion-prueba-cancelar" class="btn-secondary" type="button">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
     <!-- MODAL: COBRO CON NUEVO SISTEMA INTELIGENTE (BILLETERA) -->
     <div id="modal-cobro" class="modal-overlay">
         <div class="modal-content card" style="max-width: 600px;">
@@ -815,7 +790,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPOS } from './js/pos.js?v=107';
+        import { setupPOS } from './js/pos.js?v=108';
         try {
             const app = initializeApp(firebaseConfig);
             setupPOS(app);
