@@ -56,17 +56,6 @@ export function setupPOS(app) {
     const btnMobileCarrito = document.getElementById('btn-mobile-carrito');
     const mobileCartSummary = document.getElementById('pos-mobile-cart-summary');
 
-    const modalPresentacionPrueba = document.getElementById('modal-presentacion-venta-prueba');
-    const presentacionPruebaNombre = document.getElementById('presentacion-prueba-nombre');
-    const presentacionPruebaPrecioPorcion = document.getElementById('presentacion-prueba-precio-porcion');
-    const presentacionPruebaPrecioEntera = document.getElementById('presentacion-prueba-precio-entera');
-    const presentacionPruebaPorciones = document.getElementById('presentacion-prueba-porciones');
-    const presentacionPruebaResultado = document.getElementById('presentacion-prueba-resultado');
-    const btnPresentacionPruebaPorcion = document.getElementById('presentacion-prueba-porcion');
-    const btnPresentacionPruebaEntera = document.getElementById('presentacion-prueba-entera');
-    const btnPresentacionPruebaCancelar = document.getElementById('presentacion-prueba-cancelar');
-    let productoPresentacionPrueba = null;
-
     const modalCobro = document.getElementById('modal-cobro');
     const modalCobroTotal = document.getElementById('modal-cobro-total');
     const btnPaymentMethods = document.querySelectorAll('.btn-payment');
@@ -720,19 +709,27 @@ export function setupPOS(app) {
     const procesarYRenderizar = () => {
         if (recetasBrutas.length === 0) return;
 
-        let testOverrides = {};
+        let commercialOverrides = {};
+        let recipeOverrides = {};
         if (window.location.hostname !== 'dulce-app.netlify.app') {
             try {
-                testOverrides = JSON.parse(
+                commercialOverrides = JSON.parse(
                     sessionStorage.getItem('dulcesallPricingTestOverrides') || '{}'
+                );
+            } catch {}
+            try {
+                recipeOverrides = JSON.parse(
+                    sessionStorage.getItem('dulcesallRecipeTestOverrides') || '{}'
                 );
             } catch {}
         }
 
         productosDisponibles = recetasBrutas.map(recetaOriginal => {
-            const receta = testOverrides[recetaOriginal.id]
-                ? { ...recetaOriginal, ...testOverrides[recetaOriginal.id] }
-                : recetaOriginal;
+            const receta = {
+                ...recetaOriginal,
+                ...(recipeOverrides[recetaOriginal.id] || {}),
+                ...(commercialOverrides[recetaOriginal.id] || {})
+            };
             const sale = calcularPrecioComercial(receta);
             const whole = calculateWholeCakePricing({
                 unitPrice: sale.price,
@@ -744,6 +741,8 @@ export function setupPOS(app) {
                 ...receta,
                 codigoProducto: receta.id,
                 costoBaseCalculado: sale.cost,
+                costoUnidadRendimiento: sale.recipeUnitCost,
+                unidadesPorVenta: sale.unitsPerSale,
                 porcentajeGananciaAplicado: sale.marginPercent,
                 precioCalculado: sale.price,
                 porcionesTortaEntera: whole.portions,
