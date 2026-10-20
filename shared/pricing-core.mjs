@@ -98,12 +98,24 @@ export const getAppliedMarginPercent = (product, globalMargin = 0) => {
         : (Number(globalMargin) || 0);
 };
 
+export const normalizeSaleUnits = (value) => {
+    if (value === null || value === undefined || value === '') return 1;
+    const number = Number(value);
+    if (!Number.isInteger(number) || number < 1 || number > 10000) return 1;
+    return number;
+};
+
 export const calculateProductSalePrice = (
     product,
     ingredientMap,
     globalMargin = 0
 ) => {
-    const cost = calculateRecipeUnitCost(product, ingredientMap);
+    // rendimiento = cuántas unidades/porciones produce la receta.
+    // unidadesPorVenta = cuántas de esas unidades forman UNA venta.
+    // Ej.: Chipá rinde 300, se vende x6 => el costo/precio de Mostrador es x6.
+    const recipeUnitCost = calculateRecipeUnitCost(product, ingredientMap);
+    const unitsPerSale = normalizeSaleUnits(product?.unidadesPorVenta);
+    const cost = recipeUnitCost * unitsPerSale;
     const marginPercent = getAppliedMarginPercent(product, globalMargin);
     const price = calculateRoundedSalePrice(
         cost,
@@ -111,7 +123,7 @@ export const calculateProductSalePrice = (
         { roundTo: 100, midpointDown: true }
     );
 
-    return { cost, marginPercent, price };
+    return { recipeUnitCost, unitsPerSale, cost, marginPercent, price };
 };
 
 export const normalizeWholeCakePortions = (value) => {
@@ -187,6 +199,9 @@ export const buildCommercialPricing = ({
 
     return {
         unitPrice: sale.price,
+        unitsPerSale: sale.unitsPerSale,
+        recipeUnitCost: sale.recipeUnitCost,
+        saleUnitCost: sale.cost,
         wholeCakePortions: whole.portions,
         wholeCakeAutomaticPrice: whole.automaticPrice,
         wholeCakeCurrentPrice: whole.currentPrice,
