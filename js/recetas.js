@@ -5,9 +5,22 @@ import {
 import { addToCart, updateCartIcon } from './cart.js';
 import { getEffectiveUnitCost } from './core/pricing.js';
 import { escapeHtml } from './core/html.js';
+import { createAuthorization } from './core/authorization.js';
 
 export function setupRecetas(app) {
     const db = getFirestore(app);
+    const authorization = createAuthorization(app);
+    let puedeEditarUnidadesVenta = false;
+    authorization.canAdminister().then(value => {
+        puedeEditarUnidadesVenta = value === true;
+        if (unidadesVentaInput) {
+            unidadesVentaInput.disabled = !puedeEditarUnidadesVenta;
+            unidadesVentaInput.title = puedeEditarUnidadesVenta
+                ? 'Define cuántas unidades forman una venta.'
+                : 'Sólo un administrador puede modificar las unidades por venta.';
+        }
+    });
+
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const categoriasCollection = collection(db, 'categorias');
@@ -339,15 +352,17 @@ export function setupRecetas(app) {
         const costoPorcionCalculado = costoTotalCalculado / rendimiento;
 
         const id = editandoId || doc(collection(db, 'recetas')).id;
-        const recetaData = { 
-            nombreTorta, 
-            categoria, 
+        const recetaData = {
+            nombreTorta,
+            categoria,
             rendimiento,
-            unidadesPorVenta,
             ingredientes: ingredientesRecetaActual,
-            costoTotal: costoTotalCalculado, // GUARDAMOS EL COSTO REAL
-            costoPorcion: costoPorcionCalculado // GUARDAMOS COSTO POR PORCIÓN
+            costoTotal: costoTotalCalculado,
+            costoPorcion: costoPorcionCalculado
         };
+        if (puedeEditarUnidadesVenta) {
+            recetaData.unidadesPorVenta = unidadesPorVenta;
+        }
         
         try {
             if (recetaSoloPrueba) {
@@ -363,7 +378,9 @@ export function setupRecetas(app) {
                 mostrarRecetas(todasLasRecetas);
                 return;
             }
-            await setDoc(doc(db, 'recetas', id), recetaData);
+            // merge:true preserva stock, lotes, código de barras, margen y
+            // configuración comercial cuando sólo se edita la receta.
+            await setDoc(doc(db, 'recetas', id), recetaData, { merge: true });
             alert(editandoId ? '¡Receta actualizada con éxito!' : '¡Receta creada con éxito!');
             closeModal();
         } catch (error) {
