@@ -56,6 +56,17 @@ export function setupPOS(app) {
     const btnMobileCarrito = document.getElementById('btn-mobile-carrito');
     const mobileCartSummary = document.getElementById('pos-mobile-cart-summary');
 
+    const modalPresentacionPrueba = document.getElementById('modal-presentacion-venta-prueba');
+    const presentacionPruebaNombre = document.getElementById('presentacion-prueba-nombre');
+    const presentacionPruebaPrecioPorcion = document.getElementById('presentacion-prueba-precio-porcion');
+    const presentacionPruebaPrecioEntera = document.getElementById('presentacion-prueba-precio-entera');
+    const presentacionPruebaPorciones = document.getElementById('presentacion-prueba-porciones');
+    const presentacionPruebaResultado = document.getElementById('presentacion-prueba-resultado');
+    const btnPresentacionPruebaPorcion = document.getElementById('presentacion-prueba-porcion');
+    const btnPresentacionPruebaEntera = document.getElementById('presentacion-prueba-entera');
+    const btnPresentacionPruebaCancelar = document.getElementById('presentacion-prueba-cancelar');
+    let productoPresentacionPrueba = null;
+
     const modalCobro = document.getElementById('modal-cobro');
     const modalCobroTotal = document.getElementById('modal-cobro-total');
     const btnPaymentMethods = document.querySelectorAll('.btn-payment');
@@ -773,6 +784,9 @@ export function setupPOS(app) {
                 </div>
                 <div>
                     <div class="prod-precio">${formatMoneda(precioCalculado)}</div>
+                    ${prod.precioTortaEnteraVigente !== null && prod.porcionesTortaEntera
+                        ? `<span class="ds-pos-whole-price">Entera: ${formatMoneda(prod.precioTortaEnteraVigente)} · ${prod.porcionesTortaEntera} porciones</span>`
+                        : ''}
                     <span class="ds-pos-card-category">${escapeHtml(categoria)}</span>
                 </div>
             `;
@@ -816,6 +830,58 @@ export function setupPOS(app) {
         });
     }
 
+    const tieneVentaEnteraConfigurable = product =>
+        Number.isInteger(product?.porcionesTortaEntera)
+        && product.porcionesTortaEntera >= 2
+        && Number.isFinite(Number(product?.precioTortaEnteraVigente))
+        && Number(product.precioTortaEnteraVigente) > 0;
+
+    const abrirSelectorPresentacionPrueba = product => {
+        if (!tieneVentaEnteraConfigurable(product)) {
+            agregarProductoAlCarrito(product, 1);
+            return;
+        }
+
+        productoPresentacionPrueba = product;
+        if (presentacionPruebaNombre) presentacionPruebaNombre.textContent = product.nombreTorta || 'Producto';
+        if (presentacionPruebaPrecioPorcion) presentacionPruebaPrecioPorcion.textContent =
+            formatMoneda(product.precioCalculado);
+        if (presentacionPruebaPrecioEntera) presentacionPruebaPrecioEntera.textContent =
+            formatMoneda(product.precioTortaEnteraVigente);
+        if (presentacionPruebaPorciones) presentacionPruebaPorciones.textContent =
+            product.porcionesTortaEntera + ' porciones equivalentes';
+        if (presentacionPruebaResultado) {
+            presentacionPruebaResultado.hidden = true;
+            presentacionPruebaResultado.textContent = '';
+        }
+        modalPresentacionPrueba?.classList.add('visible');
+    };
+
+    btnPresentacionPruebaPorcion?.addEventListener('click', () => {
+        if (!productoPresentacionPrueba) return;
+        agregarProductoAlCarrito(productoPresentacionPrueba, 1);
+        modalPresentacionPrueba?.classList.remove('visible');
+        productoPresentacionPrueba = null;
+    });
+
+    btnPresentacionPruebaEntera?.addEventListener('click', () => {
+        const product = productoPresentacionPrueba;
+        if (!product || !presentacionPruebaResultado) return;
+        // Fase de prueba: mostramos exactamente qué agregaría/cobraría,
+        // pero NO alteramos carrito, ventas, stock ni caja.
+        presentacionPruebaResultado.hidden = false;
+        presentacionPruebaResultado.textContent =
+            'Simulación: se agregaría 1 torta entera por '
+            + formatMoneda(product.precioTortaEnteraVigente)
+            + ', equivalente a ' + product.porcionesTortaEntera
+            + ' porciones para costo/stock. Todavía no se agregó al carrito.';
+    });
+
+    btnPresentacionPruebaCancelar?.addEventListener('click', () => {
+        modalPresentacionPrueba?.classList.remove('visible');
+        productoPresentacionPrueba = null;
+    });
+
     // Escáner de Código de Barras Físico
     let scanBuffer = '';
     let lastKeyTime = Date.now();
@@ -835,7 +901,7 @@ export function setupPOS(app) {
                 const productoEncontrado = productosDisponibles.find(p => p.codigoBarras && String(p.codigoBarras) === codigoEscaneado);
                 
                 if (productoEncontrado) {
-                    agregarProductoAlCarrito(productoEncontrado, 1);
+                    abrirSelectorPresentacionPrueba(productoEncontrado);
                 } else {
                     alert("El código escaneado (" + codigoEscaneado + ") no existe en el sistema.");
                 }
