@@ -32,6 +32,33 @@ En cualquier host distinto de `dulce-app.netlify.app`, el editor comercial funci
 - permite volver a Mostrador y probar el selector al escanear;
 - elegir "Torta entera" sólo informa qué se agregaría/cobraría: no toca carrito, caja, stock ni ventas.
 
+
+## Rendimiento vs. unidades por venta
+
+Se separan explícitamente dos conceptos:
+
+- `rendimiento`: cuántas unidades/porciones produce una receta.
+- `unidadesPorVenta`: cuántas de esas unidades componen una venta en Mostrador.
+
+Ejemplos:
+- Tiramisú: rendimiento 8 porciones; unidades por venta 1.
+- Chipá: rendimiento 300 unidades; unidades por venta 6. Una cantidad 2 en carrito representa 12 chipás.
+
+El costo/precio de una venta se calcula tomando el costo por unidad de rendimiento y multiplicándolo por
+`unidadesPorVenta` antes de aplicar margen y el redondeo vigente de Mostrador.
+
+## Selector Entera en carrito
+
+El escaneo siempre agrega primero la unidad de venta normal. Si el producto tiene torta entera configurada,
+la línea del carrito muestra un botón `Entera`. Al activarlo:
+
+- el total usa el precio entero vigente;
+- la cantidad visible sigue representando número de ventas (1 torta, 2 tortas);
+- se conserva aparte la equivalencia física configurada (por ejemplo 8 porciones por torta);
+- en la fase de prueba no se permite confirmar una venta experimental para no afectar stock/costos/caja.
+
+En productos agrupados que no son torta, el mismo espacio muestra la unidad de venta, por ejemplo `6 u.`.
+
 ## Consulta futura
 
 Ruta propuesta:
@@ -46,6 +73,7 @@ Respuesta comercial:
   "identificador": "ID_RECETA",
   "nombre": "Tiramisú",
   "presentacion": "Porción",
+  "unidadesPorVenta": 1,
   "precioVigente": 6500,
   "porcionesTortaEntera": 8,
   "precioTortaEntera": 45500,
