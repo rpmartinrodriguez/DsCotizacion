@@ -13,6 +13,7 @@ export const buildPublicProductPricePayload = ({
         identificador: product.id,
         nombre: String(product.nombreTorta || ""),
         presentacion: product.presentacionVenta || null,
+        unidadesPorVenta: pricing.unitsPerSale,
         precioVigente: pricing.unitPrice,
         porcionesTortaEntera: pricing.wholeCakePortions,
         precioTortaEntera: pricing.wholeCakeCurrentPrice,
