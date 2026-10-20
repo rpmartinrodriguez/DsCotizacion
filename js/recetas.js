@@ -5,9 +5,22 @@ import {
 import { addToCart, updateCartIcon } from './cart.js';
 import { getEffectiveUnitCost } from './core/pricing.js';
 import { escapeHtml } from './core/html.js';
+import { createAuthorization } from './core/authorization.js';
 
 export function setupRecetas(app) {
     const db = getFirestore(app);
+    const authorization = createAuthorization(app);
+    let puedeEditarUnidadesVenta = false;
+    authorization.canAdminister().then(value => {
+        puedeEditarUnidadesVenta = value === true;
+        if (unidadesVentaInput) {
+            unidadesVentaInput.disabled = !puedeEditarUnidadesVenta;
+            unidadesVentaInput.title = puedeEditarUnidadesVenta
+                ? 'Define cuántas unidades forman una venta.'
+                : 'Sólo un administrador puede modificar las unidades por venta.';
+        }
+    });
+
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const categoriasCollection = collection(db, 'categorias');
@@ -26,6 +39,7 @@ export function setupRecetas(app) {
     const recetaNombreInput = document.getElementById('receta-nombre-input');
     const categoriaSelect = document.getElementById('receta-categoria-select');
     const rendimientoInput = document.getElementById('receta-rendimiento-input');
+    const unidadesVentaInput = document.getElementById('receta-unidades-venta-input');
     const ingredienteInput = document.getElementById('selector-ingrediente-receta');
     const ingredientesDatalist = document.getElementById('lista-materias-primas-receta');
     const cantidadIngredienteInput = document.getElementById('cantidad-ingrediente-receta');
@@ -57,6 +71,19 @@ export function setupRecetas(app) {
     let todasLasRecetas = [];
     let ingredientesRecetaActual = [];
     let editandoId = null;
+    const recetaSoloPrueba = window.location.hostname !== 'dulce-app.netlify.app';
+    const RECETA_TEST_KEY = 'dulcesallRecipeTestOverrides';
+
+    const leerOverridesPrueba = () => {
+        if (!recetaSoloPrueba) return {};
+        try { return JSON.parse(sessionStorage.getItem(RECETA_TEST_KEY) || '{}'); }
+        catch { return {}; }
+    };
+
+    const leerRecetaConOverride = receta => ({
+        ...receta,
+        ...(leerOverridesPrueba()[receta.id] || {})
+    });
     
     // Variables temporales para el flujo del carrito
     let recetaSeleccionadaParaCarrito = null; 
@@ -205,16 +232,19 @@ export function setupRecetas(app) {
         if (receta && receta.data) {
             editandoId = receta.id;
             modalTitle.textContent = `Editar Receta: ${receta.data.nombreTorta}`;
-            recetaNombreInput.value = receta.data.nombreTorta;
-            categoriaSelect.value = receta.data.categoria || '';
-            rendimientoInput.value = receta.data.rendimiento || '';
-            ingredientesRecetaActual = JSON.parse(JSON.stringify(receta.data.ingredientes));
+            const data = leerRecetaConOverride({ id: receta.id, ...receta.data });
+            recetaNombreInput.value = data.nombreTorta;
+            categoriaSelect.value = data.categoria || '';
+            rendimientoInput.value = data.rendimiento || '';
+            unidadesVentaInput.value = data.unidadesPorVenta || 1;
+            ingredientesRecetaActual = JSON.parse(JSON.stringify(data.ingredientes));
         } else {
             editandoId = null;
             modalTitle.textContent = 'Crear Nueva Receta';
             recetaNombreInput.value = '';
             categoriaSelect.value = '';
             rendimientoInput.value = '';
+            unidadesVentaInput.value = 1;
             ingredientesRecetaActual = [];
         }
         ingredienteInput.value = '';
@@ -258,10 +288,14 @@ export function setupRecetas(app) {
         }
         const total = calcularCostoTotalReceta({ ingredientes: ingredientesRecetaActual });
         const rendimiento = Number(rendimientoInput.value);
-        const unitario = rendimiento > 0 ? formatearCosto(total / rendimiento) : 'Ingresá el rendimiento';
+        const unidadesVenta = Math.max(1, Math.floor(Number(unidadesVentaInput?.value) || 1));
+        const costoUnitario = rendimiento > 0 ? total / rendimiento : null;
+        const unitario = costoUnitario !== null ? formatearCosto(costoUnitario) : 'Ingresá el rendimiento';
+        const costoVenta = costoUnitario !== null ? formatearCosto(costoUnitario * unidadesVenta) : '—';
         resumenCostos.innerHTML = `
             <div><span>Costo del lote${faltantes ? ' (parcial)' : ''}</span><strong>${formatearCosto(total)}</strong></div>
-            <div><span>Costo por unidad / porción</span><strong>${faltantes ? '—' : unitario}</strong></div>
+            <div><span>Costo por unidad de rendimiento</span><strong>${faltantes ? '—' : unitario}</strong></div>
+            <div><span>Costo por venta${unidadesVenta > 1 ? ' (x' + unidadesVenta + ')' : ''}</span><strong>${faltantes ? '—' : costoVenta}</strong></div>
             <small class="${faltantes ? 'ds-receta-costo-alerta' : ''}">
                 ${faltantes
                     ? 'Atención: ' + faltantes + ' ingrediente(s) sin costo válido en Stock. Este total es parcial; revisá sus precios.'
@@ -303,8 +337,11 @@ export function setupRecetas(app) {
         const nombreTorta = recetaNombreInput.value.trim();
         const categoria = categoriaSelect.value;
         const rendimiento = parseInt(rendimientoInput.value, 10);
+        const unidadesPorVenta = parseInt(unidadesVentaInput.value, 10);
 
-        if (!nombreTorta || !categoria || !rendimiento || isNaN(rendimiento) || rendimiento <= 0 || ingredientesRecetaActual.length === 0) {
+        if (!nombreTorta || !categoria || !rendimiento || isNaN(rendimiento) || rendimiento <= 0
+            || !Number.isInteger(unidadesPorVenta) || unidadesPorVenta < 1 || unidadesPorVenta > 10000
+            || ingredientesRecetaActual.length === 0) {
             alert('Por favor, completa todos los campos y añade al menos un ingrediente.');
             return;
         }
@@ -315,17 +352,35 @@ export function setupRecetas(app) {
         const costoPorcionCalculado = costoTotalCalculado / rendimiento;
 
         const id = editandoId || doc(collection(db, 'recetas')).id;
-        const recetaData = { 
-            nombreTorta, 
-            categoria, 
-            rendimiento, 
+        const recetaData = {
+            nombreTorta,
+            categoria,
+            rendimiento,
             ingredientes: ingredientesRecetaActual,
-            costoTotal: costoTotalCalculado, // GUARDAMOS EL COSTO REAL
-            costoPorcion: costoPorcionCalculado // GUARDAMOS COSTO POR PORCIÓN
+            costoTotal: costoTotalCalculado,
+            costoPorcion: costoPorcionCalculado
         };
+        if (puedeEditarUnidadesVenta) {
+            recetaData.unidadesPorVenta = unidadesPorVenta;
+        }
         
         try {
-            await setDoc(doc(db, 'recetas', id), recetaData);
+            if (recetaSoloPrueba) {
+                if (!editandoId) {
+                    alert('En esta fase de prueba no se crean recetas nuevas. Editá una existente para probar “Unidades por venta”.');
+                    return;
+                }
+                const overrides = leerOverridesPrueba();
+                overrides[id] = { ...(overrides[id] || {}), unidadesPorVenta };
+                sessionStorage.setItem(RECETA_TEST_KEY, JSON.stringify(overrides));
+                alert('Prueba: “Unidades por venta” quedó guardado sólo durante esta sesión. No se modificó Firestore.');
+                closeModal();
+                mostrarRecetas(todasLasRecetas);
+                return;
+            }
+            // merge:true preserva stock, lotes, código de barras, margen y
+            // configuración comercial cuando sólo se edita la receta.
+            await setDoc(doc(db, 'recetas', id), recetaData, { merge: true });
             alert(editandoId ? '¡Receta actualizada con éxito!' : '¡Receta creada con éxito!');
             closeModal();
         } catch (error) {
@@ -360,15 +415,17 @@ export function setupRecetas(app) {
                 
                 const contenidoHtml = listaDeRecetas.map(receta => {
                     // Calculamos el costo en tiempo real para mostrarlo en pantalla
-                    const costoTotalActual = calcularCostoTotalReceta(receta.data);
-                    const rendimiento = parseFloat(receta.data.rendimiento) || 1;
+                    const recetaVista = leerRecetaConOverride({ id: receta.id, ...receta.data });
+                    const costoTotalActual = calcularCostoTotalReceta(recetaVista);
+                    const rendimiento = parseFloat(recetaVista.rendimiento) || 1;
+                    const unidadesVenta = Math.max(1, Number(recetaVista.unidadesPorVenta) || 1);
                     const costoPorcionActual = costoTotalActual / rendimiento;
 
                     return `
                     <div class="receta-card">
                         <div class="receta-card__info">
-                            <h3>${receta.data.nombreTorta}</h3>
-                            <p>${receta.data.ingredientes.length} ingrediente(s) - Rinde: ${rendimiento} u.</p>
+                            <h3>${recetaVista.nombreTorta}</h3>
+                            <p>${recetaVista.ingredientes.length} ingrediente(s) - Rinde: ${rendimiento} u. · Venta: x${unidadesVenta}</p>
                             <p style="color:#15803d; font-weight:bold; margin-top:0.3rem; font-size:0.9rem;">
                                 Costo Lote: $${costoTotalActual.toLocaleString('es-AR', {minimumFractionDigits: 2})} | Costo c/u: $${costoPorcionActual.toLocaleString('es-AR', {minimumFractionDigits: 2})}
                             </p>
@@ -505,6 +562,7 @@ export function setupRecetas(app) {
     ingredienteInput.addEventListener('input', renderizarVistaPreviaCosto);
     cantidadIngredienteInput.addEventListener('input', renderizarVistaPreviaCosto);
     rendimientoInput.addEventListener('input', renderizarIngredientesEnReceta);
+    unidadesVentaInput?.addEventListener('input', renderizarIngredientesEnReceta);
     
     updateCartIcon();
 }
