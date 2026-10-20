@@ -169,7 +169,11 @@ service cloud.firestore {
       // administrador. El resto de las escrituras existentes conserva su permiso.
       allow update: if (
           (hasPermission('recetas') || hasPermission('mostrador'))
-          && !changesCommercialProductConfig()
+          && (
+            !changesCommercialProductConfig()
+            || isMaster()
+            || hasPermission('configuracion')
+          )
         )
         || (
           (isMaster() || hasPermission('configuracion'))
