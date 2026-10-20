@@ -131,6 +131,26 @@ service cloud.firestore {
 
     // Recetas y productos vendidos en Mostrador.
     match /recetas/{recetaId} {
+      function changesCommercialProductConfig() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'presentacionVenta',
+          'porcionesTortaEntera',
+          'precioTortaEnteraManual',
+          'precioWebHabilitado',
+          'configComercialActualizadaAt'
+        ]);
+      }
+
+      function onlyCommercialProductConfig() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'presentacionVenta',
+          'porcionesTortaEntera',
+          'precioTortaEnteraManual',
+          'precioWebHabilitado',
+          'configComercialActualizadaAt'
+        ]);
+      }
+
       allow read: if hasPermission('mostrador')
         || hasPermission('recetas')
         || hasPermission('presupuestos')
@@ -143,10 +163,19 @@ service cloud.firestore {
       allow create, delete: if hasPermission('recetas')
         || hasPermission('mostrador');
 
-      allow update: if hasPermission('recetas')
-        || hasPermission('mostrador')
+      // Los nuevos datos comerciales sólo pueden modificarse por un usuario
+      // administrador. El resto de las escrituras existentes conserva su permiso.
+      allow update: if (
+          (hasPermission('recetas') || hasPermission('mostrador'))
+          && !changesCommercialProductConfig()
+        )
+        || (
+          (isMaster() || hasPermission('configuracion'))
+          && onlyCommercialProductConfig()
+        )
         || (
           hasPermission('precios')
+          && !changesCommercialProductConfig()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'margenIndividual',
             'historialCambiosPrecio',
