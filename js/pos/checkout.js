@@ -59,9 +59,39 @@ export const savePOSCheckout = async ({
             throw new Error('El carrito contiene cantidades o precios inválidos.');
         }
 
-        const unitCost = Math.max(0, number(product.costoBaseCalculado));
+        const mode = item.modoVenta === 'entera' ? 'entera' : 'unidad';
+        const saleUnits = Math.max(1, Math.floor(number(product.unidadesPorVenta) || 1));
+        const wholePortions = Number.isInteger(Number(product.porcionesTortaEntera))
+            ? Number(product.porcionesTortaEntera)
+            : null;
+        const physicalUnitsPerSale = mode === 'entera'
+            ? wholePortions
+            : saleUnits;
+
+        if (!Number.isInteger(physicalUnitsPerSale) || physicalUnitsPerSale < 1) {
+            throw new Error('La presentación de venta no tiene una equivalencia física válida.');
+        }
+        if (mode === 'entera') {
+            const wholePrice = Number(product.precioTortaEnteraVigente);
+            if (!wholePortions || wholePortions < 2 || !Number.isFinite(wholePrice) || wholePrice <= 0) {
+                throw new Error('La torta entera ya no está configurada. Volvé a cargar el producto.');
+            }
+            if (Math.abs(price - wholePrice) > 0.01) {
+                throw new Error('Cambió el precio de la torta entera. Quitá el producto y volvé a agregarlo.');
+            }
+        } else if (Math.abs(price - Number(product.precioCalculado)) > 0.01) {
+            throw new Error('Cambió el precio del producto. Quitalo y volvé a agregarlo.');
+        }
+
+        const recipePhysicalUnitCost = Math.max(
+            0,
+            number(product.costoUnidadRendimiento)
+                || (number(product.costoBaseCalculado) / saleUnits)
+        );
+        const saleCost = recipePhysicalUnitCost * physicalUnitsPerSale;
+        const physicalQuantity = physicalUnitsPerSale * quantity;
         const revenue = Math.round(price * quantity * 100) / 100;
-        const totalCost = unitCost * quantity;
+        const totalCost = saleCost * quantity;
         const profit = revenue - totalCost;
 
         return {
@@ -69,12 +99,19 @@ export const savePOSCheckout = async ({
             nombre: String(item.nombre || product.nombreTorta || ''),
             precio: price,
             cantidad: quantity,
-            costoUnitarioVenta: unitCost,
+            modoVenta: mode,
+            presentacionVenta: String(product.presentacionVenta || ''),
+            unidadesPorVenta: saleUnits,
+            porcionesTortaEntera: wholePortions,
+            unidadesFisicasPorVenta: physicalUnitsPerSale,
+            cantidadFisica: physicalQuantity,
+            costoUnidadFisica: recipePhysicalUnitCost,
+            costoUnitarioVenta: saleCost,
             costoTotalVenta: totalCost,
             utilidadBrutaVenta: profit,
             margenBrutoVentaPct: revenue > 0 ? profit / revenue * 100 : 0,
             porcentajeGananciaAplicado: number(product.porcentajeGananciaAplicado),
-            costoSnapshotVersion: 1
+            costoSnapshotVersion: 2
         };
     });
 
@@ -117,6 +154,8 @@ export const savePOSCheckout = async ({
                     savedLine.id === lines[index].id
                     && savedLine.cantidad === lines[index].cantidad
                     && savedLine.precio === lines[index].precio
+                    && (savedLine.modoVenta || 'unidad') === lines[index].modoVenta
+                    && Number(savedLine.cantidadFisica || savedLine.cantidad) === lines[index].cantidadFisica
                 );
             if (saved.cajaId !== cajaId
                 || saved.metodoPago !== method
@@ -172,7 +211,7 @@ export const savePOSCheckout = async ({
             costoTotalVenta: totalCost,
             utilidadBrutaVenta: total - totalCost,
             margenBrutoVentaPct: (total - totalCost) / total * 100,
-            costoSnapshotVersion: 1,
+            costoSnapshotVersion: 2,
             vendedor: caja.usuarioNombre || userName,
             ...(isPrepaid ? {
                 cuentaCorrienteClienteId: clientId,
@@ -186,20 +225,29 @@ export const savePOSCheckout = async ({
             const line = lines[index];
             const old = snapshot.data();
             const existingStock = Math.max(0, number(old.stockMostrador));
-            const nextStock = Math.max(0, existingStock - line.cantidad);
+            const quantityToDeduct = line.cantidadFisica;
+            const nextStock = Math.max(0, existingStock - quantityToDeduct);
             tx.update(snapshot.ref, {
                 stockMostrador: nextStock,
-                lotes: sortedLotsAfterSale(old.lotes, line.cantidad)
+                lotes: sortedLotsAfterSale(old.lotes, quantityToDeduct)
             });
+            const presentationDetail = line.modoVenta === 'entera'
+                ? `${line.cantidad} torta(s) entera(s) = ${quantityToDeduct} porciones`
+                : line.unidadesFisicasPorVenta > 1
+                    ? `${line.cantidad} venta(s) x${line.unidadesFisicasPorVenta} = ${quantityToDeduct} unidades`
+                    : `${quantityToDeduct} unidad(es)`;
             tx.set(auditRefs[index], {
                 productoId: line.id,
                 productoNombre: line.nombre,
                 tipo: 'RESTA',
-                cantidad: line.cantidad,
+                cantidad: quantityToDeduct,
+                cantidadVentas: line.cantidad,
+                modoVenta: line.modoVenta,
+                unidadesFisicasPorVenta: line.unidadesFisicasPorVenta,
                 stockResultante: nextStock,
-                motivo: line.cantidad > existingStock
-                    ? `Venta (${method}) · stock informativo/no bloqueante`
-                    : `Venta (${method})`,
+                motivo: quantityToDeduct > existingStock
+                    ? `Venta (${method}) · ${presentationDetail} · stock informativo/no bloqueante`
+                    : `Venta (${method}) · ${presentationDetail}`,
                 usuario: userName,
                 usuarioId: userId,
                 fecha: now
