@@ -111,7 +111,6 @@ export function setupPOS(app) {
     // VARIABLES DE ESTADO GLOBALES
     // ==========================================
     let currentUser = null;
-    const esVistaPruebaComercial = window.location.hostname !== 'dulce-app.netlify.app';
     let userRol = 'empleado';
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
@@ -1286,13 +1285,6 @@ export function setupPOS(app) {
         btnConfirmarVenta.addEventListener('click', async () => {
             if (!metodoPagoSeleccionado || carritoActual.length === 0 || !cajaActiva) return;
 
-            if (esVistaPruebaComercial && carritoActual.some(item =>
-                item.modoVenta === 'entera' || Number(item.unidadesPorVenta) > 1
-            )) {
-                alert('Fase de prueba: el total y las cantidades ya se simulan, pero todavía no se registra esta venta para no alterar stock, costos ni caja con la nueva equivalencia.');
-                return;
-            }
-
             let mpReal = 0; let efectivoReal = 0;
             if (metodoPagoSeleccionado === 'MercadoPago') { mpReal = totalVentaActual; } 
             else if (metodoPagoSeleccionado === 'Efectivo') { efectivoReal = totalVentaActual; } 
@@ -1320,7 +1312,12 @@ export function setupPOS(app) {
                     mp: mpReal,
                     clientId: selectedCC?.id || null,
                     items: carritoActual.map(item => ({
-                        id: item.id, cantidad: item.cantidad, precio: item.precio
+                        id: item.id,
+                        cantidad: item.cantidad,
+                        precio: item.precio,
+                        modoVenta: item.modoVenta || 'unidad',
+                        unidadesPorVenta: item.unidadesPorVenta || 1,
+                        porcionesTortaEntera: item.porcionesTortaEntera || null
                     }))
                 });
                 if (!pendingCheckout || pendingCheckout.fingerprint !== checkoutFingerprint) {
