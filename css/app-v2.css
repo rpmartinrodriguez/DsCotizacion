@@ -6383,3 +6383,89 @@ body.ds-pos .ds-sale-presentation-option small {
     grid-template-columns:1fr;
   }
 }
+
+
+/* PRUEBA v2 — selector de presentación directamente en cada línea del carrito */
+body.ds-pos .ds-pos-sale-pack {
+  display:block;
+  width:max-content;
+  margin:4px auto 0;
+  padding:3px 7px;
+  border-radius:999px;
+  background:#f4f1f3;
+  color:#746a72;
+  font-size:.64rem;
+  font-weight:850;
+}
+body.ds-pos .ds-pos-cart-list .cart-item {
+  grid-template-columns:minmax(0,1fr) 58px auto auto 28px !important;
+}
+body.ds-pos .ds-cart-sale-mode {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:58px;
+  min-height:28px;
+  padding:4px 6px;
+  border:1px solid #e3d7dd;
+  border-radius:7px;
+  background:#fff;
+  color:#a23d6d;
+  font-size:.68rem;
+  font-weight:850;
+  white-space:nowrap;
+}
+body.ds-pos button.ds-cart-sale-mode {
+  cursor:pointer;
+}
+body.ds-pos button.ds-cart-sale-mode:hover {
+  border-color:#d795b5;
+  background:#fff3f8;
+}
+body.ds-pos .ds-cart-sale-mode.is-whole {
+  border-color:#d78fb1;
+  background:#fff0f6;
+  color:#96325f;
+}
+body.ds-pos .ds-cart-sale-mode.is-pack {
+  background:#f7f4f6;
+  color:#6f666d;
+  border-color:#e6dfe3;
+}
+body.ds-pos .ds-cart-sale-mode.is-empty {
+  visibility:hidden;
+}
+body.ds-pos .ds-cart-equivalent {
+  display:block;
+  margin-top:3px;
+  color:#9a8d95;
+  font-size:.59rem;
+  font-weight:700;
+}
+@media (max-width:560px) {
+  body.ds-pos .ds-pos-cart-list .cart-item {
+    grid-template-columns:minmax(0,1fr) 58px 28px !important;
+    gap:6px !important;
+  }
+  body.ds-pos .ds-pos-cart-list .cart-item-info {
+    grid-column:1;
+    grid-row:1;
+  }
+  body.ds-pos .ds-pos-cart-list .ds-cart-sale-mode {
+    grid-column:2;
+    grid-row:1;
+  }
+  body.ds-pos .ds-pos-cart-list .ds-cart-remove-btn {
+    grid-column:3;
+    grid-row:1;
+  }
+  body.ds-pos .ds-pos-cart-list .ds-cart-qty-control {
+    grid-column:1;
+    grid-row:2;
+  }
+  body.ds-pos .ds-pos-cart-list .cart-item-total {
+    grid-column:2 / 4;
+    grid-row:2;
+    align-self:center;
+  }
+}
