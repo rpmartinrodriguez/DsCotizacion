@@ -111,6 +111,7 @@ export function setupPOS(app) {
     // VARIABLES DE ESTADO GLOBALES
     // ==========================================
     let currentUser = null;
+    const esVistaPruebaComercial = window.location.hostname !== 'dulce-app.netlify.app';
     let userRol = 'empleado';
     let userName = "Usuario Mostrador";
     let cajaActiva = null; 
