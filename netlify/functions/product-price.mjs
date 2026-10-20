@@ -1,6 +1,6 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { buildCommercialPricing } from "../../shared/pricing-core.mjs";
+import { buildPublicProductPricePayload } from "./_shared/product-price-payload.mjs";
 
 const allowedOrigins = new Set([
     "https://dulcesall.com",
@@ -104,29 +104,18 @@ export default async (request) => {
         });
 
         const globalMargin = Number(configSnap.data()?.margenGlobal) || 0;
-        const pricing = buildCommercialPricing({
-            product,
-            ingredientMap,
-            globalMargin
-        });
-
         const updatedAt = latestUpdateIso([
             productSnap,
             configSnap,
             ...ingredientSnaps
         ]);
 
-        return json(request, 200, {
-            codigo: product.id,
-            identificador: product.id,
-            nombre: String(product.nombreTorta || ""),
-            presentacion: product.presentacionVenta || null,
-            precioVigente: pricing.unitPrice,
-            porcionesTortaEntera: pricing.wholeCakePortions,
-            precioTortaEntera: pricing.wholeCakeCurrentPrice,
-            origenPrecioTortaEntera: pricing.wholeCakePriceSource,
-            actualizadoAt: updatedAt
-        });
+        return json(request, 200, buildPublicProductPricePayload({
+            product,
+            ingredientMap,
+            globalMargin,
+            updatedAt
+        }));
     } catch (error) {
         if (error?.message === "SERVER_CONFIG_MISSING") {
             return json(request, 503, {
