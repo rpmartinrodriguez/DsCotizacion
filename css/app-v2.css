@@ -6315,3 +6315,71 @@ body.ds-pos .ds-commercial-notice {
     grid-template-columns:1fr;
   }
 }
+
+
+body.ds-pos .ds-pos-whole-price {
+  display:block;
+  margin:5px auto 4px;
+  width:max-content;
+  max-width:100%;
+  padding:3px 7px;
+  border-radius:999px;
+  background:#fff2f7;
+  color:#a13d6c;
+  font-size:.65rem;
+  font-weight:850;
+}
+body.ds-pos .ds-sale-presentation-modal {
+  width:min(520px,calc(100vw - 24px)) !important;
+  max-width:520px !important;
+}
+body.ds-pos .ds-sale-presentation-copy {
+  margin:4px 0 14px;
+  color:#756a73;
+  font-size:.82rem;
+}
+body.ds-pos .ds-sale-presentation-options {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+body.ds-pos .ds-sale-presentation-option {
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  align-items:flex-start;
+  min-height:128px;
+  padding:15px;
+  border:1px solid #e2d9df;
+  border-radius:14px;
+  background:#fff;
+  color:#5c535b;
+  cursor:pointer;
+  text-align:left;
+}
+body.ds-pos .ds-sale-presentation-option:hover {
+  border-color:#dca9c0;
+  background:#fff8fb;
+}
+body.ds-pos .ds-sale-presentation-option.is-whole {
+  border-color:#e7bfd2;
+  background:#fff9fc;
+}
+body.ds-pos .ds-sale-presentation-option span {
+  font-size:.76rem;
+  font-weight:850;
+}
+body.ds-pos .ds-sale-presentation-option strong {
+  color:#9d3768;
+  font-size:1.2rem;
+}
+body.ds-pos .ds-sale-presentation-option small {
+  color:#847981;
+  font-size:.7rem;
+  line-height:1.35;
+}
+@media (max-width:560px) {
+  body.ds-pos .ds-sale-presentation-options {
+    grid-template-columns:1fr;
+  }
+}
