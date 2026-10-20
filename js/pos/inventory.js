@@ -307,8 +307,13 @@ export function setupPOSInventory({
         try {
             if (comercialSoloPrueba) {
                 Object.assign(product, draft);
+                const key = 'dulcesallPricingTestOverrides';
+                let overrides = {};
+                try { overrides = JSON.parse(sessionStorage.getItem(key) || '{}'); } catch {}
+                overrides[product.id] = draft;
+                sessionStorage.setItem(key, JSON.stringify(overrides));
                 renderInventory(products);
-                alert('Simulación aplicada sólo en esta vista. No se modificó Firestore.');
+                alert('Simulación aplicada a esta sesión. No se modificó Firestore.');
             } else {
                 await updateDoc(doc(db, 'recetas', product.id), {
                     ...draft,
