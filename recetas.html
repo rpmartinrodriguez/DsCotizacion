@@ -188,7 +188,13 @@
                     </div>
                     <div class="form-group">
                         <label for="receta-rendimiento-input">Rendimiento (unidades)</label>
-                        <input type="number" id="receta-rendimiento-input" placeholder="Ej: 36" min="1">
+                        <input type="number" id="receta-rendimiento-input" placeholder="Ej: 300" min="1">
+                        <small>Cuántas unidades reales produce la receta.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="receta-unidades-venta-input">Unidades por venta</label>
+                        <input type="number" id="receta-unidades-venta-input" placeholder="Ej: 6" min="1" max="10000" step="1">
+                        <small>Ej.: torta por porción = 1; Chipá vendido de a 6 = 6.</small>
                     </div>
                 </div>
 
@@ -258,7 +264,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupRecetas } from './js/recetas.js?v=2';
+        import { setupRecetas } from './js/recetas.js?v=3';
         try {
             const app = initializeApp(firebaseConfig);
             setupRecetas(app);
