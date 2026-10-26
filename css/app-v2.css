@@ -6159,6 +6159,56 @@ body.ds-pos #modal-cobro .modal-actions {
 }
 
 
+/* Inventario del Mostrador: mantener columnas legibles en escritorio */
+body.ds-pos .ds-pos-inventory-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+  padding-bottom: 4px;
+}
+body.ds-pos .ds-pos-inventory-table {
+  width: max(100%, 1180px);
+  min-width: 1180px;
+  table-layout: auto;
+}
+body.ds-pos .ds-pos-inventory-table th,
+body.ds-pos .ds-pos-inventory-table td {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+body.ds-pos .ds-pos-inventory-table th {
+  white-space: nowrap;
+}
+body.ds-pos .ds-pos-inventory-table th:nth-child(1),
+body.ds-pos .ds-pos-inventory-table td:nth-child(1) { min-width: 110px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(2),
+body.ds-pos .ds-pos-inventory-table td:nth-child(2) { min-width: 220px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(3),
+body.ds-pos .ds-pos-inventory-table td:nth-child(3) { min-width: 110px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(4),
+body.ds-pos .ds-pos-inventory-table td:nth-child(4) { min-width: 105px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(5),
+body.ds-pos .ds-pos-inventory-table td:nth-child(5) { min-width: 155px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(6),
+body.ds-pos .ds-pos-inventory-table td:nth-child(6) { min-width: 145px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(7),
+body.ds-pos .ds-pos-inventory-table td:nth-child(7) { min-width: 115px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(8),
+body.ds-pos .ds-pos-inventory-table td:nth-child(8) { min-width: 95px; }
+body.ds-pos .ds-pos-inventory-table th:nth-child(9),
+body.ds-pos .ds-pos-inventory-table td:nth-child(9) { min-width: 235px; }
+body.ds-pos .ds-pos-inventory-table td:nth-child(2) > strong {
+  display: block;
+  white-space: normal;
+  line-height: 1.25;
+}
+body.ds-pos .ds-pos-products-grid .prod-nombre {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none;
+}
+
 /* =========================================================
    PRUEBA — configuración comercial de producto terminado
    ========================================================= */
