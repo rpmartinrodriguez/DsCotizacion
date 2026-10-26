@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+  <title>Migración de base · Dulce Sall Admin</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/app-v2.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-192.png?v=2">
+  <style>
+    .ds-migration{max-width:1100px;margin:0 auto;padding-bottom:50px}
+    .ds-migration-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+    .ds-migration-card{border:1px solid #eadfe5;border-radius:16px;background:#fff;padding:18px}
+    .ds-migration-card h2{margin:0 0 8px;color:#493b43;font-size:1rem}
+    .ds-migration-project{font-size:1.15rem;font-weight:850;color:#9e3f6d}
+    .ds-migration-arrow{text-align:center;font-size:1.5rem;color:#aa5c80;align-self:center}
+    .ds-migration-controls{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+    .ds-migration-token{display:grid;gap:6px;margin-top:12px}
+    .ds-migration-token input{max-width:520px}
+    .ds-migration-token small,.ds-migration-help{color:#857981;font-size:.8rem;line-height:1.5}
+    .ds-migration-notice{padding:11px 13px;border-radius:10px;margin:10px 0;background:#f6f3f5;color:#665b62;font-size:.85rem}
+    .ds-migration-notice.is-success{background:#edf8f0;color:#21663d}
+    .ds-migration-notice.is-error{background:#fff0f1;color:#9b303c}
+    .ds-migration-progress{height:9px;border-radius:999px;background:#eee7eb;overflow:hidden;margin:14px 0 6px}
+    #migration-progress-bar{height:100%;width:0;background:#b74c7e;transition:width .2s ease}
+    #migration-progress-text{font-size:.78rem;color:#7f747b}
+    .ds-migration-table-wrap{overflow:auto;border:1px solid #ece4e8;border-radius:12px;margin-top:16px}
+    .ds-migration-table{width:100%;border-collapse:collapse;min-width:620px}
+    .ds-migration-table th,.ds-migration-table td{padding:10px 12px;border-bottom:1px solid #eee8eb;text-align:left;font-size:.82rem}
+    .ds-migration-table th{background:#faf8f9;color:#71656c}
+    .ds-migration-table td:nth-child(n+2),.ds-migration-table th:nth-child(n+2){text-align:center}
+    .ds-migration-summary{display:grid;gap:5px;margin-top:16px;padding:14px;border:1px solid #cfe8d7;border-radius:12px;background:#f2fbf5}
+    .ds-integrity-ok{color:#21663d;font-weight:800}
+    .ds-integrity-bad{color:#a33240;font-weight:800}
+    .ds-integrity-pending{color:#887d84}
+    .ds-migration-warning{border-left:4px solid #c48639;padding:12px 14px;background:#fff9ef;color:#77551f;border-radius:8px;font-size:.82rem;line-height:1.55}
+    .ds-auth-users{display:grid;gap:12px;margin-top:14px}
+    .ds-auth-user{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) minmax(190px,1fr) auto;gap:10px;align-items:end;padding:13px;border:1px solid #ece4e8;border-radius:12px;background:#fff}
+    .ds-auth-user small{display:block;color:#857981;margin-top:4px;overflow-wrap:anywhere}
+    .ds-auth-user label{display:grid;gap:5px;font-size:.8rem;color:#675c63}
+    .ds-auth-user input{min-width:0}
+    .ds-auth-state{font-size:.8rem;font-weight:750}
+    .ds-auth-state.is-ok{color:#21663d}
+    .ds-auth-state.is-bad{color:#a33240}
+    @media(max-width:850px){.ds-auth-user{grid-template-columns:1fr}}
+    @media(max-width:720px){.ds-migration-grid{grid-template-columns:1fr}.ds-migration-arrow{transform:rotate(90deg)}}
+  </style>
+</head>
+<body class="ds-app">
+  <div class="main-container">
+    <header class="header">
+      <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+      <a href="index.html" class="header__logo-link"><img src="assets/logo.png" alt="Dulce Sall" class="header__logo"></a>
+    </header>
+    <nav class="nav-menu" id="nav-menu"></nav>
+    <div class="nav-menu__overlay" id="nav-overlay"></div>
+
+    <main class="ds-main">
+      <div class="ds-migration">
+        <section class="ds-page-head">
+          <div>
+            <p class="ds-eyebrow">Administración · Migración</p>
+            <h1 class="ds-page-title">Migrar base de datos</h1>
+            <p class="ds-page-subtitle">Copia Firestore directamente a un proyecto nuevo conservando los IDs. La base actual nunca se borra ni se modifica.</p>
+          </div>
+        </section>
+
+        <div class="ds-migration-warning">
+          Esta herramienta migra datos de Firestore. Firebase Authentication se migrará en una etapa aparte para conservar los UID de los usuarios. No cambies todavía la configuración principal de la app.
+        </div>
+
+        <section class="ds-migration-grid">
+          <article class="ds-migration-card">
+            <h2>Origen actual</h2>
+            <div id="migration-source-project" class="ds-migration-project">—</div>
+            <p class="ds-migration-help">La app sigue leyendo este proyecto durante toda la migración.</p>
+          </article>
+          <article class="ds-migration-card">
+            <h2>Destino nuevo</h2>
+            <div id="migration-target-project" class="ds-migration-project">—</div>
+            <p class="ds-migration-help">El migrador rechaza credenciales que no pertenezcan a este proyecto.</p>
+          </article>
+        </section>
+
+        <section class="ds-migration-card">
+          <h2>1 · Preparar conexión segura al destino</h2>
+          <p class="ds-migration-help">En Netlify deben existir FIREBASE_MIGRATION_PROJECT_ID, FIREBASE_MIGRATION_CLIENT_EMAIL, FIREBASE_MIGRATION_PRIVATE_KEY y FIREBASE_MIGRATION_TOKEN.</p>
+          <label class="ds-migration-token">Token de migración
+            <input id="migration-token" type="password" autocomplete="off" placeholder="Pegá el token temporal de Netlify">
+            <small>El token se usa sólo en esta pantalla y no se guarda en Firestore.</small>
+          </label>
+          <div id="migration-destination-status" class="ds-migration-notice"></div>
+        </section>
+
+        <section class="ds-migration-card" style="margin-top:14px">
+          <h2>2 · Analizar y copiar</h2>
+          <div class="ds-migration-controls">
+            <button id="btn-migration-analyze" class="btn-secondary">Analizar origen</button>
+            <button id="btn-migration-destination" class="btn-secondary">Verificar destino</button>
+            <button id="btn-migration-integrity" class="btn-secondary" disabled>Verificar integridad</button>
+            <button id="btn-migration-start" class="btn-primary" disabled>Iniciar migración</button>
+          </div>
+          <div id="migration-status" class="ds-migration-notice"></div>
+          <div class="ds-migration-progress"><div id="migration-progress-bar"></div></div>
+          <div id="migration-progress-text">Sin iniciar</div>
+
+          <div class="ds-migration-table-wrap">
+            <table class="ds-migration-table">
+              <thead><tr><th>Colección</th><th>Origen</th><th>Destino</th><th>Integridad</th></tr></thead>
+              <tbody id="migration-table-body"></tbody>
+            </table>
+          </div>
+          <div id="migration-summary" class="ds-migration-summary" hidden>
+            <strong>Migración finalizada</strong>
+            <span>La app todavía continúa conectada al Firebase viejo.</span>
+          </div>
+        </section>
+
+        <section class="ds-migration-card" style="margin-top:14px">
+          <h2>3 · Migrar usuarios de Authentication</h2>
+          <p class="ds-migration-help">Usa los perfiles ya migrados en <code>usuarios/{UID}</code>. Se conserva el UID exacto; las contraseñas se envían sólo a la función segura para crear el usuario y no se guardan en Firestore.</p>
+          <div class="ds-migration-controls">
+            <button id="btn-auth-prepare" class="btn-secondary">Preparar usuarios</button>
+            <button id="btn-auth-create-all" class="btn-primary" disabled>Crear usuarios faltantes</button>
+          </div>
+          <div id="auth-migration-status" class="ds-migration-notice">Primero verificá la integridad de Firestore.</div>
+          <div id="auth-users-list" class="ds-auth-users"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+    import { firebaseConfig } from "./js/firebase-config.js";
+    import { setupMigracion } from "./js/migracion.js?v=13";
+    const app = initializeApp(firebaseConfig);
+    setupMigracion(app);
+  </script>
+  <script src="js/menu.js?v=13" defer></script>
+  <script src="js/shell-v2.js?v=2" defer></script>
+</body>
+</html>
