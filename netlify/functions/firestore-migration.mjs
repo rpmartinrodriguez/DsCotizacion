@@ -72,7 +72,7 @@ const getCredentialDiagnostics = () => {
     projectIdPresent: Boolean(projectId),
     projectIdMatches: projectId === EXPECTED_TARGET_PROJECT_ID,
     clientEmailPresent: Boolean(clientEmail),
-    clientEmailLooksValid: /^[^@\\s]+@[^@\\s]+\\.iam\\.gserviceaccount\\.com$/.test(clientEmail),
+    clientEmailLooksValid: /^[^@\s]+@[^@\s]+\.iam\.gserviceaccount\.com$/.test(clientEmail),
     clientEmailMatchesProject: clientEmail.endsWith("@" + EXPECTED_TARGET_PROJECT_ID + ".iam.gserviceaccount.com"),
     privateKeyPresent: Boolean(privateKey),
     privateKeyHasHeader: privateKey.startsWith("-----BEGIN PRIVATE KEY-----"),
