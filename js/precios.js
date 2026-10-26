@@ -10,7 +10,7 @@ import {
     orderBy,
     limit
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { calculateRecipeUnitCost, calculateRoundedSalePrice, getEffectiveUnitCost } from "./core/pricing.js";
+import { buildCommercialPricing, calculateRecipeUnitCost, calculateRoundedSalePrice, getEffectiveUnitCost } from "./core/pricing.js";
 import { formatCurrency } from "./core/format.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 
@@ -26,6 +26,8 @@ export function setupPrecios(app) {
     const btnPdfCosto = document.getElementById('btn-pdf-costo');
     const btnPdfMayorista = document.getElementById('btn-pdf-mayorista');
     const btnPdfMinorista = document.getElementById('btn-pdf-minorista');
+    const webPriceBody = document.getElementById('web-price-body');
+    const webPriceSummary = document.getElementById('web-price-summary');
 
     const reviewBody = document.getElementById('revision-precios-body');
     const reviewTargetInput = document.getElementById('revision-margen-objetivo');
@@ -259,6 +261,192 @@ export function setupPrecios(app) {
                 });
 
             container.appendChild(lista);
+        });
+    };
+
+    const getWebPricing = (receta) =>
+        buildCommercialPricing({
+            product: receta,
+            ingredientMap: materiasPrimasMap,
+            globalMargin: margenGlobal
+        });
+
+    const setWebStatus = (id, message, type = 'muted') => {
+        const element = document.querySelector('[data-web-status="' + CSS.escape(String(id)) + '"]');
+        if (!element) return;
+        element.className = 'ds-web-status is-' + type;
+        element.textContent = message;
+    };
+
+    const copyText = async (text) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch {
+            const area = document.createElement('textarea');
+            area.value = text;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.opacity = '0';
+            document.body.appendChild(area);
+            area.select();
+            const ok = document.execCommand('copy');
+            area.remove();
+            return ok;
+        }
+    };
+
+    const renderWebPricePanel = () => {
+        if (!webPriceBody) return;
+
+        const recipes = [...recetasConCosto]
+            .sort((a, b) => String(a.nombreTorta || '').localeCompare(String(b.nombreTorta || ''), 'es'));
+
+        if (!recipes.length) {
+            webPriceBody.innerHTML = '<tr><td colspan="7">No hay productos disponibles.</td></tr>';
+            if (webPriceSummary) webPriceSummary.textContent = '0 productos';
+            return;
+        }
+
+        let enabled = 0;
+        webPriceBody.innerHTML = recipes.map((recipe) => {
+            const pricing = getWebPricing(recipe);
+            const isEnabled = recipe.precioWebHabilitado === true;
+            if (isEnabled) enabled += 1;
+
+            const whole = pricing.wholeCakeCurrentPrice
+                ? formatCurrency(pricing.wholeCakeCurrentPrice)
+                : '—';
+
+            return `
+                <tr data-web-row="${escapeAttribute(recipe.id)}">
+                    <td>
+                        <strong>${escapeHtml(recipe.nombreTorta || 'Producto')}</strong>
+                        <div class="ds-review-secondary">${escapeHtml(recipe.categoria || 'Sin categoría')}</div>
+                    </td>
+                    <td><span class="ds-web-code">${escapeHtml(recipe.id)}</span></td>
+                    <td>
+                        <strong>${formatCurrency(pricing.unitPrice)}</strong>
+                        <div class="ds-review-secondary">${pricing.unitsPerSale > 1 ? 'Venta x' + pricing.unitsPerSale : 'Porción / unidad'}</div>
+                    </td>
+                    <td>${whole}</td>
+                    <td>
+                        <label class="ds-web-switch">
+                            <input type="checkbox" data-web-toggle="${escapeAttribute(recipe.id)}" ${isEnabled ? 'checked' : ''}>
+                            <span>${isEnabled ? 'Sí' : 'No'}</span>
+                        </label>
+                    </td>
+                    <td>
+                        <div class="ds-web-actions">
+                            <button type="button" class="btn-secondary" data-web-copy="${escapeAttribute(recipe.id)}">Copiar ID</button>
+                            <button type="button" class="btn-secondary" data-web-test="${escapeAttribute(recipe.id)}">Probar API</button>
+                        </div>
+                    </td>
+                    <td><span class="ds-web-status is-muted" data-web-status="${escapeAttribute(recipe.id)}">${isEnabled ? 'Listo para probar' : 'No publicado'}</span></td>
+                </tr>
+            `;
+        }).join('');
+
+        if (webPriceSummary) {
+            webPriceSummary.className = 'ds-web-status is-ok';
+            webPriceSummary.textContent = enabled + ' de ' + recipes.length + ' productos publicados';
+        }
+    };
+
+    const updateWebPublishing = async (id, enabled) => {
+        const recipe = recetasConCosto.find(item => String(item.id) === String(id));
+        if (!recipe) throw new Error('Producto no encontrado.');
+
+        const ref = doc(db, 'recetas', recipe.id);
+        await updateDoc(ref, {
+            precioWebHabilitado: Boolean(enabled),
+            ultimaActualizacionPrecioWeb: Timestamp.now()
+        });
+
+        recipe.precioWebHabilitado = Boolean(enabled);
+        const toggle = document.querySelector('[data-web-toggle="' + CSS.escape(String(id)) + '"]');
+        const label = toggle?.closest('.ds-web-switch')?.querySelector('span');
+        if (label) label.textContent = enabled ? 'Sí' : 'No';
+        setWebStatus(id, enabled ? 'Publicado' : 'No publicado', enabled ? 'ok' : 'muted');
+
+        const enabledCount = recetasConCosto.filter(item => item.precioWebHabilitado === true).length;
+        if (webPriceSummary) {
+            webPriceSummary.className = 'ds-web-status is-ok';
+            webPriceSummary.textContent = enabledCount + ' de ' + recetasConCosto.length + ' productos publicados';
+        }
+    };
+
+    const testWebPriceApi = async (id) => {
+        const recipe = recetasConCosto.find(item => String(item.id) === String(id));
+        if (!recipe) return;
+
+        setWebStatus(id, 'Consultando…', 'muted');
+
+        try {
+            const response = await fetch('/api/precio-producto?code=' + encodeURIComponent(recipe.id), {
+                headers: { 'Accept': 'application/json' },
+                cache: 'no-store'
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                if (response.status === 404 && recipe.precioWebHabilitado !== true) {
+                    throw new Error('Activá Publicar primero');
+                }
+                throw new Error(payload?.error || ('HTTP ' + response.status));
+            }
+
+            const price = Number(payload.precioVigente);
+            if (!Number.isFinite(price) || price <= 0) {
+                throw new Error('Precio inválido');
+            }
+
+            const wholeText = Number(payload.precioTortaEntera) > 0
+                ? ' · Entera ' + formatCurrency(payload.precioTortaEntera)
+                : '';
+
+            setWebStatus(id, '✓ ' + formatCurrency(price) + wholeText, 'ok');
+        } catch (error) {
+            setWebStatus(id, error.message || 'Error de API', 'error');
+        }
+    };
+
+    const setupWebPriceListeners = () => {
+        webPriceBody?.addEventListener('change', async (event) => {
+            const toggle = event.target.closest('[data-web-toggle]');
+            if (!toggle) return;
+
+            const id = toggle.dataset.webToggle;
+            const enabled = toggle.checked;
+            toggle.disabled = true;
+            setWebStatus(id, 'Guardando…', 'muted');
+
+            try {
+                await updateWebPublishing(id, enabled);
+            } catch (error) {
+                console.error('No se pudo actualizar la publicación web:', error);
+                toggle.checked = !enabled;
+                setWebStatus(id, 'No se pudo guardar', 'error');
+            } finally {
+                toggle.disabled = false;
+            }
+        });
+
+        webPriceBody?.addEventListener('click', async (event) => {
+            const copyButton = event.target.closest('[data-web-copy]');
+            if (copyButton) {
+                const id = copyButton.dataset.webCopy;
+                const ok = await copyText(id);
+                setWebStatus(id, ok ? 'ID copiado' : 'No se pudo copiar', ok ? 'ok' : 'error');
+                return;
+            }
+
+            const testButton = event.target.closest('[data-web-test]');
+            if (testButton) {
+                testButton.disabled = true;
+                await testWebPriceApi(testButton.dataset.webTest);
+                testButton.disabled = false;
+            }
         });
     };
 
@@ -999,7 +1187,9 @@ export function setupPrecios(app) {
 
             renderizarListaPrecios(recetasConCosto);
             renderReview();
+            renderWebPricePanel();
             setupEventListeners();
+            setupWebPriceListeners();
         } catch (error) {
             console.error("Error al cargar la lista de precios:", error);
             if (container) container.textContent = 'No se pudieron calcular los precios.';

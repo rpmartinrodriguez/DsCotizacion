@@ -27,6 +27,23 @@
     <!-- ====================================================== -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    .ds-web-price-card{margin-top:18px}
+    .ds-web-price-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .ds-web-price-help{font-size:.82rem;color:var(--text-light);line-height:1.5;max-width:760px}
+    .ds-web-price-table-wrap{overflow:auto;border:1px solid #eee3e9;border-radius:14px;margin-top:14px}
+    .ds-web-price-table{width:100%;border-collapse:collapse;min-width:850px}
+    .ds-web-price-table th,.ds-web-price-table td{padding:10px 12px;border-bottom:1px solid #f0e8ec;text-align:left;font-size:.82rem;vertical-align:middle}
+    .ds-web-price-table th{background:#faf7f9;color:#71656c;font-weight:800}
+    .ds-web-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.76rem;word-break:break-all}
+    .ds-web-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .ds-web-switch{display:inline-flex;align-items:center;gap:8px;font-weight:700}
+    .ds-web-status{font-size:.76rem;font-weight:700}
+    .ds-web-status.is-ok{color:#21663d}
+    .ds-web-status.is-error{color:#a33240}
+    .ds-web-status.is-muted{color:#857981}
+    @media(max-width:720px){.ds-web-price-table{min-width:760px}}
+  </style>
 </head>
 <body class="ds-app ds-content ds-prices">
     <div class="main-container">
@@ -130,7 +147,41 @@
                 </div>
             </section>
 
-            <!-- Panel de Control para Descargas PDF -->
+            <section class="card ds-web-price-card" id="publicacion-web">
+                <div class="ds-web-price-head">
+                    <div>
+                        <p class="ds-mini-eyebrow">Integración web</p>
+                        <h2 class="card__title">Publicación de precios en dulcesall.com</h2>
+                        <p class="ds-web-price-help">
+                            Cada producto usa como código permanente el ID de su documento en <strong>recetas</strong>.
+                            Activá sólo los productos que quieras publicar. La web consultará ese código en tiempo real
+                            y tomará el precio vigente de Mostrador.
+                        </p>
+                    </div>
+                    <div id="web-price-summary" class="ds-web-status is-muted">Cargando productos…</div>
+                </div>
+
+                <div class="ds-web-price-table-wrap">
+                    <table class="ds-web-price-table">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>ID permanente</th>
+                                <th>Precio vigente</th>
+                                <th>Entera</th>
+                                <th>Publicar</th>
+                                <th>Acciones</th>
+                                <th>API</th>
+                            </tr>
+                        </thead>
+                        <tbody id="web-price-body">
+                            <tr><td colspan="7">Cargando…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+                        <!-- Panel de Control para Descargas PDF -->
             <section class="card">
                 <h2 class="card__title">Generar Listas de Precios en PDF</h2>
                 <div class="form-modern">
@@ -230,7 +281,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPrecios } from './js/precios.js';
+        import { setupPrecios } from './js/precios.js?v=web-prices-1';
         try {
             const app = initializeApp(firebaseConfig);
             setupPrecios(app);

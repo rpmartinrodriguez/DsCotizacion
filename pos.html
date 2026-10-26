@@ -359,8 +359,8 @@
                     <input type="search" id="buscador-inventario" placeholder="Buscar en el inventario por nombre o categoría...">
                 </div>
 
-                <div style="overflow-x: auto;">
-                    <table class="table-clean">
+                <div class="ds-pos-inventory-scroll">
+                    <table class="table-clean ds-pos-inventory-table">
                         <thead>
                             <tr>
                                 <th>Categoría</th>
@@ -790,7 +790,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPOS } from './js/pos.js?v=108';
+        import { setupPOS } from './js/pos.js?v=109';
         try {
             const app = initializeApp(firebaseConfig);
             setupPOS(app);
