@@ -2,10 +2,12 @@
 
 // Tu configuración de Firebase
 export const firebaseConfig = {
-  apiKey: "AIzaSyA33nr4_j2kMIeDJ-fyRqKLkUw9AToRnnM",
-  authDomain: "dscotizacion.firebaseapp.com",
-  projectId: "dscotizacion",
-  storageBucket: "dscotizacion.appspot.com",
-  messagingSenderId: "103917274080",
-  appId: "1:103917274080:web:478f18b226473a70202185"
+  apiKey: "AIzaSyAI7wOK4t6ZiWbIshuvWANjUfuxboMtK7E",
+  authDomain: "dulcesall.firebaseapp.com",
+  projectId: "dulcesall",
+  storageBucket: "dulcesall.firebasestorage.app",
+  messagingSenderId: "758854417192",
+  appId: "1:758854417192:web:2ce39292ef724cc20c6e1d"
 };
+
+// cutover-preview: dulcesall
