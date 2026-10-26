@@ -121,10 +121,12 @@ export function setupPOSInventory({
                     <strong>${formatCurrency(product.precioCalculado)}</strong>
                 </td>
                 <td data-label="Torta entera" class="ds-commercial-price">${wholePriceHtml}</td>
-                <td data-label="Web futura" class="admin-only" style="text-align:center;">
+                <td data-label="Web futura" class="admin-only ds-web-price-cell" style="text-align:center;">
                     <span class="ds-web-price-state ${product.precioWebHabilitado === true ? 'is-on' : ''}">
                         ${product.precioWebHabilitado === true ? 'Habilitado' : 'No publicado'}
                     </span>
+                    <button type="button" class="btn-test-product-api" data-id="${safeId}">Probar API</button>
+                    <small class="ds-web-api-result" data-api-result="${safeId}"></small>
                 </td>
                 <td data-label="Stock" style="text-align:center;">
                     <strong>${stock}</strong> u.
@@ -490,6 +492,47 @@ export function setupPOSInventory({
             await copyText(copyButton.dataset.code);
             copyButton.textContent = 'Copiado';
             window.setTimeout(() => { copyButton.textContent = 'Copiar'; }, 1200);
+            return;
+        }
+
+        const apiButton = event.target.closest('.btn-test-product-api');
+        if (apiButton) {
+            const id = apiButton.dataset.id;
+            const product = products.find(item => item.id === id);
+            const result = tablaInventario.querySelector('[data-api-result="' + CSS.escape(id) + '"]');
+            apiButton.disabled = true;
+            if (result) {
+                result.textContent = 'Consultando…';
+                result.className = 'ds-web-api-result';
+            }
+            try {
+                const response = await fetch('/api/precio-producto?code=' + encodeURIComponent(id), {
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store'
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    if (response.status === 404 && product?.precioWebHabilitado !== true) {
+                        throw new Error('Activá Web en Comercial');
+                    }
+                    throw new Error(payload?.error || ('HTTP ' + response.status));
+                }
+                const price = Number(payload.precioVigente);
+                const whole = Number(payload.precioTortaEntera);
+                if (!Number.isFinite(price) || price <= 0) throw new Error('Precio inválido');
+                if (result) {
+                    result.textContent = '✓ ' + formatCurrency(price)
+                        + (Number.isFinite(whole) && whole > 0 ? ' · Entera ' + formatCurrency(whole) : '');
+                    result.className = 'ds-web-api-result is-ok';
+                }
+            } catch (error) {
+                if (result) {
+                    result.textContent = error.message || 'Error de API';
+                    result.className = 'ds-web-api-result is-error';
+                }
+            } finally {
+                apiButton.disabled = false;
+            }
             return;
         }
 
