@@ -1,6 +1,5 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import {
-  DocumentReference,
   GeoPoint,
   Timestamp,
   getFirestore
@@ -107,7 +106,7 @@ const encodeValue = value => {
       longitude: value.longitude
     };
   }
-  if (value instanceof DocumentReference) {
+  if (value && typeof value.path === "string" && value.firestore) {
     return { __dsType: "reference", path: value.path };
   }
   if (Buffer.isBuffer(value) || value instanceof Uint8Array) {
