@@ -1,4 +1,5 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import {
   GeoPoint,
   Timestamp,
@@ -277,6 +278,78 @@ const verifyCollection = async (db, collectionName) => {
   };
 };
 
+const normalizeAuthUserInput = body => {
+  const uid = String(body?.uid || "").trim();
+  const email = String(body?.email || "").trim().toLowerCase();
+  const password = String(body?.password || "");
+  if (!uid || uid.length > 128) throw new Error("AUTH_UID_INVALID");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error("AUTH_EMAIL_INVALID");
+  return { uid, email, password };
+};
+
+const authUserStatus = async (adminAuth, body) => {
+  const { uid, email } = normalizeAuthUserInput({ ...body, password: "123456" });
+  try {
+    const user = await adminAuth.getUser(uid);
+    return {
+      exists: true,
+      uidMatches: user.uid === uid,
+      emailMatches: String(user.email || "").toLowerCase() === email,
+      uid: user.uid,
+      email: user.email || ""
+    };
+  } catch (error) {
+    if (error?.code !== "auth/user-not-found") throw error;
+  }
+
+  try {
+    const byEmail = await adminAuth.getUserByEmail(email);
+    return {
+      exists: true,
+      uidMatches: byEmail.uid === uid,
+      emailMatches: true,
+      uid: byEmail.uid,
+      email: byEmail.email || "",
+      conflict: byEmail.uid !== uid
+    };
+  } catch (error) {
+    if (error?.code !== "auth/user-not-found") throw error;
+  }
+
+  return { exists: false, uidMatches: false, emailMatches: false, uid, email };
+};
+
+const createAuthUser = async (adminAuth, body) => {
+  const { uid, email, password } = normalizeAuthUserInput(body);
+  if (password.length < 6 || password.length > 128) throw new Error("AUTH_PASSWORD_INVALID");
+
+  const status = await authUserStatus(adminAuth, { uid, email });
+  if (status.exists) {
+    if (status.uidMatches && status.emailMatches) {
+      return { ok: true, created: false, alreadyExists: true, uid, email };
+    }
+    const error = new Error("AUTH_USER_CONFLICT");
+    error.authStatus = status;
+    throw error;
+  }
+
+  const user = await adminAuth.createUser({
+    uid,
+    email,
+    password,
+    emailVerified: false,
+    disabled: false
+  });
+
+  return {
+    ok: true,
+    created: true,
+    alreadyExists: false,
+    uid: user.uid,
+    email: user.email || email
+  };
+};
+
 export default async request => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders(request) });
@@ -316,6 +389,16 @@ export default async request => {
       return json(request, 200, { ok: true, ...result });
     }
 
+    if (action === "auth-status") {
+      const result = await authUserStatus(getAdminAuth(app), body);
+      return json(request, 200, { ok: true, ...result });
+    }
+
+    if (action === "auth-create") {
+      const result = await createAuthUser(getAdminAuth(app), body);
+      return json(request, 200, result);
+    }
+
     return json(request, 400, { error: "UNKNOWN_ACTION" });
   } catch (error) {
     const rawCode = String(error?.code || "");
@@ -328,7 +411,11 @@ export default async request => {
       WRONG_TARGET_PROJECT: [409, "Las credenciales configuradas no pertenecen al proyecto dulcesall."],
       DESTINATION_CREDENTIAL_FORMAT_INVALID: [503, "La clave o el email del Firebase nuevo tienen un formato inválido en Netlify."],
       COLLECTION_NOT_ALLOWED: [400, "Colección no permitida por el migrador."],
-      INVALID_DOCUMENT_BATCH: [400, "Lote de documentos inválido."]
+      INVALID_DOCUMENT_BATCH: [400, "Lote de documentos inválido."],
+      AUTH_UID_INVALID: [400, "El UID del usuario no es válido."],
+      AUTH_EMAIL_INVALID: [400, "El email del usuario no es válido."],
+      AUTH_PASSWORD_INVALID: [400, "La contraseña debe tener entre 6 y 128 caracteres."],
+      AUTH_USER_CONFLICT: [409, "Ya existe un usuario en Authentication con ese email o UID, pero no coincide con el perfil migrado."]
     };
 
     let statusCode = known[code]?.[0] || 500;
@@ -358,7 +445,8 @@ export default async request => {
     return json(request, statusCode, {
       error: diagnostic || code,
       message,
-      ...(error?.diagnostics ? { diagnostics: error.diagnostics } : {})
+      ...(error?.diagnostics ? { diagnostics: error.diagnostics } : {}),
+      ...(error?.authStatus ? { authStatus: error.authStatus } : {})
     });
   }
 };
