@@ -1,5 +1,4 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth as getAdminAuth } from "firebase-admin/auth";
 import {
   GeoPoint,
   Timestamp,
@@ -396,11 +395,13 @@ export default async request => {
     }
 
     if (action === "auth-status") {
+      const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
       const result = await authUserStatus(getAdminAuth(app), body);
       return json(request, 200, { ok: true, ...result });
     }
 
     if (action === "auth-create") {
+      const { getAuth: getAdminAuth } = await import("firebase-admin/auth");
       const result = await createAuthUser(getAdminAuth(app), db, body);
       return json(request, 200, result);
     }
