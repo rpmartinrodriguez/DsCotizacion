@@ -279,7 +279,9 @@ export default async request => {
 
     return json(request, 400, { error: "UNKNOWN_ACTION" });
   } catch (error) {
-    const code = error?.message || "MIGRATION_FAILED";
+    const rawCode = String(error?.code || "");
+    const rawMessage = String(error?.message || "");
+    const code = rawMessage || rawCode || "MIGRATION_FAILED";
     const known = {
       MIGRATION_TOKEN_MISSING: [503, "Falta configurar FIREBASE_MIGRATION_TOKEN en Netlify."],
       MIGRATION_UNAUTHORIZED: [401, "Token de migración incorrecto."],
@@ -288,9 +290,32 @@ export default async request => {
       COLLECTION_NOT_ALLOWED: [400, "Colección no permitida por el migrador."],
       INVALID_DOCUMENT_BATCH: [400, "Lote de documentos inválido."]
     };
-    const [statusCode, message] = known[code] || [500, "No se pudo completar la operación de migración."];
-    console.error("firestore migration function failed", error);
-    return json(request, statusCode, { error: code, message });
+
+    let statusCode = known[code]?.[0] || 500;
+    let message = known[code]?.[1] || "No se pudo completar la operación de migración.";
+    let diagnostic = rawCode || null;
+
+    const lowered = (rawCode + " " + rawMessage).toLowerCase();
+    if (lowered.includes("private key") || lowered.includes("invalid credential") || lowered.includes("invalid_grant") || lowered.includes("credential")) {
+      statusCode = 503;
+      message = "La cuenta de servicio del Firebase nuevo no pudo autenticarse. Revisá FIREBASE_MIGRATION_CLIENT_EMAIL y FIREBASE_MIGRATION_PRIVATE_KEY.";
+      diagnostic = "DESTINATION_CREDENTIAL_INVALID";
+    } else if (lowered.includes("not found") || rawCode === "5") {
+      statusCode = 503;
+      message = "El proyecto dulcesall responde, pero Firestore no está disponible. Verificá que hayas creado Firestore Database en el proyecto nuevo.";
+      diagnostic = "DESTINATION_FIRESTORE_NOT_READY";
+    } else if (lowered.includes("permission") || lowered.includes("denied") || rawCode === "7") {
+      statusCode = 503;
+      message = "La cuenta de servicio pudo autenticarse, pero no tiene permiso para acceder a Firestore del proyecto dulcesall.";
+      diagnostic = "DESTINATION_PERMISSION_DENIED";
+    }
+
+    console.error("firestore migration function failed", {
+      code: rawCode,
+      message: rawMessage,
+      stack: error?.stack
+    });
+    return json(request, statusCode, { error: diagnostic || code, message });
   }
 };
 
