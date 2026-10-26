@@ -319,9 +319,15 @@ const authUserStatus = async (adminAuth, body) => {
   return { exists: false, uidMatches: false, emailMatches: false, uid, email };
 };
 
-const createAuthUser = async (adminAuth, body) => {
+const createAuthUser = async (adminAuth, db, body) => {
   const { uid, email, password } = normalizeAuthUserInput(body);
   if (password.length < 6 || password.length > 128) throw new Error("AUTH_PASSWORD_INVALID");
+
+  const profileSnap = await db.collection("usuarios").doc(uid).get();
+  const profileEmail = String(profileSnap.exists ? profileSnap.data()?.email || "" : "").trim().toLowerCase();
+  if (!profileSnap.exists || !profileEmail || profileEmail !== email) {
+    throw new Error("AUTH_PROFILE_MISMATCH");
+  }
 
   const status = await authUserStatus(adminAuth, { uid, email });
   if (status.exists) {
@@ -395,7 +401,7 @@ export default async request => {
     }
 
     if (action === "auth-create") {
-      const result = await createAuthUser(getAdminAuth(app), body);
+      const result = await createAuthUser(getAdminAuth(app), db, body);
       return json(request, 200, result);
     }
 
@@ -415,7 +421,8 @@ export default async request => {
       AUTH_UID_INVALID: [400, "El UID del usuario no es válido."],
       AUTH_EMAIL_INVALID: [400, "El email del usuario no es válido."],
       AUTH_PASSWORD_INVALID: [400, "La contraseña debe tener entre 6 y 128 caracteres."],
-      AUTH_USER_CONFLICT: [409, "Ya existe un usuario en Authentication con ese email o UID, pero no coincide con el perfil migrado."]
+      AUTH_USER_CONFLICT: [409, "Ya existe un usuario en Authentication con ese email o UID, pero no coincide con el perfil migrado."],
+      AUTH_PROFILE_MISMATCH: [409, "El UID y email no coinciden con un perfil migrado en usuarios/{UID}."]
     };
 
     let statusCode = known[code]?.[0] || 500;
