@@ -6277,6 +6277,43 @@ body.ds-pos .ds-web-price-state.is-on {
   background:#edf8f0;
   color:#39734a;
 }
+body.ds-pos .ds-web-price-cell {
+  min-width: 125px;
+}
+body.ds-pos .btn-test-product-api {
+  display: block;
+  width: auto;
+  margin: 6px auto 0;
+  padding: 4px 7px;
+  border: 1px solid #dec9d4;
+  border-radius: 7px;
+  background: #fff;
+  color: #9d3d6b;
+  font-size: .66rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+body.ds-pos .btn-test-product-api:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+body.ds-pos .ds-web-api-result {
+  display: block;
+  max-width: 150px;
+  margin: 5px auto 0;
+  color: #8a7d86;
+  font-size: .62rem;
+  line-height: 1.25;
+  white-space: normal;
+}
+body.ds-pos .ds-web-api-result.is-ok {
+  color: #39734a;
+  font-weight: 800;
+}
+body.ds-pos .ds-web-api-result.is-error {
+  color: #a33240;
+  font-weight: 800;
+}
 body.ds-pos .ds-commercial-modal {
   width:min(760px, calc(100vw - 24px)) !important;
   max-width:760px !important;
