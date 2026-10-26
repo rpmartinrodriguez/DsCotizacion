@@ -287,8 +287,6 @@ export default async request => {
 
   try {
     authorize(request);
-    const app = getTargetApp();
-    const db = getFirestore(app);
     const body = await request.json();
     const action = String(body?.action || "");
 
@@ -296,6 +294,9 @@ export default async request => {
       const { result } = getCredentialDiagnostics();
       return json(request, 200, { ok: true, diagnostics: result });
     }
+
+    const app = getTargetApp();
+    const db = getFirestore(app);
 
     if (action === "status") {
       return json(request, 200, { ok: true, ...(await status(db)) });
