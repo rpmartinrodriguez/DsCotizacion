@@ -4,7 +4,7 @@ import {
   Timestamp,
   getFirestore
 } from "firebase-admin/firestore";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, createPrivateKey, timingSafeEqual } from "node:crypto";
 
 const EXPECTED_TARGET_PROJECT_ID = "dulcesall";
 const COLLECTIONS = [
@@ -62,16 +62,49 @@ const authorize = request => {
   if (!secureEqual(configured, supplied)) throw new Error("MIGRATION_UNAUTHORIZED");
 };
 
+const getCredentialDiagnostics = () => {
+  const projectId = String(process.env.FIREBASE_MIGRATION_PROJECT_ID || "").trim();
+  const clientEmail = String(process.env.FIREBASE_MIGRATION_CLIENT_EMAIL || "").trim();
+  const rawPrivateKey = String(process.env.FIREBASE_MIGRATION_PRIVATE_KEY || "");
+  const privateKey = rawPrivateKey.replace(/\\n/g, "\n").trim();
+
+  const result = {
+    projectIdPresent: Boolean(projectId),
+    projectIdMatches: projectId === EXPECTED_TARGET_PROJECT_ID,
+    clientEmailPresent: Boolean(clientEmail),
+    clientEmailLooksValid: /^[^@\\s]+@[^@\\s]+\\.iam\\.gserviceaccount\\.com$/.test(clientEmail),
+    clientEmailMatchesProject: clientEmail.endsWith("@" + EXPECTED_TARGET_PROJECT_ID + ".iam.gserviceaccount.com"),
+    privateKeyPresent: Boolean(privateKey),
+    privateKeyHasHeader: privateKey.startsWith("-----BEGIN PRIVATE KEY-----"),
+    privateKeyHasFooter: privateKey.endsWith("-----END PRIVATE KEY-----"),
+    privateKeyLength: privateKey.length,
+    privateKeyParseable: false
+  };
+
+  if (privateKey) {
+    try {
+      createPrivateKey({ key: privateKey, format: "pem" });
+      result.privateKeyParseable = true;
+    } catch {}
+  }
+
+  return { projectId, clientEmail, privateKey, result };
+};
+
 const getTargetApp = () => {
-  const projectId = process.env.FIREBASE_MIGRATION_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_MIGRATION_CLIENT_EMAIL;
-  const privateKey = (process.env.FIREBASE_MIGRATION_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+  const { projectId, clientEmail, privateKey, result: diagnostics } = getCredentialDiagnostics();
 
   if (!projectId || !clientEmail || !privateKey) {
     throw new Error("DESTINATION_CONFIG_MISSING");
   }
   if (projectId !== EXPECTED_TARGET_PROJECT_ID) {
     throw new Error("WRONG_TARGET_PROJECT");
+  }
+  if (!diagnostics.clientEmailLooksValid || !diagnostics.privateKeyHasHeader
+      || !diagnostics.privateKeyHasFooter || !diagnostics.privateKeyParseable) {
+    const error = new Error("DESTINATION_CREDENTIAL_FORMAT_INVALID");
+    error.diagnostics = diagnostics;
+    throw error;
   }
 
   const name = "dulcesall-migration-target";
@@ -259,6 +292,11 @@ export default async request => {
     const body = await request.json();
     const action = String(body?.action || "");
 
+    if (action === "diagnose") {
+      const { result } = getCredentialDiagnostics();
+      return json(request, 200, { ok: true, diagnostics: result });
+    }
+
     if (action === "status") {
       return json(request, 200, { ok: true, ...(await status(db)) });
     }
@@ -287,6 +325,7 @@ export default async request => {
       MIGRATION_UNAUTHORIZED: [401, "Token de migración incorrecto."],
       DESTINATION_CONFIG_MISSING: [503, "Faltan credenciales del Firebase nuevo en Netlify."],
       WRONG_TARGET_PROJECT: [409, "Las credenciales configuradas no pertenecen al proyecto dulcesall."],
+      DESTINATION_CREDENTIAL_FORMAT_INVALID: [503, "La clave o el email del Firebase nuevo tienen un formato inválido en Netlify."],
       COLLECTION_NOT_ALLOWED: [400, "Colección no permitida por el migrador."],
       INVALID_DOCUMENT_BATCH: [400, "Lote de documentos inválido."]
     };
@@ -315,7 +354,11 @@ export default async request => {
       message: rawMessage,
       stack: error?.stack
     });
-    return json(request, statusCode, { error: diagnostic || code, message });
+    return json(request, statusCode, {
+      error: diagnostic || code,
+      message,
+      ...(error?.diagnostics ? { diagnostics: error.diagnostics } : {})
+    });
   }
 };
 
