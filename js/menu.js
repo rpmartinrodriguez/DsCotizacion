@@ -107,6 +107,7 @@ const MENU_ICON = {
     shoppingList: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 5h13M8 12h13M8 19h13"></path><path d="m3 5 1 1 2-2M3 12l1 1 2-2M3 19l1 1 2-2"></path></svg>',
     history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5M12 7v5l3 2"></path></svg>',
     users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="8" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M2.5 20a5.5 5.5 0 0 1 11 0M14 20a4.5 4.5 0 0 1 8 0"></path></svg>',
+    migration: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"></ellipse><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg>',
     logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"></path></svg>'
 };
 
@@ -149,7 +150,8 @@ async function inicializarMenu() {
         'clientes.html': p.clientes,
         'agenda.html': p.agenda,
         'modelos.html': p.modelos,
-        'usuarios.html': p.configuracion || userRol === 'master'
+        'usuarios.html': p.configuracion || userRol === 'master',
+        'migracion.html': p.configuracion || userRol === 'master'
     };
 
     if (archivoActual !== 'login.html' && Object.prototype.hasOwnProperty.call(accesos, archivoActual) && accesos[archivoActual] !== true) {
@@ -217,6 +219,7 @@ async function inicializarMenu() {
         if (p.compras_lista) htmlMenu += `<a href="compras-lista.html" class="nav-menu__link" title="Lista de compras"><span class="nav-menu__glyph">${MENU_ICON.shoppingList}</span><span class="nav-menu__label">Lista de compras</span></a>`;
         if (p.historial) htmlMenu += `<a href="historial.html" class="nav-menu__link" title="Historial"><span class="nav-menu__glyph">${MENU_ICON.history}</span><span class="nav-menu__label">Historial</span></a>`;
         if (p.configuracion || userRol === 'master') htmlMenu += `<a href="usuarios.html" class="nav-menu__link" title="Usuarios y permisos"><span class="nav-menu__glyph">${MENU_ICON.users}</span><span class="nav-menu__label">Usuarios y permisos</span></a>`;
+        if (p.configuracion || userRol === 'master') htmlMenu += `<a href="migracion.html" class="nav-menu__link" title="Migración de base"><span class="nav-menu__glyph">${MENU_ICON.migration}</span><span class="nav-menu__label">Migración de base</span></a>`;
 
         htmlMenu += `</div></div>`;
     }
