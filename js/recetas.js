@@ -69,6 +69,8 @@ export function setupRecetas(app) {
     // ==================================================================
     let materiasPrimasDisponibles = [];
     let todasLasRecetas = [];
+    const productoSolicitado = new URLSearchParams(window.location.search).get('producto');
+    let productoSolicitadoAbierto = false;
     let ingredientesRecetaActual = [];
     let editandoId = null;
     const recetaSoloPrueba = window.location.hostname !== 'dulce-app.netlify.app';
@@ -509,6 +511,14 @@ export function setupRecetas(app) {
     onSnapshot(query(recetasCollection, orderBy('nombreTorta')), (snapshot) => {
         todasLasRecetas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
         mostrarRecetas(todasLasRecetas);
+
+        if (productoSolicitado && !productoSolicitadoAbierto) {
+            const receta = todasLasRecetas.find(item => String(item.id) === String(productoSolicitado));
+            if (receta) {
+                productoSolicitadoAbierto = true;
+                openModal(receta);
+            }
+        }
     });
 
     listaRecetasContainer.addEventListener('click', (e) => {

@@ -6916,3 +6916,133 @@ body.ds-pos .ds-cart-equivalent {
     align-self:center;
   }
 }
+
+
+/* =========================================================
+   GRAN ACTUALIZACIÓN UX — navegación y Centro de Revisiones
+   ========================================================= */
+.ds-nav-info {
+  display:inline-grid;
+  place-items:center;
+  width:17px;
+  height:17px;
+  margin-left:4px;
+  border:1px solid rgba(126,102,115,.35);
+  border-radius:50%;
+  color:#9b7187;
+  font-size:.58rem;
+  font-weight:900;
+  line-height:1;
+  vertical-align:middle;
+}
+.ds-home-review {
+  margin:18px 0;
+  padding:20px !important;
+  border:1px solid #eadfe5 !important;
+  background:
+    linear-gradient(135deg, rgba(220,94,151,.05), transparent 48%),
+    #fff !important;
+}
+.ds-home-review-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+.ds-home-review-head h2 {
+  margin:2px 0 5px;
+  color:#40353d;
+  font-size:1.08rem;
+}
+.ds-home-review-head p:last-child {
+  margin:0;
+  color:#82757e;
+  font-size:.78rem;
+}
+.ds-home-info {
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:26px;
+  height:26px;
+  border:1px solid #ddcbd5;
+  border-radius:50%;
+  background:#fff;
+  color:#9e3d6d;
+  font-size:.72rem;
+  font-weight:900;
+  cursor:pointer;
+}
+.ds-home-review-help {
+  margin:-2px 0 14px;
+  padding:10px 12px;
+  border:1px solid #edd9e3;
+  border-radius:10px;
+  background:#fff5fa;
+  color:#6c5964;
+  font-size:.75rem;
+  line-height:1.45;
+}
+.ds-home-review-grid {
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:9px;
+}
+.ds-home-review-item {
+  min-width:0;
+  padding:12px;
+  border:1px solid #eee5ea;
+  border-radius:12px;
+  background:#faf8f9;
+  color:inherit;
+  text-decoration:none;
+  transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
+}
+.ds-home-review-item:hover {
+  transform:translateY(-1px);
+  border-color:#dcbacb;
+  box-shadow:0 6px 18px rgba(77,49,63,.07);
+}
+.ds-home-review-item span,
+.ds-home-review-item strong,
+.ds-home-review-item small {
+  display:block;
+}
+.ds-home-review-item span {
+  color:#897c84;
+  font-size:.64rem;
+  font-weight:800;
+}
+.ds-home-review-item strong {
+  margin:5px 0 3px;
+  color:#4a3d45;
+  font-size:1.45rem;
+  line-height:1;
+}
+.ds-home-review-item small {
+  color:#92868e;
+  font-size:.65rem;
+  line-height:1.3;
+}
+.ds-home-review-item.is-critical strong { color:#af3d57; }
+.ds-home-review-item.is-warning strong { color:#a26424; }
+.ds-home-review-footer {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-top:13px;
+  padding-top:12px;
+  border-top:1px solid #eee6ea;
+  color:#7f737b;
+  font-size:.72rem;
+}
+@media (max-width:1100px) {
+  .ds-home-review-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:700px) {
+  .ds-home-review { padding:16px !important; }
+  .ds-home-review-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .ds-home-review-footer { align-items:flex-start; flex-direction:column; }
+}

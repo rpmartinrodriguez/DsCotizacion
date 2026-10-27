@@ -63,6 +63,8 @@ export function setupPrecios(app) {
     let ventasRecientes = [];
     let margenGlobal = 0;
     let reviewRows = [];
+    const productoSolicitado = new URLSearchParams(window.location.search).get('producto');
+    let productoSolicitadoAbierto = false;
     let reviewFilter = 'todos';
     let selectedReviewId = null;
     let logoDataUrlCache = null;
@@ -1003,6 +1005,16 @@ export function setupPrecios(app) {
             renderizarListaPrecios(recetasConCosto);
             renderReview();
             setupEventListeners();
+
+            if (productoSolicitado && !productoSolicitadoAbierto) {
+                const row = reviewRows.find(item => String(item.id) === String(productoSolicitado));
+                if (row) {
+                    productoSolicitadoAbierto = true;
+                    if (reviewSearch) reviewSearch.value = row.nombreTorta || '';
+                    renderReviewTable();
+                    openReviewModal(row.id);
+                }
+            }
         } catch (error) {
             console.error("Error al cargar la lista de precios:", error);
             if (container) container.textContent = 'No se pudieron calcular los precios.';

@@ -136,6 +136,7 @@ async function inicializarMenu() {
     const accesos = {
         'pos.html': p.mostrador,
         'index.html': p.indicadores,
+        'productos.html': p.recetas || p.precios || p.stock,
         'recetas.html': p.recetas,
         'stock.html': p.stock,
         'presupuesto.html': p.presupuestos,
@@ -185,39 +186,52 @@ async function inicializarMenu() {
         </div>
     `;
 
-    if (p.mostrador || p.indicadores || p.recetas || p.stock || p.presupuestos || p.precios) {
-        htmlMenu += `<div class="nav-category"><button class="nav-category-btn">Operación <span class="nav-icon">+</span></button><div class="nav-category-content">`;
+    const categoriaMenu = (titulo, ayuda) =>
+        `<div class="nav-category"><button class="nav-category-btn"><span>${titulo} <span class="ds-nav-info" title="${ayuda}">(i)</span></span><span class="nav-icon">+</span></button><div class="nav-category-content">`;
 
+    if (p.mostrador || p.indicadores) {
+        htmlMenu += categoriaMenu('Operación', 'Trabajo diario: inicio de jornada y ventas de mostrador.');
         if (p.indicadores) htmlMenu += `<a href="index.html" class="nav-menu__link" title="Inicio"><span class="nav-menu__glyph">${MENU_ICON.home}</span><span class="nav-menu__label">Inicio</span></a>`;
         if (p.mostrador) htmlMenu += `<a href="pos.html" class="nav-menu__link" title="Mostrador"><span class="nav-menu__glyph">${MENU_ICON.pos}</span><span class="nav-menu__label">Mostrador</span></a>`;
-        if (p.stock) htmlMenu += `<a href="stock.html" class="nav-menu__link" title="Stock"><span class="nav-menu__glyph">${MENU_ICON.stock}</span><span class="nav-menu__label">Stock</span></a>`;
-        if (p.recetas) htmlMenu += `<a href="recetas.html" class="nav-menu__link" title="Productos y recetas"><span class="nav-menu__glyph">${MENU_ICON.recipes}</span><span class="nav-menu__label">Productos y recetas</span></a>`;
-        if (p.presupuestos) htmlMenu += `<a href="presupuesto.html" class="nav-menu__link" title="Presupuestos"><span class="nav-menu__glyph">${MENU_ICON.quote}</span><span class="nav-menu__label">Presupuestos</span></a>`;
+        htmlMenu += `</div></div>`;
+    }
+
+    if (p.recetas || p.precios || p.stock) {
+        htmlMenu += categoriaMenu('Productos', 'Una misma elaboración vista desde receta, costo, precio de venta y seguimiento.');
+        if (p.recetas || p.precios || p.stock) htmlMenu += `<a href="productos.html" class="nav-menu__link" title="Maestro de Productos"><span class="nav-menu__glyph">${MENU_ICON.recipes}</span><span class="nav-menu__label">Maestro de Productos</span></a>`;
+        if (p.recetas) htmlMenu += `<a href="recetas.html" class="nav-menu__link" title="Recetas y costos"><span class="nav-menu__glyph">${MENU_ICON.recipes}</span><span class="nav-menu__label">Recetas y costos</span></a>`;
         if (p.precios) htmlMenu += `<a href="precios.html" class="nav-menu__link" title="Precios y revisión"><span class="nav-menu__glyph">${MENU_ICON.prices}</span><span class="nav-menu__label">Precios y revisión</span></a>`;
-
         htmlMenu += `</div></div>`;
     }
 
-    if (p.clientes || p.agenda || p.modelos) {
-        htmlMenu += `<div class="nav-category"><button class="nav-category-btn">Comercial <span class="nav-icon">+</span></button><div class="nav-category-content">`;
-
-        if (p.clientes) htmlMenu += `<a href="clientes.html" class="nav-menu__link" title="Clientes"><span class="nav-menu__glyph">${MENU_ICON.clients}</span><span class="nav-menu__label">Clientes</span></a>`;
-        if (p.agenda) htmlMenu += `<a href="agenda.html" class="nav-menu__link" title="Agenda y entregas"><span class="nav-menu__glyph">${MENU_ICON.agenda}</span><span class="nav-menu__label">Agenda y entregas</span></a>`;
-        if (p.modelos) htmlMenu += `<a href="modelos.html" class="nav-menu__link" title="Modelos 3D"><span class="nav-menu__glyph">${MENU_ICON.models}</span><span class="nav-menu__label">Modelos 3D</span></a>`;
-
-        htmlMenu += `</div></div>`;
-    }
-
-    if (p.cajas || p.finanzas || p.historial || p.compras || p.compras_lista || p.configuracion || userRol === 'master') {
-        htmlMenu += `<div class="nav-category"><button class="nav-category-btn">Administración <span class="nav-icon">+</span></button><div class="nav-category-content">`;
-
-        if (p.cajas) htmlMenu += `<a href="cajas.html" class="nav-menu__link" title="Cajas"><span class="nav-menu__glyph">${MENU_ICON.cash}</span><span class="nav-menu__label">Cajas</span></a>`;
-        if (p.finanzas) htmlMenu += `<a href="finanzas.html" class="nav-menu__link" title="Finanzas"><span class="nav-menu__glyph">${MENU_ICON.finance}</span><span class="nav-menu__label">Finanzas</span></a>`;
+    if (p.stock || p.compras || p.compras_lista) {
+        htmlMenu += categoriaMenu('Insumos y compras', 'Materias primas, proveedores, reposición y registro de compras.');
+        if (p.stock) htmlMenu += `<a href="stock.html" class="nav-menu__link" title="Stock de materias primas"><span class="nav-menu__glyph">${MENU_ICON.stock}</span><span class="nav-menu__label">Stock e insumos</span></a>`;
         if (p.compras) htmlMenu += `<a href="compras.html" class="nav-menu__link" title="Registrar compra"><span class="nav-menu__glyph">${MENU_ICON.purchase}</span><span class="nav-menu__label">Registrar compra</span></a>`;
         if (p.compras_lista) htmlMenu += `<a href="compras-lista.html" class="nav-menu__link" title="Lista de compras"><span class="nav-menu__glyph">${MENU_ICON.shoppingList}</span><span class="nav-menu__label">Lista de compras</span></a>`;
+        htmlMenu += `</div></div>`;
+    }
+
+    if (p.clientes || p.agenda || p.presupuestos) {
+        htmlMenu += categoriaMenu('Clientes y pedidos', 'Clientes, compromisos de entrega y presupuestos.');
+        if (p.clientes) htmlMenu += `<a href="clientes.html" class="nav-menu__link" title="Clientes"><span class="nav-menu__glyph">${MENU_ICON.clients}</span><span class="nav-menu__label">Clientes</span></a>`;
+        if (p.agenda) htmlMenu += `<a href="agenda.html" class="nav-menu__link" title="Agenda y entregas"><span class="nav-menu__glyph">${MENU_ICON.agenda}</span><span class="nav-menu__label">Agenda y entregas</span></a>`;
+        if (p.presupuestos) htmlMenu += `<a href="presupuesto.html" class="nav-menu__link" title="Presupuestos"><span class="nav-menu__glyph">${MENU_ICON.quote}</span><span class="nav-menu__label">Presupuestos</span></a>`;
+        htmlMenu += `</div></div>`;
+    }
+
+    if (p.cajas || p.finanzas || p.historial || p.configuracion || userRol === 'master') {
+        htmlMenu += categoriaMenu('Administración', 'Control de caja, resultados, auditoría y permisos.');
+        if (p.cajas) htmlMenu += `<a href="cajas.html" class="nav-menu__link" title="Cajas"><span class="nav-menu__glyph">${MENU_ICON.cash}</span><span class="nav-menu__label">Cajas</span></a>`;
+        if (p.finanzas) htmlMenu += `<a href="finanzas.html" class="nav-menu__link" title="Finanzas"><span class="nav-menu__glyph">${MENU_ICON.finance}</span><span class="nav-menu__label">Finanzas</span></a>`;
         if (p.historial) htmlMenu += `<a href="historial.html" class="nav-menu__link" title="Historial"><span class="nav-menu__glyph">${MENU_ICON.history}</span><span class="nav-menu__label">Historial</span></a>`;
         if (p.configuracion || userRol === 'master') htmlMenu += `<a href="usuarios.html" class="nav-menu__link" title="Usuarios y permisos"><span class="nav-menu__glyph">${MENU_ICON.users}</span><span class="nav-menu__label">Usuarios y permisos</span></a>`;
+        htmlMenu += `</div></div>`;
+    }
 
+    if (p.modelos) {
+        htmlMenu += categoriaMenu('Herramientas', 'Funciones de apoyo que no forman parte del circuito diario principal.');
+        htmlMenu += `<a href="modelos.html" class="nav-menu__link" title="Modelos 3D"><span class="nav-menu__glyph">${MENU_ICON.models}</span><span class="nav-menu__label">Modelos 3D</span></a>`;
         htmlMenu += `</div></div>`;
     }
 
@@ -286,6 +300,15 @@ async function inicializarMenu() {
     }
 
     if (navOverlay) navOverlay.addEventListener('click', closeMenu);
+
+    document.querySelectorAll('.ds-nav-info').forEach((info) => {
+        info.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const message = info.getAttribute('title');
+            if (message) window.alert(message);
+        });
+    });
 
     document.querySelectorAll('.nav-category-btn').forEach((btn) => {
         btn.addEventListener('click', () => {

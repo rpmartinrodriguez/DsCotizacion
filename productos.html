@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Maestro de Productos · Dulce Sall Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/app-v2.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-192.png?v=2">
+    <meta name="theme-color" content="#ff96c5">
+    <style>
+        .ds-products-master{display:grid;grid-template-columns:minmax(270px,340px) minmax(0,1fr);gap:18px;align-items:start}
+        .ds-products-list{position:sticky;top:18px;max-height:calc(100dvh - 36px);display:flex;flex-direction:column;overflow:hidden}
+        .ds-products-list-head{padding:18px 18px 12px;border-bottom:1px solid #eee7eb}
+        .ds-products-list-head h2{margin:0 0 4px;font-size:1rem}
+        .ds-products-list-head p{margin:0;color:#837680;font-size:.76rem}
+        .ds-products-filters{display:grid;grid-template-columns:1fr;gap:8px;padding:12px 18px}
+        .ds-products-scroll{overflow:auto;padding:0 10px 12px}
+        .ds-product-row{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 10px;border:0;border-bottom:1px solid #f0e9ed;background:transparent;text-align:left;cursor:pointer}
+        .ds-product-row:hover,.ds-product-row.is-active{background:#fff3f8}
+        .ds-product-row strong{display:block;color:#3f353d;font-size:.83rem}
+        .ds-product-row small{display:block;margin-top:3px;color:#8c8088;font-size:.69rem}
+        .ds-product-row-status{display:flex;gap:4px;align-items:center}
+        .ds-product-dot{width:8px;height:8px;border-radius:50%;background:#d8ced4}
+        .ds-product-dot.is-web{background:#48a466}
+        .ds-product-dot.is-manual{background:#c54a80}
+        .ds-products-detail{min-width:0}
+        .ds-product-empty{min-height:440px;display:grid;place-items:center;text-align:center;padding:34px}
+        .ds-product-empty div{max-width:430px}
+        .ds-product-empty h2{margin:8px 0}
+        .ds-product-detail-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;flex-wrap:wrap}
+        .ds-product-detail-head h1{margin:2px 0 5px;font-size:1.65rem;color:#302730}
+        .ds-product-detail-head p{margin:0;color:#80747d}
+        .ds-product-actions{display:flex;gap:8px;flex-wrap:wrap}
+        .ds-product-actions a{width:auto!important}
+        .ds-product-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:18px 0}
+        .ds-product-kpi{padding:12px;border:1px solid #eee4e9;border-radius:12px;background:#fff}
+        .ds-product-kpi span{display:block;color:#8a7e86;font-size:.66rem;margin-bottom:4px}
+        .ds-product-kpi strong{display:block;color:#4b3c45;font-size:.96rem}
+        .ds-product-kpi small{display:block;margin-top:3px;color:#9a8f96;font-size:.64rem}
+        .ds-product-tabs{display:flex;gap:6px;overflow:auto;padding:5px;background:#f4f0f2;border-radius:12px;margin-bottom:14px}
+        .ds-product-tab{flex:0 0 auto;border:0;border-radius:9px;background:transparent;padding:9px 12px;color:#796d75;font-size:.75rem;font-weight:800;cursor:pointer}
+        .ds-product-tab.is-active{background:#fff;color:#a43e6f;box-shadow:0 3px 10px rgba(65,42,53,.07)}
+        .ds-product-panel[hidden]{display:none!important}
+        .ds-product-section{padding:16px;border:1px solid #eee5e9;border-radius:13px;background:#fff;margin-bottom:12px}
+        .ds-product-section-head{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+        .ds-product-section-head h3{margin:0;font-size:.95rem;color:#473b43}
+        .ds-product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+        .ds-product-data{padding:10px 11px;border-radius:10px;background:#faf8f9}
+        .ds-product-data span{display:block;font-size:.65rem;color:#8a7d86;margin-bottom:3px}
+        .ds-product-data strong{display:block;color:#493c44;font-size:.82rem;overflow-wrap:anywhere}
+        .ds-ingredient-list{display:grid;gap:6px}
+        .ds-ingredient-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;padding:9px 10px;border-bottom:1px solid #f0e9ed;align-items:center;font-size:.75rem}
+        .ds-ingredient-row:last-child{border-bottom:0}
+        .ds-ingredient-row small{color:#897d85}
+        .ds-help-dot{display:inline-grid;place-items:center;width:21px;height:21px;border:1px solid #dccbd4;border-radius:50%;background:#fff;color:#a24370;font-size:.68rem;font-weight:900;cursor:pointer;padding:0}
+        .ds-help-box{margin:0 0 14px;padding:10px 12px;border-radius:10px;background:#fff5fa;border:1px solid #efdbe5;color:#6e5965;font-size:.76rem;line-height:1.45}
+        .ds-status-ok{color:#2d7b49!important}.ds-status-warn{color:#a05c16!important}
+        @media(max-width:1050px){.ds-product-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+        @media(max-width:850px){.ds-products-master{grid-template-columns:1fr}.ds-products-list{position:static;max-height:none}.ds-products-scroll{max-height:300px}.ds-product-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        @media(max-width:620px){.ds-product-grid{grid-template-columns:1fr}.ds-product-kpis{grid-template-columns:1fr 1fr}.ds-product-detail-head{display:block}.ds-product-actions{margin-top:12px}.ds-ingredient-row{grid-template-columns:minmax(0,1fr) auto}.ds-ingredient-row>:last-child{grid-column:2}}
+    </style>
+</head>
+<body class="ds-app ds-content ds-products">
+<div class="main-container">
+    <header class="header">
+        <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú"><span></span><span></span><span></span></button>
+        <a href="index.html" class="header__logo-link"><img src="assets/logo.png" alt="Dulce Sall" class="header__logo"></a>
+    </header>
+    <nav class="nav-menu" id="nav-menu"></nav>
+    <div class="nav-menu__overlay" id="nav-overlay"></div>
+
+    <main class="ds-main">
+        <div class="ds-content-wrap">
+            <section class="ds-content-head">
+                <div>
+                    <p class="ds-eyebrow">Operación · Centro maestro</p>
+                    <h1>Productos</h1>
+                    <p>Buscá un producto una sola vez y consultá su receta, costo, venta, stock y publicación web desde la misma ficha.</p>
+                </div>
+                <button class="ds-help-dot" type="button" data-help="Este espacio no reemplaza ni elimina Recetas, Stock o Precios. Los reúne como ficha maestra y te lleva a la función original cuando necesitás editar en profundidad.">(i)</button>
+            </section>
+
+            <div id="productos-help" class="ds-help-box" hidden></div>
+
+            <section class="ds-products-master">
+                <aside class="card ds-products-list">
+                    <div class="ds-products-list-head">
+                        <h2>Catálogo maestro</h2>
+                        <p id="productos-count">Cargando productos…</p>
+                    </div>
+                    <div class="ds-products-filters">
+                        <input id="productos-buscar" type="search" placeholder="Buscar producto…">
+                        <select id="productos-categoria"><option value="">Todas las categorías</option></select>
+                        <select id="productos-estado" aria-label="Filtrar por estado">
+                            <option value="">Todos los estados</option>
+                            <option value="sugerido">Sin precio manual</option>
+                            <option value="web">No publicado en web</option>
+                            <option value="costos">Costo incompleto</option>
+                        </select>
+                    </div>
+                    <div id="productos-lista" class="ds-products-scroll"></div>
+                </aside>
+
+                <div class="ds-products-detail">
+                    <section id="producto-vacio" class="card ds-product-empty">
+                        <div><div style="font-size:2rem">🍰</div><h2>Elegí un producto</h2><p>Su ficha va a reunir la información que hoy está distribuida en varios módulos.</p></div>
+                    </section>
+
+                    <section id="producto-detalle" class="card" hidden>
+                        <div class="ds-product-detail-head">
+                            <div>
+                                <p class="ds-eyebrow">Ficha de producto</p>
+                                <h1 id="producto-nombre">Producto</h1>
+                                <p id="producto-subtitulo"></p>
+                            </div>
+                            <div class="ds-product-actions">
+                                <a id="producto-editar-receta" class="btn-secondary" href="recetas.html">Editar receta</a>
+                                <a id="producto-gestionar-venta" class="btn-primary" href="pos.html">Gestionar venta / stock</a>
+                            </div>
+                        </div>
+
+                        <div class="ds-product-kpis">
+                            <div class="ds-product-kpi"><span>Costo por venta</span><strong id="producto-costo">$0</strong><small>Receta + presentación</small></div>
+                            <div class="ds-product-kpi"><span>Precio sugerido</span><strong id="producto-sugerido">$0</strong><small id="producto-markup">Costo + %</small></div>
+                            <div class="ds-product-kpi"><span>Precio vigente</span><strong id="producto-venta">$0</strong><small id="producto-origen-venta">Sugerido</small></div>
+                            <div class="ds-product-kpi"><span>Torta entera</span><strong id="producto-entera">—</strong><small id="producto-entera-origen">Sin configurar</small></div>
+                            <div class="ds-product-kpi"><span>Web</span><strong id="producto-web">—</strong><small id="producto-stock">Stock: 0</small></div>
+                        </div>
+
+                        <div class="ds-product-tabs" role="tablist">
+                            <button class="ds-product-tab is-active" data-tab="resumen">Resumen</button>
+                            <button class="ds-product-tab" data-tab="receta">Receta y costo</button>
+                            <button class="ds-product-tab" data-tab="venta">Venta</button>
+                            <button class="ds-product-tab" data-tab="stock">Stock y web</button>
+                            <button class="ds-product-tab" data-tab="historial">Historial</button>
+                        </div>
+
+                        <div id="producto-panel-resumen" class="ds-product-panel">
+                            <div class="ds-product-section">
+                                <div class="ds-product-section-head"><h3>Resumen comercial</h3><button class="ds-help-dot" data-help="Resume el estado actual del producto. El precio vigente es el que cobra Mostrador; el sugerido sigue siendo una referencia calculada por costo + porcentaje.">(i)</button></div>
+                                <div id="producto-resumen-grid" class="ds-product-grid"></div>
+                            </div>
+                            <div class="ds-product-section">
+                                <div class="ds-product-section-head"><h3>Acciones rápidas</h3><button class="ds-help-dot" data-help="Estos accesos usan los módulos existentes. No se duplican reglas ni datos: te llevan al mismo editor que ya utilizás, pero con el producto preseleccionado.">(i)</button></div>
+                                <div class="ds-product-actions">
+                                    <a id="producto-ir-precios" class="btn-secondary" href="precios.html">Revisar precio</a>
+                                    <a id="producto-ir-stock" class="btn-secondary" href="pos.html">Stock terminado / barras</a>
+                                    <a id="producto-ir-receta" class="btn-secondary" href="recetas.html">Ingredientes y rendimiento</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="producto-panel-receta" class="ds-product-panel" hidden>
+                            <div class="ds-product-section">
+                                <div class="ds-product-section-head"><h3>Ingredientes de la receta</h3><button class="ds-help-dot" data-help="El costo mostrado usa la fuente vigente de cada materia prima: proveedor cuando existe, de lo contrario el costo de compra cargado.">(i)</button></div>
+                                <div id="producto-ingredientes" class="ds-ingredient-list"></div>
+                            </div>
+                        </div>
+
+                        <div id="producto-panel-venta" class="ds-product-panel" hidden>
+                            <div class="ds-product-section">
+                                <div class="ds-product-section-head"><h3>Configuración de venta</h3><button class="ds-help-dot" data-help="El sugerido se calcula automáticamente. Si definís un precio manual, ese es el que se cobra y el que consulta dulcesall.com.">(i)</button></div>
+                                <div id="producto-venta-grid" class="ds-product-grid"></div>
+                            </div>
+                        </div>
+
+                        <div id="producto-panel-stock" class="ds-product-panel" hidden>
+                            <div class="ds-product-section">
+                                <div class="ds-product-section-head"><h3>Stock, código y web</h3><button class="ds-help-dot" data-help="El stock terminado es informativo y no bloquea la venta. La publicación web sólo habilita la API cuando el producto está marcado para publicar.">(i)</button></div>
+                                <div id="producto-stock-grid" class="ds-product-grid"></div>
+                            </div>
+                        </div>
+
+                        <div id="producto-panel-historial" class="ds-product-panel" hidden>
+                            <div class="ds-product-section">
+                                <div class="ds-product-section-head"><h3>Seguimiento</h3><button class="ds-help-dot" data-help="La ficha conserva los historiales en sus módulos originales: movimientos de stock, cambios de proveedor y revisiones de precio. Acá se muestran los últimos datos disponibles y accesos directos.">(i)</button></div>
+                                <div id="producto-historial-grid" class="ds-product-grid"></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </div>
+    </main>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+    import { firebaseConfig } from './js/firebase-config.js';
+    import { setupProductos } from './js/productos.js?v=1';
+    try {
+        const app = initializeApp(firebaseConfig);
+        setupProductos(app);
+    } catch (error) { console.error(error); }
+</script>
+<script src="js/menu.js?v=13" defer></script>
+<script src="js/shell-v2.js?v=2" defer></script>
+<script>
+    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+</script>
+</body>
+</html>
