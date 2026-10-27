@@ -2718,6 +2718,11 @@ body.ds-history .historial-card__detalle ul {
 .ds-supplier-result-card.is-up { border-left-color: #d35e67; }
 .ds-supplier-result-card.is-down { border-left-color: #4c9a72; }
 .ds-supplier-result-card.is-error { border-left-color: var(--ds-danger); }
+@media (min-width: 761px) {
+  .ds-supplier-result-card.is-error {
+    grid-template-columns: minmax(0,1fr) auto;
+  }
+}
 
 .ds-supplier-result-main strong {
   display: block;
