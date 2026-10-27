@@ -737,6 +737,12 @@ export function setupPOSInventory({
         setProducts,
         ensureBarcode,
         resetWorkspace: closeCommercialWorkspace,
+        openProduct: async (id) => {
+            const product = products.find(item => String(item.id) === String(id));
+            if (!product) return false;
+            await openCommercialModal(product);
+            return true;
+        },
         render: () => setProducts(products)
     };
 }
