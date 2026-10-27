@@ -3,7 +3,7 @@ import {
     updateDoc, getDoc, getDocs, deleteDoc, runTransaction, where, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
-import { setupSupplierPricing } from "./stock/supplier-pricing.js";
+import { setupSupplierPricing } from "./stock/supplier-pricing.js?v=2";
 import { getEffectiveUnitCost } from "./core/pricing.js";
 import { createAuthorization } from "./core/authorization.js";
 
