@@ -2,7 +2,10 @@ const crypto = require("crypto");
 const dns = require("dns").promises;
 const net = require("net");
 
-const PROJECT_ID = "dscotizacion";
+const PROJECT_ID = String(process.env.FIREBASE_PROJECT_ID || "dulcesall").trim();
+if (!/^[a-z0-9-]{4,63}$/.test(PROJECT_ID)) {
+  throw new Error("FIREBASE_PROJECT_ID inválido.");
+}
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 const CERTS_URL = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com";
 
