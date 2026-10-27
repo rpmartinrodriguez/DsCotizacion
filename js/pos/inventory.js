@@ -16,6 +16,7 @@ export function setupPOSInventory({
 }) {
     const buscadorInventario = document.getElementById('buscador-inventario');
     const filtroCategoriaInventario = document.getElementById('filtro-categoria-inventario');
+    const inventarioListadoPanel = document.getElementById('inventario-listado-panel');
     const tablaInventario = document.getElementById('tabla-inventario-mostrador');
 
     const modalStock = document.getElementById('modal-stock-detalle');
@@ -62,6 +63,7 @@ export function setupPOSInventory({
     const comercialWebHabilitado = document.getElementById('comercial-web-habilitado');
     const comercialAviso = document.getElementById('comercial-aviso');
     const btnComercialCopiar = document.getElementById('comercial-copiar-codigo');
+    const btnComercialVolverLista = document.getElementById('comercial-volver-lista');
     const btnComercialCancelar = document.getElementById('comercial-cancelar');
     const btnComercialGuardar = document.getElementById('comercial-guardar');
 
@@ -334,13 +336,21 @@ export function setupPOSInventory({
                 : 'Guardar configuración';
         }
         renderCommercialPreview();
-        modalComercial?.classList.add('visible');
+        if (inventarioListadoPanel) inventarioListadoPanel.hidden = true;
+        if (modalComercial) {
+            modalComercial.hidden = false;
+            modalComercial.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
+    };
+
+    const closeCommercialWorkspace = () => {
+        if (modalComercial) modalComercial.hidden = true;
+        if (inventarioListadoPanel) inventarioListadoPanel.hidden = false;
     };
 
     btnComercialAjustarStock?.addEventListener('click', async () => {
         const product = products.find(item => item.id === comercialId?.value);
         if (!product) return;
-        modalComercial?.classList.remove('visible');
         await openStockModal(product);
     });
 
@@ -357,9 +367,8 @@ export function setupPOSInventory({
     btnComercialCopiar?.addEventListener('click', () =>
         copyText(comercialCodigo?.value || '')
     );
-    btnComercialCancelar?.addEventListener('click', () =>
-        modalComercial?.classList.remove('visible')
-    );
+    btnComercialVolverLista?.addEventListener('click', closeCommercialWorkspace);
+    btnComercialCancelar?.addEventListener('click', closeCommercialWorkspace);
 
     btnComercialGuardar?.addEventListener('click', async () => {
         const product = products.find(item => item.id === comercialId?.value);
@@ -417,7 +426,7 @@ export function setupPOSInventory({
                     configComercialActualizadaAt: Timestamp.now()
                 });
             }
-            modalComercial?.classList.remove('visible');
+            closeCommercialWorkspace();
         } catch (error) {
             console.error('No se pudo guardar la configuración comercial:', error);
             alert('No se pudo guardar la configuración comercial.');
