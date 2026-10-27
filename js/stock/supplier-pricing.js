@@ -6,7 +6,7 @@ import {
     Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "../core/format.js";
-import { escapeHtml } from "../core/html.js";
+import { escapeHtml, escapeAttribute } from "../core/html.js";
 
 const getLotSeconds = (lote) => {
     if (lote?.fechaCompra?.seconds !== undefined) return lote.fechaCompra.seconds;
@@ -544,7 +544,7 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
                     </div>
                     <div class="ds-supplier-result-error-detail">
                         <span class="ds-supplier-result-badge">Error</span>
-                        <button type="button" class="btn-secondary ds-supplier-open-material" data-material-id="${escapeHtml(id)}">Abrir materia prima</button>
+                        <button type="button" class="btn-secondary ds-supplier-open-material" data-material-id="${escapeAttribute(id)}">Abrir materia prima</button>
                     </div>
                 `;
                 resultsList.appendChild(item);
@@ -576,7 +576,7 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
                 <div class="ds-supplier-result-reference">
                     <span>Costo vigente</span>
                     <strong>${formatCurrency(result.oldReferenceUnitCost)} → ${formatCurrency(result.newReferenceUnitCost)} / ${escapeHtml(result.unit || 'unidad')}</strong>
-                    <button type="button" class="btn-secondary ds-supplier-open-material" data-material-id="${escapeHtml(result.id)}">Revisar insumo</button>
+                    <button type="button" class="btn-secondary ds-supplier-open-material" data-material-id="${escapeAttribute(result.id)}">Revisar insumo</button>
                 </div>
             `;
 
