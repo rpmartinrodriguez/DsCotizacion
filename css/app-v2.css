@@ -6305,6 +6305,14 @@ body.ds-pos .ds-inventory-actions-cell .btn-secondary {
   font-size:.78rem !important;
   white-space:nowrap;
 }
+body.ds-pos:not(.admin-open) .btn-gestionar-prod {
+  display:none !important;
+}
+body.ds-pos.admin-open .btn-gestionar-prod {
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+}
 body.ds-pos .admin-open .btn-cashier-barcode,
 body.ds-pos.admin-open .btn-cashier-barcode {
   display:none !important;
