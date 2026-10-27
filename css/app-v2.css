@@ -1631,10 +1631,22 @@ body.ds-current-quote .modal-actions {
 
 @media (max-width:700px) {
   body.ds-pos .ds-commercial-modal {
-    max-height: calc(100dvh - 12px) !important;
+    width:calc(100vw - 12px) !important;
+    max-height:calc(100dvh - 12px) !important;
+  }
+  body.ds-pos .ds-commercial-modal > .ds-modal-heading {
+    padding:14px 14px 11px;
   }
   body.ds-pos .ds-commercial-scroll {
-    padding-right: 2px;
+    padding:14px 14px 10px;
+  }
+  body.ds-pos .ds-commercial-actions {
+    grid-template-columns:minmax(110px,.75fr) minmax(0,1.6fr);
+    padding:10px 14px 14px;
+    gap:8px !important;
+  }
+  body.ds-pos #comercial-cancelar {
+    min-width:0 !important;
   }
   body.ds-users .permisos-grid {
     grid-template-columns: 1fr;
@@ -6273,6 +6285,41 @@ body.ds-pos .ds-pos-inventory-table td {
   body.ds-pos .ds-pos-inventory-table td:nth-child(8) { min-width: 95px; }
   body.ds-pos .ds-pos-inventory-table th:nth-child(9),
   body.ds-pos .ds-pos-inventory-table td:nth-child(9) { min-width: 235px; }
+
+  /* El producto queda anclado al desplazarse horizontalmente. */
+  body.ds-pos .ds-pos-inventory-table th:nth-child(2),
+  body.ds-pos .ds-pos-inventory-table td:nth-child(2) {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    background: #fff;
+    box-shadow: 8px 0 12px -12px rgba(66,42,55,.45);
+  }
+  body.ds-pos .ds-pos-inventory-table thead th:nth-child(2) {
+    z-index: 7;
+    background: var(--secondary-button-hover-bg);
+  }
+  body.ds-pos .ds-pos-inventory-table tr:hover td:nth-child(2) {
+    background: var(--secondary-button-hover-bg);
+  }
+
+  /* Las acciones quedan siempre accesibles a la derecha. */
+  body.ds-pos .ds-pos-inventory-table th:nth-child(9),
+  body.ds-pos .ds-pos-inventory-table td:nth-child(9) {
+    position: sticky;
+    right: 0;
+    z-index: 5;
+    background: #fff;
+    box-shadow: -8px 0 12px -12px rgba(66,42,55,.45);
+  }
+  body.ds-pos .ds-pos-inventory-table thead th:nth-child(9) {
+    z-index: 8;
+    background: var(--secondary-button-hover-bg);
+  }
+  body.ds-pos .ds-pos-inventory-table tr:hover td:nth-child(9) {
+    background: var(--secondary-button-hover-bg);
+  }
+
   body.ds-pos .ds-pos-inventory-table td:nth-child(2) > strong {
     display: block;
     white-space: normal;
@@ -6360,30 +6407,56 @@ body.ds-pos .ds-web-price-state.is-on {
 body.ds-pos .ds-commercial-modal {
   width:min(760px, calc(100vw - 24px)) !important;
   max-width:760px !important;
-}
-body.ds-pos .ds-commercial-modal {
-  max-height: calc(100dvh - 24px) !important;
-  overflow: hidden !important;
-  display: flex !important;
-  flex-direction: column;
+  max-height:calc(100dvh - 24px) !important;
+  box-sizing:border-box;
+  overflow:hidden !important;
+  display:flex !important;
+  flex-direction:column;
+  padding:0 !important;
 }
 body.ds-pos .ds-commercial-modal > .ds-modal-heading {
-  flex: 0 0 auto;
+  flex:0 0 auto;
+  margin:0;
+  padding:18px 22px 13px;
+  border-bottom:1px solid #f0e6ed;
+  background:#fff;
+  position:relative;
+  z-index:3;
+}
+body.ds-pos .ds-commercial-modal > .ds-modal-heading .card__title {
+  margin:3px 0 0 !important;
+  line-height:1.2;
+  overflow-wrap:normal;
+  word-break:normal;
 }
 body.ds-pos .ds-commercial-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  padding-right: 4px;
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  padding:16px 22px 12px;
 }
 body.ds-pos .ds-commercial-actions {
-  flex: 0 0 auto;
-  margin-top: 12px;
-  padding-top: 12px;
-  background: #fff;
-  border-top: 1px solid #f0e6ed;
+  flex:0 0 auto;
+  display:grid !important;
+  grid-template-columns:140px minmax(0,1fr);
+  gap:12px !important;
+  margin:0 !important;
+  padding:12px 22px 18px;
+  background:#fff;
+  border-top:1px solid #f0e6ed;
+  position:relative;
+  z-index:3;
+}
+body.ds-pos .ds-commercial-actions > button {
+  width:100% !important;
+  min-width:0 !important;
+  margin:0 !important;
+  white-space:nowrap !important;
+}
+body.ds-pos #comercial-cancelar {
+  min-width:140px !important;
 }
 body.ds-pos .ds-commercial-grid {
   display:grid;
