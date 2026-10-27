@@ -4,7 +4,7 @@ import {
 import { formatCurrency, formatTimestampDateTime, dateToYMD } from "../core/format.js";
 import { drawBarcodeLabel, downloadCanvasPng } from "../core/labels.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
-import { calculateWholeCakePricing } from "../core/pricing.js";
+import { calculateRoundedSalePrice, calculateWholeCakePricing } from "../core/pricing.js";
 
 export function setupPOSInventory({
     db,
@@ -225,7 +225,21 @@ export function setupPOSInventory({
         const product = products.find(item => item.id === comercialId?.value);
         if (!product) return;
         const draft = getCommercialDraft(product);
-        const suggestedUnitPrice = Number(product.precioSugerido ?? product.precioCalculado) || 0;
+        const globalMargin = Number(getGlobalMargin?.()) || 0;
+        const appliedMargin = draft.margenIndividual !== null
+            ? Number(draft.margenIndividual) || 0
+            : globalMargin;
+        const suggestedUnitPrice = calculateRoundedSalePrice(
+            Number(product.costoBaseCalculado) || 0,
+            appliedMargin,
+            { roundTo: 100, midpointDown: true }
+        );
+        if (comercialMargenAplicado) {
+            comercialMargenAplicado.textContent =
+                appliedMargin.toLocaleString('es-AR') + '% ' +
+                (draft.margenIndividual !== null ? '· individual' : '· global');
+        }
+        if (comercialPrecioUnitario) comercialPrecioUnitario.value = formatCurrency(suggestedUnitPrice);
         const currentUnitPrice = Number(draft.precioVentaManual) > 0
             ? Number(draft.precioVentaManual)
             : suggestedUnitPrice;
@@ -336,7 +350,7 @@ export function setupPOSInventory({
         await openBarcodeModal(product);
     });
 
-    [comercialPrecioVenta, comercialPorciones, comercialPrecioManual].forEach(input =>
+    [comercialMargenIndividual, comercialPrecioVenta, comercialPorciones, comercialPrecioManual].forEach(input =>
         input?.addEventListener('input', renderCommercialPreview)
     );
 
