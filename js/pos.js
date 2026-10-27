@@ -120,6 +120,8 @@ export function setupPOS(app) {
     let recetasBrutas = []; 
     let productosDisponibles = []; 
     let carritoActual = [];
+    const gestionarProductoSolicitado = new URLSearchParams(window.location.search).get('gestionarProducto');
+    let gestionarProductoAbierto = false;
     let metodoPagoSeleccionado = null;
     let margenGlobal = 0; 
     let totalVentaActual = 0;
@@ -764,6 +766,20 @@ export function setupPOS(app) {
         } 
         inventory.setProducts(productosDisponibles);
         manualHistory.setProducts(productosDisponibles);
+
+        if (gestionarProductoSolicitado && !gestionarProductoAbierto) {
+            const existe = productosDisponibles.some(item => String(item.id) === String(gestionarProductoSolicitado));
+            if (existe) {
+                gestionarProductoAbierto = true;
+                if (pantallaPOS) pantallaPOS.style.display = 'none';
+                if (pantallaPromociones) pantallaPromociones.style.display = 'none';
+                if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
+                if (pantallaStock) pantallaStock.style.display = 'block';
+                actualizarMobileBarVisibility();
+                inventory.openProduct?.(gestionarProductoSolicitado);
+                window.scrollTo(0, 0);
+            }
+        }
     };
 
     // ==========================================
