@@ -43,6 +43,9 @@ export function setupPOSInventory({
     const comercialCodigo = document.getElementById('comercial-producto-codigo');
     const comercialPresentacion = document.getElementById('comercial-presentacion');
     const comercialPrecioUnitario = document.getElementById('comercial-precio-unitario');
+    const comercialPrecioVenta = document.getElementById('comercial-precio-venta');
+    const comercialPrecioVentaVigente = document.getElementById('comercial-precio-venta-vigente');
+    const comercialPrecioVentaOrigen = document.getElementById('comercial-precio-venta-origen');
     const comercialPorciones = document.getElementById('comercial-porciones-entera');
     const comercialPrecioAutomatico = document.getElementById('comercial-precio-entera-auto');
     const comercialPrecioManual = document.getElementById('comercial-precio-entera-manual');
@@ -88,8 +91,11 @@ export function setupPOSInventory({
             const safeName = escapeHtml(product.nombreTorta || '');
             const safeId = escapeAttribute(product.id);
 
+            const suggestedUnitPrice = Number(product.precioSugerido ?? product.precioCalculado) || 0;
+            const currentUnitPrice = Number(product.precioCalculado) || suggestedUnitPrice;
+            const hasManualSalePrice = Number(product.precioVentaManual) > 0;
             const whole = calculateWholeCakePricing({
-                unitPrice: product.precioCalculado,
+                unitPrice: currentUnitPrice,
                 portions: product.porcionesTortaEntera,
                 manualPrice: product.precioTortaEnteraManual
             });
@@ -101,7 +107,7 @@ export function setupPOSInventory({
             const wholePriceHtml = whole.currentPrice === null
                 ? '<strong class="ds-commercial-empty">Sin definir</strong><small>Opcional</small>'
                 : `<strong>${formatCurrency(whole.currentPrice)}</strong>
-                   <small>${whole.source === 'manual' ? 'Manual' : 'Automático'}${whole.portions ? ' · ' + whole.portions + ' porciones' : ''}</small>`;
+                   <small>${whole.source === 'manual' ? 'Venta definida' : 'Usa sugerido'}${whole.portions ? ' · ' + whole.portions + ' porciones' : ''}</small>`;
 
             row.innerHTML = `
                 <td data-label="Categoría"><span class="categoria-tag">${safeCategory}</span></td>
@@ -117,8 +123,12 @@ export function setupPOSInventory({
                 <td class="admin-only" data-label="% Ganancia">
                     ${margin}% <small style="color:var(--text-light);">${hasIndividualMargin ? '(Indiv)' : '(Global)'}</small>
                 </td>
-                <td data-label="Precio porción / unidad" class="ds-commercial-price">
-                    <strong>${formatCurrency(product.precioCalculado)}</strong>
+                <td data-label="Precio sugerido / venta" class="ds-commercial-price">
+                    <strong>${formatCurrency(suggestedUnitPrice)}</strong>
+                    <small>Sugerido · costo + ${margin}%</small>
+                    <small class="${hasManualSalePrice ? 'ds-commercial-sale-current' : ''}">
+                        Venta: ${hasManualSalePrice ? formatCurrency(currentUnitPrice) + ' · definida' : 'usa sugerido'}
+                    </small>
                 </td>
                 <td data-label="Torta entera" class="ds-commercial-price">${wholePriceHtml}</td>
                 <td data-label="Web futura" class="admin-only" style="text-align:center;">
@@ -184,12 +194,15 @@ export function setupPOSInventory({
     };
 
     const getCommercialDraft = product => {
+        const saleRaw = comercialPrecioVenta?.value.trim() || '';
         const portionsRaw = comercialPorciones?.value.trim() || '';
         const manualRaw = comercialPrecioManual?.value.trim() || '';
+        const salePrice = saleRaw === '' ? null : Number(saleRaw);
         const portions = portionsRaw === '' ? null : Number(portionsRaw);
         const manualPrice = manualRaw === '' ? null : Number(manualRaw);
         return {
             presentacionVenta: comercialPresentacion?.value.trim() || null,
+            precioVentaManual: salePrice,
             porcionesTortaEntera: portions,
             precioTortaEnteraManual: manualPrice,
             precioWebHabilitado: comercialWebHabilitado?.checked === true
@@ -200,11 +213,26 @@ export function setupPOSInventory({
         const product = products.find(item => item.id === comercialId?.value);
         if (!product) return;
         const draft = getCommercialDraft(product);
+        const suggestedUnitPrice = Number(product.precioSugerido ?? product.precioCalculado) || 0;
+        const currentUnitPrice = Number(draft.precioVentaManual) > 0
+            ? Number(draft.precioVentaManual)
+            : suggestedUnitPrice;
         const whole = calculateWholeCakePricing({
-            unitPrice: product.precioCalculado,
+            unitPrice: currentUnitPrice,
             portions: draft.porcionesTortaEntera,
             manualPrice: draft.precioTortaEnteraManual
         });
+
+        if (comercialPrecioVentaVigente) {
+            comercialPrecioVentaVigente.textContent = currentUnitPrice > 0
+                ? formatCurrency(currentUnitPrice)
+                : 'Sin definir';
+        }
+        if (comercialPrecioVentaOrigen) {
+            comercialPrecioVentaOrigen.textContent = Number(draft.precioVentaManual) > 0
+                ? 'Precio definido manualmente'
+                : 'Usando precio sugerido';
+        }
 
         if (comercialPrecioAutomatico) {
             comercialPrecioAutomatico.textContent = whole.automaticPrice === null
@@ -233,8 +261,8 @@ export function setupPOSInventory({
             } else {
                 comercialAviso.textContent =
                     whole.source === 'manual'
-                        ? 'El precio manual tiene prioridad. Al borrarlo, vuelve automáticamente al cálculo por porciones.'
-                        : 'Automático = precio vigente por porción × (cantidad de porciones − 1).';
+                        ? 'La torta entera usa el precio de venta que definiste.'
+                        : 'La torta entera está usando el precio sugerido. Podés fijar un importe distinto cuando quieras.';
             }
         }
     };
@@ -248,7 +276,10 @@ export function setupPOSInventory({
         if (comercialNombre) comercialNombre.textContent = product.nombreTorta || 'Producto';
         if (comercialCodigo) comercialCodigo.value = product.id;
         if (comercialPresentacion) comercialPresentacion.value = product.presentacionVenta || '';
-        if (comercialPrecioUnitario) comercialPrecioUnitario.value = formatCurrency(product.precioCalculado);
+        if (comercialPrecioUnitario) comercialPrecioUnitario.value =
+            formatCurrency(Number(product.precioSugerido ?? product.precioCalculado) || 0);
+        if (comercialPrecioVenta) comercialPrecioVenta.value =
+            product.precioVentaManual ?? '';
         if (comercialPorciones) comercialPorciones.value =
             product.porcionesTortaEntera ?? '';
         if (comercialPrecioManual) comercialPrecioManual.value =
@@ -265,7 +296,7 @@ export function setupPOSInventory({
         modalComercial?.classList.add('visible');
     };
 
-    [comercialPorciones, comercialPrecioManual].forEach(input =>
+    [comercialPrecioVenta, comercialPorciones, comercialPrecioManual].forEach(input =>
         input?.addEventListener('input', renderCommercialPreview)
     );
 
@@ -286,6 +317,13 @@ export function setupPOSInventory({
         const draft = getCommercialDraft(product);
         if (draft.presentacionVenta && draft.presentacionVenta.length > 60) {
             alert('La presentación puede tener como máximo 60 caracteres.');
+            return;
+        }
+        if (draft.precioVentaManual !== null &&
+            (!Number.isFinite(draft.precioVentaManual) ||
+             draft.precioVentaManual <= 0 ||
+             draft.precioVentaManual > 100000000)) {
+            alert('El precio de venta por porción/unidad debe ser un importe positivo válido.');
             return;
         }
         if (draft.porcionesTortaEntera !== null &&
