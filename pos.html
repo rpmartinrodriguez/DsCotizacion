@@ -726,23 +726,34 @@
                     <input id="comercial-presentacion" type="text" maxlength="60" placeholder="Ej. Porción, Unidad, Caja x 6">
                 </label>
                 <label class="form-group">
-                    <span>Precio vigente por porción / unidad</span>
+                    <span>Precio sugerido por porción / unidad</span>
                     <input id="comercial-precio-unitario" type="text" readonly>
-                    <small>Se calcula con la misma fórmula que cobra Mostrador.</small>
+                    <small>Costo actual + % de ganancia configurado. Es una referencia, no obliga al precio de venta.</small>
                 </label>
+                <label class="form-group">
+                    <span>Precio de venta por porción / unidad</span>
+                    <input id="comercial-precio-venta" type="number" min="1" step="100" placeholder="Vacío = usar sugerido">
+                    <small>Este es el precio real que cobrará Mostrador y que verá la web.</small>
+                </label>
+                <div class="form-group">
+                    <span>Precio de venta vigente</span>
+                    <output id="comercial-precio-venta-vigente" class="ds-commercial-output">Sin definir</output>
+                    <strong id="comercial-precio-venta-origen" class="ds-commercial-source">Usando sugerido</strong>
+                </div>
                 <label class="form-group">
                     <span>Porciones que representa una torta entera</span>
                     <input id="comercial-porciones-entera" type="number" min="2" max="100" step="1" placeholder="Sin configurar">
                     <small>Campo separado del rendimiento de la receta.</small>
                 </label>
                 <label class="form-group">
-                    <span>Precio entero automático</span>
+                    <span>Precio entero sugerido</span>
                     <output id="comercial-precio-entera-auto" class="ds-commercial-output">Sin definir</output>
-                    <small>Porción vigente × (porciones de torta − 1).</small>
+                    <small>Referencia calculada con el precio de venta por porción/unidad × (porciones − 1).</small>
                 </label>
                 <label class="form-group">
-                    <span>Precio manual de torta entera (opcional)</span>
-                    <input id="comercial-precio-entera-manual" type="number" min="1" step="100" placeholder="Vacío = automático">
+                    <span>Precio de venta de torta entera</span>
+                    <input id="comercial-precio-entera-manual" type="number" min="1" step="100" placeholder="Vacío = usar sugerido">
+                    <small>Si lo completás, este importe manda sobre el sugerido.</small>
                 </label>
                 <div class="form-group">
                     <span>Precio entero vigente</span>
@@ -790,7 +801,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPOS } from './js/pos.js?v=108';
+        import { setupPOS } from './js/pos.js?v=110';
         try {
             const app = initializeApp(firebaseConfig);
             setupPOS(app);
