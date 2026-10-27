@@ -54,6 +54,7 @@ export function setupPOS(app) {
     const mobileBar = document.getElementById('pos-mobile-bar');
     const btnMobileProductos = document.getElementById('btn-mobile-productos');
     const btnMobileCarrito = document.getElementById('btn-mobile-carrito');
+    const mobileCartItems = document.getElementById('pos-mobile-cart-items');
     const mobileCartSummary = document.getElementById('pos-mobile-cart-summary');
 
     const modalCobro = document.getElementById('modal-cobro');
@@ -945,6 +946,17 @@ export function setupPOS(app) {
         }
         if (posCartCount) posCartCount.textContent = cantidadItems;
         if (mobileCartSummary) mobileCartSummary.textContent = `${cantidadItems} · ${formatMoneda(total)}`;
+        if (mobileCartItems) {
+            if (!carritoActual.length) {
+                mobileCartItems.textContent = 'Carrito vacío';
+            } else {
+                const visible = carritoActual.slice(0, 2).map(item =>
+                    `${Number(item.cantidad) || 0}× ${item.nombre}`
+                );
+                const extra = carritoActual.length > 2 ? ` · +${carritoActual.length - 2} más` : '';
+                mobileCartItems.textContent = visible.join(' · ') + extra;
+            }
+        }
         if (btnVaciarCarrito) btnVaciarCarrito.hidden = carritoActual.length === 0;
 
         if (carritoActual.length === 0) {
