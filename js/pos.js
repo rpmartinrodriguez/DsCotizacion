@@ -9,7 +9,7 @@ import { calculateProductSalePrice, calculateWholeCakePricing } from "./core/pri
 import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
-import { setupPOSInventory } from "./pos/inventory.js?v=4";
+import { setupPOSInventory } from "./pos/inventory.js?v=5";
 import { createPriceListPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
 import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
@@ -466,6 +466,7 @@ export function setupPOS(app) {
     // NAVEGACIÓN ENTRE PANTALLAS ADMIN
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
+            inventory.resetWorkspace?.();
             pantallaPOS.style.display = 'none';
             actualizarMobileBarVisibility();
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
@@ -500,6 +501,7 @@ export function setupPOS(app) {
 
     if (btnVolverMostrador) {
         btnVolverMostrador.addEventListener('click', () => {
+            inventory.resetWorkspace?.();
             pantallaStock.style.display = 'none';
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
