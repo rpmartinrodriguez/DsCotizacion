@@ -53,7 +53,7 @@ const formatDateTime = (timestamp) => {
     }
 };
 
-export function setupSupplierPricing(app, db, { getStock }) {
+export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial, openMaterialEditor }) {
     const auth = getAuth(app);
     const bulkButton = document.getElementById('btn-actualizar-precios-proveedor');
     const urlInput = document.getElementById('proveedor-url-input');
@@ -80,6 +80,8 @@ export function setupSupplierPricing(app, db, { getStock }) {
     let activeProductName = '';
     let activePackageSource = '';
     let packageEditedByUser = false;
+    let bulkResults = [];
+    let bulkFilter = 'all';
 
     const normalizeUnit = (unit) => {
         const value = String(unit || '').toLowerCase().trim();
@@ -461,38 +463,89 @@ export function setupSupplierPricing(app, db, { getStock }) {
         }
     };
 
-    const renderResultsModal = (results) => {
-        if (!resultsModal || !resultsList || !resultsSummary) return;
+    const getRecipes = (materialId) => {
+        const recipes = typeof getRecipesForMaterial === 'function'
+            ? getRecipesForMaterial(materialId)
+            : [];
+        return Array.isArray(recipes) ? recipes : [];
+    };
 
-        const success = results.filter((item) => item.ok).map((item) => item.result);
-        const errors = results.filter((item) => !item.ok);
-        const ups = success.filter((item) => item.movement === 'up').length;
-        const downs = success.filter((item) => item.movement === 'down').length;
-        const same = success.filter((item) => item.movement === 'same').length;
-        const initial = success.filter((item) => item.movement === 'initial').length;
-
-        resultsSummary.innerHTML = `
-            <div class="ds-supplier-summary-item"><span>Consultados</span><strong>${results.length}</strong></div>
-            <div class="ds-supplier-summary-item is-up"><span>Aumentaron</span><strong>${ups}</strong></div>
-            <div class="ds-supplier-summary-item is-down"><span>Bajaron</span><strong>${downs}</strong></div>
-            <div class="ds-supplier-summary-item"><span>Sin cambios / inicial</span><strong>${same + initial}</strong></div>
-            <div class="ds-supplier-summary-item is-error"><span>Con error</span><strong>${errors.length}</strong></div>
+    const buildRecipesHtml = (materialId) => {
+        const recipes = getRecipes(materialId);
+        if (!recipes.length) {
+            return '<span class="ds-supplier-recipes-empty">No se usa en recetas</span>';
+        }
+        return `
+            <details class="ds-supplier-result-recipes">
+                <summary>Recetas afectadas: ${recipes.length}</summary>
+                <ul>
+                    ${recipes.map(recipe => `<li>${escapeHtml(recipe?.nombre || 'Receta sin nombre')}</li>`).join('')}
+                </ul>
+            </details>
         `;
+    };
+
+    const entryCategory = (entry) => {
+        if (!entry?.ok) return 'error';
+        const movement = entry.result?.movement;
+        if (movement === 'up') return 'up';
+        if (movement === 'down') return 'down';
+        return 'same';
+    };
+
+    const renderBulkResultsView = () => {
+        if (!resultsList || !resultsSummary) return;
+
+        const success = bulkResults.filter(item => item.ok).map(item => item.result);
+        const errors = bulkResults.filter(item => !item.ok);
+        const ups = success.filter(item => item.movement === 'up').length;
+        const downs = success.filter(item => item.movement === 'down').length;
+        const same = success.filter(item => item.movement === 'same' || item.movement === 'initial').length;
+
+        const summaryItems = [
+            ['all', 'Consultados', bulkResults.length, ''],
+            ['up', 'Aumentaron', ups, 'is-up'],
+            ['down', 'Bajaron', downs, 'is-down'],
+            ['same', 'Sin cambios / inicial', same, ''],
+            ['error', 'Con error', errors.length, 'is-error']
+        ];
+
+        resultsSummary.innerHTML = summaryItems.map(([key, label, count, cls]) => `
+            <button type="button"
+                    class="ds-supplier-summary-item ${cls} ${bulkFilter === key ? 'is-active' : ''}"
+                    data-supplier-filter="${key}">
+                <span>${label}</span>
+                <strong>${count}</strong>
+            </button>
+        `).join('');
+
+        const visible = bulkFilter === 'all'
+            ? bulkResults
+            : bulkResults.filter(entry => entryCategory(entry) === bulkFilter);
+
+        if (!visible.length) {
+            resultsList.innerHTML = '<div class="ds-supplier-filter-empty">No hay resultados en esta categoría.</div>';
+            return;
+        }
 
         resultsList.innerHTML = '';
-
-        results.forEach((entry) => {
+        visible.forEach((entry) => {
             const item = document.createElement('article');
             item.className = 'ds-supplier-result-card';
 
             if (!entry.ok) {
                 item.classList.add('is-error');
+                const id = String(entry.id || '');
                 item.innerHTML = `
-                    <div>
+                    <div class="ds-supplier-result-main">
                         <strong>${escapeHtml(entry.name || 'Materia prima')}</strong>
                         <p>${escapeHtml(entry.error || 'No se pudo consultar.')}</p>
+                        ${buildRecipesHtml(id)}
                     </div>
-                    <span class="ds-supplier-result-badge">Error</span>
+                    <div class="ds-supplier-result-error-detail">
+                        <span class="ds-supplier-result-badge">Error</span>
+                        <button type="button" class="btn-secondary ds-supplier-open-material" data-material-id="${escapeHtml(id)}">Abrir materia prima</button>
+                    </div>
                 `;
                 resultsList.appendChild(item);
                 return;
@@ -513,6 +566,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
                     <strong>${escapeHtml(result.name)}</strong>
                     <p>${escapeHtml(detail)}</p>
                     <small>${escapeHtml(result.host || '')}</small>
+                    ${buildRecipesHtml(result.id)}
                 </div>
                 <div class="ds-supplier-result-prices">
                     <span>${result.oldPrice > 0 ? formatCurrency(result.oldPrice) : '—'}</span>
@@ -522,12 +576,19 @@ export function setupSupplierPricing(app, db, { getStock }) {
                 <div class="ds-supplier-result-reference">
                     <span>Costo vigente</span>
                     <strong>${formatCurrency(result.oldReferenceUnitCost)} → ${formatCurrency(result.newReferenceUnitCost)} / ${escapeHtml(result.unit || 'unidad')}</strong>
+                    <button type="button" class="btn-secondary ds-supplier-open-material" data-material-id="${escapeHtml(result.id)}">Revisar insumo</button>
                 </div>
             `;
 
             resultsList.appendChild(item);
         });
+    };
 
+    const renderResultsModal = (results) => {
+        if (!resultsModal || !resultsList || !resultsSummary) return;
+        bulkResults = Array.isArray(results) ? results : [];
+        bulkFilter = 'all';
+        renderBulkResultsView();
         resultsModal.classList.add('visible');
     };
 
@@ -565,6 +626,7 @@ export function setupSupplierPricing(app, db, { getStock }) {
                     console.error(`Error actualizando ${item.data?.nombre || item.id}:`, error);
                     results[currentIndex] = {
                         ok: false,
+                        id: item.id,
                         name: item.data?.nombre || 'Materia prima',
                         error: error.message || 'No se pudo consultar.'
                     };
@@ -642,6 +704,22 @@ export function setupSupplierPricing(app, db, { getStock }) {
 
     if (queryOneButton) queryOneButton.addEventListener('click', queryActiveProduct);
     if (bulkButton) bulkButton.addEventListener('click', runBulkUpdate);
+    resultsSummary?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-supplier-filter]');
+        if (!button) return;
+        bulkFilter = button.dataset.supplierFilter || 'all';
+        renderBulkResultsView();
+    });
+
+    resultsList?.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-material-id]');
+        if (!button) return;
+        const id = button.dataset.materialId;
+        if (!id || typeof openMaterialEditor !== 'function') return;
+        resultsModal?.classList.remove('visible');
+        await openMaterialEditor(id);
+    });
+
     if (resultsClose) resultsClose.addEventListener('click', () => resultsModal?.classList.remove('visible'));
     if (historyButton) historyButton.addEventListener('click', openHistory);
     if (historyClose) historyClose.addEventListener('click', () => historyModal?.classList.remove('visible'));
