@@ -16,6 +16,7 @@ export function setupProductos(app) {
     const count = document.getElementById('productos-count');
     const buscar = document.getElementById('productos-buscar');
     const categoria = document.getElementById('productos-categoria');
+    const estado = document.getElementById('productos-estado');
     const vacio = document.getElementById('producto-vacio');
     const detalle = document.getElementById('producto-detalle');
     const helpBox = document.getElementById('productos-help');
@@ -49,7 +50,9 @@ export function setupProductos(app) {
     let recetas = [];
     let materiasMap = new Map();
     let margenGlobal = 0;
-    let selectedId = new URLSearchParams(window.location.search).get('id') || null;
+    const initialParams = new URLSearchParams(window.location.search);
+    let selectedId = initialParams.get('id') || null;
+    const initialStateFilter = initialParams.get('estado') || '';
     let loadedRecipes = false;
     let loadedMaterials = false;
 
@@ -120,9 +123,20 @@ export function setupProductos(app) {
     const filteredProducts = () => {
         const term = (buscar?.value || '').trim().toLowerCase();
         const cat = categoria?.value || '';
+        const state = estado?.value || '';
         return recetas
             .filter(item => !term || String(item.nombreTorta || '').toLowerCase().includes(term))
             .filter(item => !cat || String(item.categoria || 'Sin categoría') === cat)
+            .filter(item => {
+                if (!state) return true;
+                if (state === 'sugerido') return !(Number(item.precioVentaManual) > 0);
+                if (state === 'web') return item.precioWebHabilitado !== true;
+                if (state === 'costos') {
+                    const ingredients = Array.isArray(item.ingredientes) ? item.ingredientes : [];
+                    return ingredients.some(ingredient => getEffectiveUnitCost(materiasMap.get(ingredient.idMateriaPrima)) <= 0);
+                }
+                return true;
+            })
             .sort((a,b)=>String(a.nombreTorta||'').localeCompare(String(b.nombreTorta||''),'es'));
     };
 
@@ -269,8 +283,18 @@ export function setupProductos(app) {
         const row = event.target.closest('[data-product-id]');
         if (row) renderDetail(row.dataset.productId);
     });
+    if (estado && ['sugerido','web','costos'].includes(initialStateFilter)) {
+        estado.value = initialStateFilter;
+    }
     buscar?.addEventListener('input', renderList);
     categoria?.addEventListener('change', renderList);
+    estado?.addEventListener('change', () => {
+        const url = new URL(window.location.href);
+        if (estado.value) url.searchParams.set('estado', estado.value);
+        else url.searchParams.delete('estado');
+        window.history.replaceState({}, '', url);
+        renderList();
+    });
 
     document.querySelectorAll('.ds-product-tab').forEach(button => {
         button.addEventListener('click', () => {
