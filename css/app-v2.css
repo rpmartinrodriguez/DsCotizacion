@@ -6272,6 +6272,10 @@ body.ds-pos .ds-pos-inventory-table td {
   overflow-wrap:normal !important;
   hyphens:none !important;
 }
+body.ds-pos .ds-pos-inventory-table th,
+body.ds-pos .ds-pos-inventory-table td {
+  padding:.72rem .75rem !important;
+}
 body.ds-pos .ds-pos-inventory-table th {
   white-space:nowrap !important;
 }
@@ -6367,6 +6371,8 @@ body.ds-pos .ds-product-code {
   max-width:260px;
 }
 body.ds-pos .ds-product-code code {
+  flex:1 1 auto;
+  min-width:0;
   max-width:180px;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -6379,6 +6385,8 @@ body.ds-pos .ds-product-code code {
   padding:3px 5px;
 }
 body.ds-pos .ds-product-code button {
+  flex:0 0 auto;
+  white-space:nowrap;
   border:0;
   background:transparent;
   color:#a23d6c;
