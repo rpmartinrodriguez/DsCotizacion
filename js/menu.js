@@ -301,6 +301,15 @@ async function inicializarMenu() {
 
     if (navOverlay) navOverlay.addEventListener('click', closeMenu);
 
+    document.querySelectorAll('.ds-nav-info').forEach((info) => {
+        info.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const message = info.getAttribute('title');
+            if (message) window.alert(message);
+        });
+    });
+
     document.querySelectorAll('.nav-category-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
             const content = btn.nextElementSibling;
