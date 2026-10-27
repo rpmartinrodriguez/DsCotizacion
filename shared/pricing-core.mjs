@@ -105,6 +105,13 @@ export const normalizeSaleUnits = (value) => {
     return number;
 };
 
+export const normalizeManualSalePrice = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    const number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) return null;
+    return Math.round(number * 100) / 100;
+};
+
 export const calculateProductSalePrice = (
     product,
     ingredientMap,
@@ -112,18 +119,31 @@ export const calculateProductSalePrice = (
 ) => {
     // rendimiento = cuántas unidades/porciones produce la receta.
     // unidadesPorVenta = cuántas de esas unidades forman UNA venta.
-    // Ej.: Chipá rinde 300, se vende x6 => el costo/precio de Mostrador es x6.
+    // El costo + % define un PRECIO SUGERIDO. El precio comercial final
+    // puede fijarse manualmente con precioVentaManual.
     const recipeUnitCost = calculateRecipeUnitCost(product, ingredientMap);
     const unitsPerSale = normalizeSaleUnits(product?.unidadesPorVenta);
     const cost = recipeUnitCost * unitsPerSale;
     const marginPercent = getAppliedMarginPercent(product, globalMargin);
-    const price = calculateRoundedSalePrice(
+    const suggestedPrice = calculateRoundedSalePrice(
         cost,
         marginPercent,
         { roundTo: 100, midpointDown: true }
     );
+    const manualPrice = normalizeManualSalePrice(product?.precioVentaManual);
+    const price = manualPrice !== null ? manualPrice : suggestedPrice;
+    const priceSource = manualPrice !== null ? 'manual' : 'sugerido';
 
-    return { recipeUnitCost, unitsPerSale, cost, marginPercent, price };
+    return {
+        recipeUnitCost,
+        unitsPerSale,
+        cost,
+        marginPercent,
+        suggestedPrice,
+        manualPrice,
+        price,
+        priceSource
+    };
 };
 
 export const normalizeWholeCakePortions = (value) => {
@@ -199,6 +219,9 @@ export const buildCommercialPricing = ({
 
     return {
         unitPrice: sale.price,
+        suggestedUnitPrice: sale.suggestedPrice,
+        manualUnitPrice: sale.manualPrice,
+        unitPriceSource: sale.priceSource,
         unitsPerSale: sale.unitsPerSale,
         recipeUnitCost: sale.recipeUnitCost,
         saleUnitCost: sale.cost,
