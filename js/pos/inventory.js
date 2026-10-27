@@ -4,7 +4,7 @@ import {
 import { formatCurrency, formatTimestampDateTime, dateToYMD } from "../core/format.js";
 import { drawBarcodeLabel, downloadCanvasPng } from "../core/labels.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
-import { calculateWholeCakePricing } from "../core/pricing.js";
+import { calculateRoundedSalePrice, calculateWholeCakePricing } from "../core/pricing.js";
 
 export function setupPOSInventory({
     db,
@@ -15,6 +15,8 @@ export function setupPOSInventory({
     canAdminister
 }) {
     const buscadorInventario = document.getElementById('buscador-inventario');
+    const filtroCategoriaInventario = document.getElementById('filtro-categoria-inventario');
+    const inventarioListadoPanel = document.getElementById('inventario-listado-panel');
     const tablaInventario = document.getElementById('tabla-inventario-mostrador');
 
     const modalStock = document.getElementById('modal-stock-detalle');
@@ -43,6 +45,13 @@ export function setupPOSInventory({
     const comercialCodigo = document.getElementById('comercial-producto-codigo');
     const comercialPresentacion = document.getElementById('comercial-presentacion');
     const comercialPrecioUnitario = document.getElementById('comercial-precio-unitario');
+    const comercialMargenAplicado = document.getElementById('comercial-margen-aplicado');
+    const comercialMargenIndividual = document.getElementById('comercial-margen-individual');
+    const comercialMargenAyuda = document.getElementById('comercial-margen-ayuda');
+    const comercialStockActual = document.getElementById('comercial-stock-actual');
+    const comercialBarcodeActual = document.getElementById('comercial-barcode-actual');
+    const btnComercialAjustarStock = document.getElementById('comercial-ajustar-stock');
+    const btnComercialVerBarcode = document.getElementById('comercial-ver-barcode');
     const comercialPrecioVenta = document.getElementById('comercial-precio-venta');
     const comercialPrecioVentaVigente = document.getElementById('comercial-precio-venta-vigente');
     const comercialPrecioVentaOrigen = document.getElementById('comercial-precio-venta-origen');
@@ -54,6 +63,7 @@ export function setupPOSInventory({
     const comercialWebHabilitado = document.getElementById('comercial-web-habilitado');
     const comercialAviso = document.getElementById('comercial-aviso');
     const btnComercialCopiar = document.getElementById('comercial-copiar-codigo');
+    const btnComercialVolverLista = document.getElementById('comercial-volver-lista');
     const btnComercialCancelar = document.getElementById('comercial-cancelar');
     const btnComercialGuardar = document.getElementById('comercial-guardar');
 
@@ -70,7 +80,7 @@ export function setupPOSInventory({
         tablaInventario.innerHTML = '';
 
         if (!items.length) {
-            tablaInventario.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;">No hay recetas dadas de alta en el sistema.</td></tr>';
+            tablaInventario.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">No hay recetas dadas de alta en el sistema.</td></tr>';
             return;
         }
 
@@ -110,7 +120,6 @@ export function setupPOSInventory({
                    <small>${whole.source === 'manual' ? 'Venta definida' : 'Usa sugerido'}${whole.portions ? ' · ' + whole.portions + ' porciones' : ''}</small>`;
 
             row.innerHTML = `
-                <td data-label="Categoría"><span class="categoria-tag">${safeCategory}</span></td>
                 <td data-label="Producto">
                     <strong>${safeName}</strong>
                     <div class="ds-product-code">
@@ -119,34 +128,27 @@ export function setupPOSInventory({
                     </div>
                     <small class="ds-product-presentation">${presentation}</small>
                 </td>
-                <td data-label="Costo Base">${formatCurrency(cost)}</td>
-                <td class="admin-only" data-label="% Ganancia">
-                    ${margin}% <small style="color:var(--text-light);">${hasIndividualMargin ? '(Indiv)' : '(Global)'}</small>
-                </td>
+                <td data-label="Costo base">${formatCurrency(cost)}</td>
                 <td data-label="Precio sugerido / venta" class="ds-commercial-price">
                     <strong>${formatCurrency(suggestedUnitPrice)}</strong>
-                    <small>Sugerido · costo + ${margin}%</small>
+                    <small>Sugerido</small>
                     <small class="${hasManualSalePrice ? 'ds-commercial-sale-current' : ''}">
-                        Venta: ${hasManualSalePrice ? formatCurrency(currentUnitPrice) + ' · definida' : 'usa sugerido'}
+                        Venta: ${hasManualSalePrice ? formatCurrency(currentUnitPrice) : 'usa sugerido'}
                     </small>
                 </td>
                 <td data-label="Torta entera" class="ds-commercial-price">${wholePriceHtml}</td>
-                <td data-label="Web futura" class="admin-only" style="text-align:center;">
-                    <span class="ds-web-price-state ${product.precioWebHabilitado === true ? 'is-on' : ''}">
-                        ${product.precioWebHabilitado === true ? 'Habilitado' : 'No publicado'}
-                    </span>
+                <td data-label="Web" class="admin-only ds-web-check-cell">
+                    ${product.precioWebHabilitado === true
+                        ? '<span class="ds-web-check" title="Publicado en web" aria-label="Publicado en web">✓</span>'
+                        : '<span class="ds-web-check is-off" title="No publicado en web" aria-label="No publicado en web">—</span>'}
                 </td>
                 <td data-label="Stock" style="text-align:center;">
                     <strong>${stock}</strong> u.
-                    <small class="ds-stock-mode-note">${stock > 0 ? 'informativo' : 'sin cargar · venta habilitada'}</small>
+                    <small class="ds-stock-mode-note">${stock > 0 ? 'informativo' : 'sin cargar'}</small>
                 </td>
-                <td data-label="Acciones" style="text-align:center;">
-                    <div style="display:flex;gap:.5rem;justify-content:center;align-items:center;flex-wrap:wrap;">
-                        <button class="btn-primary btn-editar-prod" data-id="${safeId}" style="padding:.3rem .6rem;width:auto;font-size:.85rem;">📝 Stock</button>
-                        <button class="btn-secondary btn-ver-barcode" data-id="${safeId}" style="padding:.3rem .6rem;width:auto;font-size:.85rem;">🖨️ Barras</button>
-                        <button class="btn-secondary btn-config-comercial admin-only" data-id="${safeId}" style="padding:.3rem .6rem;width:auto;font-size:.85rem;">💲 Comercial</button>
-                        <button class="btn-secondary btn-editar-margen admin-only" data-id="${safeId}" style="padding:.3rem .6rem;width:auto;font-size:.85rem;border-color:#6366f1;color:#6366f1;">⚙️ %</button>
-                    </div>
+                <td data-label="Acciones" class="ds-inventory-actions-cell">
+                    <button class="btn-primary btn-gestionar-prod admin-only" data-id="${safeId}">Gestionar</button>
+                    <button class="btn-secondary btn-ver-barcode btn-cashier-barcode" data-id="${safeId}">🖨️ Barras</button>
                 </td>
             `;
 
@@ -154,28 +156,37 @@ export function setupPOSInventory({
         });
     };
 
-    const setProducts = (nextProducts = []) => {
-        products = Array.isArray(nextProducts) ? nextProducts : [];
-
+    const renderInventoryFilters = () => {
         const term = buscadorInventario?.value.trim().toLowerCase() || '';
-        const filtered = term
-            ? products.filter((product) =>
-                (product.nombreTorta || '').toLowerCase().includes(term) ||
-                (product.categoria || '').toLowerCase().includes(term)
-            )
-            : products;
-
+        const category = filtroCategoriaInventario?.value || '';
+        const filtered = products.filter(product => {
+            const matchesTerm = !term || (product.nombreTorta || '').toLowerCase().includes(term);
+            const matchesCategory = !category || String(product.categoria || 'Sin Categoría') === category;
+            return matchesTerm && matchesCategory;
+        });
         renderInventory(filtered);
     };
 
-    buscadorInventario?.addEventListener('input', (event) => {
-        const term = event.target.value.toLowerCase();
+    const refreshCategoryFilter = () => {
+        if (!filtroCategoriaInventario) return;
+        const current = filtroCategoriaInventario.value;
+        const categories = [...new Set(
+            products.map(product => String(product.categoria || 'Sin Categoría')).filter(Boolean)
+        )].sort((a,b)=>a.localeCompare(b,'es'));
+        filtroCategoriaInventario.innerHTML =
+            '<option value="">Todas las categorías</option>' +
+            categories.map(category => `<option value="${escapeAttribute(category)}">${escapeHtml(category)}</option>`).join('');
+        if (categories.includes(current)) filtroCategoriaInventario.value = current;
+    };
 
-        renderInventory(products.filter((product) =>
-            (product.nombreTorta || '').toLowerCase().includes(term) ||
-            (product.categoria || '').toLowerCase().includes(term)
-        ));
-    });
+    const setProducts = (nextProducts = []) => {
+        products = Array.isArray(nextProducts) ? nextProducts : [];
+        refreshCategoryFilter();
+        renderInventoryFilters();
+    };
+
+    buscadorInventario?.addEventListener('input', renderInventoryFilters);
+    filtroCategoriaInventario?.addEventListener('change', renderInventoryFilters);
 
     const copyText = async value => {
         if (!value) return;
@@ -200,8 +211,11 @@ export function setupPOSInventory({
         const salePrice = saleRaw === '' ? null : Number(saleRaw);
         const portions = portionsRaw === '' ? null : Number(portionsRaw);
         const manualPrice = manualRaw === '' ? null : Number(manualRaw);
+        const marginRaw = comercialMargenIndividual?.value.trim() || '';
+        const individualMargin = marginRaw === '' ? null : Number(marginRaw);
         return {
             presentacionVenta: comercialPresentacion?.value.trim() || null,
+            margenIndividual: individualMargin,
             precioVentaManual: salePrice,
             porcionesTortaEntera: portions,
             precioTortaEnteraManual: manualPrice,
@@ -213,7 +227,21 @@ export function setupPOSInventory({
         const product = products.find(item => item.id === comercialId?.value);
         if (!product) return;
         const draft = getCommercialDraft(product);
-        const suggestedUnitPrice = Number(product.precioSugerido ?? product.precioCalculado) || 0;
+        const globalMargin = Number(getGlobalMargin?.()) || 0;
+        const appliedMargin = draft.margenIndividual !== null
+            ? Number(draft.margenIndividual) || 0
+            : globalMargin;
+        const suggestedUnitPrice = calculateRoundedSalePrice(
+            Number(product.costoBaseCalculado) || 0,
+            appliedMargin,
+            { roundTo: 100, midpointDown: true }
+        );
+        if (comercialMargenAplicado) {
+            comercialMargenAplicado.textContent =
+                appliedMargin.toLocaleString('es-AR') + '% ' +
+                (draft.margenIndividual !== null ? '· individual' : '· global');
+        }
+        if (comercialPrecioUnitario) comercialPrecioUnitario.value = formatCurrency(suggestedUnitPrice);
         const currentUnitPrice = Number(draft.precioVentaManual) > 0
             ? Number(draft.precioVentaManual)
             : suggestedUnitPrice;
@@ -275,6 +303,21 @@ export function setupPOSInventory({
         if (comercialId) comercialId.value = product.id;
         if (comercialNombre) comercialNombre.textContent = product.nombreTorta || 'Producto';
         if (comercialCodigo) comercialCodigo.value = product.id;
+        const globalMargin = Number(getGlobalMargin?.()) || 0;
+        const hasIndividual = product.margenIndividual !== undefined &&
+            product.margenIndividual !== null && product.margenIndividual !== '';
+        const appliedMargin = hasIndividual ? Number(product.margenIndividual) || 0 : globalMargin;
+        if (comercialMargenAplicado) comercialMargenAplicado.textContent =
+            appliedMargin.toLocaleString('es-AR') + '% ' + (hasIndividual ? '· individual' : '· global');
+        if (comercialMargenIndividual) comercialMargenIndividual.value =
+            hasIndividual ? product.margenIndividual : '';
+        if (comercialMargenAyuda) comercialMargenAyuda.textContent =
+            'Vacío usa el margen global actual: ' + globalMargin.toLocaleString('es-AR') + '%.';
+        if (comercialStockActual) comercialStockActual.textContent =
+            (Number(product.stockMostrador) || 0).toLocaleString('es-AR') + ' u.';
+        if (comercialBarcodeActual) comercialBarcodeActual.textContent =
+            product.codigoBarras ? String(product.codigoBarras) : 'Sin asignar';
+
         if (comercialPresentacion) comercialPresentacion.value = product.presentacionVenta || '';
         if (comercialPrecioUnitario) comercialPrecioUnitario.value =
             formatCurrency(Number(product.precioSugerido ?? product.precioCalculado) || 0);
@@ -293,19 +336,39 @@ export function setupPOSInventory({
                 : 'Guardar configuración';
         }
         renderCommercialPreview();
-        modalComercial?.classList.add('visible');
+        if (inventarioListadoPanel) inventarioListadoPanel.hidden = true;
+        if (modalComercial) {
+            modalComercial.hidden = false;
+            modalComercial.scrollIntoView({ behavior: 'auto', block: 'start' });
+        }
     };
 
-    [comercialPrecioVenta, comercialPorciones, comercialPrecioManual].forEach(input =>
+    const closeCommercialWorkspace = () => {
+        if (modalComercial) modalComercial.hidden = true;
+        if (inventarioListadoPanel) inventarioListadoPanel.hidden = false;
+    };
+
+    btnComercialAjustarStock?.addEventListener('click', async () => {
+        const product = products.find(item => item.id === comercialId?.value);
+        if (!product) return;
+        await openStockModal(product);
+    });
+
+    btnComercialVerBarcode?.addEventListener('click', async () => {
+        const product = products.find(item => item.id === comercialId?.value);
+        if (!product) return;
+        await openBarcodeModal(product);
+    });
+
+    [comercialMargenIndividual, comercialPrecioVenta, comercialPorciones, comercialPrecioManual].forEach(input =>
         input?.addEventListener('input', renderCommercialPreview)
     );
 
     btnComercialCopiar?.addEventListener('click', () =>
         copyText(comercialCodigo?.value || '')
     );
-    btnComercialCancelar?.addEventListener('click', () =>
-        modalComercial?.classList.remove('visible')
-    );
+    btnComercialVolverLista?.addEventListener('click', closeCommercialWorkspace);
+    btnComercialCancelar?.addEventListener('click', closeCommercialWorkspace);
 
     btnComercialGuardar?.addEventListener('click', async () => {
         const product = products.find(item => item.id === comercialId?.value);
@@ -315,6 +378,11 @@ export function setupPOSInventory({
         }
 
         const draft = getCommercialDraft(product);
+        if (draft.margenIndividual !== null &&
+            (!Number.isFinite(draft.margenIndividual) || draft.margenIndividual < 0 || draft.margenIndividual > 10000)) {
+            alert('El margen individual debe ser un porcentaje válido.');
+            return;
+        }
         if (draft.presentacionVenta && draft.presentacionVenta.length > 60) {
             alert('La presentación puede tener como máximo 60 caracteres.');
             return;
@@ -358,7 +426,7 @@ export function setupPOSInventory({
                     configComercialActualizadaAt: Timestamp.now()
                 });
             }
-            modalComercial?.classList.remove('visible');
+            closeCommercialWorkspace();
         } catch (error) {
             console.error('No se pudo guardar la configuración comercial:', error);
             alert('No se pudo guardar la configuración comercial.');
@@ -531,16 +599,10 @@ export function setupPOSInventory({
             return;
         }
 
-        const commercialButton = event.target.closest('.btn-config-comercial');
-        if (commercialButton) {
-            const product = products.find(item => item.id === commercialButton.dataset.id);
+        const manageButton = event.target.closest('.btn-gestionar-prod');
+        if (manageButton) {
+            const product = products.find(item => item.id === manageButton.dataset.id);
             if (product) await openCommercialModal(product);
-            return;
-        }
-        const stockButton = event.target.closest('.btn-editar-prod');
-        if (stockButton) {
-            const product = products.find((item) => item.id === stockButton.dataset.id);
-            if (product) await openStockModal(product);
             return;
         }
 
@@ -551,43 +613,7 @@ export function setupPOSInventory({
             return;
         }
 
-        const marginButton = event.target.closest('.btn-editar-margen');
-        if (!marginButton) return;
-
-        const product = products.find((item) => item.id === marginButton.dataset.id);
-        if (!product) return;
-
-        const currentMargin =
-            product.margenIndividual !== undefined && product.margenIndividual !== null
-                ? product.margenIndividual
-                : '';
-
-        const nextMargin = prompt(
-            `Ingrese el % de ganancia para "${product.nombreTorta}"\n(Deje vacío para usar el % Global):`,
-            currentMargin
-        );
-
-        if (nextMargin === null) return;
-
-        try {
-            const productRef = doc(db, 'recetas', product.id);
-
-            if (nextMargin.trim() === '') {
-                await updateDoc(productRef, { margenIndividual: null });
-                return;
-            }
-
-            const value = parseFloat(nextMargin);
-            if (Number.isNaN(value) || value < 0) {
-                alert('Número inválido.');
-                return;
-            }
-
-            await updateDoc(productRef, { margenIndividual: value });
-        } catch (error) {
-            console.error('Error actualizando margen:', error);
-            alert('Error al actualizar.');
-        }
+        return;
     });
 
     btnCancelarStock?.addEventListener('click', () => modalStock?.classList.remove('visible'));
@@ -668,11 +694,6 @@ export function setupPOSInventory({
                     lotes: lots
                 };
 
-                if (document.body.classList.contains('admin-open') && modalProdGananciaIndiv) {
-                    const value = modalProdGananciaIndiv.value.trim();
-                    updates.margenIndividual = value === '' ? null : parseFloat(value);
-                }
-
                 transaction.update(productRef, updates);
 
                 transaction.set(doc(auditoriaCollection), {
@@ -715,6 +736,7 @@ export function setupPOSInventory({
     return {
         setProducts,
         ensureBarcode,
+        resetWorkspace: closeCommercialWorkspace,
         render: () => setProducts(products)
     };
 }

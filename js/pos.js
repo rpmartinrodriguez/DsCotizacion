@@ -9,7 +9,7 @@ import { calculateProductSalePrice, calculateWholeCakePricing } from "./core/pri
 import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
-import { setupPOSInventory } from "./pos/inventory.js?v=3";
+import { setupPOSInventory } from "./pos/inventory.js?v=5";
 import { createPriceListPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
 import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
@@ -54,6 +54,7 @@ export function setupPOS(app) {
     const mobileBar = document.getElementById('pos-mobile-bar');
     const btnMobileProductos = document.getElementById('btn-mobile-productos');
     const btnMobileCarrito = document.getElementById('btn-mobile-carrito');
+    const mobileCartItems = document.getElementById('pos-mobile-cart-items');
     const mobileCartSummary = document.getElementById('pos-mobile-cart-summary');
 
     const modalCobro = document.getElementById('modal-cobro');
@@ -465,6 +466,7 @@ export function setupPOS(app) {
     // NAVEGACIÓN ENTRE PANTALLAS ADMIN
     if (btnIrStock) {
         btnIrStock.addEventListener('click', () => {
+            inventory.resetWorkspace?.();
             pantallaPOS.style.display = 'none';
             actualizarMobileBarVisibility();
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
@@ -499,6 +501,7 @@ export function setupPOS(app) {
 
     if (btnVolverMostrador) {
         btnVolverMostrador.addEventListener('click', () => {
+            inventory.resetWorkspace?.();
             pantallaStock.style.display = 'none';
             if (pantallaPromociones) pantallaPromociones.style.display = 'none';
             if (pantallaCargaHistorica) pantallaCargaHistorica.style.display = 'none';
@@ -945,6 +948,17 @@ export function setupPOS(app) {
         }
         if (posCartCount) posCartCount.textContent = cantidadItems;
         if (mobileCartSummary) mobileCartSummary.textContent = `${cantidadItems} · ${formatMoneda(total)}`;
+        if (mobileCartItems) {
+            if (!carritoActual.length) {
+                mobileCartItems.textContent = 'Carrito vacío';
+            } else {
+                const visible = carritoActual.slice(0, 2).map(item =>
+                    `${Number(item.cantidad) || 0}× ${item.nombre}`
+                );
+                const extra = carritoActual.length > 2 ? ` · +${carritoActual.length - 2} más` : '';
+                mobileCartItems.textContent = visible.join(' · ') + extra;
+            }
+        }
         if (btnVaciarCarrito) btnVaciarCarrito.hidden = carritoActual.length === 0;
 
         if (carritoActual.length === 0) {
