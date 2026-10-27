@@ -28,6 +28,7 @@
   const navIcon = {
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11 12 3l9 8"></path><path d="M5 10v11h14V10"></path></svg>',
     pos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9h16l-1-5H5L4 9Z"></path><path d="M5 9v11h14V9"></path></svg>',
+    products: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v18H6z"></path><path d="M9 7h6M9 11h6M9 15h4"></path></svg>',
     agenda: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M16 3v4M8 3v4M3 10h18"></path></svg>',
     stock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 12 8 4 8-4"></path></svg>',
     more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>'
@@ -41,7 +42,7 @@
     const items = [
       { href: 'index.html', permission: 'indicadores', label: 'Inicio', icon: navIcon.home },
       { href: 'pos.html', permission: 'mostrador', label: 'Mostrador', icon: navIcon.pos },
-      { href: 'agenda.html', permission: 'agenda', label: 'Agenda', icon: navIcon.agenda },
+      { href: 'productos.html', permission: 'recetas', label: 'Productos', icon: navIcon.products },
       { href: 'stock.html', permission: 'stock', label: 'Stock', icon: navIcon.stock }
     ];
 
