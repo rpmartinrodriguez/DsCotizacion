@@ -9,7 +9,7 @@ import { calculateProductSalePrice, calculateWholeCakePricing } from "./core/pri
 import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
-import { setupPOSInventory } from "./pos/inventory.js?v=3";
+import { setupPOSInventory } from "./pos/inventory.js?v=4";
 import { createPriceListPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
 import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
