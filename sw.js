@@ -1,13 +1,15 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.40';
+const CACHE_NAME = 'dulce-sall-admin-v2.41';
 
 const CORE_ASSETS = [
     '/',
     '/index.html',
     '/login.html',
+    '/productos.html',
     '/css/style.css',
     '/css/app-v2.css',
     '/js/menu.js',
     '/js/home.js',
+    '/js/productos.js',
     '/js/shell-v2.js',
     '/manifest.json',
     '/assets/logo.png',
