@@ -174,6 +174,11 @@ export function setupPrecios(app) {
     };
 
     const calculateCurrentPrice = (recipe) => {
+        const manualSalePrice = Number(recipe?.precioVentaManual);
+        if (Number.isFinite(manualSalePrice) && manualSalePrice > 0) {
+            return manualSalePrice;
+        }
+
         const hasIndividual = recipe?.margenIndividual !== undefined
             && recipe?.margenIndividual !== null
             && recipe?.margenIndividual !== '';
@@ -648,7 +653,7 @@ export function setupPrecios(app) {
     const persistPriceDecision = async (row, {
         action,
         newPrice = row.currentPrice,
-        newMarkup = null
+        saveSalePrice = false
     }) => {
         const ref = doc(db, 'recetas', row.id);
         const snapshot = await getDoc(ref);
@@ -661,9 +666,9 @@ export function setupPrecios(app) {
 
         const target = getReviewTarget();
         const now = Timestamp.now();
-        const effectiveMarkup = newMarkup !== null
-            ? Number(newMarkup)
-            : Number(currentData.margenIndividual);
+        const previousManualSalePrice = Number(currentData.precioVentaManual) > 0
+            ? Number(currentData.precioVentaManual)
+            : null;
 
         const entry = {
             accion: action,
@@ -675,7 +680,9 @@ export function setupPrecios(app) {
             margenBrutoHistorico: row.historicalMargin,
             margenBrutoObjetivo: target,
             margenIndividualAnterior: currentData.margenIndividual ?? null,
-            margenIndividualNuevo: Number.isFinite(effectiveMarkup) ? effectiveMarkup : null,
+            margenIndividualNuevo: currentData.margenIndividual ?? null,
+            precioVentaManualAnterior: previousManualSalePrice,
+            precioVentaManualNuevo: saveSalePrice ? newPrice : previousManualSalePrice,
             impactoMensualEstimado: row.monthlyImpact,
             unidadesUltimos30Dias: row.sales.unidades,
             origen: 'revision-precios'
@@ -687,8 +694,8 @@ export function setupPrecios(app) {
             ultimaDecisionPrecio: action
         };
 
-        if (newMarkup !== null) {
-            update.margenIndividual = Number(newMarkup);
+        if (saveSalePrice) {
+            update.precioVentaManual = Number(newPrice);
         }
 
         await updateDoc(ref, update);
@@ -696,7 +703,6 @@ export function setupPrecios(app) {
         const localRecipe = recetasConCosto.find(recipe => recipe.id === row.id);
         if (localRecipe) {
             Object.assign(localRecipe, update);
-            if (newMarkup !== null) localRecipe.margenIndividual = Number(newMarkup);
         }
 
         renderReview();
@@ -707,13 +713,12 @@ export function setupPrecios(app) {
         const row = reviewRows.find(item => item.id === selectedReviewId);
         if (!row) return;
 
-        const markup = markupForPrice(row.currentCost, row.suggestedPrice);
         const confirmed = window.confirm(
             `¿Aplicar ${formatCurrency(row.suggestedPrice)} a "${row.nombreTorta}"?\n\n`
             + `Costo actual: ${formatCurrency(row.currentCost)}\n`
             + `Margen actual: ${formatPercent(row.currentMargin)}\n`
             + `Margen objetivo: ${formatPercent(getReviewTarget(), 0)}\n\n`
-            + 'La app guardará el porcentaje necesario sobre costo para mantener esta lógica en ventas futuras.'
+            + 'La app guardará este importe como precio real de venta. El % configurado seguirá calculando el precio sugerido.'
         );
 
         if (!confirmed) return;
@@ -726,7 +731,7 @@ export function setupPrecios(app) {
             await persistPriceDecision(row, {
                 action: 'sugerencia',
                 newPrice: row.suggestedPrice,
-                newMarkup: markup
+                saveSalePrice: true
             });
         } catch (error) {
             console.error('Error aplicando precio sugerido:', error);
@@ -745,7 +750,7 @@ export function setupPrecios(app) {
             await persistPriceDecision(row, {
                 action: 'mantener',
                 newPrice: row.currentPrice,
-                newMarkup: null
+                saveSalePrice: false
             });
         } catch (error) {
             console.error('Error registrando revisión de precio:', error);
@@ -781,13 +786,11 @@ export function setupPrecios(app) {
             if (!confirmed) return;
         }
 
-        const markup = markupForPrice(row.currentCost, newPrice);
-
         try {
             await persistPriceDecision(row, {
                 action: 'personalizado',
                 newPrice,
-                newMarkup: markup
+                saveSalePrice: true
             });
         } catch (error) {
             console.error('Error guardando precio personalizado:', error);
