@@ -3,7 +3,7 @@ import {
     updateDoc, getDoc, getDocs, deleteDoc, runTransaction, where, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
-import { setupSupplierPricing } from "./stock/supplier-pricing.js";
+import { setupSupplierPricing } from "./stock/supplier-pricing.js?v=2";
 import { getEffectiveUnitCost } from "./core/pricing.js";
 import { createAuthorization } from "./core/authorization.js";
 
@@ -49,7 +49,9 @@ export function setupStock(app) {
     let estadoRelaciones = 'cargando'; // cargando | listo | error
 
     const supplierPricing = setupSupplierPricing(app, db, {
-        getStock: () => todoElStock
+        getStock: () => todoElStock,
+        getRecipesForMaterial: (id) => recetasPorMateria.get(id) || [],
+        openMaterialEditor: (id) => openModalParaEdicionCompleta(id)
     });
 
     const renderizarTabla = (datos) => {
@@ -135,7 +137,7 @@ export function setupStock(app) {
                     : recetasVinculadas.length
                         ? `<details class="ds-stock-recipe-usage">
                             <summary>En ${recetasVinculadas.length} receta${recetasVinculadas.length === 1 ? '' : 's'} · Ver cuáles</summary>
-                            <ul>${recetasVinculadas.map(nombre => `<li>${escapeHtml(nombre)}</li>`).join('')}</ul>
+                            <ul>${recetasVinculadas.map(receta => `<li>${escapeHtml(receta.nombre)}</li>`).join('')}</ul>
                            </details>`
                         : '<span class="ds-stock-recipe-usage is-muted">No se usa en recetas</span>';
                 fila.innerHTML = `
@@ -576,10 +578,10 @@ export function setupStock(app) {
             );
             insumosUsados.forEach(id => {
                 if (!mapa.has(id)) mapa.set(id, []);
-                mapa.get(id).push(nombre);
+                mapa.get(id).push(recetaInfo);
             });
         });
-        mapa.forEach(nombres => nombres.sort((a, b) => a.localeCompare(b, 'es')));
+        mapa.forEach(recetas => recetas.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')));
         recetasPorMateria = mapa;
         estadoRelaciones = 'listo';
         buscadorInput.dispatchEvent(new Event('input'));
