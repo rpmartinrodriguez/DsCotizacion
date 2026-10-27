@@ -1630,6 +1630,12 @@ body.ds-current-quote .modal-actions {
 }
 
 @media (max-width:700px) {
+  body.ds-pos .ds-commercial-modal {
+    max-height: calc(100dvh - 12px) !important;
+  }
+  body.ds-pos .ds-commercial-scroll {
+    padding-right: 2px;
+  }
   body.ds-users .permisos-grid {
     grid-template-columns: 1fr;
   }
@@ -6354,6 +6360,30 @@ body.ds-pos .ds-web-price-state.is-on {
 body.ds-pos .ds-commercial-modal {
   width:min(760px, calc(100vw - 24px)) !important;
   max-width:760px !important;
+}
+body.ds-pos .ds-commercial-modal {
+  max-height: calc(100dvh - 24px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column;
+}
+body.ds-pos .ds-commercial-modal > .ds-modal-heading {
+  flex: 0 0 auto;
+}
+body.ds-pos .ds-commercial-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding-right: 4px;
+}
+body.ds-pos .ds-commercial-actions {
+  flex: 0 0 auto;
+  margin-top: 12px;
+  padding-top: 12px;
+  background: #fff;
+  border-top: 1px solid #f0e6ed;
 }
 body.ds-pos .ds-commercial-grid {
   display:grid;
