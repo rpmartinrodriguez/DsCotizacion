@@ -736,6 +736,7 @@ export function setupPOSInventory({
     return {
         setProducts,
         ensureBarcode,
+        resetWorkspace: closeCommercialWorkspace,
         render: () => setProducts(products)
     };
 }
