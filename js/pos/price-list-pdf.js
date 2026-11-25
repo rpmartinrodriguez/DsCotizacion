@@ -21,8 +21,8 @@ export const loadPriceListPdfLibrary = () => {
     return libraryPromise;
 };
 
-// Exportación A4 de precios del Mostrador. Sin consultas ni cambios en Firebase.
-// Los códigos deben estar previamente persistidos en cada receta.
+// Exportaciones A4 separadas. La lista de precios no depende de códigos de barras.
+// El catálogo permanente usa sólo códigos previamente persistidos en Recetas.
 const displayPrice = value => '$ ' + Number(value || 0).toLocaleString('es-AR', {
     minimumFractionDigits: 2, maximumFractionDigits: 2
 });
@@ -46,34 +46,45 @@ const barcodeImage = (code, drawBarcode, canvasFactory) => {
     };
 };
 
-export function createPriceListPdf(products, {
+export function createPriceListPdf(products, options = {}) {
+    return createCatalogPdf(products, options, false);
+}
+
+export function createBarcodeCatalogPdf(products, options = {}) {
+    return createCatalogPdf(products, options, true);
+}
+
+const categoryOf = product => String(product.categoria || 'Otros').trim() || 'Otros';
+
+function createCatalogPdf(products, {
     Pdf = globalThis.jspdf?.jsPDF,
     drawBarcode = globalThis.JsBarcode,
     canvasFactory = () => document.createElement('canvas'),
     today = new Date()
-} = {}) {
+} = {}, permanent) {
     if (typeof Pdf !== 'function') throw new Error('No se pudo cargar la librería de PDF.');
-    if (typeof drawBarcode !== 'function') throw new Error('No se pudo cargar el generador de códigos de barras.');
+    if (permanent && typeof drawBarcode !== 'function') throw new Error('No se pudo cargar el generador de códigos de barras.');
     if (!products?.length) throw new Error('No hay productos disponibles para exportar.');
 
     const items = [...products]
         .filter(product => product?.id && product.nombreTorta)
-        .sort((a, b) => a.nombreTorta.localeCompare(b.nombreTorta, 'es'));
+        .sort((a, b) => categoryOf(a).localeCompare(categoryOf(b), 'es') || a.nombreTorta.localeCompare(b.nombreTorta, 'es'));
     if (!items.length) throw new Error('No hay productos con nombre para exportar.');
 
-    const missingCode = items.find(item => !item.codigoBarras);
+    const missingCode = permanent && items.find(item => !item.codigoBarras);
     if (missingCode) {
         throw new Error('Falta registrar el código de barras de ' + missingCode.nombreTorta);
     }
 
     const pdf = new Pdf({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-    const cols = 4;
-    const rows = 5;
+    const cols = permanent ? 4 : 2;
+    const rows = permanent ? 5 : 14;
     const perPage = cols * rows;
     const gap = 3;
     const margin = 9;
     const pageWidth = 210;
     const cellSize = (pageWidth - 2 * margin - (cols - 1) * gap) / cols;
+    const cellHeight = permanent ? cellSize : 15;
     const startY = 27;
     const pages = Math.ceil(items.length / perPage);
     const dateLabel = today.toLocaleDateString('es-AR', {
@@ -94,7 +105,7 @@ export function createPriceListPdf(products, {
             pdf.text('DULCE SALL', margin, 13);
             pdf.setFontSize(9);
             pdf.setTextColor(78, 70, 78);
-            pdf.text('Lista de precios y códigos de barras', margin, 19);
+            pdf.text(permanent ? 'Catálogo permanente de escaneo · Sin precios' : 'Lista de precios vigentes · Uso interno', margin, 19);
             pdf.setFont('helvetica', 'normal');
             pdf.setFontSize(8);
             pdf.text(dateLabel + ' · ' + timeLabel, pageWidth - margin, 19, { align: 'right' });
@@ -106,17 +117,41 @@ export function createPriceListPdf(products, {
         const col = position % cols;
         const row = Math.floor(position / cols);
         const x = margin + col * (cellSize + gap);
-        const y = startY + row * (cellSize + gap);
+        const y = startY + row * (cellHeight + (permanent ? gap : 2));
 
         pdf.setFillColor(255, 253, 254);
         pdf.setDrawColor(225, 208, 218);
         pdf.setLineWidth(0.32);
-        pdf.roundedRect(x, y, cellSize, cellSize, 1.5, 1.5, 'FD');
+        pdf.roundedRect(x, y, cellSize, cellHeight, 1.5, 1.5, 'FD');
+
+        if (!permanent) {
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7);
+            pdf.setTextColor(104, 94, 104);
+            const category = pdf.splitTextToSize(categoryOf(item), cellSize - 35)[0];
+            pdf.text(category, x + 3, y + 4);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(9);
+            pdf.setTextColor(61, 53, 61);
+            const nameLines = pdf.splitTextToSize(String(item.nombreTorta).trim(), cellSize - 35);
+            const visible = nameLines.slice(0, 2);
+            if (nameLines.length > 2) visible[1] = visible[1].trimEnd().slice(0, -3) + '…';
+            pdf.text(visible, x + 3, y + 8.5, { lineHeightFactor: 1.08 });
+            pdf.setFontSize(10);
+            pdf.setTextColor(151, 53, 100);
+            pdf.text(displayPrice(item.precioCalculado), x + cellSize - 3, y + 9, { align: 'right' });
+            continue;
+        }
+
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(104, 94, 104);
+        pdf.text(pdf.splitTextToSize(categoryOf(item), cellSize - 6)[0], x + cellSize / 2, y + 4, { align: 'center' });
 
         let fontSize = 8.5;
         let lines = [];
         const name = String(item.nombreTorta || '').trim().replace(/[\u{1F300}-\u{1FAFF}]/gu, '');
-        // Hasta 16 mm para el nombre, sin invadir el precio ni el código.
+        // Hasta 16 mm para el nombre, sin invadir el código.
         do {
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(fontSize);
@@ -131,23 +166,18 @@ export function createPriceListPdf(products, {
             lines[lines.length - 1] = lines[lines.length - 1].trimEnd().slice(0, -3) + '…';
         }
         pdf.setTextColor(61, 53, 61);
-        pdf.text(lines, x + cellSize / 2, y + 6.5, {
+        pdf.text(lines, x + cellSize / 2, y + 9, {
             align: 'center', lineHeightFactor: 1.08
         });
-
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(11.5);
-        pdf.setTextColor(151, 53, 100);
-        pdf.text(displayPrice(item.precioCalculado), x + cellSize / 2, y + 26, { align: 'center' });
 
         const barcode = barcodeImage(item.codigoBarras, drawBarcode, canvasFactory);
         // EAN13 con barras de ancho legible y márgenes de calma en ambos lados.
         const maxImageWidth = cellSize - 8;
-        const maxImageHeight = 15;
+        const maxImageHeight = 17;
         const imageWidth = Math.min(maxImageWidth, maxImageHeight * barcode.aspect);
         const imageHeight = imageWidth / barcode.aspect;
         pdf.addImage(barcode.data, 'PNG',
-            x + (cellSize - imageWidth) / 2, y + 29,
+            x + (cellSize - imageWidth) / 2, y + 26,
             imageWidth, imageHeight
         );
     }
@@ -157,7 +187,7 @@ export function createPriceListPdf(products, {
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(104, 94, 104);
-        pdf.text('Precios al momento de exportación · Dulce Sall', margin, 285);
+        pdf.text(permanent ? 'Códigos permanentes · El precio se consulta al escanear' : 'Precios al momento de exportación · Dulce Sall', margin, 285);
         pdf.text(page + ' / ' + pages, pageWidth - margin, 285, { align: 'right' });
     }
     const fileDate = [
@@ -165,7 +195,7 @@ export function createPriceListPdf(products, {
         String(today.getMonth() + 1).padStart(2, '0'),
         String(today.getDate()).padStart(2, '0')
     ].join('-');
-    const fileName = 'DulceSall_Precios_Barras_' + fileDate + '.pdf';
+    const fileName = (permanent ? 'DulceSall_Codigos_Permanentes_' : 'DulceSall_Lista_Precios_') + fileDate + '.pdf';
     pdf.save(fileName);
     return { total: items.length, pages, fileName };
 }
