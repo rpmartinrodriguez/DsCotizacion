@@ -10,7 +10,7 @@ import { drawPromoLabel, downloadCanvasPng } from "./core/labels.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { setupManualHistory } from "./pos/manual-history.js";
 import { setupPOSInventory } from "./pos/inventory.js?v=6";
-import { createPriceListPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
+import { createPriceListPdf, createBarcodeCatalogPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
 import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
 
@@ -94,6 +94,7 @@ export function setupPOS(app) {
 
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnExportarListaPrecios = document.getElementById('btn-exportar-lista-precios');
+    const btnExportarCatalogoBarras = document.getElementById('btn-exportar-catalogo-barras');
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
@@ -211,48 +212,50 @@ export function setupPOS(app) {
         canAdminister: authorization.canAdminister
     });
 
-    // La lista toma exactamente los mismos precios calculados del Mostrador.
-    // Si falta un código se guarda antes en Recetas para que sea escaneable
-    // luego: nunca imprimimos códigos efímeros o no persistidos.
-    btnExportarListaPrecios?.addEventListener('click', async () => {
-        const original = btnExportarListaPrecios.textContent;
-        btnExportarListaPrecios.disabled = true;
+    // Precios: sólo lectura. Códigos permanentes: persistir los faltantes una única vez.
+    const exportarCatalogoPos = async (button, permanent) => {
+        const original = button.textContent;
+        const exportButtons = [btnExportarListaPrecios, btnExportarCatalogoBarras].filter(Boolean);
+        exportButtons.forEach(btn => { btn.disabled = true; });
         try {
             if (!currentUser || !(await authorization.canAdminister())) {
-                throw new Error('Sólo el administrador puede exportar listas de precios.');
+                throw new Error('Sólo el administrador puede exportar estos PDF.');
             }
             if (!productosDisponibles.length) {
                 throw new Error('El catálogo todavía no está disponible. Revisá la conexión.');
             }
-            btnExportarListaPrecios.textContent = 'Cargando PDF…';
+            button.textContent = 'Cargando PDF…';
             await loadPriceListPdfLibrary();
-            if (typeof globalThis.JsBarcode !== 'function') {
-                throw new Error('No se pudo cargar el generador de códigos de barras.');
+            const products = productosDisponibles
+                .filter(product => product?.id && product.nombreTorta)
+                .map(product => ({ ...product }));
+            if (permanent) {
+                if (typeof globalThis.JsBarcode !== 'function') {
+                    throw new Error('No se pudo cargar el generador de códigos de barras.');
+                }
+                const usedCodes = new Set(products.map(p => String(p.codigoBarras || '')).filter(Boolean));
+                const missing = products.filter(p => !p.codigoBarras);
+                for (let start = 0; start < missing.length; start += 4) {
+                    button.textContent = `Códigos ${Math.min(start + 4, missing.length)}/${missing.length}…`;
+                    await Promise.all(
+                        missing.slice(start, start + 4)
+                            .map(product => inventory.ensureBarcode(product, usedCodes))
+                    );
+                }
             }
-
-            const products = productosDisponibles.map(product => ({ ...product }));
-            const usedCodes = new Set(products.map(p => String(p.codigoBarras || '')).filter(Boolean));
-            const missing = products.filter(p => !p.codigoBarras);
-            // Lotes pequeños: aceleran la primera descarga sin saturar
-            // Firebase ni recalcular el catálogo con cientos de escrituras juntas.
-            for (let start = 0; start < missing.length; start += 4) {
-                btnExportarListaPrecios.textContent =
-                    `Códigos ${Math.min(start + 4, missing.length)}/${missing.length}…`;
-                await Promise.all(
-                    missing.slice(start, start + 4)
-                        .map(product => inventory.ensureBarcode(product, usedCodes))
-                );
-            }
-            btnExportarListaPrecios.textContent = 'Generando PDF…';
-            createPriceListPdf(products);
+            button.textContent = 'Generando PDF…';
+            if (permanent) createBarcodeCatalogPdf(products);
+            else createPriceListPdf(products);
         } catch (error) {
-            console.error('No se pudo generar la lista de precios:', error);
+            console.error('No se pudo generar el PDF:', error);
             alert('No se pudo generar el PDF: ' + (error.message || 'Revisá permisos y conexión.'));
         } finally {
-            btnExportarListaPrecios.disabled = false;
-            btnExportarListaPrecios.textContent = original;
+            exportButtons.forEach(btn => { btn.disabled = false; });
+            button.textContent = original;
         }
-    });
+    };
+    btnExportarListaPrecios?.addEventListener('click', () => exportarCatalogoPos(btnExportarListaPrecios, false));
+    btnExportarCatalogoBarras?.addEventListener('click', () => exportarCatalogoPos(btnExportarCatalogoBarras, true));
 
     // Funciones Helper compartidas
     const formatFecha = (timestamp) => formatTimestampDateTime(timestamp, { shortYear: true });
