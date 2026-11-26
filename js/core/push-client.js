@@ -58,7 +58,9 @@ export function mountPushControls(auth){
         await api(auth,'register',{token});localStorage.setItem(storageKey(auth),token);state(true);showStatus('Push activadas en este dispositivo.');
     }
     function run(fn){return async()=>{try{enable.disabled=test.disabled=disable.disabled=true;await fn();}catch(e){showStatus(e.message);}finally{state(subscribed);}};}
-    button.addEventListener('click',()=>{dialog.showModal();if(!status.textContent)showStatus(subscribed?'Push activadas en este dispositivo.':'Activá las notificaciones para recibir avisos.');});
+    const openSettings=()=>{if(!dialog.open)dialog.showModal();if(!status.textContent)showStatus(subscribed?'Push activadas en este dispositivo.':'Activá las notificaciones para recibir avisos.');};
+    window.addEventListener('ds-open-push-settings',openSettings);
+    button.addEventListener('click',()=>{if(window.dispatchEvent(new CustomEvent('ds-open-inbox',{cancelable:true})))openSettings();});
     dialog.querySelector('[data-close]').addEventListener('click',()=>dialog.close());
     enable.addEventListener('click',run(activate));
     test.addEventListener('click',run(async()=>{await api(auth,'test',{token:localStorage.getItem(storageKey(auth))});showStatus('Prueba aceptada por FCM. Revisá la notificación del dispositivo.');}));

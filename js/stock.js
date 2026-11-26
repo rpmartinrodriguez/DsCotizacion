@@ -597,6 +597,7 @@ export function setupStock(app) {
         buscadorInput.dispatchEvent(new Event('input'));
     });
 
+    buscadorInput.value = new URLSearchParams(location.search).get('buscar') || buscadorInput.value;
     buscadorInput.addEventListener('input', (e) => {
         const terminoBusqueda = e.target.value.toLowerCase();
         const datosFiltrados = todoElStock.filter(item => item.data.nombre && item.data.nombre.toLowerCase().includes(terminoBusqueda));

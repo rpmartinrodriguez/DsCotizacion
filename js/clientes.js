@@ -162,6 +162,7 @@ export function setupClientes(app) {
         programarRender();
     }, error => console.error('Error leyendo fichas de clientes:', error));
 
+    buscadorInput.value = new URLSearchParams(location.search).get('buscar') || buscadorInput.value;
     buscadorInput.addEventListener('input', (e) => {
         const termino = e.target.value.toLowerCase();
         const filtrados = Object.values(todosLosClientesAgrupados).filter(c => c.nombre.toLowerCase().includes(termino));
