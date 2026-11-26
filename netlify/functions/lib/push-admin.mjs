@@ -27,11 +27,20 @@ export function parseServiceAccount(raw){
     try{createPrivateKey(privateKey);}catch{throw setupError('FIREBASE_PRIVATE_KEY_INVALID','La clave privada tiene un formato inválido. Copiá el archivo JSON original completo.');}
     return {projectId,clientEmail,privateKey};
 }
+export function readServiceAccount(env=process.env){
+    const projectId=String(env.FIREBASE_PROJECT_ID||'').trim();
+    const clientEmail=String(env.FIREBASE_CLIENT_EMAIL||'').trim();
+    const privateKey=String(env.FIREBASE_PRIVATE_KEY||'').trim();
+    // Reuse the existing credentials for product-price. A duplicate JSON can exceed Lambda's 4 KB limit.
+    if(projectId&&clientEmail&&privateKey)return parseServiceAccount(JSON.stringify({project_id:projectId,client_email:clientEmail,private_key:privateKey}));
+    const raw=env.FIREBASE_SERVICE_ACCOUNT_JSON||env.FIREBASE_SERVICE_ACCOUNT||env.FIREBASE_ADMIN_CREDENTIALS;
+    if(raw)return parseServiceAccount(raw);
+    throw setupError('FIREBASE_CREDENTIALS_MISSING','Revisá FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en Netlify. Las tres deben estar disponibles para Functions y Deploy Previews.');
+}
 export function admin(){
-    const raw=process.env.FIREBASE_SERVICE_ACCOUNT_JSON||process.env.FIREBASE_SERVICE_ACCOUNT||process.env.FIREBASE_ADMIN_CREDENTIALS;
     let app=getApps().find(a=>a.name==='ds-push');
     if(!app){
-        const service=parseServiceAccount(raw);
+        const service=readServiceAccount();
         try{app=initializeApp({credential:cert(service),projectId:'dulcesall'},'ds-push');}
         catch{throw setupError('FIREBASE_ADMIN_INIT','No se pudo inicializar Firebase Admin con las credenciales configuradas.');}
     }

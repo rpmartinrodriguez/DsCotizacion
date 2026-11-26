@@ -96,6 +96,16 @@ export function setupPOS(app) {
     const btnIrStock = document.getElementById('btn-ir-stock');
     const btnExportarListaPrecios = document.getElementById('btn-exportar-lista-precios');
     const btnExportarCatalogoBarras = document.getElementById('btn-exportar-catalogo-barras');
+    const toolsDetails = document.getElementById('pos-tools');
+    toolsDetails?.addEventListener('click',event=>{
+        if(event.target.closest('.ds-pos-tools-menu button'))toolsDetails.open=false;
+    });
+    document.addEventListener('click',event=>{
+        if(toolsDetails?.open&&!toolsDetails.contains(event.target))toolsDetails.open=false;
+    });
+    document.addEventListener('keydown',event=>{
+        if(event.key==='Escape'&&toolsDetails?.open){toolsDetails.open=false;toolsDetails.querySelector('summary')?.focus();}
+    });
     const btnVolverMostrador = document.getElementById('btn-volver-mostrador');
     const btnDesbloquearAdmin = document.getElementById('btn-desbloquear-admin');
     const btnMargenGlobal = document.getElementById('btn-margen-global');
