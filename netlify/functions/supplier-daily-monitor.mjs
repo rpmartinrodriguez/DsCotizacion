@@ -39,7 +39,7 @@ const run=async()=>{
             const history=old.key===key&&Array.isArray(old.history)?old.history:[];
             const entry={price:next,previous:before||null,at:checkedAt};
             const recorded=history.length&&Number(history[0].price)===next?history:[entry,...history].slice(0,30);
-            await state.set({key,price:next,checkedAt,source:observed.source||'',host:observed.host||'',name:d.nombre||'',day,history:recorded});
+            await state.set({key,price:next,checkedAt,source:observed.source||'',host:observed.host||'',name:d.nombre||'',day,history:recorded,configuredQty,configuredUnit,url});
             return {kind:before>0&&Math.abs(before-next)>=0.01?'changed':'same'};
         }catch(e){console.warn('supplier daily',doc.id,e.message);await db.collection('dsSupplierObservations').doc(doc.id).set({lastError:String(e.message).slice(0,250),lastAttempt:Timestamp.now()},{merge:true});return {kind:'error'};}
     }));

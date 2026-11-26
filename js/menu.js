@@ -163,7 +163,7 @@ async function inicializarMenu() {
     }
 
     if (!navMenu) return;
-    if (userRol === 'master') import('./core/push-client.js?v=3').then(mod => mod.mountPushControls(session.auth)).catch(console.warn);
+    if (userRol === 'master') import('./core/push-client.js?v=4').then(mod => mod.mountPushControls(session.auth)).catch(console.warn);
 
     const nombre = session.perfil?.nombre || 'Dulce Sall';
 
@@ -277,7 +277,7 @@ async function inicializarMenu() {
         const financePanel=[...document.querySelectorAll('.ds-topnav-panel')].find(panel=>panel.querySelector('a[href="cajas.html"]'));
         if(financePanel){const link=document.createElement('a');link.href='cajas.html#decisiones';link.className='nav-menu__link';link.innerHTML='<span class="nav-menu__glyph">'+MENU_ICON.finance+'</span><span class="nav-menu__label">Dulce Sall Intelligence</span>';financePanel.append(link);}
     }
-    import('./core/admin-tools.js?v=1').then(m=>m.mountAdminTools({session,p,header,navMenu})).catch(console.warn);
+    import('./core/admin-tools.js?v=2').then(m=>m.mountAdminTools({session,p,header,navMenu})).catch(console.warn);
 
     // Anticipar el HTML de la sección que el usuario está por abrir.
     // No ejecuta scripts ni consulta datos de Firebase; sólo precarga HTML.
@@ -326,7 +326,7 @@ async function inicializarMenu() {
             try {
                 if (session.auth && session.signOut) {
                     if (userRol === 'master') {
-                        try { await (await import('./core/push-client.js?v=3')).disablePush(session.auth); } catch (error) { console.warn('No se pudo desactivar push al salir', error); }
+                        try { await (await import('./core/push-client.js?v=4')).disablePush(session.auth); } catch (error) { console.warn('No se pudo desactivar push al salir', error); }
                     }
                     await session.signOut(session.auth);
                 }

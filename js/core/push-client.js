@@ -46,6 +46,7 @@ export function mountPushControls(auth){
         messaging=m.getMessaging(auth.app);
         if(!unsubscribe)unsubscribe=m.onMessage(messaging,payload=>{
             const d=payload.data||{};
+            window.dispatchEvent(new Event('ds-push-received'));
             if(d.title&&Notification.permission==='granted')void registration.showNotification(d.title,{body:d.body||'',icon:'/assets/logo-192.png',tag:d.eventId||'dulcesall',data:{dsPush:true,path:d.path||'/index.html'}});
         });
         return m.getToken(messaging,{vapidKey,serviceWorkerRegistration:registration});

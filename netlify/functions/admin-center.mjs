@@ -13,15 +13,32 @@ export default async function(request){
         const token=request.headers.get('authorization')||'';
         if(!token.startsWith('Bearer '))return json(401,{ok:false,message:'Iniciá sesión.'});
         const body=await request.json().catch(()=>null);
-        if(!body||!['inbox','inbox-update','suppliers'].includes(body.action))return json(400,{ok:false,message:'Acción inválida.'});
+        if(!body||!['inbox','inbox-update','suppliers','supplier-alternative'].includes(body.action))return json(400,{ok:false,message:'Acción inválida.'});
         const svc=admin(),{db}=svc,{uid,profile}=await authorize({headers:{authorization:token}},svc);
         if(profile.rol!=='master')return json(403,{ok:false,message:'Sólo administradores.'});
+        if(body.action==='supplier-alternative'){
+            const materialId=body.materialId,alt=body.alternative;
+            if(typeof materialId!=='string'||!materialId||materialId.length>150||materialId.includes('/')||!alt||typeof alt.name!=='string'||!alt.name.trim()||alt.name.trim().length>100||!Number.isFinite(alt.price)||alt.price<=0||!Number.isFinite(alt.quantity)||alt.quantity<=0)return json(400,{ok:false,message:'Ingresá proveedor, precio y cantidad válidos.'});
+            const material=await db.collection('materiasPrimas').doc(materialId).get();
+            if(!material.exists)return json(404,{ok:false,message:'Insumo no encontrado.'});
+            const unit=String(material.data().unidad||'');
+            if(!unit||alt.unit!==unit)return json(400,{ok:false,message:'La cotización debe usar la unidad de costeo del insumo.'});
+            const ref=db.collection('dsSupplierAlternatives').doc(materialId);
+            await db.runTransaction(async tx=>{
+                const old=(await tx.get(ref)).data()||{};
+                const name=alt.name.trim(),key=name.toLowerCase();
+                const alternatives=(Array.isArray(old.alternatives)?old.alternatives:[]).filter(x=>String(x.name||'').toLowerCase()!==key);
+                tx.set(ref,{alternatives:[{name,price:alt.price,quantity:alt.quantity,unit,at:Timestamp.now()},...alternatives].slice(0,10),updatedBy:uid,updatedAt:Timestamp.now()});
+            });
+            return json(200,{ok:true});
+        }
         if(body.action==='suppliers'){
-            const [observations,runs]=await Promise.all([
+            const [observations,runs,alternatives]=await Promise.all([
                 db.collection('dsSupplierObservations').orderBy('__name__').limit(301).get(),
-                db.collection('dsSupplierChecks').orderBy('__name__','desc').limit(7).get()
+                db.collection('dsSupplierChecks').orderBy('__name__','desc').limit(7).get(),
+                db.collection('dsSupplierAlternatives').orderBy('__name__').limit(301).get()
             ]);
-            return json(200,{ok:true,observations:rows(observations).slice(0,300).map(d=>({id:d.id,name:d.name||'',price:d.price||0,checkedAt:date(d.checkedAt),lastAttempt:date(d.lastAttempt),error:d.lastError||'',history:(Array.isArray(d.history)?d.history:[]).slice(0,30).map(v=>({price:v.price,previous:v.previous,at:date(v.at)}))})),runs:rows(runs).map(d=>({day:d.day||d.id,done:d.done===true,checked:d.checked||0,changed:d.changed||0,errors:d.errors||0})),truncated:observations.size>300});
+            return json(200,{ok:true,observations:rows(observations).slice(0,300).map(d=>({id:d.id,name:d.name||'',price:d.price||0,configuredQty:d.configuredQty||0,configuredUnit:d.configuredUnit||'',url:d.url||'',checkedAt:date(d.checkedAt),lastAttempt:date(d.lastAttempt),error:d.lastError||'',history:(Array.isArray(d.history)?d.history:[]).slice(0,30).map(v=>({price:v.price,previous:v.previous,at:date(v.at)}))})),runs:rows(runs).map(d=>({day:d.day||d.id,done:d.done===true,checked:d.checked||0,changed:d.changed||0,errors:d.errors||0})),alternatives:rows(alternatives).slice(0,300).map(d=>({id:d.id,items:(Array.isArray(d.alternatives)?d.alternatives:[]).map(x=>({name:x.name,price:x.price,quantity:x.quantity,unit:x.unit,at:date(x.at)}))})),truncated:observations.size>300||alternatives.size>300});
         }
         const prefs=db.collection('dsNotificationPrefs').doc(hash(uid+'|'+origin));
         if(body.action==='inbox-update'){
