@@ -572,9 +572,10 @@ export function setupStock(app) {
         snapshot.forEach(recetaDoc => {
             const receta = recetaDoc.data();
             const nombre = String(receta.nombreTorta || receta.nombre || 'Receta sin nombre');
+            const recetaInfo = { id: recetaDoc.id, nombre };
             const insumosUsados = new Set(
                 (Array.isArray(receta.ingredientes) ? receta.ingredientes : [])
-                    .map(ing => ing.idMateriaPrima).filter(Boolean)
+                    .map(ing => ing?.idMateriaPrima).filter(Boolean)
             );
             insumosUsados.forEach(id => {
                 if (!mapa.has(id)) mapa.set(id, []);
