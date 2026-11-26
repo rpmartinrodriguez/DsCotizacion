@@ -1,7 +1,7 @@
 
 import supplier from './lib/supplier-price.cjs';
 import { admin,dispatchOnce,productionOrigin,money,hash } from './lib/push-admin.mjs';
-import { FieldPath,Timestamp } from 'firebase-admin/firestore';
+import { FieldPath,Timestamp } from './lib/firebase-rest.mjs';
 const dayKey=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Cordoba',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const normal=s=>String(s||'').toLowerCase().trim().replace(/^(g|grs|gramo|gramos)$/,'gr').replace(/^(kilo|kilos)$/,'kg').replace(/^(un|u|unidades)$/,'unidad').replace(/^(lt|litro|litros)$/,'l');
 const run=async()=>{

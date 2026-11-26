@@ -1,8 +1,5 @@
 
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { getMessaging } from 'firebase-admin/messaging';
+import { createRestServices, FieldValue, Timestamp } from './firebase-rest.mjs';
 import { createHash, createPrivateKey } from 'node:crypto';
 export const productionOrigin = 'https://dulce-app.netlify.app';
 export const hash = value => createHash('sha256').update(value).digest('hex');
@@ -37,15 +34,7 @@ export function readServiceAccount(env=process.env){
     if(raw)return parseServiceAccount(raw);
     throw setupError('FIREBASE_CREDENTIALS_MISSING','Revisá FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL y FIREBASE_PRIVATE_KEY en Netlify. Las tres deben estar disponibles para Functions y Deploy Previews.');
 }
-export function admin(){
-    let app=getApps().find(a=>a.name==='ds-push');
-    if(!app){
-        const service=readServiceAccount();
-        try{app=initializeApp({credential:cert(service),projectId:'dulcesall'},'ds-push');}
-        catch{throw setupError('FIREBASE_ADMIN_INIT','No se pudo inicializar Firebase Admin con las credenciales configuradas.');}
-    }
-    return {db:getFirestore(app),auth:getAuth(app),messaging:getMessaging(app)};
-}
+export function admin(){ return createRestServices(readServiceAccount()); }
 export async function activeProfile(db,uid) {
     const doc = await db.collection('usuarios').doc(uid).get();
     return doc.exists && doc.data().estado==='activo' ? doc.data() : null;
@@ -76,13 +65,15 @@ export async function sendToDevices(services, origin, message, {uid=null,tokenHa
         if (v.updatedAt?.toMillis() < now-90*86400000) continue;
         devices.push(d);
     }
-    let delivered=0;
+    let delivered=0, transientFailure=null;
     for(let i=0;i<devices.length;i+=400){
         const part=devices.slice(i,i+400);
         const result=await messaging.sendEachForMulticast({tokens:part.map(d=>d.data().token),data:{title:String(message.title),body:String(message.body).slice(0,800),path:message.path,eventId:message.id},webpush:{headers:{TTL:'86400',Urgency:'high'}}});
         delivered+=result.successCount;
+        for(const res of result.responses)if(!res.success&&!['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(res.error?.code))transientFailure=res.error?.code||'FCM_ERROR';
         await Promise.all(result.responses.map((res,index)=>!res.success && ['messaging/registration-token-not-registered','messaging/invalid-registration-token'].includes(res.error?.code)?part[index].ref.delete():Promise.resolve()));
     }
+    if(!delivered&&transientFailure)throw Object.assign(new Error('FCM no aceptó el envío.'),{code:transientFailure});
     return {delivered,devices:devices.length};
 }
 export async function dispatchOnce(services,origin,message) {

@@ -4,7 +4,7 @@ const api=async(auth,action,body={})=>{
     const response=await fetch('/.netlify/functions/ds-push',{method:'POST',keepalive:action==='event',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await auth.currentUser.getIdToken()},body:JSON.stringify({action,...body})});
     let result;
     try{result=await response.json();}catch{throw new Error('ds-push no respondió correctamente (HTTP '+response.status+', etapa '+action+'). Revisá el registro de Netlify.');}
-    if(!response.ok||!result.ok)throw new Error((result.message||'Error en notificaciones.')+(result.code?' ['+result.code+']':''));
+    if(!response.ok||!result.ok)throw new Error((result.message||('Error de notificaciones (HTTP '+response.status+', etapa '+action+').'))+(result.code?' ['+result.code+']':''));
     return result;
 };
 const storageKey=auth=>'ds-push-token:'+auth.currentUser?.uid;

@@ -1,5 +1,5 @@
 import { admin,authorize,hash,sendToDevices,dispatchOnce,eventMessage } from './lib/push-admin.mjs';
-import { Timestamp } from 'firebase-admin/firestore';
+import { Timestamp } from './lib/firebase-rest.mjs';
 
 const productionOrigin='https://dulce-app.netlify.app';
 const allowedOrigin=v=>v===productionOrigin||/^https:\/\/[a-z0-9-]+--dulce-app\.netlify\.app$/.test(v);
@@ -19,7 +19,7 @@ function publicError(error,stage){
     const code=String(error?.code||'').toLowerCase(),msg=String(error?.message||'').toLowerCase();
     if(code==='8'||code.includes('resource_exhausted')||msg.includes('resource_exhausted'))return {status:503,code:'FIREBASE_QUOTA',message:'Firebase alcanzó su cuota de operaciones.'};
     if(code==='7'||code.includes('permission-denied')||code.includes('permission_denied')||msg.includes('permission_denied'))return {status:503,code:'FIREBASE_PERMISSION',message:'La cuenta de servicio no tiene permisos suficientes en Firebase. Revisá IAM y acceso a Firestore/FCM.'};
-    if(code==='16'||code.includes('invalid-credential')||code.includes('unauthenticated')||msg.includes('invalid_grant')||msg.includes('invalid jwt signature'))return {status:503,code:'FIREBASE_CREDENTIAL_REJECTED',message:'Firebase rechazó la cuenta de servicio. Verificá que la clave esté activa y pertenezca a dulcesall.'};
+    if(code==='16'||code.includes('invalid-credential')||code.includes('unauthenticated')||code.includes('invalid_grant')||msg.includes('invalid_grant')||msg.includes('invalid jwt signature'))return {status:503,code:'FIREBASE_CREDENTIAL_REJECTED',message:'Firebase rechazó la cuenta de servicio. Verificá que la clave esté activa y pertenezca a dulcesall.'};
     if(stage==='load')return {status:503,code:'PUSH_RUNTIME',message:'No se pudo cargar Firebase Admin en Netlify.'};
     if(stage==='authorize')return {status:503,code:'FIREBASE_AUTH_CHECK',message:'No se pudo verificar el perfil en Firebase. Revisá credenciales y permisos de la cuenta de servicio.'};
     if(stage==='register')return {status:503,code:'PUSH_REGISTER_FAILED',message:'No se pudo guardar el dispositivo en Firestore. Revisá permisos y cuota.'};
@@ -30,6 +30,7 @@ const fail=(status,message)=>Object.assign(new Error(message),{status});
 const handleRequest=async event=>{
     let stage='request';
     try{
+        if(event.httpMethod==='GET')return reply(200,{ok:true,service:'ds-push',transport:'firebase-rest'});
         if(event.httpMethod!=='POST')return reply(405,{ok:false});
         const origin=originOf(event);
         const authorization=Object.entries(event.headers||{}).find(([k])=>k.toLowerCase()==='authorization')?.[1];

@@ -1,6 +1,6 @@
 
 import {admin,dispatchOnce,productionOrigin,eventMessage} from './lib/push-admin.mjs';
-import {Timestamp} from 'firebase-admin/firestore';
+import {Timestamp} from './lib/firebase-rest.mjs';
 const run=async()=>{
     if(process.env.CONTEXT&&process.env.CONTEXT!=='production')return {statusCode:200,body:'Preview'};
     const svc=admin(),{db}=svc;
