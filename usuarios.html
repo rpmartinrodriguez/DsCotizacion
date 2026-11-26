@@ -38,6 +38,7 @@
         .permiso-item input[type="checkbox"] { width: 1.2rem; height: 1.2rem; accent-color: #ec4899; cursor: pointer;}
         .permiso-item label { font-size: 0.95rem; cursor: pointer; color: #334155; font-weight: 500;}
     </style>
+    <link rel="stylesheet" href="css/supplier-schedule.css?v=1">
 </head>
 <body class="ds-app ds-content ds-users">
     <div class="main-container">
@@ -64,6 +65,7 @@
                     <p>Administrá quién puede ingresar y qué módulos puede utilizar cada persona.</p>
                 </div>
                 <div class="ds-content-actions">
+                    <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática de proveedores</button>
                     <button id="btn-nuevo-usuario" class="ds-action-primary">+ Nuevo empleado</button>
                 </div>
             </section>
@@ -201,10 +203,12 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
+        import { setupSupplierSchedule } from './js/stock/supplier-schedule.js?v=1';
         import { setupUsuarios } from './js/usuarios.js?v=4';
         
         try {
             const app = initializeApp(firebaseConfig);
+            setupSupplierSchedule(app);
             // Le pasamos la config al JS para que pueda crear la app secundaria invisible
             setupUsuarios(app, firebaseConfig);
         } catch(e) { 

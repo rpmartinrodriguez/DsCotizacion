@@ -2,12 +2,16 @@
 import supplier from './lib/supplier-price.cjs';
 import { admin,dispatchOnce,productionOrigin,money,hash } from './lib/push-admin.mjs';
 import { FieldPath,Timestamp } from './lib/firebase-rest.mjs';
-const dayKey=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Cordoba',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+import { argentinaDay,shouldCheck,scheduleRef } from './lib/supplier-schedule.mjs';
 const normal=s=>String(s||'').toLowerCase().trim().replace(/^(g|grs|gramo|gramos)$/,'gr').replace(/^(kilo|kilos)$/,'kg').replace(/^(un|u|unidades)$/,'unidad').replace(/^(lt|litro|litros)$/,'l');
 const run=async()=>{
     // Scheduled functions run only in published production. Never change the official purchase cost.
     if(process.env.CONTEXT && process.env.CONTEXT!=='production')return {statusCode:200,body:'Preview: sin consultas automáticas.'};
-    const svc=admin(),{db}=svc,day=dayKey(),run=db.collection('dsSupplierChecks').doc(day);
+    const svc=admin(),{db}=svc;
+    const now=new Date(),day=argentinaDay(now).key;
+    const settings=await scheduleRef(db).get();
+    if(!shouldCheck(settings.data(),now))return {statusCode:200,body:'Consulta automática desactivada o día no seleccionado.'};
+    const run=db.collection('dsSupplierChecks').doc(day);
     const claim=await db.runTransaction(async tx=>{const s=await tx.get(run),d=s.data()||{};if(d.done||d.leaseUntil?.toMillis()>Date.now())return null;tx.set(run,{day,leaseUntil:Timestamp.fromMillis(Date.now()+120000)},{merge:true});return d;});
     if(!claim)return {statusCode:200,body:'Ya revisado o en proceso.'};
     const query=db.collection('materiasPrimas').orderBy(FieldPath.documentId());

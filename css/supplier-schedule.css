@@ -1,0 +1,25 @@
+
+.ds-supplier-schedule-dialog{width:min(460px,calc(100vw - 28px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid #e6dfe3;border-radius:16px;padding:0;background:#fff;color:#342d32;box-shadow:0 12px 40px #0003}
+.ds-supplier-schedule-dialog::backdrop{background:#211c2466}
+.ds-supplier-schedule-form{display:grid;gap:13px;padding:20px}
+.ds-supplier-schedule-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.ds-supplier-schedule-head h2{margin:0;font-size:1.12rem;line-height:1.3}
+.ds-supplier-schedule-head button{border:0;background:#f5f2f4;border-radius:8px;font-size:1.3rem;width:32px;height:32px;flex-shrink:0;cursor:pointer}
+.ds-supplier-schedule-form p{margin:0;font-size:.85rem;line-height:1.5;color:#6b6369}
+.ds-supplier-schedule-toggle{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid #e3dddF;border-radius:10px;font-size:.86rem;cursor:pointer}
+.ds-supplier-schedule-form input[type=checkbox]{accent-color:#166c47;width:17px;height:17px;flex:0 0 17px;margin:0}
+.ds-supplier-schedule-form fieldset{min-width:0;margin:0;padding:0;border:0}
+.ds-supplier-schedule-form legend{font-size:.84rem;font-weight:700;margin-bottom:8px}
+.ds-supplier-schedule-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.ds-supplier-schedule-days label{display:flex;align-items:center;gap:7px;border:1px solid #e5e0e3;border-radius:8px;padding:9px;font-size:.8rem;cursor:pointer}
+.ds-supplier-schedule-days label:has(input:checked){border-color:#9fbfaf;background:#f5f9f6}
+.ds-supplier-schedule-form fieldset:disabled{opacity:.55}
+.ds-supplier-schedule-info{border-top:1px solid #eee8ec;padding-top:10px;font-size:.85rem}
+.ds-supplier-schedule-info strong{color:#166c47}
+.ds-supplier-schedule-info p{margin-top:4px}
+.ds-supplier-schedule-form [data-status]:empty{display:none}
+.ds-supplier-schedule-form [data-status][data-kind=error]{color:#a52f39}
+.ds-supplier-schedule-form [data-status][data-kind=success]{color:#166c47}
+.ds-supplier-schedule-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:8px}
+.ds-supplier-schedule-actions button{margin:0;width:100%;min-height:44px;white-space:normal}
+#btn-supplier-schedule[hidden]{display:none!important}
