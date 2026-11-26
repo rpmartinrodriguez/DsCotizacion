@@ -136,7 +136,7 @@ export function setupAgenda(app) {
 
     const q = query(presupuestosCollection, where("esVenta", "==", true));
     onSnapshot(q, (snapshot) => {
-        entregas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+        entregas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })).filter(p=>p.data.estadoPedido!=='entregado'&&p.data.fechaEntrega?.toDate);
         renderCalendar();
     });
 }

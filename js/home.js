@@ -1,7 +1,9 @@
 import {
-    getFirestore, collection, doc, onSnapshot, query, where
+    getFirestore, collection, doc, onSnapshot, query, where, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { calculateProductSalePrice, getEffectiveUnitCost } from "./core/pricing.js";
+import { formatCurrency } from "./core/format.js";
+import {orderDate,orderStage} from "./core/orders.js";
 
 export function setupInicio(app) {
     const fecha = document.getElementById('ds-home-date');
@@ -94,6 +96,18 @@ export function setupInicio(app) {
     });
 
     const db = getFirestore(app);
+    const kpi=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+    const updateConnection=()=>{const el=document.getElementById('ds-connection-status');if(el){el.textContent=navigator.onLine?'Con conexión':'Sin conexión';el.dataset.online=String(navigator.onLine);}};
+    updateConnection();window.addEventListener('online',updateConnection);window.addEventListener('offline',updateConnection);
+    const today=orderDate(new Date()),start=new Date(today+'T00:00:00-03:00'),end=new Date(start.getTime()+86400000);
+    onSnapshot(query(collection(db,'ventasMostrador'),where('fecha','>=',Timestamp.fromDate(start)),where('fecha','<',Timestamp.fromDate(end))),snap=>{
+        const sales=snap.docs.map(d=>d.data()).filter(d=>d.eliminada!==true);
+        kpi('ds-today-sales',formatCurrency(sales.reduce((sum,d)=>sum+(Number(d.total)||0),0)));kpi('ds-today-tickets',sales.length.toLocaleString('es-AR'));
+    },()=>{kpi('ds-today-sales','No disponible');kpi('ds-today-tickets','—');});
+    onSnapshot(query(collection(db,'presupuestosGuardados'),where('esVenta','==',true)),snap=>{
+        const active=snap.docs.map(d=>d.data()).filter(p=>orderStage(p)!=='entregado');
+        kpi('ds-today-orders',active.length.toLocaleString('es-AR'));kpi('ds-today-deliveries',active.filter(p=>orderDate(p.fechaEntrega)===today).length.toLocaleString('es-AR'));
+    },()=>{kpi('ds-today-orders','—');kpi('ds-today-deliveries','—');});
     // Solo documentos abiertos; no descargar historiales, ventas ni presupuestos.
     // La consulta es informativa y no permite operar sobre fondos.
     onSnapshot(doc(db, 'config', 'mostrador'), snapshot => {

@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "./core/format.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
+import {ORDER_STAGES,ORDER_LABELS,orderStage,nextStage,orderDate,aggregateIngredients,consumeLots} from "./core/orders.js";
 
 export function setupHistorial(app) {
     const db = getFirestore(app);
@@ -37,7 +38,10 @@ export function setupHistorial(app) {
     // Variables de Estado
     let todoElHistorial = [];
     let materiasPrimasDisponibles = [];
-    let ultimoEventoParaCalendario = null;
+    let ultimoEventoParaCalendario = null,operationBusy=false;
+    const stageFilter=document.getElementById('orders-stage'),view=document.getElementById('orders-view');
+    const rerender=()=>buscadorInput.dispatchEvent(new Event('input'));
+    stageFilter?.addEventListener('change',rerender);view?.addEventListener('change',rerender);
 
     const cargarMateriasPrimas = async () => {
         try {
@@ -135,7 +139,9 @@ export function setupHistorial(app) {
 
     const renderizarHistorial = (datos) => {
         historialContainer.innerHTML = '';
-        if (datos.length === 0) {
+        const board=view?.value==='board';historialContainer.classList.toggle('ds-orders-board',board);
+        const lanes=new Map();if(board){for(const stage of ORDER_STAGES){if(stageFilter.value!=='all'&&stageFilter.value!==stage)continue;const lane=document.createElement('section');lane.className='ds-order-lane';const heading=document.createElement('h3');heading.textContent=ORDER_LABELS[stage]+' · '+datos.filter(p=>orderStage(p.data)===stage).length;lane.append(heading);historialContainer.append(lane);lanes.set(stage,lane);}}
+        if (datos.length === 0&&!board) {
             historialContainer.innerHTML = '<p>No se encontraron presupuestos.</p>';
             return;
         }
@@ -157,6 +163,7 @@ export function setupHistorial(app) {
                 const card = document.createElement('div');
                 card.className = 'historial-card';
                 if (presupuesto.esVenta) card.classList.add('es-venta');
+                const stage=orderStage(presupuesto),next=nextStage(presupuesto),delivery=orderDate(presupuesto.fechaEntrega),note=escapeHtml(presupuesto.notaPedido||'');
 
                 card.innerHTML = `
                     <div class="historial-card__header">
@@ -164,6 +171,9 @@ export function setupHistorial(app) {
                             <h3>${safeTitle}</h3>
                             <p><strong>Cliente:</strong> ${safeClient}</p>
                             <p class="fecha">${fechaFormateada} hs</p>
+                            <span class="ds-order-stage" data-stage="${stage}">${ORDER_LABELS[stage]}</span>
+                            ${delivery?`<p>Entrega: ${delivery.split('-').reverse().join('/')}</p>`:''}
+                            ${note?`<p class="ds-order-note">${note}</p>`:''}
                         </div>
                         <div class="historial-card__total">${formatCurrency(totalMostrado)}</div>
                     </div>
@@ -175,10 +185,11 @@ export function setupHistorial(app) {
                     <div class="historial-card__actions">
                         <button class="btn-ver-detalle" data-id="${safeId}">Ver detalle</button>
                         ${botonVentaHtml}
-                        <button class="btn-borrar-presupuesto" data-id="${safeId}">Borrar</button>
+                        ${presupuesto.esVenta&&next?`<button class="btn-avanzar-pedido" data-id="${safeId}">${ORDER_LABELS[next]} →</button>`:''}
+                        ${presupuesto.esVenta?`<button class="btn-nota-pedido" data-id="${safeId}">Nota / entrega</button>`:`<button class="btn-borrar-presupuesto" data-id="${safeId}">Borrar</button>`}
                     </div>
                 `;
-                historialContainer.appendChild(card);
+                (board?lanes.get(stage):historialContainer)?.appendChild(card);
             } catch (error) {
                 console.error(`Error al renderizar el presupuesto ID: ${pConId.id}.`, error);
             }
@@ -225,12 +236,12 @@ export function setupHistorial(app) {
 
     buscadorInput.addEventListener('input', (e) => {
         const termino = e.target.value.toLowerCase();
-        const filtrados = todoElHistorial.filter(p => ((p.data.tituloTorta || '').toLowerCase().includes(termino) || (p.data.nombreCliente || '').toLowerCase().includes(termino)));
+        const filtrados = todoElHistorial.filter(p => (stageFilter?.value==='all'||!stageFilter||orderStage(p.data)===stageFilter.value)&&((p.data.tituloTorta || '').toLowerCase().includes(termino) || (p.data.nombreCliente || '').toLowerCase().includes(termino)));
         renderizarHistorial(filtrados);
     });
 
     historialContainer.addEventListener('click', async (e) => {
-        const target = e.target.closest('.btn-marcar-venta, .btn-borrar-presupuesto, .btn-ver-detalle');
+        const target = e.target.closest('.btn-marcar-venta, .btn-borrar-presupuesto, .btn-ver-detalle, .btn-avanzar-pedido, .btn-nota-pedido');
         if (!target) return;
         const id = target.dataset.id;
         
@@ -244,12 +255,23 @@ export function setupHistorial(app) {
                 detalleDiv.style.display = isVisible ? 'none' : 'block';
                 target.textContent = isVisible ? 'Ver Detalle' : 'Ocultar Detalle';
             }
+        } else if(target.classList.contains('btn-avanzar-pedido')||target.classList.contains('btn-nota-pedido')){
+            if(operationBusy)return;const p=todoElHistorial.find(x=>x.id===id)?.data;if(!p?.esVenta)return;
+            const advance=target.classList.contains('btn-avanzar-pedido'),expected=orderStage(p),next=nextStage(p);
+            if(advance&&!next)return;
+            const dialog=document.getElementById('ds-order-dialog'),note=document.getElementById('ds-order-note'),date=document.getElementById('ds-order-date');
+            note.value=p.notaPedido||'';date.value=orderDate(p.fechaEntrega);document.getElementById('ds-order-dialog-title').textContent=advance?'Pasar a '+ORDER_LABELS[next]:'Editar nota y entrega';
+            dialog.showModal();operationBusy=true;
+            document.getElementById('ds-order-cancel').onclick=()=>dialog.close();
+            dialog.onclose=()=>{operationBusy=false;};
+            document.getElementById('ds-order-save').onclick=async()=>{const btn=document.getElementById('ds-order-save');if(btn.disabled)return;if(!date.value){alert('Seleccioná una fecha de entrega.');return;}btn.disabled=true;try{const ref=doc(db,'presupuestosGuardados',id);await runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists()||!snap.data().esVenta||orderStage(snap.data())!==expected)throw Error('El pedido cambió. Volvé a abrirlo.');tx.update(ref,{estadoPedido:advance?next:expected,notaPedido:note.value.trim().slice(0,1000),fechaEntrega:Timestamp.fromDate(new Date(date.value+'T00:00:00-03:00')),pedidoActualizadoAt:Timestamp.now()});});dialog.close();}catch(e){alert(e.message);}finally{btn.disabled=false;}};
         } else if (target.classList.contains('btn-marcar-venta')) {
+            if(operationBusy)return;operationBusy=true;
             const presupuestoSeleccionado = todoElHistorial.find(p => p.id === id);
-            if (!presupuestoSeleccionado) return;
+            if (!presupuestoSeleccionado){operationBusy=false;return;}
             try {
                 let advertenciaStock = "";
-                for (const ing of presupuestoSeleccionado.data.ingredientes) {
+                for (const ing of (presupuestoSeleccionado.data.ingredientes||[])) {
                     const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === (ing.idMateriaPrima || ing.id));
                     if (materiaPrima) {
                         const stockTotal = (materiaPrima.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
@@ -262,37 +284,19 @@ export function setupHistorial(app) {
                     await showConfirmationModal('⚠️ ¡Atención, stock insuficiente!', `Te falta stock de:\n${advertenciaStock}\nEl stock quedará en negativo. ¿Confirmar venta de todos modos?`, 'danger');
                 }
                 const fechaEntregaStr = await showConfirmVentaModal();
-                const fechaEntrega = new Date(`${fechaEntregaStr}T00:00:00`);
-                await runTransaction(db, async (transaction) => {
-                    const refs = presupuestoSeleccionado.data.ingredientes.map(ing => doc(db, 'materiasPrimas', ing.idMateriaPrima || ing.id));
-                    const docs = await Promise.all(refs.map(ref => transaction.get(ref)));
-                    for (let i = 0; i < docs.length; i++) {
-                        const mpDoc = docs[i];
-                        const ingrediente = presupuestoSeleccionado.data.ingredientes[i];
-                        if (!mpDoc.exists()) throw new Error(`El ingrediente "${ingrediente.nombre}" ya no existe.`);
-                        let data = mpDoc.data();
-                        let cantidadADescontar = ingrediente.cantidadTotal;
-                        let lotesActualizados = data.lotes.sort((a, b) => (a.fechaCompra.seconds || 0) - (b.fechaCompra.seconds || 0));
-                        for (const lote of lotesActualizados) {
-                            if (cantidadADescontar <= 0) break;
-                            const descontar = Math.min(lote.stockRestante, cantidadADescontar);
-                            lote.stockRestante -= descontar;
-                            cantidadADescontar -= descontar;
-                        }
-                        if (cantidadADescontar > 0 && lotesActualizados.length > 0) {
-                           lotesActualizados[lotesActualizados.length - 1].stockRestante -= cantidadADescontar;
-                        }
-                        transaction.update(mpDoc.ref, { lotes: lotesActualizados });
-                    }
+                const fechaEntrega = new Date(`${fechaEntregaStr}T00:00:00-03:00`);
+                const ref=doc(db,'presupuestosGuardados',id);
+                await runTransaction(db,async tx=>{
+                    const fresh=await tx.get(ref);
+                    if(!fresh.exists())throw Error('El presupuesto ya no existe.');
+                    const p=fresh.data();if(p.esVenta===true)throw Error('Este pedido ya fue confirmado.');
+                    // Cotizaciones antiguas sin ingredientes requieren revisión, nunca deducir cantidades inventadas.
+                    if(!Array.isArray(p.ingredientes)||!p.ingredientes.length)throw Error('Este presupuesto no contiene ingredientes guardados. Revisá la cotización original antes de confirmar.');
+                    const needs=aggregateIngredients(p.ingredientes);
+                    const refs=needs.map(n=>doc(db,'materiasPrimas',n.id)),snaps=await Promise.all(refs.map(r=>tx.get(r)));
+                    for(let i=0;i<needs.length;i++){if(!snaps[i].exists())throw Error('Falta el insumo '+needs[i].name);const n=needs[i],mp=snaps[i].data();tx.update(refs[i],{lotes:consumeLots(mp.lotes,n.qty)});tx.set(doc(movimientosStockCollection,id+'_'+n.id),{materiaPrimaId:n.id,materiaPrimaNombre:n.name,tipo:'Venta',cantidad:-n.qty,fecha:Timestamp.now(),descripcion:'Pedido '+(p.tituloTorta||''),pedidoId:id});}
+                    tx.update(ref,{esVenta:true,estadoPedido:'confirmado',fechaEntrega:Timestamp.fromDate(fechaEntrega),pedidoActualizadoAt:Timestamp.now()});
                 });
-                const batch = writeBatch(db);
-                const presupuestoRef = doc(db, 'presupuestosGuardados', id);
-                batch.update(presupuestoRef, { esVenta: true, fechaEntrega: Timestamp.fromDate(fechaEntrega) });
-                presupuestoSeleccionado.data.ingredientes.forEach(ing => {
-                    const movRef = doc(collection(db, 'movimientosStock'));
-                    batch.set(movRef, { materiaPrimaId: ing.idMateriaPrima || ing.id, materiaPrimaNombre: ing.nombreMateriaPrima || ing.nombre, tipo: 'Venta', cantidad: -ing.cantidadTotal, fecha: new Date(), descripcion: `Venta de "${presupuestoSeleccionado.data.tituloTorta}"` });
-                });
-                await batch.commit();
                 
                 ultimoEventoParaCalendario = {
                     id: id,
@@ -307,12 +311,12 @@ export function setupHistorial(app) {
             } catch (error) {
                 if (error?.message && !error.message.includes("cancelada")) { alert(`No se pudo completar la venta: ${error.message}`); } 
                 else { console.log("Acción cancelada."); }
-            }
+            } finally {operationBusy=false;}
         } else if (target.classList.contains('btn-borrar-presupuesto')) {
             const id = target.dataset.id;
             try {
                 await showConfirmationModal('Eliminar Presupuesto', 'Esta acción es permanente. ¿Estás seguro?', 'danger');
-                await deleteDoc(doc(db, 'presupuestosGuardados', id));
+                await runTransaction(db,async tx=>{const ref=doc(db,'presupuestosGuardados',id),snap=await tx.get(ref);if(!snap.exists())return;if(snap.data().esVenta===true)throw Error('No se puede borrar una venta confirmada sin revertir sus movimientos.');tx.delete(ref);});
             } catch (error) {
                 if(error?.message && !error.message.includes("cancelado")) console.error("Error al eliminar:", error);
                 else console.log("Borrado cancelado.");
