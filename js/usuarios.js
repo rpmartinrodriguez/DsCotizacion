@@ -42,28 +42,27 @@ export function setupUsuarios(app, firebaseConfig) {
     ];
 
     let todosLosUsuarios = [];
-    let isCreateMode = false;
+    let isCreateMode = false,master=false,unsubscribe=null,busy=false;
+    const search=document.getElementById('usuarios-buscar'),summary=document.getElementById('usuarios-resumen');
+    const api=async(action,uid,extra={})=>{if(!master||!auth.currentUser)throw Error('Sólo el administrador principal puede gestionar cuentas.');const response=await fetch('/.netlify/functions/users-admin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await auth.currentUser.getIdToken()},body:JSON.stringify({action,uid,...extra})});const data=await response.json().catch(()=>null);if(!response.ok||!data?.ok)throw Error(data?.message||'No se pudo completar la operación.');return data;};
+    const protectedUser=u=>!u||u.rol==='master'||u.id===auth.currentUser?.uid;
+    const run=async(fn)=>{if(busy)return;busy=true;try{await fn();}catch(e){alert(e.message||'No se pudo completar la operación.');}finally{busy=false;}};
 
-    // --- BARRERA DE SEGURIDAD PARA LA PÁGINA ---
-    onAuthStateChanged(auth, async (user) => {
-        if (!user || user.isAnonymous) {
-            window.location.replace('login.html');
-            return;
-        }
-
-        const autorizado = await authorization.canAdminister();
-        if (!autorizado) {
-            alert("Acceso denegado. No tenés permisos de administrador.");
-            window.location.replace('pos.html');
-        }
+    btnNuevoUsuario.hidden=true;
+    onAuthStateChanged(auth,async user=>{
+        unsubscribe?.();unsubscribe=null;master=false;btnNuevoUsuario.hidden=true;
+        if(!user||user.isAnonymous){window.location.replace('login.html');return;}
+        const profile=await authorization.getActiveProfile();
+        if(!profile||auth.currentUser?.uid!==user.uid)return;
+        master=profile.rol==='master';
+        if(!master&&profile.permisos?.configuracion!==true){window.location.replace('pos.html');return;}
+        btnNuevoUsuario.hidden=!master;
+        unsubscribe=onSnapshot(usuariosCollection,snapshot=>{
+            todosLosUsuarios=snapshot.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.rol==='master')-(a.rol==='master')||String(a.nombre||'').localeCompare(String(b.nombre||''),'es'));
+            renderizarTabla();
+        },()=>{tablaUsuarios.textContent='No se pudo cargar la lista de usuarios.';});
     });
-
-    // --- ESCUCHAR Y RENDERIZAR USUARIOS ---
-    onSnapshot(query(usuariosCollection, orderBy('fechaCreacion', 'asc')), (snapshot) => {
-        todosLosUsuarios = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderizarTabla();
-    });
-
+    search?.addEventListener('input',renderizarTabla);
     function renderizarTabla() {
         if (!tablaUsuarios) return;
         tablaUsuarios.innerHTML = '';
@@ -73,9 +72,13 @@ export function setupUsuarios(app, firebaseConfig) {
             return;
         }
 
-        todosLosUsuarios.forEach(u => {
+        const term=String(search?.value||'').trim().toLowerCase();
+        if(summary)summary.textContent=todosLosUsuarios.length+' cuentas · '+todosLosUsuarios.filter(u=>u.estado==='activo').length+' activas';
+        const visible=todosLosUsuarios.filter(u=>String((u.nombre||'')+' '+(u.email||'')).toLowerCase().includes(term));
+        if(!visible.length){tablaUsuarios.innerHTML='<tr><td colspan="5">No se encontraron usuarios.</td></tr>';return;}
+        visible.forEach(u => {
             const estadoClase = u.estado === 'activo' ? 'status-activo' : 'status-inactivo';
-            const estadoTexto = u.estado === 'activo' ? 'Activo' : 'Inactivo';
+            const estadoTexto = u.eliminacionPendiente?'Eliminación pendiente':u.estado === 'activo' ? 'Activo' : 'Inactivo';
             const rolClase = u.rol === 'master' ? 'role-master' : '';
             const rolTexto = u.rol === 'master' ? '👑 Master Admin' : '👤 Empleado';
 
@@ -89,16 +92,21 @@ export function setupUsuarios(app, firebaseConfig) {
                 <td data-label="Rol"><span class="user-role ${rolClase}">${rolTexto}</span></td>
                 <td data-label="Estado"><span class="user-status ${estadoClase}">${estadoTexto}</span></td>
                 <td data-label="Acciones" style="text-align: center;">
-                    <button class="btn-editar-usuario btn-secondary" data-id="${safeId}" style="padding: 0.3rem 0.8rem; font-size: 0.85rem;">⚙️ Gestionar</button>
+                    ${protectedUser(u)?'<span class="ds-user-protected">Cuenta protegida</span>':!master?'<span>Solo lectura</span>':`<div class="ds-user-actions">${u.eliminacionPendiente?'':`<button type="button" class="btn-editar-usuario btn-secondary" data-id="${safeId}">Editar</button><button type="button" class="btn-reset-usuario btn-secondary" data-id="${safeId}">Regenerar clave</button>`}<button type="button" class="btn-borrar-usuario btn-secondary" data-id="${safeId}">Eliminar</button></div>`}
                 </td>
             `;
             tablaUsuarios.appendChild(tr);
         });
     }
 
+    const pwDialog=document.getElementById('ds-password-dialog'),pwField=document.getElementById('ds-generated-password');
+    document.getElementById('ds-copy-password').onclick=async()=>{try{await navigator.clipboard.writeText(pwField.value);document.getElementById('ds-password-feedback').textContent='Copiada';}catch{pwField.select();}};
+    document.getElementById('ds-close-password').onclick=()=>pwDialog.close();
+    pwDialog.addEventListener('close',()=>{pwField.value='';document.getElementById('ds-password-feedback').textContent='';});
     // --- ABRIR MODAL PARA NUEVO USUARIO ---
     if (btnNuevoUsuario) {
         btnNuevoUsuario.addEventListener('click', () => {
+            if(!master||busy)return;
             isCreateMode = true;
             modalTitulo.textContent = "Crear Nuevo Empleado";
             camposCreacion.style.display = 'block';
@@ -127,14 +135,16 @@ export function setupUsuarios(app, firebaseConfig) {
     // --- ABRIR MODAL PARA EDITAR ---
     if (tablaUsuarios) {
         tablaUsuarios.addEventListener('click', (e) => {
+            const action=e.target.closest('.btn-reset-usuario,.btn-borrar-usuario');
+            if(action){const u=todosLosUsuarios.find(x=>x.id===action.dataset.id);if(!master||protectedUser(u))return;void run(async()=>{if(action.classList.contains('btn-reset-usuario')){if(!confirm('¿Regenerar la contraseña de '+u.nombre+'? La anterior dejará de funcionar.'))return;const result=await api('reset',u.id);const d=document.getElementById('ds-password-dialog'),field=document.getElementById('ds-generated-password');field.value=result.password;d.showModal();}else{if(!confirm('¿Eliminar definitivamente el acceso de '+u.nombre+'? Sus ventas e historial se conservan.'))return;await api('delete',u.id,{confirm:u.id});alert('Cuenta eliminada.');}});return;}
             const btn = e.target.closest('.btn-editar-usuario');
             if (!btn) return;
 
             const user = todosLosUsuarios.find(u => u.id === btn.dataset.id);
-            if (!user) return;
+            if (!master||protectedUser(user)||user.eliminacionPendiente||busy) return;
 
             isCreateMode = false;
-            modalTitulo.textContent = "Editar Permisos";
+            modalTitulo.textContent = "Editar usuario";
             camposCreacion.style.display = 'none';
 
             editId.value = user.id;
@@ -169,7 +179,9 @@ export function setupUsuarios(app, firebaseConfig) {
     // --- GUARDAR O CREAR ---
     if (btnGuardar) {
         btnGuardar.addEventListener('click', async () => {
-            const autorizado = await authorization.canAdminister();
+            if(!master||busy)return;
+            const profile=await authorization.getActiveProfile();
+            const autorizado=profile?.rol==='master';
             if (!autorizado) {
                 alert("Tu sesión ya no tiene permisos de administrador.");
                 window.location.replace('pos.html');
@@ -182,7 +194,7 @@ export function setupUsuarios(app, firebaseConfig) {
 
             if (!nombreIngresado) return alert("Tenés que ponerle un nombre al usuario.");
 
-            btnGuardar.disabled = true;
+            busy=true;btnGuardar.disabled = true;
             btnGuardar.textContent = isCreateMode ? 'Creando cuenta...' : 'Guardando...';
 
             // Recolectar el valor de las 15 casillas
@@ -202,7 +214,7 @@ export function setupUsuarios(app, firebaseConfig) {
             try {
                 if (isCreateMode) {
                     if (!emailIngresado || passIngresada.length < 6) {
-                        btnGuardar.disabled = false;
+                        busy=false;btnGuardar.disabled = false;
                         btnGuardar.textContent = 'Guardar Cambios';
                         return alert("El email es obligatorio y la clave debe tener al menos 6 letras.");
                     }
@@ -230,15 +242,9 @@ export function setupUsuarios(app, firebaseConfig) {
                     const id = editId.value;
                     const estadoFinal = editEstado.disabled ? 'activo' : editEstado.value;
 
-                    await updateDoc(doc(db, 'usuarios', id), {
-                        nombre: nombreIngresado,
-                        estado: estadoFinal,
-                        permisos: permisosAsignados
-                    });
-
-                    if (id === auth.currentUser.uid) {
-                        localStorage.setItem('userName', nombreIngresado);
-                    }
+                    const target=todosLosUsuarios.find(u=>u.id===id);
+                    if(protectedUser(target))throw Error('La cuenta administradora está protegida.');
+                    await api('edit',id,{nombre:nombreIngresado,estado:estadoFinal,permisos:permisosAsignados});
                 }
 
                 modalUsuario.classList.remove('visible');
@@ -247,11 +253,11 @@ export function setupUsuarios(app, firebaseConfig) {
                 if (error.code === 'auth/email-already-in-use') {
                     alert("Ese correo electrónico ya está registrado.");
                 } else {
-                    alert("Hubo un error al procesar el usuario.");
+                    alert(error.message || "Hubo un error al procesar el usuario.");
                 }
             }
 
-            btnGuardar.disabled = false;
+            busy=false;btnGuardar.disabled = false;
             btnGuardar.textContent = 'Guardar Cambios';
         });
     }

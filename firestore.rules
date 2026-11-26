@@ -49,8 +49,9 @@ service cloud.firestore {
 
       allow list: if isMaster() || hasPermission('configuracion');
 
-      allow create, update, delete: if isMaster()
-        || hasPermission('configuracion');
+      // Las cuentas master no se modifican desde el cliente. Alta de empleados sólo por master.
+      allow create: if isMaster() && request.resource.data.get('rol','') == 'empleado';
+      allow update, delete: if false; // Gestión exclusiva del endpoint administrativo autenticado.
     }
 
     // Configuración sensible del mostrador (ej. margen global).

@@ -51,10 +51,10 @@ async function jsonFetch(url,options={}){
     return {payload,response};
 }
 let cachedToken=null,cachedCerts=null;
-async function accessToken(service){
-    const now=Math.floor(Date.now()/1000),key=service.clientEmail+'|'+service.projectId;
+async function accessToken(service,scope='https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/firebase.messaging'){
+    const now=Math.floor(Date.now()/1000),key=service.clientEmail+'|'+service.projectId+'|'+scope;
     if(cachedToken?.key===key&&cachedToken.until>now+60)return cachedToken.token;
-    const unsigned=b64({alg:'RS256',typ:'JWT'})+'.'+b64({iss:service.clientEmail,scope:'https://www.googleapis.com/auth/datastore https://www.googleapis.com/auth/firebase.messaging',aud:OAUTH_URL,iat:now,exp:now+3600});
+    const unsigned=b64({alg:'RS256',typ:'JWT'})+'.'+b64({iss:service.clientEmail,scope,aud:OAUTH_URL,iat:now,exp:now+3600});
     const signature=createSign('RSA-SHA256').update(unsigned).sign(service.privateKey).toString('base64url');
     const {payload}=await jsonFetch(OAUTH_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:unsigned+'.'+signature})});
     if(!payload.access_token)throw error('UNAUTHENTICATED','Google no devolvió un token de acceso.');
@@ -82,7 +82,7 @@ async function verifyIdToken(token,projectId){
     if(!cert)throw invalid();
     let valid=false;try{valid=createVerify('RSA-SHA256').update(parts[0]+'.'+parts[1]).verify(cert,Buffer.from(parts[2],'base64url'));}catch{}
     if(!valid)throw invalid();
-    return {uid:p.sub};
+    return {uid:p.sub,authTime:p.auth_time};
 }
 export function createRestServices(service){
     const root='projects/'+service.projectId+'/databases/(default)/documents';
@@ -157,5 +157,13 @@ export function createRestServices(service){
         }
         return {successCount:responses.filter(r=>r.success).length,responses};
     }};
-    return {db,messaging,auth:{verifyIdToken:token=>verifyIdToken(token,service.projectId)}};
+    const accountRequest=async(action,body)=>{
+        const token=await accessToken(service,'https://www.googleapis.com/auth/identitytoolkit');
+        return (await jsonFetch('https://identitytoolkit.googleapis.com/v1/projects/'+segment(service.projectId)+'/accounts:'+action,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)})).payload;
+    };
+    const auth={verifyIdToken:token=>verifyIdToken(token,service.projectId),
+        async lookup(uid){const result=await accountRequest('lookup',{localId:[uid]});return result.users?.[0]||null;},
+        updateAccount:(uid,patch)=>accountRequest('update',{localId:uid,...patch}),
+        deleteAccount:uid=>accountRequest('delete',{localId:uid})};
+    return {db,messaging,auth};
 }

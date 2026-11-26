@@ -40,8 +40,9 @@
     </style>
     <link rel="stylesheet" href="css/supplier-schedule.css?v=1">
     <link rel="stylesheet" href="css/topnav.css?v=6">
+    <link rel="stylesheet" href="css/workspace-pink.css?v=1"><link rel="stylesheet" href="css/experience-orders.css?v=1">
 </head>
-<body class="ds-app ds-topnav-layout ds-content ds-users">
+<body class="ds-app ds-topnav-layout ds-content ds-users ds-workspace">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -74,8 +75,8 @@
                 </div>
             </section>
 
-            <div class="card">
-                <div style="overflow-x: auto;">
+            <div class="card ds-work-panel ds-users-panel"><div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">Accesos</span><h2 class="card__title">Equipo de trabajo</h2><p>La cuenta principal permanece protegida.</p></div></div><div class="ds-work-filter-row"><div class="ds-work-search"><span aria-hidden="true">⌕</span><input id="usuarios-buscar" type="search" placeholder="Buscar por nombre o correo…" aria-label="Buscar usuario"></div><span class="ds-work-count" id="usuarios-resumen"></span></div>
+                <div class="ds-work-table-wrap">
                     <table class="table-clean">
                         <thead>
                             <tr>
@@ -99,12 +100,12 @@
     <!-- MODAL: CREAR/EDITAR USUARIO Y PERMISOS -->
     <div id="modal-usuario" class="modal-overlay">
         <div class="modal-content card" style="max-width: 600px;">
-            <h2 id="modal-titulo" class="card__title" style="color: #ec4899; border-bottom: 2px solid #fbcfe8; padding-bottom: 0.5rem;">Editar Permisos</h2>
+            <div class="ds-work-modal-heading"><span class="ds-mini-eyebrow">Cuenta y accesos</span><h2 id="modal-titulo" class="card__title">Editar usuario</h2></div><div class="ds-user-modal-body">
             
             <input type="hidden" id="edit-user-id">
             
             <!-- Campos exclusivos para creación -->
-            <div id="campos-creacion" style="display: none; gap: 1rem; margin-top: 1rem; background: #f0f9ff; padding: 1rem; border-radius: 8px; border: 1px solid #bae6fd;">
+            <div id="campos-creacion" class="ds-user-create-fields" style="display:none">
                 <div class="form-group" style="flex: 1; margin: 0;">
                     <label style="color: #0369a1;">Email de acceso</label>
                     <input type="email" id="edit-user-email" placeholder="ejemplo@correo.com">
@@ -115,7 +116,7 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+            <div class="ds-user-fields">
                 <div class="form-group" style="flex: 1;">
                     <label>Nombre del Empleado</label>
                     <input type="text" id="edit-user-nombre" placeholder="Ej: Ceci, Eve">
@@ -196,19 +197,20 @@
                 </div>
             </div>
 
-            <div class="modal-actions" style="justify-content: space-between; margin-top: 2rem;">
+            </div><div class="modal-actions ds-user-modal-actions">
                 <button id="btn-cancelar-usuario" class="btn-secondary" style="width: 48%;">Cancelar</button>
                 <button id="btn-guardar-usuario" class="btn-primary" style="width: 48%;">Guardar Cambios</button>
             </div>
         </div>
     </div>
 
+    <dialog id="ds-password-dialog" class="ds-tools-dialog"><div class="ds-tools-head"><h2>Nueva contraseña</h2></div><div class="ds-tools-body"><p>Compartila por un canal seguro. Se muestra una sola vez y no se guarda en Firestore.</p><input id="ds-generated-password" class="ds-tools-input" readonly autocomplete="off" aria-label="Nueva contraseña"><div class="ds-tools-actions"><button type="button" class="btn-primary" id="ds-copy-password">Copiar</button><button type="button" class="btn-secondary" id="ds-close-password">Cerrar</button><span id="ds-password-feedback" role="status"></span></div></div></dialog>
     <!-- SCRIPT -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
         import { setupSupplierSchedule } from './js/stock/supplier-schedule.js?v=1';
-        import { setupUsuarios } from './js/usuarios.js?v=4';
+        import { setupUsuarios } from './js/usuarios.js?v=5';
         
         try {
             const app = initializeApp(firebaseConfig);
