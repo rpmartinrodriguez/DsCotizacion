@@ -32,7 +32,7 @@ const remove=k=>{try{sessionStorage.removeItem(k);}catch{}};
 const file=url=>url.pathname.split('/').pop()||'index.html';
 const current=()=>file(new URL(location.href));
 const make=(tag,cls)=>{const el=document.createElement(tag);el.className=cls;return el;};
-let loader,delay,limit,ghosts=[],ready=false,outgoing=false;
+let loader,delay,limit,ghosts=[],ready=false,outgoing=false,dataObserver;
 const ghost=(className,html)=>{
  const node=make('span',className+' ds-nav-ghost');node.setAttribute('aria-hidden','true');node.innerHTML=html;header.append(node);ghosts.push(node);
  return node;
@@ -60,7 +60,7 @@ const createLoader=()=>{
  loader.innerHTML='<div class="ds-navigation-loader-card"><svg class="ds-navigation-cake" viewBox="0 0 64 64" width="48" height="48" aria-hidden="true"><path d="M9 29 43 12 55 27 55 49 9 49Z" fill="#f7c5da" stroke="#78324f" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 29 43 12 55 27 9 36Z" fill="#fff0f6" stroke="#78324f" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 42 55 34M9 48 55 41" fill="none" stroke="#a53569" stroke-width="3" stroke-linecap="round"/><circle cx="42" cy="13" r="4.5" fill="#a53569" stroke="#78324f" stroke-width="1.4"/><path d="M42 8q2-5 6-5" fill="none" stroke="#166c47" stroke-width="2" stroke-linecap="round"/></svg><span>Cargando…</span></div>';
  document.body.append(loader);return loader;
 };
-const hide=()=>{clearTimeout(delay);clearTimeout(limit);if(loader){loader.hidden=true;loader.classList.remove('is-slow');loader.querySelector('span').textContent='Cargando…';}};
+const hide=()=>{dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);if(loader){loader.hidden=true;loader.classList.remove('is-slow');loader.querySelector('span').textContent='Cargando…';}};
 const show=(isOutgoing=false)=>{
  hide();outgoing=isOutgoing;
  delay=setTimeout(()=>{const el=createLoader();el.hidden=false;limit=setTimeout(()=>{if(isOutgoing){hide();outgoing=false;remove(pendingKey);}else{el.classList.add('is-slow');el.querySelector('span').textContent='La carga está demorando…';}},isOutgoing?5000:15000);},isOutgoing?90:160);
@@ -75,14 +75,21 @@ const syncGhosts=()=>{
  ghosts=ghosts.filter(node=>node.isConnected);
 };
 const observer=new MutationObserver(syncGhosts);observer.observe(header,{childList:true});
-const pending=read(pendingKey);remove(pendingKey);
+remove(pendingKey);
 show();
 window.DSNavigation={
  beforeMenu(){clearPreview();},
  ready(groups,master){
   // Only after Firebase validates the user; no UID, tokens or financial data stored.
   const data={master:master===true,groups:groups.map(g=>({name:g.name,pages:[...new Set(g.pages.filter(p=>pages.has(p)))]})).filter(g=>Object.prototype.hasOwnProperty.call(categoryIcons,g.name))};
-  write(key,data);ready=true;hide();clearPreview();syncGhosts();
+  write(key,data);ready=true;clearPreview();syncGhosts();
+  const selectors={'stock.html':'#tabla-stock tbody','recetas.html':'#lista-recetas-container','presupuesto.html':'#lista-ingredientes'};
+  const target=selectors[current()]&&document.querySelector(selectors[current()]);
+  const isLoading=()=>target&&/^cargando\b/i.test(target.textContent.trim());
+  if(isLoading()){
+   dataObserver=new MutationObserver(()=>{if(!isLoading()&&!outgoing)hide();});
+   dataObserver.observe(target,{subtree:true,childList:true,characterData:true});
+  }else hide();
   // If a secondary module fails, don't leave dead decorative buttons around indefinitely.
   setTimeout(()=>{clearGhosts();observer.disconnect();},3000);
  },
@@ -96,6 +103,6 @@ document.addEventListener('click',event=>{
  if(url.origin!==location.origin||!pages.has(file(url))||!/^\/(?:[^/]+\.html)?$/.test(url.pathname)||url.pathname===location.pathname&&url.search===location.search)return;
  write(pendingKey,{at:Date.now(),path:url.pathname});show(true);
 });
-window.addEventListener('pageshow',event=>{if(event.persisted){hide();outgoing=false;remove(pendingKey);}else if(ready&&!outgoing)hide();});
-window.addEventListener('pagehide',()=>{clearTimeout(delay);clearTimeout(limit);});
+window.addEventListener('pageshow',event=>{if(event.persisted){hide();outgoing=false;remove(pendingKey);}else if(ready&&!outgoing&&!dataObserver)hide();});
+window.addEventListener('pagehide',()=>{dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);});
 })();

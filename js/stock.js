@@ -99,7 +99,7 @@ export function setupStock(app) {
                 const fuenteClase = usaCostoProveedor ? 'is-provider' : (tieneCostoCompra ? 'is-purchase' : 'is-empty');
                 const costoAplicadoHtml = `
                     <div class="ds-applied-cost">
-                        <strong>${costoAplicado > 0 ? `${costoAplicado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / ${safeUnidad}` : '—'}</strong>
+                        <strong>${costoAplicado > 0 ? `$${costoAplicado.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} / ${safeUnidad}` : '—'}</strong>
                         <span class="${fuenteClase}">${fuenteCosto}</span>
                     </div>
                 `;
@@ -125,7 +125,7 @@ export function setupStock(app) {
 
                     proveedorHtml = `
                         <div class="ds-provider-table-price">
-                            <strong>${proveedorPrecio.toLocaleString('es-AR', {minimumFractionDigits:2,maximumFractionDigits:2})}${presentacionTexto}</strong>
+                            <strong>$${proveedorPrecio.toLocaleString('es-AR', {minimumFractionDigits:2,maximumFractionDigits:2})}${presentacionTexto}</strong>
                             <span class="${cls}">${variacionTexto}</span>
                         </div>
                     `;
