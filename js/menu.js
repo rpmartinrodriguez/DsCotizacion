@@ -15,7 +15,7 @@ async function obtenerSesionAutorizada() {
         const { getFirestore, doc, getDoc } = firebaseFirestoreModule;
         let app = getApps().find((candidate) => candidate.name === '[DEFAULT]');
 
-        for (let intento = 0; !app && intento < 120; intento += 1) {
+        for (let intento = 0; !app && intento < 400; intento += 1) {
             await new Promise((resolve) => setTimeout(resolve, 25));
             app = getApps().find((candidate) => candidate.name === '[DEFAULT]');
         }
@@ -28,11 +28,9 @@ async function obtenerSesionAutorizada() {
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const user = await new Promise((resolve) => {
-            const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-                unsubscribe();
-                resolve(currentUser);
-            });
+        const user = await new Promise((resolve,reject) => {
+            let unsubscribe;
+            unsubscribe=onAuthStateChanged(auth,currentUser=>{unsubscribe?.();resolve(currentUser);},error=>{unsubscribe?.();reject(error);});
         });
 
         if (!user || user.isAnonymous) {
@@ -52,9 +50,11 @@ async function obtenerSesionAutorizada() {
         const rol = perfil.rol || 'empleado';
         const permisos = perfil.permisos || {};
 
-        localStorage.setItem('userPermisos', JSON.stringify(permisos));
-        localStorage.setItem('userName', perfil.nombre || user.email || 'Usuario');
-        localStorage.setItem('userRol', rol);
+        try{
+            localStorage.setItem('userPermisos', JSON.stringify(permisos));
+            localStorage.setItem('userName', perfil.nombre || user.email || 'Usuario');
+            localStorage.setItem('userRol', rol);
+        }catch{}
 
         return {
             autorizado: true,
@@ -66,7 +66,7 @@ async function obtenerSesionAutorizada() {
         };
     } catch (error) {
         console.error("No se pudo validar la sesión:", error);
-        return { autorizado: false };
+        return { autorizado: false, temporal:true };
     }
 }
 
@@ -117,6 +117,13 @@ async function inicializarMenu() {
 
     const session = await obtenerSesionAutorizada();
 
+    if(session.temporal){
+        // Bloquear la vista si no se puede verificar la cuenta, sin borrar la sesión.
+        const notice=document.createElement('dialog');notice.className='ds-tools-dialog';
+        notice.innerHTML='<div class="ds-tools-head"><h2>Comprobando tu sesión</h2></div><div class="ds-tools-body"><p>No pudimos verificar los permisos en este momento. Tu sesión no se cerró. Revisá la conexión y reintentá.</p><button type="button" class="btn-primary">Reintentar</button></div>';
+        notice.addEventListener('cancel',event=>event.preventDefault());notice.querySelector('button').onclick=()=>location.reload();
+        document.body.append(notice);notice.showModal();return;
+    }
     if (!session.autorizado) {
         localStorage.removeItem('userPermisos');
         localStorage.removeItem('userName');
@@ -238,29 +245,39 @@ async function inicializarMenu() {
     if(menuToggleBtn)menuToggleBtn.hidden=true;
     if(navOverlay){navOverlay.classList.remove('active');navOverlay.hidden=true;}
     const groups=[...navMenu.querySelectorAll('.nav-category')];
+    const mobile=window.matchMedia('(max-width:767px)');
+    const mobileToggle=document.createElement('button');mobileToggle.type='button';mobileToggle.id='ds-mobile-menu-toggle';mobileToggle.className='ds-mobile-menu-toggle';
+    mobileToggle.innerHTML=MENU_ICON.menu+'<span>Menú</span>';mobileToggle.setAttribute('aria-controls','nav-menu');mobileToggle.setAttribute('aria-expanded','false');header.append(mobileToggle);
+    const mobileHeading=document.createElement('p');mobileHeading.className='ds-mobile-menu-heading';mobileHeading.textContent='Secciones';navMenu.prepend(mobileHeading);
     let current=null;
-    const closeMenu=(restoreFocus=false)=>{
-        if(!current)return;
-        const {button,panel}=current;
-        panel.hidden=true;button.setAttribute('aria-expanded','false');current=null;
-        if(restoreFocus)button.focus();
+    const mobileState=(open)=>{navMenu.classList.toggle('ds-mobile-menu-open',open);mobileToggle.setAttribute('aria-expanded',String(open));};
+    const closeMenu=(restoreFocus=false,keepGrid=false)=>{
+        const previous=current;
+        if(current){current.panel.hidden=true;current.button.setAttribute('aria-expanded','false');current=null;}
+        navMenu.classList.remove('ds-mobile-submenu-open');
+        if(!keepGrid)mobileState(false);
+        if(restoreFocus)(mobile.matches&&!keepGrid?mobileToggle:previous?.button)?.focus();
     };
+    mobileToggle.addEventListener('click',()=>{if(navMenu.classList.contains('ds-mobile-menu-open'))closeMenu(true);else{closeMenu();mobileState(true);groups[0]?.querySelector('button')?.focus();}});
+
     const positionPanel=()=>{
         if(!current)return;
-        const {button,panel}=current,rect=button.getBoundingClientRect(),width=Math.min(270,window.innerWidth-20),top=Math.ceil(header.getBoundingClientRect().bottom)+5;
+        const {button,panel}=current,rect=button.getBoundingClientRect(),width=mobile.matches?window.innerWidth-20:Math.min(270,window.innerWidth-20),top=Math.ceil(header.getBoundingClientRect().bottom)+5;
         panel.style.width=width+'px';panel.style.top=top+'px';
-        panel.style.left=Math.max(10,Math.min(rect.left,window.innerWidth-width-10))+'px';
+        panel.style.left=(mobile.matches?10:Math.max(10,Math.min(rect.left,window.innerWidth-width-10)))+'px';
         panel.style.maxHeight=Math.max(100,window.innerHeight-top-10)+'px';
     };
     groups.forEach((group,i)=>{
         const button=group.querySelector('.nav-category-btn'),panel=group.querySelector('.nav-category-content');
         panel.id='ds-topnav-panel-'+i;panel.classList.add('ds-topnav-panel');button.setAttribute('aria-controls',panel.id);
         document.body.append(panel);
+        const back=document.createElement('button');back.type='button';back.className='ds-mobile-menu-back';back.textContent='‹ Todas las categorías';
+        back.onclick=()=>{closeMenu(false,true);mobileState(true);button.focus();};panel.prepend(back);
         panel.querySelectorAll('.nav-menu__link').forEach(link=>{
             if(archivoActual===link.getAttribute('href')?.split('?')[0]){link.classList.add('active');link.setAttribute('aria-current','page');button.classList.add('is-current');}
             link.addEventListener('click',()=>closeMenu());
         });
-        button.addEventListener('click',()=>{if(current?.button===button){closeMenu();return;}closeMenu();current={button,panel};button.setAttribute('aria-expanded','true');panel.hidden=false;positionPanel();});
+        button.addEventListener('click',()=>{if(current?.button===button){closeMenu();return;}closeMenu(false,mobile.matches);current={button,panel};button.setAttribute('aria-expanded','true');panel.hidden=false;positionPanel();if(mobile.matches){mobileState(true);navMenu.classList.add('ds-mobile-submenu-open');back.focus();}});
         button.addEventListener('keydown',event=>{
             if(event.key==='ArrowDown'){event.preventDefault();if(current?.button!==button)button.click();panel.querySelector('a')?.focus();}
             if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();groups[(i+(event.key==='ArrowRight'?1:-1)+groups.length)%groups.length].querySelector('button')?.focus();}
@@ -268,9 +285,9 @@ async function inicializarMenu() {
     });
     const logout=navMenu.querySelector('#btn-cerrar-sesion-menu');
     if(logout){logout.classList.add('ds-topnav-logout');logout.title='Cerrar sesión · '+nombre;}
-    document.addEventListener('pointerdown',event=>{if(current&&!current.button.contains(event.target)&&!current.panel.contains(event.target))closeMenu();});
-    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&current){event.preventDefault();closeMenu(true);}});
-    window.addEventListener('resize',()=>closeMenu());navMenu.addEventListener('scroll',()=>closeMenu(),{passive:true});window.addEventListener('pageshow',()=>closeMenu());
+    document.addEventListener('pointerdown',event=>{if(mobileToggle.contains(event.target))return;if(mobile.matches){if(navMenu.classList.contains('ds-mobile-menu-open')&&!navMenu.contains(event.target)&&!current?.panel.contains(event.target))closeMenu();}else if(current&&!current.button.contains(event.target)&&!current.panel.contains(event.target))closeMenu();});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&(current||navMenu.classList.contains('ds-mobile-menu-open'))){event.preventDefault();closeMenu(true);}});
+    window.addEventListener('resize',()=>{if(current)positionPanel();});mobile.addEventListener('change',()=>closeMenu());navMenu.addEventListener('scroll',()=>{if(!mobile.matches)closeMenu();},{passive:true});window.addEventListener('pageshow',()=>closeMenu());
 
     // Accesos adicionales, sin alterar los permisos ni las rutas originales.
     if(p.cajas){
@@ -346,12 +363,12 @@ async function inicializarMenu() {
                 }
             } catch (error) {
                 console.error("Error al cerrar sesión:", error);
-            } finally {
-                // Mantener preferencias y borradores locales, aislados por UID y caja.
-                const preserved=[];
-                try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^(ds-favorite-pages:|ds-pos-category:|ds-pos-parked:)/.test(k||''))preserved.push([k,localStorage.getItem(k)]);}}catch{}
-                localStorage.clear();
-                for(const [k,v] of preserved)try{localStorage.setItem(k,v);}catch{}
+                btnCerrarSesion.disabled=false;btnCerrarSesion.textContent='Reintentar cierre de sesión';
+                alert('No se pudo cerrar la sesión. Reintentá.');return;
+            }
+            {
+                // No borrar almacenamiento de Firebase ni preferencias de otros usuarios.
+                for(const key of ['userPermisos','userName','userRol'])try{localStorage.removeItem(key);}catch{}
                 window.location.replace('login.html');
             }
         });

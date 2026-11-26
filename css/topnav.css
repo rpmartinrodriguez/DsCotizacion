@@ -53,3 +53,28 @@ body.ds-app.ds-topnav-layout .header>#ds-push-open{display:grid!important;visibi
 body.ds-app.ds-topnav-layout .header>#ds-global-search{order:4;flex:0 0 38px!important;margin:0!important}
 #btn-push-settings[hidden]{display:none!important}
 @media(max-width:1100px){body.ds-app.ds-topnav-layout .header>#ds-push-open,body.ds-app.ds-topnav-layout .header>#ds-global-search{align-self:center;flex-shrink:0!important}body.ds-app.ds-topnav-layout .header>.header__logo-link{order:0}body.ds-app.ds-topnav-layout .header>.nav-menu.ds-topnav{order:10}}
+
+/* Menú compacto exclusivamente para celulares. En escritorio se mantiene la barra original. */
+.ds-mobile-menu-toggle,.ds-mobile-menu-heading,.ds-mobile-menu-back{display:none}
+@media(max-width:767px){
+ body.ds-app.ds-topnav-layout{--ds-topnav-height:calc(60px + env(safe-area-inset-top,0px))}
+ body.ds-app.ds-topnav-layout .header{flex-wrap:nowrap!important;align-content:center;gap:7px!important;padding:env(safe-area-inset-top,0px) 10px 0!important}
+ body.ds-app.ds-topnav-layout .header>.header__logo-link{flex:1 1 auto;min-width:0;margin-right:auto!important;display:flex!important;align-items:center}
+ body.ds-app.ds-topnav-layout .header__logo{height:36px!important;max-width:104px!important;max-height:36px;object-fit:contain}
+ body.ds-app.ds-topnav-layout .header>.ds-topbar-actions{display:none!important}
+ body.ds-app.ds-topnav-layout .header>.header__spacer{display:none!important}
+ body.ds-app.ds-topnav-layout .header>.ds-mobile-menu-toggle{order:5;display:flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;min-height:40px;min-width:60px;padding:6px 8px;border:1px solid #dce6df;background:#f5f9f6;color:#166c47;border-radius:10px;font:650 .76rem/1 system-ui,sans-serif;cursor:pointer}
+ body.ds-app.ds-topnav-layout .ds-mobile-menu-toggle svg{width:19px;height:19px}
+ body.ds-app.ds-topnav-layout .header>.ds-mobile-menu-toggle[aria-expanded=true]{background:#e3f0e8}
+ body.ds-app.ds-topnav-layout .header>.nav-menu.ds-topnav{display:none!important;position:fixed!important;top:calc(var(--ds-topnav-height) + 6px)!important;left:10px!important;right:10px!important;bottom:auto!important;width:auto!important;height:auto!important;max-height:calc(100dvh - var(--ds-topnav-height) - 18px - env(safe-area-inset-bottom,0px));overflow:auto!important;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:8px;padding:12px!important;background:#fff!important;border:1px solid #e6dfe4!important;border-radius:14px!important;box-shadow:0 12px 36px #39263226!important}
+ body.ds-app.ds-topnav-layout .header>.nav-menu.ds-topnav.ds-mobile-menu-open:not(.ds-mobile-submenu-open){display:grid!important}
+ body.ds-app.ds-topnav-layout .ds-mobile-menu-heading{display:block;grid-column:1/-1;margin:2px 2px 4px;font-size:.84rem;font-weight:700;color:#766d74}
+ body.ds-app.ds-topnav-layout .ds-topnav .nav-category-btn{min-width:0;width:100%!important;min-height:76px;padding:10px 8px!important;border:1px solid #eee7eb;background:#fbf9fa;white-space:normal;text-align:center;font-size:.78rem;gap:7px}
+ body.ds-app.ds-topnav-layout .ds-topnav .nav-category-btn.is-current{background:#f1f7f3;border-color:#cce2d4}
+ body.ds-app.ds-topnav-layout .ds-topnav .nav-menu__footer{grid-column:1/-1;border-top:1px solid #eee7eb;padding-top:6px!important}
+ body.ds-app.ds-topnav-layout .ds-topnav .ds-topnav-logout{flex-direction:row;min-height:42px;width:100%!important;gap:9px;font-size:.8rem}
+ body.ds-app.ds-topnav-layout .ds-mobile-menu-back{display:block;text-align:left;padding:11px;border:0;border-radius:8px;background:#f2f7f4;color:#166c47;font-weight:700;cursor:pointer}
+ body.ds-app.ds-topnav-layout .ds-topnav-panel{max-height:calc(100dvh - var(--ds-topnav-height) - 18px)!important}
+ body.ds-app.ds-topnav-layout .ds-topnav-panel .nav-menu__link{min-height:46px;font-size:.9rem}
+}
+@media print{.ds-mobile-menu-toggle,.ds-mobile-menu-back{display:none!important}}

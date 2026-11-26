@@ -56,6 +56,8 @@
                 </div>
 
                 <button type="submit" class="ds-login-submit" id="btn-submit">Ingresar</button>
+                <button type="button" id="retry-session" class="ds-login-submit" hidden style="margin-top:8px">Reintentar sesión</button>
+                <button type="button" id="switch-account" hidden style="margin-top:8px;width:100%;padding:10px;border:0;background:transparent;color:#166c47;cursor:pointer">Cerrar sesión y usar otra cuenta</button>
             </form>
 
             <div class="ds-login-footnote">Las cuentas y permisos son administrados desde Dulce Sall.</div>
@@ -65,7 +67,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupLogin } from './js/login.js?v=3';
+        import { setupLogin } from './js/login.js?v=4';
 
         try {
             const app = initializeApp(firebaseConfig);
