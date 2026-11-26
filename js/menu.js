@@ -167,29 +167,9 @@ async function inicializarMenu() {
 
     const nombre = session.perfil?.nombre || 'Dulce Sall';
 
-    let htmlMenu = `
-        <div class="nav-menu__header ds-sidebar-header">
-            <button
-                id="sidebar-collapse-btn"
-                class="ds-sidebar-menu-btn"
-                type="button"
-                aria-label="Contraer menú lateral"
-                title="Contraer menú lateral"
-                aria-expanded="true"
-            >${MENU_ICON.menu}</button>
-
-            <img src="assets/logo.png" alt="Dulce Sall" class="header__logo ds-sidebar-logo" style="height:40px;">
-
-            <div class="nav-menu__brand-copy">
-                <span class="nav-menu__title">Dulce Sall</span>
-                <small class="nav-menu__user-name">${nombre}</small>
-            </div>
-        </div>
-    `;
-
-    const categoriaMenu = (titulo, ayuda) =>
-        `<div class="nav-category"><button class="nav-category-btn"><span>${titulo} <span class="ds-nav-info" title="${ayuda}">(i)</span></span><span class="nav-icon">+</span></button><div class="nav-category-content">`;
-
+    let htmlMenu = '';
+    const categoryIcons={'Operación':'pos','Productos':'recipes','Insumos y compras':'stock','Clientes y pedidos':'clients','Administración':'finance','Herramientas':'models'};
+    const categoriaMenu=(titulo,ayuda)=>`<div class="nav-category"><button type="button" class="nav-category-btn" aria-expanded="false" title="${ayuda}"><span class="ds-topnav-icon">${MENU_ICON[categoryIcons[titulo]]}</span><span class="ds-topnav-name">${titulo}</span><span class="ds-topnav-chevron" aria-hidden="true">⌄</span></button><div class="nav-category-content" hidden><p class="ds-topnav-help">${ayuda}</p>`;
     if (p.mostrador || p.indicadores) {
         htmlMenu += categoriaMenu('Operación', 'Trabajo diario: inicio de jornada y ventas de mostrador.');
         if (p.indicadores) htmlMenu += `<a href="index.html" class="nav-menu__link" title="Inicio"><span class="nav-menu__glyph">${MENU_ICON.home}</span><span class="nav-menu__label">Inicio</span></a>`;
@@ -247,98 +227,50 @@ async function inicializarMenu() {
 
     navMenu.innerHTML = htmlMenu;
 
-    const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
-    const SIDEBAR_STORAGE_KEY = 'dsSidebarCollapsed';
-
-    const aplicarEstadoSidebar = (collapsed, { persist = false } = {}) => {
-        document.body.classList.toggle('ds-sidebar-collapsed', collapsed);
-
-        if (sidebarCollapseBtn) {
-            const label = collapsed ? 'Expandir menú lateral' : 'Contraer menú lateral';
-            sidebarCollapseBtn.setAttribute('aria-label', label);
-            sidebarCollapseBtn.title = label;
-            sidebarCollapseBtn.setAttribute('aria-expanded', String(!collapsed));
-        }
-
-        if (persist) {
-            localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? '1' : '0');
-        }
+    const header=document.querySelector('.header');
+    if(!header)return;
+    document.body.classList.remove('ds-sidebar-collapsed','menu-open');
+    document.body.classList.add('ds-topnav-layout');
+    navMenu.setAttribute('aria-label','Navegación por categorías');
+    navMenu.classList.add('ds-topnav');
+    header.querySelector('.header__logo-link')?.after(navMenu);
+    if(navMenu.parentElement!==header)header.append(navMenu);
+    if(menuToggleBtn)menuToggleBtn.hidden=true;
+    if(navOverlay){navOverlay.classList.remove('active');navOverlay.hidden=true;}
+    const groups=[...navMenu.querySelectorAll('.nav-category')];
+    let current=null;
+    const closeMenu=(restoreFocus=false)=>{
+        if(!current)return;
+        const {button,panel}=current;
+        panel.hidden=true;button.setAttribute('aria-expanded','false');current=null;
+        if(restoreFocus)button.focus();
     };
-
-    aplicarEstadoSidebar(localStorage.getItem(SIDEBAR_STORAGE_KEY) === '1');
-
-    if (sidebarCollapseBtn) {
-        sidebarCollapseBtn.addEventListener('click', () => {
-            if (window.innerWidth < 1024) {
-                navMenu.classList.remove('active');
-                document.body.classList.remove('menu-open');
-                if (navOverlay) navOverlay.classList.remove('active');
-                return;
-            }
-
-            aplicarEstadoSidebar(
-                !document.body.classList.contains('ds-sidebar-collapsed'),
-                { persist: true }
-            );
-        });
-    }
-
-    const closeMenu = () => {
-        navMenu.classList.remove('active');
-        document.body.classList.remove('menu-open');
-        if (navOverlay) navOverlay.classList.remove('active');
+    const positionPanel=()=>{
+        if(!current)return;
+        const {button,panel}=current,rect=button.getBoundingClientRect(),width=Math.min(270,window.innerWidth-20),top=Math.ceil(header.getBoundingClientRect().bottom)+5;
+        panel.style.width=width+'px';panel.style.top=top+'px';
+        panel.style.left=Math.max(10,Math.min(rect.left,window.innerWidth-width-10))+'px';
+        panel.style.maxHeight=Math.max(100,window.innerHeight-top-10)+'px';
     };
-
-    if (menuToggleBtn) {
-        const nuevoBoton = menuToggleBtn.cloneNode(true);
-        menuToggleBtn.parentNode.replaceChild(nuevoBoton, menuToggleBtn);
-        nuevoBoton.addEventListener('click', (event) => {
-            event.preventDefault();
-            navMenu.classList.toggle('active');
-            document.body.classList.toggle('menu-open');
-            if (navOverlay) navOverlay.classList.toggle('active');
+    groups.forEach((group,i)=>{
+        const button=group.querySelector('.nav-category-btn'),panel=group.querySelector('.nav-category-content');
+        panel.id='ds-topnav-panel-'+i;panel.classList.add('ds-topnav-panel');button.setAttribute('aria-controls',panel.id);
+        document.body.append(panel);
+        panel.querySelectorAll('.nav-menu__link').forEach(link=>{
+            if(archivoActual===link.getAttribute('href')?.split('?')[0]){link.classList.add('active');link.setAttribute('aria-current','page');button.classList.add('is-current');}
+            link.addEventListener('click',()=>closeMenu());
         });
-    }
-
-    if (navOverlay) navOverlay.addEventListener('click', closeMenu);
-
-    document.querySelectorAll('.ds-nav-info').forEach((info) => {
-        info.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const message = info.getAttribute('title');
-            if (message) window.alert(message);
+        button.addEventListener('click',()=>{if(current?.button===button){closeMenu();return;}closeMenu();current={button,panel};button.setAttribute('aria-expanded','true');panel.hidden=false;positionPanel();});
+        button.addEventListener('keydown',event=>{
+            if(event.key==='ArrowDown'){event.preventDefault();if(current?.button!==button)button.click();panel.querySelector('a')?.focus();}
+            if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();groups[(i+(event.key==='ArrowRight'?1:-1)+groups.length)%groups.length].querySelector('button')?.focus();}
         });
     });
-
-    document.querySelectorAll('.nav-category-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const content = btn.nextElementSibling;
-            const icon = btn.querySelector('.nav-icon');
-
-            if (content.style.maxHeight) {
-                content.style.maxHeight = null;
-                if (icon) icon.textContent = '+';
-            } else {
-                content.style.maxHeight = content.scrollHeight + 'px';
-                if (icon) icon.textContent = '−';
-            }
-        });
-    });
-
-    document.querySelectorAll('.nav-menu__link').forEach((link) => {
-        const href = link.getAttribute('href');
-
-        if (href && archivoActual === href.split('?')[0]) {
-            link.classList.add('active');
-            const parentContent = link.closest('.nav-category-content');
-            if (parentContent) {
-                parentContent.style.maxHeight = parentContent.scrollHeight + 'px';
-                const icon = parentContent.previousElementSibling?.querySelector('.nav-icon');
-                if (icon) icon.textContent = '−';
-            }
-        }
-    });
+    const logout=navMenu.querySelector('#btn-cerrar-sesion-menu');
+    if(logout){logout.classList.add('ds-topnav-logout');logout.title='Cerrar sesión · '+nombre;}
+    document.addEventListener('pointerdown',event=>{if(current&&!current.button.contains(event.target)&&!current.panel.contains(event.target))closeMenu();});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape'&&current){event.preventDefault();closeMenu(true);}});
+    window.addEventListener('resize',()=>closeMenu());navMenu.addEventListener('scroll',()=>closeMenu(),{passive:true});window.addEventListener('pageshow',()=>closeMenu());
 
     // Anticipar el HTML de la sección que el usuario está por abrir.
     // No ejecuta scripts ni consulta datos de Firebase; sólo precarga HTML.

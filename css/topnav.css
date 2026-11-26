@@ -1,0 +1,32 @@
+
+body.ds-app.ds-topnav-layout{--ds-sidebar:0px;--ds-topnav-height:72px}
+body.ds-app.ds-topnav-layout .header{left:0!important;right:0!important;width:100%!important;height:var(--ds-topnav-height)!important;display:flex!important;gap:12px;justify-content:flex-start!important;align-items:center;padding:0 16px!important;background:#fff;backdrop-filter:none!important;overflow:visible;z-index:1100;box-shadow:0 2px 12px #3926320a}
+body.ds-app.ds-topnav-layout .header__menu-icon,body.ds-app.ds-topnav-layout .ds-mobile-nav,body.ds-app.ds-topnav-layout .nav-menu__overlay,body.ds-app.ds-topnav-layout .ds-sidebar-collapse-btn{display:none!important}
+body.ds-app.ds-topnav-layout .header__logo-link{flex:0 0 auto;margin:0!important;position:static!important;transform:none!important}
+body.ds-app.ds-topnav-layout .header__logo{height:42px!important;max-width:115px;object-fit:contain}
+body.ds-app.ds-topnav-layout .header__spacer{display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto;width:auto;min-width:0}
+body.ds-app.ds-topnav-layout .header__spacer:empty{display:none}
+body.ds-app.ds-topnav-layout .header__cart-link,body.ds-app.ds-topnav-layout .ds-topbar-actions,body.ds-app.ds-topnav-layout #ds-push-open{flex-shrink:0}
+body.ds-app.ds-topnav-layout .nav-menu.ds-topnav{position:static!important;transform:none!important;inset:auto!important;height:100%!important;width:auto!important;min-width:0!important;flex:1 1 auto;display:flex!important;flex-direction:row!important;align-items:center;justify-content:safe center;gap:4px;overflow-x:auto!important;overflow-y:hidden!important;padding:0 2px!important;background:transparent!important;box-shadow:none!important;border:0!important;border-radius:0!important;transition:none!important;scrollbar-width:thin}
+body.ds-app.ds-topnav-layout .ds-topnav .nav-category{flex:0 0 auto;min-width:0;margin:0!important;padding:0!important;border:0}
+body.ds-app.ds-topnav-layout .ds-topnav .nav-category-btn,body.ds-app.ds-topnav-layout .ds-topnav .ds-topnav-logout{width:auto!important;min-width:84px;min-height:56px;display:flex!important;flex-direction:column;justify-content:center;align-items:center;gap:3px;margin:0!important;padding:5px 9px!important;background:transparent;color:#635b64;border:1px solid transparent;border-radius:10px;box-shadow:none;cursor:pointer;text-transform:none;letter-spacing:0;font:650 .7rem/1.15 system-ui,sans-serif;white-space:nowrap;position:relative}
+body.ds-app.ds-topnav-layout .ds-topnav .ds-topnav-icon,body.ds-app.ds-topnav-layout .ds-topnav .nav-menu__logout-icon{display:grid;place-items:center;width:23px;height:23px;flex:0 0 auto}
+body.ds-app.ds-topnav-layout .ds-topnav svg{width:22px;height:22px}
+body.ds-app.ds-topnav-layout .ds-topnav-name{display:block}
+body.ds-app.ds-topnav-layout .ds-topnav-chevron{position:absolute;top:5px;right:6px;font-size:.75rem;color:#8d838a;line-height:1}
+body.ds-app.ds-topnav-layout .ds-topnav .nav-category-btn:is(:hover,[aria-expanded=true]),body.ds-app.ds-topnav-layout .ds-topnav .ds-topnav-logout:hover{background:#f8f3f6;color:#713350}
+body.ds-app.ds-topnav-layout .ds-topnav .nav-category-btn.is-current{color:#166c47;background:#f3f8f5;border-color:#d8e8df}
+body.ds-app.ds-topnav-layout .ds-topnav .nav-category-btn:focus-visible,body.ds-app.ds-topnav-layout .ds-topnav .ds-topnav-logout:focus-visible{outline:2px solid #166c47;outline-offset:-2px}
+body.ds-app.ds-topnav-layout .ds-topnav .nav-menu__footer{margin:0!important;padding:0!important;flex:0 0 auto}
+body.ds-app.ds-topnav-layout .ds-topnav .nav-menu__logout-label{display:block;font-size:.67rem}
+body.ds-app.ds-topnav-layout .ds-topnav-panel{position:fixed;z-index:1101;display:grid;gap:4px;overflow:auto!important;max-height:none;background:#fff;border:1px solid #e8e0e5;border-radius:12px;padding:8px;box-shadow:0 10px 28px #39263224;box-sizing:border-box}
+body.ds-app.ds-topnav-layout .ds-topnav-panel[hidden]{display:none!important}
+body.ds-app.ds-topnav-layout .ds-topnav-panel .ds-topnav-help{font-size:.74rem;line-height:1.4;color:#817781;margin:4px 8px 6px;white-space:normal}
+body.ds-app.ds-topnav-layout .ds-topnav-panel .nav-menu__link{display:flex;align-items:center;gap:10px;margin:0!important;padding:11px!important;font-size:.83rem;min-height:40px;box-sizing:border-box}
+body.ds-app.ds-topnav-layout .ds-topnav-panel .nav-menu__glyph{flex:0 0 23px;width:23px;display:grid;place-items:center}
+body.ds-app.ds-topnav-layout .ds-topnav-panel svg{width:21px;height:21px}
+body.ds-app.ds-topnav-layout .ds-topnav-panel .nav-menu__link.active{color:#166c47;background:#f3f8f5}
+body.ds-app.ds-topnav-layout :is(.ds-main,.ds-cash-main,.ds-pos-main,.ds-finance-main,.ds-recipes-main,.ds-quotes-main,.ds-purchases-main,.ds-content-main){padding-top:calc(var(--ds-topnav-height) + 18px)!important;padding-left:28px!important;padding-right:28px!important}
+@media(max-width:1100px){body.ds-app.ds-topnav-layout{--ds-topnav-height:114px}body.ds-app.ds-topnav-layout .header{flex-wrap:wrap;gap:0 8px;padding:4px 12px 0!important;align-content:space-between}body.ds-app.ds-topnav-layout .header__logo-link{margin-right:auto!important}body.ds-app.ds-topnav-layout .header__logo{height:35px!important}body.ds-app.ds-topnav-layout .nav-menu.ds-topnav{order:10;flex:0 0 100%;height:61px!important;justify-content:flex-start;padding:0!important;gap:3px}body.ds-app.ds-topnav-layout .ds-topnav .nav-category-btn,body.ds-app.ds-topnav-layout .ds-topnav .ds-topnav-logout{min-width:75px;padding:4px 7px!important;min-height:54px;font-size:.65rem}body.ds-app.ds-topnav-layout :is(.ds-main,.ds-cash-main,.ds-pos-main,.ds-finance-main,.ds-recipes-main,.ds-quotes-main,.ds-purchases-main,.ds-content-main){padding-top:calc(var(--ds-topnav-height) + 14px)!important;padding-left:14px!important;padding-right:14px!important}}
+@media(min-width:992px){body.ds-pos.ds-topnav-layout #pantalla-pos.ds-pos-shell>.ds-pos-cart-panel,body.ds-pos.ds-topnav-layout #pantalla-pos > .card:last-child{top:calc(var(--ds-topnav-height) + 14px)!important;max-height:calc(100dvh - var(--ds-topnav-height) - 32px)!important}}
+@media print{body.ds-app.ds-topnav-layout .header,body.ds-app.ds-topnav-layout .ds-topnav-panel{display:none!important}body.ds-app.ds-topnav-layout main{padding-top:0!important}}

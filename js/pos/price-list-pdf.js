@@ -78,13 +78,13 @@ function createCatalogPdf(products, {
 
     const pdf = new Pdf({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
     const cols = permanent ? 4 : 2;
-    const rows = permanent ? 5 : 14;
+    const rows = permanent ? 7 : 14;
     const perPage = cols * rows;
     const gap = 3;
     const margin = 9;
     const pageWidth = 210;
     const cellSize = (pageWidth - 2 * margin - (cols - 1) * gap) / cols;
-    const cellHeight = permanent ? cellSize : 15;
+    const cellHeight = permanent ? 33 : 15;
     const startY = 27;
     const pages = Math.ceil(items.length / perPage);
     const dateLabel = today.toLocaleDateString('es-AR', {
@@ -146,27 +146,26 @@ function createCatalogPdf(products, {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(6.5);
         pdf.setTextColor(104, 94, 104);
-        pdf.text(pdf.splitTextToSize(categoryOf(item), cellSize - 6)[0], x + cellSize / 2, y + 4, { align: 'center' });
+        pdf.text(pdf.splitTextToSize(categoryOf(item), cellSize - 6)[0], x + cellSize / 2, y + 3.7, { align: 'center' });
 
         let fontSize = 8.5;
         let lines = [];
         const name = String(item.nombreTorta || '').trim().replace(/[\u{1F300}-\u{1FAFF}]/gu, '');
-        // Hasta 16 mm para el nombre, sin invadir el código.
-        do {
+        const lineStep = size => size * 0.3528 * 1.08;
+        while (true) {
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(fontSize);
             lines = pdf.splitTextToSize(name, cellSize - 6);
-            const heightMM = lines.length * fontSize * 0.3528 * 1.08;
-            if (heightMM <= 16) break;
-            fontSize -= 0.4;
-        } while (fontSize >= 5);
-        if (lines.length * fontSize * 0.3528 * 1.08 > 16) {
-            const maxLines = Math.max(1, Math.floor(16 / (fontSize * 0.3528 * 1.08)));
+            if ((lines.length - 1) * lineStep(fontSize) <= 5 || fontSize <= 6.5) break;
+            fontSize = Math.max(6.5, fontSize - 0.5);
+        }
+        const maxLines = Math.floor(5 / lineStep(fontSize)) + 1;
+        if (lines.length > maxLines) {
             lines = lines.slice(0, maxLines);
             lines[lines.length - 1] = lines[lines.length - 1].trimEnd().slice(0, -3) + '…';
         }
         pdf.setTextColor(61, 53, 61);
-        pdf.text(lines, x + cellSize / 2, y + 9, {
+        pdf.text(lines, x + cellSize / 2, y + 12 - (lines.length - 1) * lineStep(fontSize), {
             align: 'center', lineHeightFactor: 1.08
         });
 
@@ -177,7 +176,7 @@ function createCatalogPdf(products, {
         const imageWidth = Math.min(maxImageWidth, maxImageHeight * barcode.aspect);
         const imageHeight = imageWidth / barcode.aspect;
         pdf.addImage(barcode.data, 'PNG',
-            x + (cellSize - imageWidth) / 2, y + 26,
+            x + (cellSize - imageWidth) / 2, y + 14,
             imageWidth, imageHeight
         );
     }
