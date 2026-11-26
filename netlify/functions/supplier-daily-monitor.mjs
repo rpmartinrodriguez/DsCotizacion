@@ -4,7 +4,7 @@ import { admin,dispatchOnce,productionOrigin,money,hash } from './lib/push-admin
 import { FieldPath,Timestamp } from 'firebase-admin/firestore';
 const dayKey=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Cordoba',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 const normal=s=>String(s||'').toLowerCase().trim().replace(/^(g|grs|gramo|gramos)$/,'gr').replace(/^(kilo|kilos)$/,'kg').replace(/^(un|u|unidades)$/,'unidad').replace(/^(lt|litro|litros)$/,'l');
-export const handler=async()=>{
+const run=async()=>{
     // Scheduled functions run only in published production. Never change the official purchase cost.
     if(process.env.CONTEXT && process.env.CONTEXT!=='production')return {statusCode:200,body:'Preview: sin consultas automáticas.'};
     const svc=admin(),{db}=svc,day=dayKey(),run=db.collection('dsSupplierChecks').doc(day);
@@ -43,3 +43,9 @@ export const handler=async()=>{
     await run.set(patch,{merge:true});
     return {statusCode:200,body:JSON.stringify(patch)};
 };
+
+export const config={schedule:"*/15 10-23,0-2 * * *"};
+export default async function(){
+    const result=await run();
+    return new Response(result.body,{status:result.statusCode,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'}});
+}

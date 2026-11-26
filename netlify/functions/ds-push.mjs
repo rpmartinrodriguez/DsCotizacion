@@ -1,3 +1,5 @@
+import { admin,authorize,hash,sendToDevices,dispatchOnce,eventMessage } from './lib/push-admin.mjs';
+import { Timestamp } from 'firebase-admin/firestore';
 
 const productionOrigin='https://dulce-app.netlify.app';
 const allowedOrigin=v=>v===productionOrigin||/^https:\/\/[a-z0-9-]+--dulce-app\.netlify\.app$/.test(v);
@@ -25,7 +27,7 @@ function publicError(error,stage){
     return {status:500,code:'PUSH_SERVER_ERROR',message:'No se pudo completar la operación push. Revisá el registro de ds-push en Netlify.'};
 }
 const fail=(status,message)=>Object.assign(new Error(message),{status});
-export const handler=async event=>{
+const handleRequest=async event=>{
     let stage='request';
     try{
         if(event.httpMethod!=='POST')return reply(405,{ok:false});
@@ -35,9 +37,6 @@ export const handler=async event=>{
         let body;try{body=JSON.parse(event.body||'{}');}catch{throw fail(400,'Solicitud inválida.');}
         const action=body?.action;
         if(!['event','config','register','disable','test','status'].includes(action))throw fail(400,'Acción inválida.');
-        stage='load';
-        const {admin,authorize,hash,sendToDevices,dispatchOnce,eventMessage}=await import('./lib/push-admin.mjs');
-        const {Timestamp}=await import('firebase-admin/firestore');
         stage='initialize';
         const svc=admin(),{db}=svc;
         stage='authorize';
@@ -81,3 +80,15 @@ export const handler=async event=>{
         return reply(200,{ok:true,...result});
     }catch(e){const result=publicError(e,stage);console.error('ds-push',{stage,code:result.code,firebaseCode:e?.code||null});return reply(result.status,{ok:false,code:result.code,message:result.message});}
 };
+
+/* Modern Netlify API: the same Request/Response interface as product-price. */
+export default async function(request){
+    const headers=Object.fromEntries(request.headers.entries());
+    const result=await handleRequest({
+        httpMethod:request.method,
+        rawUrl:request.url,
+        headers,
+        body:request.method==='POST'?await request.text():''
+    });
+    return new Response(result.body,{status:result.statusCode,headers:result.headers});
+}

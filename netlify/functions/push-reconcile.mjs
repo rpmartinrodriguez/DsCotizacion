@@ -1,7 +1,7 @@
 
 import {admin,dispatchOnce,productionOrigin,eventMessage} from './lib/push-admin.mjs';
 import {Timestamp} from 'firebase-admin/firestore';
-export const handler=async()=>{
+const run=async()=>{
     if(process.env.CONTEXT&&process.env.CONTEXT!=='production')return {statusCode:200,body:'Preview'};
     const svc=admin(),{db}=svc;
     // Backup for a closed browser or an interrupted immediate request. No historical backfill.
@@ -29,3 +29,9 @@ export const handler=async()=>{
     }
     return {statusCode:200,body:JSON.stringify({processed,total:messages.length})};
 };
+
+export const config={schedule:"*/5 * * * *"};
+export default async function(){
+    const result=await run();
+    return new Response(result.body,{status:result.statusCode,headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'}});
+}
