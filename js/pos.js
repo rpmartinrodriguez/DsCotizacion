@@ -144,6 +144,73 @@ export function setupPOS(app) {
     let topVendidosCargados = false;
     let cuentaCorrienteClienteId = null;
     let pendingCheckout = null;
+    let checkoutInProgress=false, dataUnsubs=[], parkingKey='', parked=[], parkedStorageError=false;
+    let posPreferenceLoaded=false;
+    const parkedPanel=document.createElement('div');parkedPanel.className='ds-pos-smart-tools';parkedPanel.hidden=true;
+    const parkBtn=document.createElement('button');parkBtn.type='button';parkBtn.className='btn-secondary';parkBtn.textContent='Poner en espera';
+    const resumeBtn=document.createElement('button');resumeBtn.type='button';resumeBtn.className='btn-secondary';resumeBtn.textContent='Ventas en espera (0)';
+    const suggestion=document.createElement('div');suggestion.className='ds-pos-suggestion';suggestion.hidden=true;
+    parkedPanel.append(parkBtn,resumeBtn,suggestion);
+    carritoContainer?.before(parkedPanel);
+    const parkingDialog=document.createElement('dialog');parkingDialog.className='ds-tools-dialog';
+    parkingDialog.innerHTML='<div class="ds-tools-head"><h2>Ventas en espera</h2><button type="button" data-close aria-label="Cerrar">×</button></div><div class="ds-tools-body"><p class="ds-tools-muted">Borradores de esta caja y dispositivo. No descuentan stock ni registran cobros.</p><div data-list class="ds-tools-results"></div></div>';
+    document.body.append(parkingDialog);parkingDialog.querySelector('[data-close]').onclick=()=>parkingDialog.close();
+    const saveParked=next=>{if(!parkingKey||parkedStorageError)return false;try{localStorage.setItem(parkingKey,JSON.stringify(next));parked=next;return true;}catch{alert('No se pudo guardar el borrador. El carrito sigue intacto.');return false;}};
+    const loadParked=()=>{
+        const next=cajaActiva?.id&&currentUser?.uid?'ds-pos-parked:'+currentUser.uid+':'+cajaActiva.id:'';
+        if(next===parkingKey)return;parkingKey=next;parked=[];parkedStorageError=false;
+        if(next)try{const raw=JSON.parse(localStorage.getItem(next)||'[]');if(!Array.isArray(raw))throw Error('invalid');parked=raw.filter(x=>x&&Array.isArray(x.items)&&typeof x.id==='string');}catch{parkedStorageError=true;console.warn('No se pudo cargar la lista de ventas en espera.');}
+    };
+    const safeToPark=()=>Boolean(cajaActiva&&currentUser&&!checkoutInProgress&&!pendingCheckout&&!modalCobro?.classList.contains('visible'));
+    const renderSmartTools=()=>{
+        loadParked();parkedPanel.hidden=!cajaActiva;parkBtn.disabled=!carritoActual.length||!safeToPark()||parkedStorageError||parked.length>=20;resumeBtn.disabled=!parked.length;resumeBtn.textContent='Ventas en espera ('+parked.length+')';
+        suggestion.replaceChildren();suggestion.hidden=true;
+        if(!carritoActual.length||!safeToPark())return;
+        const coffee=p=>/\b(caf[eé]|espresso|cappuccino|latte|americano)\b/i.test(p||'');
+        const pastry=p=>/torta|porci[oó]n|pasteler[ií]a|alfajor|brownie|cheesecake|rogel|medialuna|bud[ií]n|chocotorta/i.test(p||'');
+        const hasCoffee=carritoActual.some(x=>coffee(x.nombre)),hasPastry=carritoActual.some(x=>pastry(x.nombre)||pastry(productosDisponibles.find(p=>p.id===x.id)?.categoria));
+        if(hasCoffee===hasPastry)return;
+        const suggested=productosDisponibles.find(p=>p.precioCalculado>0&&!carritoActual.some(x=>x.id===p.id)&&(hasPastry?coffee(p.nombreTorta):pastry(p.nombreTorta)||pastry(p.categoria)));
+        if(!suggested)return;
+        const label=document.createElement('span');label.textContent='Sugerencia: '+suggested.nombreTorta+' · '+formatMoneda(suggested.precioCalculado);
+        const add=document.createElement('button');add.type='button';add.textContent='+ Agregar';add.className='btn-secondary';add.onclick=()=>{if(safeToPark())agregarProductoAlCarrito(suggested,1);};
+        suggestion.append(label,add);suggestion.hidden=false;
+    };
+    const parkCurrent=()=>{
+        if(!safeToPark()||!carritoActual.length||parked.length>=20)return;
+        const record={id:Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),at:Date.now(),items:carritoActual.map(x=>({...x})),clientId:cuentaCorrienteClienteId||null};
+        if(!saveParked([...parked,record]))return;
+        carritoActual=[];cuentaCorrienteClienteId=null;renderizarCarrito();actualizarMobileBarVisibility();setMobilePOSPanel('productos');
+    };
+    const renderParking=()=>{
+        const list=parkingDialog.querySelector('[data-list]');list.replaceChildren();
+        if(!parked.length){list.textContent='No hay ventas en espera.';return;}
+        for(const draft of parked){
+            const row=document.createElement('article');row.className='ds-tools-notice';
+            const name=document.createElement('strong');name.textContent=new Date(draft.at).toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})+' · '+draft.items.map(x=>x.cantidad+'× '+x.nombre).join(', ');
+            const amount=document.createElement('p');amount.textContent='Importe al guardar: '+formatMoneda(draft.items.reduce((s,x)=>s+Number(x.precio)*Number(x.cantidad),0));
+            const restore=document.createElement('button');restore.type='button';restore.className='btn-primary';restore.textContent='Recuperar venta';
+            restore.onclick=()=>{
+                if(!safeToPark()||carritoActual.length){alert('Finalizá o poné en espera el carrito actual antes de recuperar otro.');return;}
+                if(draft.clientId&&!currentAccount.currentById(draft.clientId)){alert('La cuenta corriente ya no está disponible. Revisá antes de recuperar.');return;}
+                const items=[];let changed=false;
+                for(const old of draft.items){
+                    const product=productosDisponibles.find(p=>p.id===old.id),whole=old.modoVenta==='entera';
+                    if(!product||!(Number(old.cantidad)>0)||!(Number(whole?product.precioTortaEnteraVigente:product.precioCalculado)>0)){alert('Uno de los productos ya no está disponible. El borrador sigue guardado.');return;}
+                    const price=Number(whole?product.precioTortaEnteraVigente:product.precioCalculado);
+                    if(price!==Number(old.precio)||Number(old.unidadesPorVenta)!==Number(product.unidadesPorVenta)||Number(old.porcionesTortaEntera)!==Number(product.porcionesTortaEntera))changed=true;
+                    items.push({...old,nombre:product.nombreTorta,precio:price,precioUnidadVenta:product.precioCalculado,precioTortaEntera:product.precioTortaEnteraVigente||null,unidadesPorVenta:product.unidadesPorVenta,porcionesTortaEntera:product.porcionesTortaEntera||null});
+                }
+                if(changed&&!confirm('Cambió un precio o presentación. ¿Recuperar con los valores vigentes?'))return;
+                if(!saveParked(parked.filter(x=>x.id!==draft.id)))return;
+                carritoActual=items;cuentaCorrienteClienteId=draft.clientId||null;parkingDialog.close();renderizarCarrito();actualizarMobileBarVisibility();
+            };
+            const discard=document.createElement('button');discard.type='button';discard.className='btn-secondary';discard.textContent='Descartar borrador';discard.onclick=()=>{if(confirm('¿Eliminar esta venta en espera? No afecta ventas registradas.')&&saveParked(parked.filter(x=>x.id!==draft.id))){renderParking();renderSmartTools();}};
+            row.append(name,amount,restore,discard);list.append(row);
+        }
+    };
+    parkBtn.onclick=parkCurrent;resumeBtn.onclick=()=>{if(safeToPark()){renderParking();parkingDialog.showModal();}};
+
     const ccScreen = document.getElementById('pantalla-cuenta-corriente');
     const ccBanner = document.getElementById('cc-venta-banner');
     const ccBannerName = document.getElementById('cc-venta-cliente');
@@ -368,6 +435,7 @@ export function setupPOS(app) {
                 }
                 
                 actualizarMobileBarVisibility();
+                renderSmartTools();
 
                 if (!datosCargados) {
                     cargarDataYCostos();
@@ -376,6 +444,8 @@ export function setupPOS(app) {
             } else {
                 cajaActiva = null;
                 datosCargados = false;
+                dataUnsubs.forEach(unsubscribe=>unsubscribe());dataUnsubs=[];
+                renderSmartTools();
                 cuentaCorrienteClienteId = null;
                 const viendoCuenta = ccScreen?.style.display === 'block';
                 if (ccScreen && !viendoCuenta) ccScreen.style.display = 'none';
@@ -629,8 +699,11 @@ export function setupPOS(app) {
     };
 
     const aplicarFiltrosPOS = () => {
+        if(!posPreferenceLoaded&&currentUser&&productosDisponibles.length){posPreferenceLoaded=true;try{categoriaActivaPOS=localStorage.getItem('ds-pos-category:'+currentUser.uid)||'todos';}catch{}}
         renderizarFiltrosCategorias();
-        renderizarGridPOS(obtenerProductosFiltradosPOS());
+        const filtered=obtenerProductosFiltradosPOS();
+        if(categoriaActivaPOS==='top'){const order=[...topVendidosKeys];const rank=p=>{const i=order.indexOf('id:'+p.id);return i<0?order.indexOf('name:'+normalizarTextoPOS(p.nombreTorta)):i;};filtered.sort((a,b)=>rank(a)-rank(b));}
+        renderizarGridPOS(filtered);
     };
 
     const cargarMasVendidos = async () => {
@@ -643,6 +716,7 @@ export function setupPOS(app) {
 
             ventasSnap.forEach(ventaDoc => {
                 const venta = ventaDoc.data() || {};
+                if(venta.eliminada===true)return;
                 const items = Array.isArray(venta.items) ? venta.items : [];
 
                 items.forEach(item => {
@@ -711,19 +785,19 @@ export function setupPOS(app) {
             cargarMasVendidos();
         }
 
-        onSnapshot(materiasPrimasCollection, (snapshot) => {
+        dataUnsubs.push(onSnapshot(materiasPrimasCollection, (snapshot) => {
             materiasPrimasMap.clear();
             snapshot.forEach(doc => materiasPrimasMap.set(doc.id, doc.data()));
             programarProcesamiento();
-        });
+        }));
 
-        onSnapshot(recetasCollection, (snapshot) => {
+        dataUnsubs.push(onSnapshot(recetasCollection, (snapshot) => {
             let tempArr = [];
             snapshot.forEach(doc => tempArr.push({ id: doc.id, ...doc.data() }));
             tempArr.sort((a,b) => (a.nombreTorta || "").localeCompare(b.nombreTorta || ""));
             recetasBrutas = tempArr;
             programarProcesamiento();
-        });
+        }));
     };
 
     const procesarYRenderizar = () => {
@@ -779,6 +853,7 @@ export function setupPOS(app) {
             aplicarFiltrosPOS();
             actualizarMobileBarVisibility();
         } 
+        renderSmartTools();
         inventory.setProducts(productosDisponibles);
         manualHistory.setProducts(productosDisponibles);
 
@@ -939,6 +1014,7 @@ export function setupPOS(app) {
             if (!button) return;
 
             categoriaActivaPOS = button.dataset.posCategory || 'todos';
+            try{localStorage.setItem('ds-pos-category:'+currentUser?.uid,categoriaActivaPOS);}catch{}
             aplicarFiltrosPOS();
         });
     }
@@ -991,6 +1067,7 @@ export function setupPOS(app) {
             }
         }
         if (btnVaciarCarrito) btnVaciarCarrito.hidden = carritoActual.length === 0;
+        renderSmartTools();
 
         if (carritoActual.length === 0) {
             carritoContainer.innerHTML = `
@@ -1143,6 +1220,7 @@ export function setupPOS(app) {
     }
 
     document.addEventListener('keydown', (event) => {
+        if(document.querySelector('dialog[open]'))return;
         const target = event.target;
         const isTyping = target instanceof HTMLInputElement
             || target instanceof HTMLTextAreaElement
@@ -1154,6 +1232,7 @@ export function setupPOS(app) {
             return;
         }
 
+        if (event.key === 'F4' && pantallaPOS?.style.display !== 'none' && safeToPark()) {event.preventDefault();parkCurrent();return;}
         if (event.key === 'F2' && pantallaPOS?.style.display !== 'none') {
             event.preventDefault();
             if (btnCobrar && !btnCobrar.disabled) btnCobrar.click();
@@ -1331,7 +1410,8 @@ export function setupPOS(app) {
 
     if (btnConfirmarVenta) {
         btnConfirmarVenta.addEventListener('click', async () => {
-            if (!metodoPagoSeleccionado || carritoActual.length === 0 || !cajaActiva) return;
+            if (checkoutInProgress || !metodoPagoSeleccionado || carritoActual.length === 0 || !cajaActiva) return;
+            checkoutInProgress=true;
 
             let mpReal = 0; let efectivoReal = 0;
             if (metodoPagoSeleccionado === 'MercadoPago') { mpReal = totalVentaActual; } 
@@ -1391,6 +1471,7 @@ export function setupPOS(app) {
 
                 if (mpReal > 0 && savedCheckout?.ventaId) void notifyCommittedEvent(auth, 'mp-sale', savedCheckout.ventaId);
                 pendingCheckout = null;
+                checkoutInProgress=false;
                 carritoActual = [];
                 cuentaCorrienteClienteId = null;
                 renderizarCarrito();
@@ -1403,7 +1484,9 @@ export function setupPOS(app) {
             } catch (error) {
                 console.error("Error al procesar la venta:", error);
                 alert(`No se pudo registrar la venta: ${error.message || 'revisá los datos y tu conexión'}. No se modificó la caja ni el saldo si la operación fue rechazada.`);
+                checkoutInProgress=false;
                 btnConfirmarVenta.disabled = false; btnConfirmarVenta.textContent = 'Confirmar Venta';
+                renderSmartTools();
             }
         });
     }
@@ -1414,6 +1497,7 @@ export function setupPOS(app) {
     if (btnIniciarCierre) {
         btnIniciarCierre.addEventListener('click', () => {
             if (!cajaActiva) return;
+            if(checkoutInProgress||pendingCheckout||carritoActual.length||parked.length){alert('Finalizá las ventas activas y en espera de este dispositivo antes de cerrar la caja.');return;}
             
             if (cierreNombreCajero) {
                 cierreNombreCajero.value = cajaActiva.usuarioNombre === 'Ceci' || cajaActiva.usuarioNombre === 'Eve' ? cajaActiva.usuarioNombre : '';
@@ -1439,6 +1523,7 @@ export function setupPOS(app) {
     if (btnConfirmarCierre) {
         btnConfirmarCierre.addEventListener('click', async () => {
             if (!cajaActiva) return;
+            if(checkoutInProgress||pendingCheckout||carritoActual.length||parked.length){alert('Hay ventas sin finalizar en este dispositivo.');return;}
             const quienCierra = cierreNombreCajero.value;
             if (!quienCierra) {
                 alert("Por favor, seleccione quién cierra la caja.");

@@ -3,7 +3,7 @@ import {Timestamp} from './lib/firebase-rest.mjs';
 const allowed=o=>o==='https://dulce-app.netlify.app'||/^https:\/\/[a-z0-9-]+--dulce-app\.netlify\.app$/.test(o);
 const json=(status,body)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'}});
 const date=v=>v?.toMillis?.()||0;
-const rows=s=>s.docs.map(d=>({id:d.id,...d.data()}));
+const rows=s=>s.docs.map(d=>({...d.data(),eventId:d.data().id,id:d.id}));
 const validId=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
 export default async function(request){
     try{
@@ -36,7 +36,7 @@ export default async function(request){
         // La consulta usa un solo índice y limita lecturas; el origen se filtra antes de responder.
         const [events,settings]=await Promise.all([db.collection('dsPushEvents').orderBy('claimedAt','desc').limit(150).get(),prefs.get()]);
         const values=settings.data()||{},read=new Set(values.read||[]),hidden=new Set(values.hidden||[]);
-        const items=rows(events).filter(d=>d.origin===origin&&!hidden.has(d.id)).slice(0,100).map(d=>({id:d.id,title:d.title||'Aviso',body:d.body||'',path:['/pos.html','/stock.html','/index.html'].includes(d.path)?d.path:'/index.html',at:date(d.claimedAt),kind:String(d.id||'').startsWith('supplier-')||d.path==='/stock.html'?'proveedores':String(d.title||'').includes('Mercado Pago')?'ventas':'cajas',read:read.has(d.id),status:d.status||''}));
+        const items=rows(events).filter(d=>d.origin===origin&&!hidden.has(d.id)).slice(0,100).map(d=>({id:d.id,title:d.title||'Aviso',body:d.body||'',path:['/pos.html','/stock.html','/index.html'].includes(d.path)?d.path:'/index.html',at:date(d.claimedAt),kind:String(d.eventId||'').startsWith('supplier-')||d.path==='/stock.html'?'proveedores':String(d.title||'').includes('Mercado Pago')?'ventas':'cajas',read:read.has(d.id),status:d.status||''}));
         return json(200,{ok:true,items,limited:events.size===150});
     }catch(e){console.error('admin-center',{code:e?.code||e?.publicCode||null});return json(e.status||503,{ok:false,message:e.status?e.message:'No se pudo cargar el centro de control. Revisá la conexión.'});}
 }
