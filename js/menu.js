@@ -233,7 +233,7 @@ async function inicializarMenu() {
     document.body.classList.add('ds-topnav-layout');
     navMenu.setAttribute('aria-label','Navegación por categorías');
     navMenu.classList.add('ds-topnav');
-    header.querySelector('.header__logo-link')?.after(navMenu);
+    if(navMenu.parentElement!==header)header.querySelector('.header__logo-link')?.after(navMenu);
     if(navMenu.parentElement!==header)header.append(navMenu);
     if(menuToggleBtn)menuToggleBtn.hidden=true;
     if(navOverlay){navOverlay.classList.remove('active');navOverlay.hidden=true;}

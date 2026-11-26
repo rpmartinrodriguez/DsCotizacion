@@ -34,7 +34,7 @@
     more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>'
   };
 
-  if (document.body.classList.contains('ds-app') && !document.querySelector('.ds-mobile-nav')) {
+  if (document.body.classList.contains('ds-app') && !document.body.classList.contains('ds-topnav-layout') && !document.querySelector('.ds-mobile-nav')) {
     const nav = document.createElement('nav');
     nav.className = 'ds-mobile-nav';
     nav.setAttribute('aria-label', 'Navegación principal');

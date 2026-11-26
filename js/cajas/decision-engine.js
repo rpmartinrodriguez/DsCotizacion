@@ -7,8 +7,8 @@ const asNumber = (value) => {
 
 export const dateMillis = (value) => {
     if (!value) return 0;
-    if (typeof value.toMillis === 'function') return value.toMillis();
-    if (typeof value.toDate === 'function') return value.toDate().getTime();
+    if (typeof value.toMillis === 'function') return asNumber(value.toMillis());
+    if (typeof value.toDate === 'function') return asNumber(value.toDate()?.getTime?.());
     if (value.seconds !== undefined) return asNumber(value.seconds) * 1000;
     if (value instanceof Date) return value.getTime();
     const number = new Date(value).getTime();
@@ -53,6 +53,10 @@ export const analyzeDecisionData = ({
     const previousDate = new Date(startDate);
     previousDate.setDate(previousDate.getDate() - days);
     const previousStart = previousDate.getTime();
+    sales=sales.filter(s=>s&&typeof s==='object');
+    boxes=boxes.filter(b=>b&&typeof b==='object');
+    recipes=recipes.filter(r=>r&&typeof r==='object');
+    materials=materials.filter(m=>m&&typeof m==='object');
     const excludedBoxes = new Set(boxes.filter(box => box.eliminada === true).map(box => box.id));
     const validSales = sales
         .filter(sale => !excludedBoxes.has(sale.cajaId) && sale.eliminada !== true)
@@ -66,13 +70,14 @@ export const analyzeDecisionData = ({
     const currentAverage = recent.length ? currentRevenue / recent.length : 0;
     const previousAverage = previous.length ? previousRevenue / previous.length : 0;
 
-    const materialMap = new Map(materials.map(material => [material.id, material]));
+    const materialMap = new Map(materials.map(material => [material.id, {...material,lotes:Array.isArray(material.lotes)?material.lotes.filter(l=>l&&typeof l==='object'):[]} ]));
     const recipeMap = new Map();
     recipes.forEach(recipe => {
-        const cost = calculateRecipeUnitCost(recipe, materialMap);
-        const ingredients = Array.isArray(recipe.ingredientes) ? recipe.ingredientes : [];
+        const original=Array.isArray(recipe.ingredientes)?recipe.ingredientes:[];
+        const ingredients=original.filter(i=>i&&typeof i==='object'&&i.idMateriaPrima);
+        const cost = calculateRecipeUnitCost({...recipe,ingredientes:ingredients}, materialMap);
         const incomplete =
-            ingredients.length === 0 ||
+            ingredients.length === 0 || ingredients.length!==original.length ||
             ingredients.some(ingredient => {
                 const material = materialMap.get(ingredient.idMateriaPrima);
                 return !material || getEffectiveUnitCost(material) <= 0;
@@ -120,6 +125,7 @@ export const analyzeDecisionData = ({
         if (!items.length) unmatchedSales += 1;
 
         items.forEach(item => {
+            if(!item||typeof item!=='object')return;
             const quantity = asNumber(item.cantidad);
             const unitPrice = asNumber(item.precio);
             if (quantity <= 0 || unitPrice < 0) return;
@@ -173,7 +179,7 @@ export const analyzeDecisionData = ({
     });
 
     const productRows = [...products.values()].map(product => {
-        const recipe = recipeMap.get(product.recipeKey);
+        const recipe = recipeMap.get(product.recipeKey) || recipeMap.get('name:'+normalized(product.name.replace(/ \(entera\)$/,'')));
         const currentUnits=product.mode==='entera'?Number(recipe?.porcionesTortaEntera)||0:Math.max(1,Number(recipe?.unidadesPorVenta)||1);
         const currentCost = (recipe?.currentCost || 0)*currentUnits;
         const canEstimate = Boolean(recipe) && !recipe.costIncomplete && currentCost > 0 && product.latestPrice > 0;
@@ -249,7 +255,7 @@ export const analyzeDecisionData = ({
     const newProviderCosts = materials.filter(material => {
         const change = asNumber(material.proveedorVariacionPct);
         const events = Array.isArray(material.historialPreciosProveedor)
-            ? [...material.historialPreciosProveedor].filter(entry => Math.abs(asNumber(entry.variacionPct)) > 0.001)
+            ? [...material.historialPreciosProveedor].filter(entry => entry && Math.abs(asNumber(entry.variacionPct)) > 0.001)
             : [];
         events.sort((a, b) => dateMillis(b.fecha) - dateMillis(a.fecha));
         const latest = events[0] || null;

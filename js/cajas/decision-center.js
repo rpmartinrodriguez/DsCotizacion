@@ -3,7 +3,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml } from "../core/html.js";
-import { analyzeDecisionData } from "./decision-engine.js?v=2";
+import { analyzeDecisionData } from "./decision-engine.js?v=3";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
 const formatAmount = (value) => formatCurrency(Number(value) || 0);
 const formatPct = (value) =>
@@ -42,6 +43,8 @@ export function setupDecisionCenter(db) {
     let chartInstance = null;
     let loadedData = null;
     let requestInProgress = null;
+    const auth=getAuth(db.app);
+    const waitForUser=()=>new Promise((resolve,reject)=>{let stop;stop=onAuthStateChanged(auth,user=>{stop?.();if(user&&!user.isAnonymous)resolve(user);else reject(Object.assign(new Error('Iniciá sesión para consultar Intelligence.'),{code:'auth/session-required'}));},error=>{stop?.();reject(error);});});
 
     const setText = (id, value) => {
         const node = document.getElementById(id);
@@ -259,29 +262,35 @@ export function setupDecisionCenter(db) {
         setText('decision-margen', formatMargin(result.grossMargin));
         setText('decision-cobertura', `Cobertura documentada: ${formatMargin(result.coverage)} de ventas detalladas`);
 
-        renderAlerts(result);
-        renderChart(result);
-        renderWeekdays(result);
-        renderProducts(result);
+        if (content) content.hidden = false;
+        const panelErrors=[];
+        const safeRender=(name,fn)=>{try{fn();}catch(error){panelErrors.push(name);console.error('Intelligence: '+name,error);}};
+        safeRender('Alertas',()=>renderAlerts(result));
+        safeRender('Gráfico',()=>renderChart(result));
+        safeRender('Días',()=>renderWeekdays(result));
+        safeRender('Productos',()=>renderProducts(result));
         const peak=document.getElementById('decision-peak-hours');
         if(peak){
             const names={Mon:'Lunes',Tue:'Martes',Wed:'Miércoles',Thu:'Jueves',Fri:'Viernes',Sat:'Sábado',Sun:'Domingo'};
             peak.innerHTML=result.peakHours.length?result.peakHours.map(row=>`<div class="ds-decision-quality-row"><div><strong>${names[row.weekday]||row.weekday} · ${String(row.hour).padStart(2,'0')}:00–${String(row.hour+2).padStart(2,'0')}:00</strong><small>${formatAmount(row.revenue)} registrados</small></div><b>${row.tickets} tickets</b></div>`).join(''):'<p>Sin ventas en el período.</p>';
         }
-        renderQuality(result);
+        safeRender('Calidad de datos',()=>renderQuality(result));
 
         if (status) {
             status.textContent = `Analizados ${result.recentCount} tickets de ${periodDays} días; comparados con los ${periodDays} anteriores. Margen objetivo: ${targetMargin}%. Actualizado ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}.`;
         }
-        if (content) content.hidden = false;
+        if(status){
+            if(!result.recentCount)status.textContent+=' No hay tickets válidos en este período; probá 90 días. Estadísticas puede incluir ventas anteriores.';
+            if(loadedData.warnings?.length)status.textContent+=' Datos parciales: '+loadedData.warnings.join('; ')+'. Los márgenes sin costo confiable no se estiman.';
+            if(panelErrors.length)status.textContent+=' Paneles pendientes: '+panelErrors.join(', ')+'.';
+        }
     };
 
     const load = async ({ force = false } = {}) => {
         if (!root) return;
         if (requestInProgress) return requestInProgress;
         if (loadedData && !force) {
-            render();
-            return;
+            try{render();return;}catch(error){console.warn('Intelligence: recalculando datos',error);loadedData=null;}
         }
 
         const originalText = refreshButton?.textContent;
@@ -296,24 +305,23 @@ export function setupDecisionCenter(db) {
                 // 90 días actuales + 90 anteriores como máximo; incluimos
                 // margen adicional para horario local/verano y días parciales.
                 const horizon = Timestamp.fromDate(new Date(Date.now() - 185 * 86400000));
-                const [sales, boxes, recipes, materials] = await Promise.all([
-                    getDocs(query(collection(db, 'ventasMostrador'), where('fecha', '>=', horizon))),
-                    getDocs(collection(db, 'cajas')),
-                    getDocs(collection(db, 'recetas')),
-                    getDocs(collection(db, 'materiasPrimas'))
-                ]);
-
-                loadedData = {
-                    sales: sales.docs.map(doc => ({ ...doc.data(), id: doc.id })),
-                    boxes: boxes.docs.map(doc => ({ ...doc.data(), id: doc.id })),
-                    recipes: recipes.docs.map(doc => ({ ...doc.data(), id: doc.id })),
-                    materials: materials.docs.map(doc => ({ ...doc.data(), id: doc.id }))
-                };
+                await waitForUser();
+                const sources=[
+                    ['ventas',()=>getDocs(query(collection(db,'ventasMostrador'),where('fecha','>=',horizon)))],
+                    ['cajas',()=>getDocs(collection(db,'cajas'))],
+                    ['recetas',()=>getDocs(collection(db,'recetas'))],
+                    ['materias primas',()=>getDocs(collection(db,'materiasPrimas'))]
+                ];
+                const results=await Promise.allSettled(sources.map(([,run])=>Promise.resolve().then(run)));
+                for(let i=0;i<2;i++)if(results[i].status==='rejected')throw Object.assign(new Error('No se pudieron leer '+sources[i][0]+'.'),{code:results[i].reason?.code||'read-failed'});
+                const rows=i=>results[i].status==='fulfilled'?results[i].value.docs.map(doc=>({...doc.data(),id:doc.id})):[];
+                const warnings=results.flatMap((r,i)=>r.status==='rejected'?[sources[i][0]+' ('+(r.reason?.code||'lectura fallida')+')']:[]);
+                loadedData={sales:rows(0),boxes:rows(1),recipes:rows(2),materials:rows(3),warnings};
 
                 render();
             } catch (error) {
                 console.error('No se pudo cargar el Centro de decisiones:', error);
-                if (status) status.textContent = 'No pudimos cargar el análisis. Verificá tu conexión y los permisos de Cajas antes de reintentar.';
+                if (status) status.textContent = 'No se pudo cargar Intelligence: '+(error.message||'error de lectura o cálculo')+(error.code?' ['+error.code+']':'')+'. Usá Actualizar análisis para reintentar.';
                 if (!loadedData && content) content.hidden = true;
             } finally {
                 if (refreshButton) {
@@ -328,7 +336,7 @@ export function setupDecisionCenter(db) {
     };
 
     periodSelect?.addEventListener('change', () => {
-        if (loadedData) render();
+        if (loadedData) {try{render();}catch(error){console.error('Intelligence: recálculo',error);if(status)status.textContent='No se pudo recalcular: '+error.message;}}
         else load();
     });
     refreshButton?.addEventListener('click', () => load({ force: true }));
