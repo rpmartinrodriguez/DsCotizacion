@@ -13,7 +13,7 @@ import { setupPOSInventory } from "./pos/inventory.js?v=6";
 import { createPriceListPdf, createBarcodeCatalogPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
 import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
-import { notifyCommittedEvent } from "./core/push-client.js?v=1";
+import { notifyCommittedEvent } from "./core/push-client.js?v=2";
 
 export function setupPOS(app) {
     const db = getFirestore(app);

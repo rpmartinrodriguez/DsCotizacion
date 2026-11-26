@@ -163,7 +163,7 @@ async function inicializarMenu() {
     }
 
     if (!navMenu) return;
-    if (userRol === 'master') import('./core/push-client.js?v=1').then(mod => mod.mountPushControls(session.auth)).catch(console.warn);
+    if (userRol === 'master') import('./core/push-client.js?v=2').then(mod => mod.mountPushControls(session.auth)).catch(console.warn);
 
     const nombre = session.perfil?.nombre || 'Dulce Sall';
 
@@ -387,7 +387,7 @@ async function inicializarMenu() {
             try {
                 if (session.auth && session.signOut) {
                     if (userRol === 'master') {
-                        try { await (await import('./core/push-client.js?v=1')).disablePush(session.auth); } catch (error) { console.warn('No se pudo desactivar push al salir', error); }
+                        try { await (await import('./core/push-client.js?v=2')).disablePush(session.auth); } catch (error) { console.warn('No se pudo desactivar push al salir', error); }
                     }
                     await session.signOut(session.auth);
                 }

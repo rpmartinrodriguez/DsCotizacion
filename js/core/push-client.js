@@ -2,8 +2,9 @@
 const api=async(auth,action,body={})=>{
     if(!auth?.currentUser)throw new Error('Iniciá sesión.');
     const response=await fetch('/.netlify/functions/ds-push',{method:'POST',keepalive:action==='event',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await auth.currentUser.getIdToken()},body:JSON.stringify({action,...body})});
-    const result=await response.json();
-    if(!response.ok||!result.ok)throw new Error(result.message||'Error en notificaciones.');
+    let result;
+    try{result=await response.json();}catch{throw new Error('ds-push no respondió correctamente (HTTP '+response.status+', etapa '+action+'). Revisá el registro de Netlify.');}
+    if(!response.ok||!result.ok)throw new Error((result.message||'Error en notificaciones.')+(result.code?' ['+result.code+']':''));
     return result;
 };
 const storageKey=auth=>'ds-push-token:'+auth.currentUser?.uid;
@@ -57,7 +58,7 @@ export function mountPushControls(auth){
         await api(auth,'register',{token});localStorage.setItem(storageKey(auth),token);state(true);showStatus('Push activadas en este dispositivo.');
     }
     function run(fn){return async()=>{try{enable.disabled=test.disabled=disable.disabled=true;await fn();}catch(e){showStatus(e.message);}finally{state(subscribed);}};}
-    button.addEventListener('click',()=>{dialog.showModal();showStatus(subscribed?'Push activadas en este dispositivo.':'Activá las notificaciones para recibir avisos.');});
+    button.addEventListener('click',()=>{dialog.showModal();if(!status.textContent)showStatus(subscribed?'Push activadas en este dispositivo.':'Activá las notificaciones para recibir avisos.');});
     dialog.querySelector('[data-close]').addEventListener('click',()=>dialog.close());
     enable.addEventListener('click',run(activate));
     test.addEventListener('click',run(async()=>{await api(auth,'test',{token:localStorage.getItem(storageKey(auth))});showStatus('Prueba aceptada por FCM. Revisá la notificación del dispositivo.');}));
