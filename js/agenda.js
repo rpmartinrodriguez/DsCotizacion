@@ -101,7 +101,7 @@ export function setupAgenda(app) {
                 producto.textContent = entrega.data.tituloTorta || 'Pedido';
 
                 const cliente = document.createElement('span');
-                cliente.textContent = entrega.data.nombreCliente || 'Sin cliente';
+                cliente.textContent = (entrega.data.nombreCliente || 'Sin cliente')+' · '+({confirmado:'Confirmado',produccion:'En producción',listo:'Listo',entregado:'Entregado'}[entrega.data.estadoPedido]||'Confirmado');
 
                 li.append(producto, cliente);
                 ul.appendChild(li);
@@ -136,7 +136,7 @@ export function setupAgenda(app) {
 
     const q = query(presupuestosCollection, where("esVenta", "==", true));
     onSnapshot(q, (snapshot) => {
-        entregas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })).filter(p=>p.data.estadoPedido!=='entregado'&&p.data.fechaEntrega?.toDate);
+        entregas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })).filter(p=>p.data.fechaEntrega?.toDate);
         renderCalendar();
     });
 }

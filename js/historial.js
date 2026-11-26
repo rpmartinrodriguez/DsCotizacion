@@ -280,8 +280,9 @@ export function setupHistorial(app) {
                         }
                     }
                 }
+                let allowNegative=false;
                 if (advertenciaStock) {
-                    await showConfirmationModal('⚠️ ¡Atención, stock insuficiente!', `Te falta stock de:\n${advertenciaStock}\nEl stock quedará en negativo. ¿Confirmar venta de todos modos?`, 'danger');
+                    await showConfirmationModal('⚠️ ¡Atención, stock insuficiente!', `Te falta stock de:\n${advertenciaStock}\nEl stock quedará en negativo. ¿Confirmar venta de todos modos?`, 'danger');allowNegative=true;
                 }
                 const fechaEntregaStr = await showConfirmVentaModal();
                 const fechaEntrega = new Date(`${fechaEntregaStr}T00:00:00-03:00`);
@@ -294,7 +295,7 @@ export function setupHistorial(app) {
                     if(!Array.isArray(p.ingredientes)||!p.ingredientes.length)throw Error('Este presupuesto no contiene ingredientes guardados. Revisá la cotización original antes de confirmar.');
                     const needs=aggregateIngredients(p.ingredientes);
                     const refs=needs.map(n=>doc(db,'materiasPrimas',n.id)),snaps=await Promise.all(refs.map(r=>tx.get(r)));
-                    for(let i=0;i<needs.length;i++){if(!snaps[i].exists())throw Error('Falta el insumo '+needs[i].name);const n=needs[i],mp=snaps[i].data();tx.update(refs[i],{lotes:consumeLots(mp.lotes,n.qty)});tx.set(doc(movimientosStockCollection,id+'_'+n.id),{materiaPrimaId:n.id,materiaPrimaNombre:n.name,tipo:'Venta',cantidad:-n.qty,fecha:Timestamp.now(),descripcion:'Pedido '+(p.tituloTorta||''),pedidoId:id});}
+                    for(let i=0;i<needs.length;i++){if(!snaps[i].exists())throw Error('Falta el insumo '+needs[i].name);const n=needs[i],mp=snaps[i].data();const available=(mp.lotes||[]).reduce((sum,l)=>sum+Math.max(0,Number(l.stockRestante)||0),0);if(available<n.qty&&!allowNegative)throw Error('Cambió el stock de '+n.name+'. Volvé a confirmar para revisar la advertencia.');tx.update(refs[i],{lotes:consumeLots(mp.lotes,n.qty)});tx.set(doc(movimientosStockCollection,id+'_'+n.id),{materiaPrimaId:n.id,materiaPrimaNombre:n.name,tipo:'Venta',cantidad:-n.qty,fecha:Timestamp.now(),descripcion:'Pedido '+(p.tituloTorta||''),pedidoId:id});}
                     tx.update(ref,{esVenta:true,estadoPedido:'confirmado',fechaEntrega:Timestamp.fromDate(fechaEntrega),pedidoActualizadoAt:Timestamp.now()});
                 });
                 

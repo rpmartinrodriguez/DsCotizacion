@@ -3,7 +3,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 // IMPORTANTE: Aquí importamos la función que faltaba
-import { getCartItems, removeFromCart, clearCart, updateCartIcon, updateCartItemQuantity } from './cart.js';
+import { getCartItems, removeFromCart, clearCart, updateCartIcon, updateCartItemQuantity } from './cart.js?v=2';
 
 export function setupCotizacion(app) {
     const db = getFirestore(app);
@@ -172,14 +172,20 @@ export function setupCotizacion(app) {
             }
             const items = getCartItems();
             const precioVentaFinal = parseFloat(formatCurrencyForParse(precioVentaSugeridoSpan.textContent));
+            if(!items.length){alert('Agregá productos antes de guardar.');btnFinalizar.disabled=false;btnFinalizar.textContent='Guardar Cotización en Historial';return;}
+            const ingredientes=items.every(i=>Array.isArray(i.ingredientesPorUnidad)&&i.ingredientesPorUnidad.length)
+                ?items.flatMap(i=>i.ingredientesPorUnidad.map(ing=>({...ing,cantidadTotal:Number(ing.cantidadTotal)*Number(i.cantidad||1),costoTotal:Number(ing.costoTotal)*Number(i.cantidad||1)}))):[];
             const presupuestoGuardado = {
                 tituloTorta: titulo,
                 nombreCliente: cliente,
                 fecha: Timestamp.now(),
                 costoMateriales: costoTotalMateriales,
+                horasTrabajo:Number(horasTrabajoInput.value)||0,costoHora:Number(costoHoraInput.value)||0,porcentajeCostosFijos:Number(costosFijosPorcInput.value)||0,porcentajeGanancia:Number(gananciaPorcInput.value)||0,
+                ingredientes,estadoPedido:'presupuestado',
                 precioVenta: precioVentaFinal,
                 esVenta: false,
                 productos: items.map(i => ({
+                    recetaId:i.recetaId||null,
                     nombre: i.nombre || i.nombreTorta,
                     detalle: i.detalle || '',
                     cantidad: i.cantidad || 1,

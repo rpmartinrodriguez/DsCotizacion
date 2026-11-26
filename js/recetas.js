@@ -2,7 +2,7 @@ import {
     getFirestore, collection, onSnapshot, query, orderBy, doc, 
     setDoc, deleteDoc, addDoc, updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { addToCart, updateCartIcon } from './cart.js';
+import { addToCart, updateCartIcon } from './cart.js?v=2';
 import { getEffectiveUnitCost } from './core/pricing.js';
 import { escapeHtml } from './core/html.js';
 import { createAuthorization } from './core/authorization.js';
@@ -497,11 +497,13 @@ export function setupRecetas(app) {
             alert("Ingresa una cantidad válida.");
             return;
         }
-        const precioFinal = costoUnitarioCalculado * cantidad;
+        const rendimiento=Number(recetaSeleccionadaParaCarrito.data.rendimiento)||1;
+        const ingredientes=(recetaSeleccionadaParaCarrito.data.ingredientes||[]).map(ing=>({idMateriaPrima:ing.idMateriaPrima,nombre:ing.nombre||ing.nombreMateriaPrima||materiasPrimasDisponibles.find(m=>m.id===ing.idMateriaPrima)?.nombre||'Insumo',unidad:ing.unidad||'',cantidadTotal:Number(ing.cantidad)/rendimiento,costoTotal:detalleCostoIngrediente(ing).costoCantidad/rendimiento}));
         const item = {
             id: recetaSeleccionadaParaCarrito.id, 
-            name: `${recetaSeleccionadaParaCarrito.data.nombreTorta} (${cantidad} u.)`, 
-            price: precioFinal, 
+            name: recetaSeleccionadaParaCarrito.data.nombreTorta,
+            price: costoUnitarioCalculado,
+            ingredientesPorUnidad:ingredientes, 
             type: 'receta_fraccionada',
             cantidadPorciones: cantidad
         };

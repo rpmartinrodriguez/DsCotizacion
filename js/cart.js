@@ -29,7 +29,8 @@ export function addToCart(item) {
             nombre: item.name,
             precio: item.price,
             cantidad: item.cantidadPorciones || 1,
-            detalle: 'Porciones calculadas'
+            detalle: 'Porciones calculadas',
+            ingredientesPorUnidad: Array.isArray(item.ingredientesPorUnidad)?item.ingredientesPorUnidad:[]
         };
     } 
     // CASO B: Viene directo sin calcular (Formato antiguo)

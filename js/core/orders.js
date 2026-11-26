@@ -2,7 +2,7 @@ export const ORDER_STAGES=['presupuestado','confirmado','produccion','listo','en
 export const ORDER_LABELS={presupuestado:'Presupuestado',confirmado:'Confirmado',produccion:'En producción',listo:'Listo para entregar',entregado:'Entregado'};
 export const orderStage=p=>p?.esVenta===true?(ORDER_STAGES.slice(1).includes(p.estadoPedido)?p.estadoPedido:'confirmado'):'presupuestado';
 export const nextStage=p=>ORDER_STAGES[ORDER_STAGES.indexOf(orderStage(p))+1]||null;
-export const orderDate=value=>{try{const d=value?.toDate?value.toDate():value?.seconds!==undefined?new Date(value.seconds*1000):new Date(value);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'';}catch{return '';}};
+export const orderDate=value=>{if(value==null||value==='')return '';try{const d=value?.toDate?value.toDate():value?.seconds!==undefined?new Date(value.seconds*1000):new Date(value);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'';}catch{return '';}};
 export function aggregateIngredients(items){
  const map=new Map();
  for(const row of items||[]){const id=row.idMateriaPrima||row.id,qty=Number(row.cantidadTotal??row.cantidad);
