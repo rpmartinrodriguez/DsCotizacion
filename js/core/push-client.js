@@ -27,7 +27,8 @@ export function mountPushControls(auth){
     if(!header)return;
     const button=document.createElement('button');button.type='button';button.id='ds-push-open';button.title='Notificaciones push';button.setAttribute('aria-label','Notificaciones push');
     button.innerHTML='<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>';
-    button.style.cssText='color:#166c47;border:1px solid #d9e4de;background:white;border-radius:10px;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;flex-shrink:0;';
+    try{const unread=sessionStorage.getItem('ds-inbox-unread:'+auth.currentUser?.uid);if(unread&&unread!=='0')button.dataset.unread=unread;}catch{}
+    button.style.cssText='position:relative;color:#166c47;border:1px solid #d9e4de;background:white;border-radius:10px;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;flex-shrink:0;';
     const spacer=header.querySelector('.header__spacer');
     if(spacer)spacer.append(button);else header.append(button);
     const dialog=document.createElement('dialog');

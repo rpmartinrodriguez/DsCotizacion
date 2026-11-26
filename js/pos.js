@@ -1,6 +1,6 @@
 import { 
     getFirestore, collection, onSnapshot, query, where, doc, 
-    addDoc, updateDoc, Timestamp, runTransaction, getDocs, setDoc, orderBy, limit
+    addDoc, updateDoc, Timestamp, runTransaction, getDocs, getDocFromServer, setDoc, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { createAuthorization } from "./core/authorization.js";
@@ -150,7 +150,21 @@ export function setupPOS(app) {
     const parkBtn=document.createElement('button');parkBtn.type='button';parkBtn.className='btn-secondary';parkBtn.textContent='Poner en espera';
     const resumeBtn=document.createElement('button');resumeBtn.type='button';resumeBtn.className='btn-secondary';resumeBtn.textContent='Ventas en espera (0)';
     const suggestion=document.createElement('div');suggestion.className='ds-pos-suggestion';suggestion.hidden=true;
-    parkedPanel.append(parkBtn,resumeBtn,suggestion);
+    const recoverPending=document.createElement('button');recoverPending.type='button';recoverPending.className='btn-secondary';recoverPending.textContent='Verificar cobro pendiente';recoverPending.hidden=true;
+    parkedPanel.append(parkBtn,resumeBtn,recoverPending,suggestion);
+    recoverPending.onclick=async()=>{
+        if(!pendingCheckout||checkoutInProgress)return;
+        if(!confirm('Consultar el servidor para verificar si el último intento de cobro se registró.'))return;
+        recoverPending.disabled=true;
+        try{
+            const id=pendingCheckout.id,snap=await getDocFromServer(doc(ventasCollection,id));
+            if(!pendingCheckout||pendingCheckout.id!==id)return;
+            if(snap.exists()){pendingCheckout=null;carritoActual=[];cuentaCorrienteClienteId=null;alert('El cobro ya estaba registrado. No se volverá a cobrar.');}
+            else{pendingCheckout=null;alert('No se encontró ese cobro en el servidor. Podés revisar el carrito y reintentar.');}
+            renderizarCarrito();actualizarMobileBarVisibility();
+        }catch(e){alert('No pudimos verificar el cobro. Conservá el carrito y reintentá con conexión.');}
+        finally{recoverPending.disabled=false;}
+    };
     carritoContainer?.before(parkedPanel);
     const parkingDialog=document.createElement('dialog');parkingDialog.className='ds-tools-dialog';
     parkingDialog.innerHTML='<div class="ds-tools-head"><h2>Ventas en espera</h2><button type="button" data-close aria-label="Cerrar">×</button></div><div class="ds-tools-body"><p class="ds-tools-muted">Borradores de esta caja y dispositivo. No descuentan stock ni registran cobros.</p><div data-list class="ds-tools-results"></div></div>';
@@ -163,7 +177,7 @@ export function setupPOS(app) {
     };
     const safeToPark=()=>Boolean(cajaActiva&&currentUser&&!checkoutInProgress&&!pendingCheckout&&!modalCobro?.classList.contains('visible'));
     const renderSmartTools=()=>{
-        loadParked();parkedPanel.hidden=!cajaActiva;parkBtn.disabled=!carritoActual.length||!safeToPark()||parkedStorageError||parked.length>=20;resumeBtn.disabled=!parked.length;resumeBtn.textContent='Ventas en espera ('+parked.length+')';
+        loadParked();parkedPanel.hidden=!cajaActiva;recoverPending.hidden=!pendingCheckout;parkBtn.disabled=!carritoActual.length||!safeToPark()||parkedStorageError||parked.length>=20;resumeBtn.disabled=!parked.length;resumeBtn.textContent='Ventas en espera ('+parked.length+')';
         suggestion.replaceChildren();suggestion.hidden=true;
         if(!carritoActual.length||!safeToPark())return;
         const coffee=p=>/\b(caf[eé]|espresso|cappuccino|latte|americano)\b/i.test(p||'');
@@ -251,6 +265,7 @@ export function setupPOS(app) {
             }
         },
         onSelectForSale: client => {
+            if(checkoutInProgress||pendingCheckout){alert('Primero verificá el cobro pendiente.');return false;}
             if (carritoActual.length > 0 && cuentaCorrienteClienteId !== client.id) {
                 alert('Ya existe una venta en preparación. Finalizala o vaciala antes de cambiar de cliente.');
                 return false;
@@ -267,6 +282,7 @@ export function setupPOS(app) {
             : null;
 
     ccExitMode?.addEventListener('click', () => {
+        if(checkoutInProgress||pendingCheckout){alert('Primero verificá el cobro pendiente.');return;}
         cuentaCorrienteClienteId = null;
         renderizarCarrito();
         actualizarMobileBarVisibility();
@@ -921,6 +937,7 @@ export function setupPOS(app) {
     };
 
     const agregarProductoAlCarrito = (prod, cantidadIngresada = 1) => {
+        if(checkoutInProgress||pendingCheckout){alert('Primero verificá el cobro pendiente.');return;}
         const existe = carritoActual.find(i => i.id === prod.id);
         if (existe) {
             existe.cantidad += cantidadIngresada;
@@ -977,6 +994,7 @@ export function setupPOS(app) {
     let lastKeyTime = Date.now();
 
     document.addEventListener('keydown', (e) => {
+        if (document.querySelector('dialog[open],.modal-overlay.visible')||checkoutInProgress||pendingCheckout){scanBuffer='';return;}
         if (pantallaPOS && pantallaPOS.style.display === 'none') return;
         if (e.key.length > 1 && e.key !== 'Enter') return;
 
@@ -1141,6 +1159,7 @@ export function setupPOS(app) {
 
     if (carritoContainer) {
         carritoContainer.addEventListener('click', (e) => {
+            if(checkoutInProgress||pendingCheckout){alert('Primero verificá el cobro pendiente.');return;}
             const btnRemove = e.target.closest('.btn-remove-cart');
             const btnRestar = e.target.closest('.btn-restar-cant');
             const btnSumar = e.target.closest('.btn-sumar-cant');
@@ -1187,6 +1206,7 @@ export function setupPOS(app) {
         });
 
         carritoContainer.addEventListener('change', (e) => {
+            if(checkoutInProgress||pendingCheckout){renderizarCarrito();return;}
             const input = e.target.closest('.ds-cart-qty-input');
             if (!input) return;
 
@@ -1201,6 +1221,7 @@ export function setupPOS(app) {
 
     if (btnVaciarCarrito) {
         btnVaciarCarrito.addEventListener('click', () => {
+            if(checkoutInProgress||pendingCheckout){alert('Primero verificá el cobro pendiente.');return;}
             if (!carritoActual.length) return;
 
             if (window.confirm('¿Vaciar toda la venta actual?')) {
@@ -1232,7 +1253,7 @@ export function setupPOS(app) {
             return;
         }
 
-        if (event.key === 'F4' && pantallaPOS?.style.display !== 'none' && safeToPark()) {event.preventDefault();parkCurrent();return;}
+        if (event.key === 'F4' && pantallaPOS?.style.display !== 'none' && !document.querySelector('.modal-overlay.visible') && safeToPark()) {event.preventDefault();parkCurrent();return;}
         if (event.key === 'F2' && pantallaPOS?.style.display !== 'none') {
             event.preventDefault();
             if (btnCobrar && !btnCobrar.disabled) btnCobrar.click();
@@ -1448,7 +1469,8 @@ export function setupPOS(app) {
                         porcionesTortaEntera: item.porcionesTortaEntera || null
                     }))
                 });
-                if (!pendingCheckout || pendingCheckout.fingerprint !== checkoutFingerprint) {
+                if(pendingCheckout&&pendingCheckout.fingerprint!==checkoutFingerprint)throw new Error('Primero verificá el intento de cobro anterior desde el Mostrador');
+                if (!pendingCheckout) {
                     pendingCheckout = {
                         fingerprint: checkoutFingerprint,
                         id: doc(ventasCollection).id
