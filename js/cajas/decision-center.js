@@ -3,7 +3,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml } from "../core/html.js";
-import { analyzeDecisionData } from "./decision-engine.js?v=3";
+import { analyzeDecisionData } from "./decision-engine.js?v=4";
+import {decisionRange,argentinaDate} from "./decision-range.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
 const formatAmount = (value) => formatCurrency(Number(value) || 0);
@@ -28,6 +29,14 @@ const WEEKDAY_NAMES = ['Dom.', 'Lun.', 'Mar.', 'Mié.', 'Jue.', 'Vie.', 'Sáb.']
 export function setupDecisionCenter(db) {
     const root = document.getElementById('section-decisiones');
     const periodSelect = document.getElementById('decision-periodo');
+    const fromInput=document.getElementById('decision-desde'),toInput=document.getElementById('decision-hasta'),customFields=document.getElementById('decision-custom-range');
+    const today=argentinaDate(),defaultRange=decisionRange();
+    if(fromInput){fromInput.value=defaultRange.from;fromInput.max=today;}
+    if(toInput){toInput.value=today;toInput.max=today;}
+    const chosenRange=()=>periodSelect?.value==='custom'?decisionRange({from:fromInput?.value,to:toInput?.value}):decisionRange({periodDays:Number(periodSelect?.value)||30});
+    const formatDay=key=>key.split('-').reverse().join('/');
+    const showCustom=()=>{if(customFields)customFields.hidden=periodSelect?.value!=='custom';};
+    showCustom();
     const refreshButton = document.getElementById('decision-recalcular');
     const status = document.getElementById('decision-estado');
     const content = document.getElementById('decision-contenido');
@@ -237,12 +246,12 @@ export function setupDecisionCenter(db) {
         `).join('');
     };
 
-    const render = () => {
+    const render = (range) => {
         if (!loadedData) return;
 
         const target = Number(localStorage.getItem('dsPriceReviewTargetMargin'));
         const targetMargin = target > 0 && target < 100 ? target : 40;
-        const periodDays = Number(periodSelect?.value) || 30;
+        const periodDays=range.days;
 
         const result = analyzeDecisionData({
             sales: loadedData.sales,
@@ -250,6 +259,7 @@ export function setupDecisionCenter(db) {
             materials: loadedData.materials,
             boxes: loadedData.boxes,
             periodDays,
+            range,
             targetMargin
         });
 
@@ -277,10 +287,10 @@ export function setupDecisionCenter(db) {
         safeRender('Calidad de datos',()=>renderQuality(result));
 
         if (status) {
-            status.textContent = `Analizados ${result.recentCount} tickets de ${periodDays} días; comparados con los ${periodDays} anteriores. Margen objetivo: ${targetMargin}%. Actualizado ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}.`;
+            status.textContent = `Analizados ${result.recentCount} tickets del ${formatDay(range.from)} al ${formatDay(range.to)} (${periodDays} días); comparados con los ${periodDays} anteriores, hasta el horario equivalente. Margen objetivo: ${targetMargin}%. Actualizado ${new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}.`;
         }
         if(status){
-            if(!result.recentCount)status.textContent+=' No hay tickets válidos en este período; probá 90 días. Estadísticas puede incluir ventas anteriores.';
+            if(!result.recentCount)status.textContent+=' No hay tickets válidos en este período; seleccioná otro rango. Estadísticas puede incluir ventas anteriores.';
             if(loadedData.warnings?.length)status.textContent+=' Datos parciales: '+loadedData.warnings.join('; ')+'. Los márgenes sin costo confiable no se estiman.';
             if(panelErrors.length)status.textContent+=' Paneles pendientes: '+panelErrors.join(', ')+'.';
         }
@@ -289,11 +299,15 @@ export function setupDecisionCenter(db) {
     const load = async ({ force = false } = {}) => {
         if (!root) return;
         if (requestInProgress) return requestInProgress;
-        if (loadedData && !force) {
-            try{render();return;}catch(error){console.warn('Intelligence: recalculando datos',error);loadedData=null;}
+        let range;
+        try{range=chosenRange();}catch(error){if(status)status.textContent=error.message;if(content)content.hidden=true;return;}
+        if(loadedData&&!force&&loadedData.from<=range.previousStart&&loadedData.to>=range.end){
+            try{render(range);return;}catch(error){console.warn('Intelligence: recalculando datos',error);loadedData=null;}
         }
+        if(content)content.hidden=true;
 
         const originalText = refreshButton?.textContent;
+        [periodSelect,fromInput,toInput].forEach(el=>{if(el)el.disabled=true;});
         if (refreshButton) {
             refreshButton.disabled = true;
             refreshButton.textContent = 'Analizando…';
@@ -302,12 +316,12 @@ export function setupDecisionCenter(db) {
 
         requestInProgress = (async () => {
             try {
-                // 90 días actuales + 90 anteriores como máximo; incluimos
-                // margen adicional para horario local/verano y días parciales.
-                const horizon = Timestamp.fromDate(new Date(Date.now() - 185 * 86400000));
+                // Consultar sólo el rango seleccionado y su comparación, incluidos históricos.
+                const horizon=Timestamp.fromDate(new Date(range.previousStart));
+                const ceiling=Timestamp.fromDate(new Date(range.end));
                 await waitForUser();
                 const sources=[
-                    ['ventas',()=>getDocs(query(collection(db,'ventasMostrador'),where('fecha','>=',horizon)))],
+                    ['ventas',()=>getDocs(query(collection(db,'ventasMostrador'),where('fecha','>=',horizon),where('fecha','<',ceiling)))],
                     ['cajas',()=>getDocs(collection(db,'cajas'))],
                     ['recetas',()=>getDocs(collection(db,'recetas'))],
                     ['materias primas',()=>getDocs(collection(db,'materiasPrimas'))]
@@ -316,9 +330,9 @@ export function setupDecisionCenter(db) {
                 for(let i=0;i<2;i++)if(results[i].status==='rejected')throw Object.assign(new Error('No se pudieron leer '+sources[i][0]+'.'),{code:results[i].reason?.code||'read-failed'});
                 const rows=i=>results[i].status==='fulfilled'?results[i].value.docs.map(doc=>({...doc.data(),id:doc.id})):[];
                 const warnings=results.flatMap((r,i)=>r.status==='rejected'?[sources[i][0]+' ('+(r.reason?.code||'lectura fallida')+')']:[]);
-                loadedData={sales:rows(0),boxes:rows(1),recipes:rows(2),materials:rows(3),warnings};
+                loadedData={sales:rows(0),boxes:rows(1),recipes:rows(2),materials:rows(3),warnings,from:range.previousStart,to:range.end};
 
-                render();
+                render(range);
             } catch (error) {
                 console.error('No se pudo cargar el Centro de decisiones:', error);
                 if (status) status.textContent = 'No se pudo cargar Intelligence: '+(error.message||'error de lectura o cálculo')+(error.code?' ['+error.code+']':'')+'. Usá Actualizar análisis para reintentar.';
@@ -328,6 +342,7 @@ export function setupDecisionCenter(db) {
                     refreshButton.disabled = false;
                     refreshButton.textContent = originalText || 'Actualizar análisis';
                 }
+                [periodSelect,fromInput,toInput].forEach(el=>{if(el)el.disabled=false;});
                 requestInProgress = null;
             }
         })();
@@ -335,10 +350,12 @@ export function setupDecisionCenter(db) {
         return requestInProgress;
     };
 
-    periodSelect?.addEventListener('change', () => {
-        if (loadedData) {try{render();}catch(error){console.error('Intelligence: recálculo',error);if(status)status.textContent='No se pudo recalcular: '+error.message;}}
+    periodSelect?.addEventListener('change',()=>{
+        showCustom();
+        if(periodSelect.value==='custom'){if(content)content.hidden=true;if(status)status.textContent='Elegí Desde y Hasta y presioná Actualizar análisis.';}
         else load();
     });
+    for(const el of [fromInput,toInput])el?.addEventListener('change',()=>{if(content)content.hidden=true;if(status)status.textContent='Rango modificado. Presioná Actualizar análisis.';});
     refreshButton?.addEventListener('click', () => load({ force: true }));
 
     return {

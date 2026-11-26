@@ -384,7 +384,9 @@
                             <option value="7">Últimos 7 días</option>
                             <option value="30" selected>Últimos 30 días</option>
                             <option value="90">Últimos 90 días</option>
+                            <option value="custom">Personalizado</option>
                         </select>
+                        <div id="decision-custom-range" class="ds-decision-range" hidden><label for="decision-desde">Desde<input type="date" id="decision-desde"></label><label for="decision-hasta">Hasta<input type="date" id="decision-hasta"></label><small>Hasta 366 días por consulta · hora argentina</small></div>
                         <button type="button" id="decision-recalcular" class="ds-action-primary">Actualizar análisis</button>
                     </div>
                 </div>
@@ -520,7 +522,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=19';
+        import { setupCajas } from './js/cajas.js?v=20';
         
         try {
             const app = initializeApp(firebaseConfig);

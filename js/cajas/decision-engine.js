@@ -1,4 +1,5 @@
 import { calculateRecipeUnitCost, getEffectiveUnitCost } from "../core/pricing.js";
+import { decisionRange, argentinaDate, argentinaCalendarDay } from "./decision-range.js";
 
 const asNumber = (value) => {
     const number = Number(value);
@@ -28,11 +29,7 @@ const grossMargin = (price, cost) =>
 const deltaPercent = (current, previous) =>
     previous > 0 ? ((current - previous) / previous) * 100 : null;
 
-const localDay = (date) => {
-    const d = new Date(date);
-    const pad = (v) => String(v).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
+const localDay = argentinaDate;
 
 export const analyzeDecisionData = ({
     sales = [],
@@ -40,19 +37,12 @@ export const analyzeDecisionData = ({
     recipes = [],
     materials = [],
     periodDays = 30,
+    range = null,
     targetMargin = 40,
     now = new Date()
 } = {}) => {
-    const days = [7, 30, 90].includes(Number(periodDays)) ? Number(periodDays) : 30;
-    const clock = now instanceof Date ? now.getTime() : dateMillis(now);
-    // Ventanas móviles equivalentes de N días al mismo horario,
-    // para no comparar una mañana parcial con días enteros.
-    const startDate = new Date(clock);
-    startDate.setDate(startDate.getDate() - days);
-    const start = startDate.getTime();
-    const previousDate = new Date(startDate);
-    previousDate.setDate(previousDate.getDate() - days);
-    const previousStart = previousDate.getTime();
+    const window=range||decisionRange({periodDays,now});
+    const {days,start,end:clock,previousStart,previousEnd}=window;
     sales=sales.filter(s=>s&&typeof s==='object');
     boxes=boxes.filter(b=>b&&typeof b==='object');
     recipes=recipes.filter(r=>r&&typeof r==='object');
@@ -61,10 +51,10 @@ export const analyzeDecisionData = ({
     const validSales = sales
         .filter(sale => !excludedBoxes.has(sale.cajaId) && sale.eliminada !== true)
         .map(sale => ({ ...sale, when: dateMillis(sale.fecha) }))
-        .filter(sale => sale.when > 0 && sale.when <= clock);
+        .filter(sale => sale.when > 0 && sale.when < clock);
 
     const recent = validSales.filter(sale => sale.when >= start);
-    const previous = validSales.filter(sale => sale.when >= previousStart && sale.when < start);
+    const previous = validSales.filter(sale => sale.when >= previousStart && sale.when < previousEnd);
     const currentRevenue = recent.reduce((sum, sale) => sum + saleRevenue(sale), 0);
     const previousRevenue = previous.reduce((sum, sale) => sum + saleRevenue(sale), 0);
     const currentAverage = recent.length ? currentRevenue / recent.length : 0;
@@ -323,26 +313,14 @@ export const analyzeDecisionData = ({
     const chartDays = [];
     const weekdayTotals = Array(7).fill(0);
     const weekdayOccurrences = Array(7).fill(0);
-    // La ventana móvil puede comenzar a mitad de un día; se muestra
-    // ese día parcial para que gráfico e indicadores cuadren.
-    for (let offset = days; offset >= 0; offset -= 1) {
-        const date = new Date(clock);
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() - offset);
-        const nextDay = new Date(date);
-        nextDay.setDate(nextDay.getDate() + 1);
-        const visibleMs = Math.max(
-            0,
-            Math.min(clock, nextDay.getTime()) - Math.max(start, date.getTime())
-        );
-        if (!visibleMs) continue;
-
-        const fraction = visibleMs / (nextDay.getTime() - date.getTime());
-        const key = localDay(date);
-        const value = daySales.get(key) || 0;
-        chartDays.push({ key, label: `${date.getDate()}/${date.getMonth() + 1}`, value });
-        weekdayTotals[date.getDay()] += value;
-        weekdayOccurrences[date.getDay()] += fraction;
+    for(let day=argentinaCalendarDay(start).start;day<clock;day+=86400000){
+        const cal=argentinaCalendarDay(day),key=localDay(day);
+        const visibleMs=Math.max(0,Math.min(clock,day+86400000)-Math.max(start,day));
+        const value=daySales.get(key)||0;
+        if(!visibleMs)continue;
+        chartDays.push({key,label:cal.label,value});
+        weekdayTotals[cal.weekday]+=value;
+        weekdayOccurrences[cal.weekday]+=visibleMs/86400000;
     }
 
     const weekdays = weekdayTotals.map((total, day) => ({
@@ -353,6 +331,7 @@ export const analyzeDecisionData = ({
 
     return {
         days,
+        range:window,
         recentCount: recent.length,
         previousCount: previous.length,
         revenue: currentRevenue,
