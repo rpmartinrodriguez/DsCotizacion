@@ -200,18 +200,21 @@ const assertPublicHttpsUrl = async (rawUrl) => {
   return url;
 };
 
-const fetchSupplierPage = async (initialUrl) => {
+const fetchSupplierPage = async (initialUrl, maxDuration = 45000) => {
+  const deadline = Date.now() + maxDuration;
   let currentUrl = await assertPublicHttpsUrl(initialUrl);
 
   for (let redirectCount = 0; redirectCount <= 3; redirectCount += 1) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new Error('Tiempo máximo de consulta agotado.');
+    const timeout = setTimeout(() => controller.abort(), Math.min(12000, remaining));
 
     let response;
     try {
       response = await fetch(currentUrl, {
         redirect: "manual",
-        signal: controller.signal,
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(Math.max(1, remaining))]),
         headers: {
           "User-Agent":
             "Mozilla/5.0 (compatible; DulceSallPriceMonitor/1.0; +https://dulce-app.netlify.app)",
@@ -669,7 +672,7 @@ exports.handler = async (event) => {
 
 
 exports.detectSupplierPrice = async (supplierUrl) => {
-    const page = await fetchSupplierPage(supplierUrl);
+    const page = await fetchSupplierPage(supplierUrl, 15000);
     const detected = extractPrice(page.text);
     if (!detected) throw new Error("No pude identificar el precio automáticamente.");
     const title = extractTitle(page.text);

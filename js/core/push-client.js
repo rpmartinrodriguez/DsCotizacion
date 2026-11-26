@@ -1,7 +1,7 @@
 
 const api=async(auth,action,body={})=>{
     if(!auth?.currentUser)throw new Error('Iniciá sesión.');
-    const response=await fetch('/.netlify/functions/ds-push',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await auth.currentUser.getIdToken()},body:JSON.stringify({action,...body})});
+    const response=await fetch('/.netlify/functions/ds-push',{method:'POST',keepalive:action==='event',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await auth.currentUser.getIdToken()},body:JSON.stringify({action,...body})});
     const result=await response.json();
     if(!response.ok||!result.ok)throw new Error(result.message||'Error en notificaciones.');
     return result;
@@ -28,7 +28,7 @@ export function mountPushControls(auth){
     button.innerHTML='<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>';
     button.style.cssText='color:#166c47;border:1px solid #d9e4de;background:white;border-radius:10px;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;flex-shrink:0;';
     const spacer=header.querySelector('.header__spacer');
-    if(spacer)spacer.replaceChildren(button);else header.append(button);
+    if(spacer)spacer.append(button);else header.append(button);
     const dialog=document.createElement('dialog');
     dialog.style.cssText='width:min(400px,calc(100% - 32px));border:1px solid #ddd;border-radius:16px;padding:22px;color:#26232a;background:white;box-shadow:0 12px 40px #0003;';
     dialog.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:1.15rem">Notificaciones push</h2><button type="button" data-close aria-label="Cerrar">×</button></div><p style="font-size:.88rem;color:#666">Ventas con Mercado Pago, apertura y cierre de caja, cambios de precios de proveedores.</p><p data-status role="status" style="font-size:.82rem;min-height:36px"></p><div style="display:grid;gap:8px"><button type="button" data-enable class="btn-primary">Activar en este dispositivo</button><button type="button" data-test class="btn-secondary">Enviar prueba</button><button type="button" data-disable class="btn-secondary">Desactivar</button></div>';

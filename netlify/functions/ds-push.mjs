@@ -1,5 +1,5 @@
 
-import { admin,authorize,reply,hash,money,sendToDevices,dispatchOnce,productionOrigin } from './lib/push-admin.mjs';
+import { admin,authorize,reply,hash,money,sendToDevices,dispatchOnce,productionOrigin,eventMessage } from './lib/push-admin.mjs';
 import { Timestamp } from 'firebase-admin/firestore';
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 export const handler=async event=>{
@@ -23,7 +23,7 @@ export const handler=async event=>{
             if(!time||time<Date.now()-15*60000||time>Date.now()+60000)throw fail(400,'Operación fuera de la ventana de aviso.');
             if(sale && !(Number(d.pagoMercadoPago)>0))return reply(200,{ok:true,skipped:true});
             if(close && d.estado!=='cerrada')throw fail(400,'La caja no está cerrada.');
-            const msg={id:body.kind+'-'+body.id,after:time,path:'/pos.html',title:sale?'Venta con Mercado Pago':close?'Caja cerrada':'Caja abierta',body:sale?money(d.pagoMercadoPago)+' por Mercado Pago · Total '+money(d.total)+' · '+(d.vendedor||'Mostrador'):close?(d.cerradaPor||d.usuarioNombre||'Operador')+' · '+(d.turno||'')+' · Efectivo '+money(d.totalEfectivo)+' · Mercado Pago '+money(d.totalMercadoPago):(d.usuarioNombre||'Operador')+' · '+(d.turno||'')+' · Fondo '+money(d.fondoInicial)};
+            const msg=eventMessage(body.kind,body.id,d,time);
             return reply(200,{ok:true,...await dispatchOnce(svc,origin,msg)});
         }
         if(profile.rol!=='master')throw fail(403,'Sólo administradores.');

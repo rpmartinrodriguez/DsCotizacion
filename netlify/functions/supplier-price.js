@@ -1,1 +1,2 @@
-module.exports = require("./lib/supplier-price.cjs");
+const { handler } = require("./lib/supplier-price.cjs");
+exports.handler = handler;

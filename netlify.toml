@@ -3,3 +3,6 @@
 
 [functions."supplier-daily-monitor"]
   schedule = "*/15 10-23,0-2 * * *"
+
+[functions."push-reconcile"]
+  schedule = "*/5 * * * *"

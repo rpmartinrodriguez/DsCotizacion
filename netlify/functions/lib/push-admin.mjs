@@ -63,3 +63,8 @@ export async function dispatchOnce(services,origin,message) {
     try { const result=await sendToDevices(services,origin,message);await ref.update({status:'sent',sentAt:FieldValue.serverTimestamp(),...result});return result; }
     catch(error){await ref.update({status:'failed'});throw error;}
 }
+
+export function eventMessage(kind,id,d,time){
+    const sale=kind==='mp-sale',close=kind==='drawer-close';
+    return {id:kind+'-'+id,after:time,path:'/pos.html',title:sale?'Venta con Mercado Pago':close?'Caja cerrada':'Caja abierta',body:sale?money(d.pagoMercadoPago)+' por Mercado Pago · Total '+money(d.total)+' · '+(d.vendedor||'Mostrador'):close?(d.cerradaPor||d.usuarioNombre||'Operador')+' · '+(d.turno||'')+' · Efectivo '+money(d.totalEfectivo)+' · Mercado Pago '+money(d.totalMercadoPago):(d.usuarioNombre||'Operador')+' · '+(d.turno||'')+' · Fondo '+money(d.fondoInicial)};
+}
