@@ -163,7 +163,7 @@ async function inicializarMenu() {
     }
 
     if (!navMenu) return;
-    if (userRol === 'master') import('./core/push-client.js?v=5').then(mod => mod.mountPushControls(session.auth)).catch(console.warn);
+    const pushModule=userRol==='master'?import('./core/push-client.js?v=6').then(mod=>{mod.mountPushControls(session.auth);return mod;}).catch(error=>{console.warn('No se pudieron preparar las notificaciones',error);return null;}):null;
 
     const nombre = session.perfil?.nombre || 'Dulce Sall';
 
@@ -277,6 +277,20 @@ async function inicializarMenu() {
         const financePanel=[...document.querySelectorAll('.ds-topnav-panel')].find(panel=>panel.querySelector('a[href="cajas.html"]'));
         if(financePanel){const link=document.createElement('a');link.href='cajas.html#decisiones';link.className='nav-menu__link';link.innerHTML='<span class="nav-menu__glyph">'+MENU_ICON.finance+'</span><span class="nav-menu__label">Dulce Sall Intelligence</span>';financePanel.append(link);}
     }
+    if(userRol==='master'){
+        const panel=[...document.querySelectorAll('.ds-topnav-panel')].find(node=>node.querySelector('a[href="usuarios.html"]'));
+        if(panel){
+            const action=document.createElement('button');
+            action.type='button';action.className='ds-tools-menu-action';action.textContent='Notificaciones push';
+            action.addEventListener('click',async()=>{
+                closeMenu();
+                let mod=await pushModule;
+                if(!mod){try{mod=await import('./core/push-client.js?v=6');mod.mountPushControls(session.auth);}catch(error){alert('No se pudo abrir la configuración de push. Revisá la conexión.');return;}}
+                window.dispatchEvent(new Event('ds-open-push-settings'));
+            });
+            panel.append(action);
+        }
+    }
     import('./core/admin-tools.js?v=3').then(m=>m.mountAdminTools({session,p,header,navMenu})).catch(console.warn);
 
     // Anticipar el HTML de la sección que el usuario está por abrir.
@@ -326,7 +340,7 @@ async function inicializarMenu() {
             try {
                 if (session.auth && session.signOut) {
                     if (userRol === 'master') {
-                        try { await (await import('./core/push-client.js?v=5')).disablePush(session.auth); } catch (error) { console.warn('No se pudo desactivar push al salir', error); }
+                        try { await (await import('./core/push-client.js?v=6')).disablePush(session.auth); } catch (error) { console.warn('No se pudo desactivar push al salir', error); }
                     }
                     await session.signOut(session.auth);
                 }

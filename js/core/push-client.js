@@ -29,10 +29,11 @@ export function mountPushControls(auth){
     button.innerHTML='<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg>';
     try{const unread=sessionStorage.getItem('ds-inbox-unread:'+auth.currentUser?.uid);if(unread&&unread!=='0')button.dataset.unread=unread;}catch{}
     button.style.cssText='position:relative;color:#166c47;border:1px solid #d9e4de;background:white;border-radius:10px;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;flex-shrink:0;';
-    const spacer=header.querySelector('.header__spacer');
-    if(spacer)spacer.append(button);else header.append(button);
+    // El spacer heredado del menú lateral se oculta en móvil. El botón debe ser hijo directo del header.
+    button.classList.add('ds-push-header-button');
+    header.append(button);
     const dialog=document.createElement('dialog');
-    dialog.style.cssText='width:min(400px,calc(100% - 32px));border:1px solid #ddd;border-radius:16px;padding:22px;color:#26232a;background:white;box-shadow:0 12px 40px #0003;';
+    dialog.style.cssText='box-sizing:border-box;width:min(400px,calc(100vw - 24px));max-height:calc(100dvh - 30px);overflow:auto;border:1px solid #ddd;border-radius:16px;padding:18px;color:#26232a;background:white;box-shadow:0 12px 40px #0003;';
     dialog.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:1.15rem">Notificaciones push</h2><button type="button" data-close aria-label="Cerrar">×</button></div><p style="font-size:.88rem;color:#666">Ventas con Mercado Pago, apertura y cierre de caja, cambios de precios de proveedores.</p><p data-status role="status" style="font-size:.82rem;min-height:36px"></p><div style="display:grid;gap:8px"><button type="button" data-enable class="btn-primary">Activar en este dispositivo</button><button type="button" data-test class="btn-secondary">Enviar prueba</button><button type="button" data-disable class="btn-secondary">Desactivar</button></div>';
     document.body.append(dialog);
     const status=dialog.querySelector('[data-status]'),enable=dialog.querySelector('[data-enable]'),test=dialog.querySelector('[data-test]'),disable=dialog.querySelector('[data-disable]');
@@ -53,7 +54,8 @@ export function mountPushControls(auth){
         return m.getToken(messaging,{vapidKey,serviceWorkerRegistration:registration});
     }
     async function activate(){
-        if(!('Notification' in window)||!('serviceWorker' in navigator))throw new Error('Instalá la PWA para habilitar push en este dispositivo.');
+        if(!('Notification' in window)||!('serviceWorker' in navigator))throw new Error('En iPhone: abrí la app desde Safari, Compartir → Agregar a inicio; luego abrila desde su icono. En Android, usá Chrome o la PWA instalada.');
+        if(Notification.permission==='denied')throw new Error('Las notificaciones están bloqueadas. Habilitalas en los permisos del navegador o en Configuración del dispositivo.');
         if(await Notification.requestPermission()!=='granted')throw new Error('Permiso de notificaciones no concedido.');
         const config=await api(auth,'config'),token=await initMessaging(config.vapidKey);
         if(!token)throw new Error('No se pudo registrar el dispositivo.');
@@ -62,6 +64,8 @@ export function mountPushControls(auth){
     function run(fn){return async()=>{try{enable.disabled=test.disabled=disable.disabled=true;await fn();}catch(e){showStatus(e.message);}finally{state(subscribed);}};}
     const openSettings=()=>{if(!dialog.open)dialog.showModal();if(!status.textContent)showStatus(subscribed?'Push activadas en este dispositivo.':'Activá las notificaciones para recibir avisos.');};
     window.addEventListener('ds-open-push-settings',openSettings);
+    const settingsButton=document.getElementById('btn-push-settings');
+    if(settingsButton){settingsButton.hidden=false;settingsButton.addEventListener('click',openSettings);}
     button.addEventListener('click',()=>{if(window.dispatchEvent(new CustomEvent('ds-open-inbox',{cancelable:true})))openSettings();});
     dialog.querySelector('[data-close]').addEventListener('click',()=>dialog.close());
     enable.addEventListener('click',run(activate));

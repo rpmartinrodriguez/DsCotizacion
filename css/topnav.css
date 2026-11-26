@@ -47,3 +47,9 @@ body.ds-app.ds-topnav-layout .nav-menu.ds-topnav:empty::before{content:"";displa
 body.ds-app.ds-topnav-layout .nav-menu:not(.ds-topnav){display:none!important}
 
 .ds-decision-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;flex:1 1 240px;min-width:0}.ds-decision-range[hidden]{display:none!important}.ds-decision-range label{display:grid;gap:4px;min-width:0;font-size:.78rem}.ds-decision-range input{min-width:0;width:100%;box-sizing:border-box;border:1px solid #ded7dc;border-radius:8px;padding:8px;font:inherit;color:#342d32;background:#fff}.ds-decision-range small{grid-column:1/-1;font-size:.69rem;color:#766d74}.ds-decision-controls{flex-wrap:wrap}@media(max-width:550px){.ds-decision-range{flex-basis:100%}.ds-decision-controls{max-width:100%}}
+
+/* Accesos de cabecera independientes del spacer heredado; conservan la segunda fila de navegación. */
+body.ds-app.ds-topnav-layout .header>#ds-push-open{display:grid!important;visibility:visible!important;flex:0 0 38px!important;min-width:38px!important;width:38px!important;height:38px!important;position:relative!important;margin:0!important;order:3;place-items:center}
+body.ds-app.ds-topnav-layout .header>#ds-global-search{order:4;flex:0 0 38px!important;margin:0!important}
+#btn-push-settings[hidden]{display:none!important}
+@media(max-width:1100px){body.ds-app.ds-topnav-layout .header>#ds-push-open,body.ds-app.ds-topnav-layout .header>#ds-global-search{align-self:center;flex-shrink:0!important}body.ds-app.ds-topnav-layout .header>.header__logo-link{order:0}body.ds-app.ds-topnav-layout .header>.nav-menu.ds-topnav{order:10}}
