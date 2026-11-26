@@ -1,0 +1,79 @@
+/* Exclusivo del Mostrador. Verde tomado de la referencia #166c47. */
+body.ds-pos {
+  --pos-green: #166c47;
+  --pos-green-dark: #104e35;
+  --pos-green-light: #edf6f1;
+  --pos-border: #d7e4dc;
+}
+body.ds-pos .ds-pos-main .ds-mini-eyebrow { color: var(--pos-green) !important; }
+body.ds-pos .ds-pos-page-head h1 { font-size: clamp(1.4rem, 2.5vw, 1.85rem) !important; }
+body.ds-pos .ds-pos-status-dot { background: #a3a3a3; box-shadow: 0 0 0 3px #ececec; }
+body.ds-pos.ds-pos-caja-open .ds-pos-status-dot { background: var(--pos-green); box-shadow: 0 0 0 3px #d9eee2; }
+body.ds-pos #pantalla-pos :is(.ds-pos-catalog-panel,.ds-pos-cart-panel) { border-color: var(--pos-border) !important; }
+body.ds-pos .ds-pos-panel-head { align-items: center; flex-wrap: wrap; gap: 9px; }
+body.ds-pos .ds-pos-admin-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+body.ds-pos .ds-pos-admin-actions button:not(.ds-close-register-btn), body.ds-pos .ds-pos-tools summary { color: var(--pos-green-dark) !important; border-color: var(--pos-border) !important; }
+body.ds-pos .ds-pos-tools.master-only { display: none !important; }
+body.ds-pos.rol-master .ds-pos-tools.master-only { display: block !important; }
+body.ds-pos .ds-pos-tools { position:relative; z-index:5; }
+body.ds-pos .ds-pos-tools summary { list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; min-height:36px; border:1px solid var(--pos-border); border-radius:9px; padding:0 12px; background:#fff; font-weight:750; font-size:.78rem; }
+body.ds-pos .ds-pos-tools summary::-webkit-details-marker { display:none; }
+body.ds-pos .ds-pos-tools[open] summary { background:var(--pos-green-light); }
+body.ds-pos .ds-pos-tools-menu { position:absolute; right:0; top:calc(100% + 6px); display:grid; gap:4px; min-width:200px; max-width:calc(100vw - 24px); background:#fff; padding:6px; border:1px solid var(--pos-border); border-radius:12px; box-shadow:0 12px 28px #173c2526; }
+body.ds-pos .ds-pos-tools-menu .btn-secondary { text-align:left; width:100% !important; margin:0; padding:8px 10px !important; min-height:38px; }
+body.ds-pos .ds-pos-search-wrap:focus-within, body.ds-pos #buscador-pos:focus { border-color:var(--pos-green) !important; box-shadow:0 0 0 3px #166c4718 !important; }
+body.ds-pos .ds-pos-catalog-meta { display:flex; justify-content:space-between; gap:8px; font-size:.72rem; color:#56685d; padding:9px 1px 0; }
+body.ds-pos .ds-pos-category-chips { padding-top:7px; }
+body.ds-pos .ds-pos-category-chip:hover { border-color:var(--pos-green); }
+body.ds-pos .ds-pos-category-chip.is-active { color:#fff !important; border-color:var(--pos-green) !important; background:var(--pos-green) !important; }
+body.ds-pos .ds-pos-product-tile { position:relative; min-width:0; display:flex; }
+body.ds-pos .ds-pos-product-tile .producto-card { width:100%; flex:1; min-height:122px !important; border-color:var(--pos-border) !important; }
+body.ds-pos .ds-pos-product-tile .ds-pos-card-top { padding-right:28px; }
+body.ds-pos .ds-pos-product-tile .prod-nombre { color:#23372b !important; font-size:.86rem !important; margin-bottom:7px !important; overflow-wrap:anywhere; }
+body.ds-pos .ds-pos-product-tile .prod-precio { color:var(--pos-green) !important; font-size:1.12rem !important; font-variant-numeric:tabular-nums; }
+body.ds-pos .ds-pos-product-tile .producto-card:hover, body.ds-pos .ds-pos-product-tile .producto-card.is-added { border-color:var(--pos-green) !important; box-shadow:0 0 0 3px #166c4718 !important; }
+body.ds-pos .ds-pos-favorite-toggle { position:absolute; top:7px; right:7px; width:30px; height:30px; padding:0; border:1px solid var(--pos-border); border-radius:9px; background:#fff; color:var(--pos-green); font:inherit; font-size:20px; cursor:pointer; }
+body.ds-pos .ds-pos-favorite-toggle[aria-pressed="true"] { background:var(--pos-green-light); border-color:var(--pos-green); }
+body.ds-pos .ds-pos-stock-info { display:block; margin-top:5px; color:#52745e; font-size:.64rem; line-height:1.2; font-weight:650; }
+body.ds-pos .ds-pos-stock-info.is-empty { color:#956126; }
+body.ds-pos .ds-pos-cart-count { color:var(--pos-green) !important; background:var(--pos-green-light) !important; }
+body.ds-pos #pos-total-monto, body.ds-pos .ds-pos-cart-list .cart-item-total { color:var(--pos-green-dark) !important; font-variant-numeric:tabular-nums; }
+body.ds-pos #btn-cobrar:not(:disabled), body.ds-pos #btn-confirmar-venta:not(:disabled) { background:var(--pos-green) !important; border-color:var(--pos-green) !important; color:white !important; box-shadow:none !important; }
+body.ds-pos #btn-cobrar:not(:disabled):hover, body.ds-pos #btn-confirmar-venta:not(:disabled):hover { background:var(--pos-green-dark) !important; }
+body.ds-pos .ds-pos-draft-tools { flex:0 0 auto; padding:6px 14px; border-bottom:1px solid var(--pos-border); display:grid; gap:6px; }
+body.ds-pos #pos-pause-sale { width:100%; min-height:32px; padding:4px 8px; color:var(--pos-green); font-size:.75rem; border-color:var(--pos-border); }
+body.ds-pos #pos-pause-sale:disabled { opacity:.5; cursor:default; }
+body.ds-pos #pos-drafts summary { cursor:pointer; color:var(--pos-green-dark); font-size:.75rem; font-weight:750; }
+body.ds-pos #pos-draft-list { max-height:140px; overflow:auto; }
+body.ds-pos .ds-pos-draft-row { display:flex; flex-wrap:wrap; align-items:center; gap:5px; border-top:1px solid var(--pos-border); padding:7px 0; }
+body.ds-pos .ds-pos-draft-row span { flex:1 1 100%; font-size:.72rem; }
+body.ds-pos .ds-pos-draft-row button { border:1px solid var(--pos-border); background:white; border-radius:7px; padding:5px 7px; color:var(--pos-green); cursor:pointer; }
+body.ds-pos .ds-pos-draft-row button:disabled { opacity:.5; cursor:default; }
+body.ds-pos #pos-draft-notice { color:#956126; margin:0; font-size:.7rem; }
+body.ds-pos #modal-cobro .btn-payment.selected { color:var(--pos-green) !important; background:var(--pos-green-light) !important; border-color:var(--pos-green) !important; box-shadow:none !important; }
+body.ds-pos #modal-cobro .check-icon { background:var(--pos-green) !important; }
+body.ds-pos #modal-cobro .btn-quick-money { color:var(--pos-green) !important; background:var(--pos-green-light) !important; border-color:var(--pos-border) !important; }
+body.ds-pos #modal-cobro .btn-quick-money:hover { background:var(--pos-green) !important; color:#fff !important; }
+body.ds-pos #modal-cobro .card__title { color:var(--pos-green) !important; }
+@media(min-width:992px) {
+  body.ds-pos #pantalla-pos.ds-pos-shell > .ds-pos-cart-panel { top:86px; max-height:calc(100dvh - 104px) !important; }
+  body.ds-pos #pantalla-pos .ds-pos-cart-list { flex:1 1 auto !important; min-height:0 !important; max-height:none !important; }
+}
+@media(max-width:991px) {
+  body.ds-pos #pantalla-pos .ds-pos-admin-actions { width:auto !important; justify-content:flex-end; }
+  body.ds-pos #pantalla-pos .ds-pos-admin-actions button { width:auto !important; flex:0 1 auto !important; }
+  body.ds-pos .ds-pos-mobile-bar button.is-active, body.ds-pos .ds-pos-mobile-bar #btn-mobile-carrito.is-active { background:var(--pos-green) !important; color:#fff !important; border-color:var(--pos-green) !important; }
+  body.ds-pos .ds-pos-mobile-bar button.is-active :is(span,strong) { color:#fff !important; }
+}
+@media(max-width:560px) {
+  body.ds-pos .ds-pos-panel-head { align-items:flex-start; }
+  body.ds-pos #pantalla-pos .ds-pos-admin-actions { flex:1 1 100%; justify-content:flex-start; }
+  body.ds-pos .ds-pos-tools-menu { left:0; right:auto; }
+  body.ds-pos .ds-pos-product-tile .producto-card { min-height:115px !important; padding:9px !important; }
+  body.ds-pos .ds-pos-catalog-meta { font-size:.65rem; }
+}
+
+/* El menú necesita escapar del scroll horizontal anterior, también en móvil. */
+body.ds-pos #pantalla-pos .ds-pos-admin-actions { overflow:visible !important; max-width:none !important; flex-wrap:wrap !important; }
+body.ds-pos .ds-pos-favorite-toggle:focus-visible, body.ds-pos .ds-pos-tools summary:focus-visible, body.ds-pos .ds-pos-category-chip:focus-visible { outline:2px solid var(--pos-green); outline-offset:2px; }
+@media(max-width:560px) { body.ds-pos #pantalla-pos .ds-pos-admin-actions { width:100% !important; } }
