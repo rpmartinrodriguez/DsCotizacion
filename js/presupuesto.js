@@ -12,6 +12,11 @@ export function setupPresupuesto(app) {
 
     // --- Referencias al DOM ---
     const ingredientesContainer = document.getElementById('lista-ingredientes');
+    const searchInput=document.getElementById('buscador-ingredientes-presupuesto');
+    const count=document.getElementById('quote-ingredient-count');
+    const normalize=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    const filterIngredients=()=>{const term=normalize(searchInput?.value);let n=0,total=0;for(const row of ingredientesContainer.querySelectorAll('.ingrediente-item')){const match=!term||normalize(row.querySelector('label')?.textContent).includes(term);row.hidden=!match;total++;if(match)n++;}if(count)count.textContent=n+' de '+total+' insumos';};
+    searchInput?.addEventListener('input',filterIngredients);
     const tablaPresupuestoBody = document.querySelector("#tabla-presupuesto tbody");
     const costoTotalSpan = document.getElementById('costo-total');
     const btnFinalizar = document.getElementById('btn-finalizar');
@@ -81,6 +86,7 @@ export function setupPresupuesto(app) {
         if (ingredientesContainer.innerHTML === '') {
             ingredientesContainer.innerHTML = '<p>No hay productos con stock. Registra una nueva compra primero.</p>';
         }
+        filterIngredients();
         ingredientesContainer.addEventListener('change', actualizarPresupuesto);
         ingredientesContainer.addEventListener('input', actualizarPresupuesto);
     };

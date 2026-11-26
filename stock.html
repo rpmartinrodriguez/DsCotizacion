@@ -31,8 +31,9 @@
     </style>
     <link rel="stylesheet" href="css/supplier-schedule.css?v=1">
     <link rel="stylesheet" href="css/topnav.css?v=5">
+    <link rel="stylesheet" href="css/workspace-pink.css?v=1">
 </head>
-<body class="ds-app ds-topnav-layout ds-content ds-stock">
+<body class="ds-app ds-topnav-layout ds-workspace ds-content ds-stock">
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
@@ -63,12 +64,11 @@
                     </div>
                 </section>
 
-                <section class="card ds-stock-panel">
-                    <div class="ds-toolbar">
-                        <input type="search" id="buscador-stock" class="ds-search" placeholder="Buscar materia prima por nombre…">
-                    </div>
+                <section class="card ds-stock-panel ds-work-panel">
+                    <div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">Inventario</span><h2 class="card__title">Materias primas</h2><p>Costos vigentes, precios de proveedor y recetas vinculadas.</p></div></div>
+                    <div class="ds-work-filter-row"><div class="ds-work-search"><span aria-hidden="true">⌕</span><input type="search" id="buscador-stock" placeholder="Buscar materia prima por nombre…" aria-label="Buscar materia prima por nombre…" autocomplete="off"></div><span class="ds-work-hint">Costos por unidad de costeo</span></div>
 
-                    <div style="overflow-x:auto;">
+                    <div class="ds-work-table-wrap" style="overflow-x:auto;">
                         <table class="table-clean" id="tabla-stock">
                             <thead>
                                 <tr>

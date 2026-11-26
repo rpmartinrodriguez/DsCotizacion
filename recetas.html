@@ -110,8 +110,9 @@
         }
     </style>
     <link rel="stylesheet" href="css/topnav.css?v=5">
+    <link rel="stylesheet" href="css/workspace-pink.css?v=1">
 </head>
-<body class="ds-app ds-topnav-layout ds-content ds-recipes">
+<body class="ds-app ds-topnav-layout ds-workspace ds-content ds-recipes">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -138,13 +139,13 @@
                 <section class="ds-content-head">
                     <div>
                         <p class="ds-eyebrow">Operación</p>
-                        <h1>Productos y recetas</h1>
+                        <h1>Recetas</h1>
                         <p>Organizá categorías, rendimientos, ingredientes y costos de cada elaboración.</p>
                     </div>
+                    <div class="ds-content-actions"><button id="btn-crear-receta" type="button" class="ds-action-primary">+ Nueva receta</button><a href="cotizacion-actual.html" class="ds-action-secondary">Ver carrito</a></div>
                 </section>
             <!-- SECCIÓN: GESTIÓN DE CATEGORÍAS -->
-            <section class="card">
-                <h2 class="card__title">Gestionar Categorías</h2>
+            <details class="card ds-work-panel ds-category-manager"><summary><span><span class="ds-mini-eyebrow">Organización</span><strong>Gestionar categorías</strong></span><span class="ds-work-summary-arrow" aria-hidden="true">⌄</span></summary><div class="ds-work-category-body">
                 <form id="form-categoria" class="form-modern" style="grid-template-columns: 2fr 1fr; align-items: flex-end;">
                     <div class="form-group">
                         <label for="nueva-categoria-nombre">Nombre de la Nueva Categoría</label>
@@ -155,14 +156,12 @@
                 <div id="lista-categorias-container" style="margin-top: 1.5rem;">
                     <p>Cargando categorías...</p>
                 </div>
-            </section>
+            </div></details>
 
             <!-- SECCIÓN: LISTA DE RECETAS -->
-            <section class="card">
-                <div class="card-header-actions">
-                    <h2 class="card__title">Mis Recetas de Postres</h2>
-                    <button id="btn-crear-receta" class="btn-primary">Crear Nueva Receta</button>
-                </div>
+            <section class="card ds-work-panel ds-recipe-library">
+                <div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">Elaboraciones</span><h2 class="card__title">Mis recetas</h2><p>Consultá costos y rendimientos o iniciá una cotización.</p></div></div>
+                <div class="ds-work-filter-row"><div class="ds-work-search"><span aria-hidden="true">⌕</span><input type="search" id="buscador-recetas" placeholder="Buscar receta o categoría…" aria-label="Buscar receta o categoría…" autocomplete="off"></div><span id="recetas-result-count" class="ds-work-count" aria-live="polite"></span></div>
                 <div id="lista-recetas-container">
                     <p>Cargando recetas...</p>
                 </div>
@@ -174,10 +173,10 @@
     <!-- MODAL PARA CREAR/EDITAR RECETAS -->
     <div id="receta-modal-overlay" class="modal-overlay">
         <div class="modal-content card" style="max-width: min(850px, 96vw); max-height: 95vh; overflow-y: auto;">
-            <h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2>
+            <div class="ds-work-modal-heading"><span class="ds-mini-eyebrow">Elaboración · Costeo</span><h2 class="card__title" id="receta-modal-title">Crear Nueva Receta</h2></div>
             
             <div class="modal-body">
-                <div class="form-modern" style="grid-template-columns: 1fr 1fr 1fr;">
+                <div class="form-modern ds-work-form-block" style="grid-template-columns: 1fr 1fr 1fr;">
                     <div class="form-group" style="grid-column: 1 / -1;">
                         <label for="receta-nombre-input">Nombre del Postre</label>
                         <input type="text" id="receta-nombre-input" placeholder="Ej: Torta Oreo">
@@ -251,7 +250,7 @@
                 </div>
                 
                 <div class="cantidad-a-cotizar" style="margin-top: 1rem; padding: 0.8rem;">
-                    <small style="color: white;">Costo estimado de estas porciones:</small>
+                    <small>Costo estimado de estas porciones:</small>
                     <div id="porciones-costo-estimado" style="font-size: 1.2rem; font-weight: bold; text-align: center; margin-top: 5px;">$0.00</div>
                 </div>
             </div>
@@ -266,7 +265,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupRecetas } from './js/recetas.js?v=4';
+        import { setupRecetas } from './js/recetas.js?v=5';
         try {
             const app = initializeApp(firebaseConfig);
             setupRecetas(app);

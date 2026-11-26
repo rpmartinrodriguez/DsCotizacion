@@ -22,8 +22,9 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <!-- ========================================== -->
     <link rel="stylesheet" href="css/topnav.css?v=5">
+    <link rel="stylesheet" href="css/workspace-pink.css?v=1">
 </head>
-<body class="ds-app ds-topnav-layout ds-content ds-current-quote">
+<body class="ds-app ds-topnav-layout ds-workspace ds-content ds-current-quote">
     <div class="main-container">
         <!-- ====================================================== -->
         <!-- HEADER                                                 -->
@@ -56,9 +57,9 @@
             <!-- ====================================================== -->
             <!-- SECCIÓN 1: Ítems del Carrito                           -->
             <!-- ====================================================== -->
-            <section class="card">
+            <div class="ds-work-split ds-cart-workspace"><div class="ds-work-stack"><section class="card ds-work-panel ds-quote-cart">
                 <div class="card-header-actions">
-                    <h2 class="card__title">🛒 Productos Seleccionados</h2>
+                    <div><span class="ds-mini-eyebrow">01 · Cotización</span><h2 class="card__title">Productos seleccionados</h2></div>
                     <!-- Botón Vaciar (Oculto por defecto hasta que haya ítems) -->
                     <button id="btn-vaciar-carrito" class="btn-secondary" style="color: var(--danger-color); border-color: var(--danger-color); width: auto; display: none;">
                         Vaciar Carrito
@@ -72,6 +73,7 @@
                 </div>
 
                 <!-- Lista de Productos -->
+                <div class="ds-work-filter-row"><a href="recetas.html" class="ds-action-secondary">+ Agregar desde recetas</a></div>
                 <div id="lista-carrito-container">
                     <!-- Se llena dinámicamente con JS -->
                 </div>
@@ -80,8 +82,9 @@
             <!-- ====================================================== -->
             <!-- SECCIÓN 2: Calculadora de Precios                      -->
             <!-- ====================================================== -->
-            <section class="card" id="calculo-precio-venta" style="display: none;">
-                <h2 class="card__title">Cálculo de Precio de Venta</h2>
+            </div><div class="ds-work-stack ds-work-aside">
+            <section class="card ds-work-panel ds-work-calculator" id="calculo-precio-venta" style="display: none;">
+                <div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">02 · Rentabilidad</span><h2 class="card__title">Precio de venta</h2><p>Revisá los parámetros antes de guardar.</p></div></div>
                 
                 <div class="form-modern">
                     <div class="form-group">
@@ -136,8 +139,8 @@
             <!-- ====================================================== -->
             <!-- SECCIÓN 3: Datos del Cliente y Guardado                -->
             <!-- ====================================================== -->
-            <section class="card" id="seccion-guardar" style="display: none;">
-                <h2 class="card__title">Datos para Guardar</h2>
+            <section class="card ds-work-panel" id="seccion-guardar" style="display: none;">
+                <div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">03 · Cliente</span><h2 class="card__title">Guardar cotización</h2></div></div>
                 <div class="form-modern">
                     <div class="form-group">
                         <label for="cotizacion-nombre-cliente">Nombre del Cliente</label>
@@ -151,7 +154,7 @@
                 </div>
                 <button id="btn-finalizar-cotizacion" class="btn-primary">Guardar Cotización en Historial</button>
             </section>
-            </div>
+            </div></div></div>
         </main>
     </div>
 

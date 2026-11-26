@@ -22,8 +22,9 @@
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
     <!-- ========================================== -->
     <link rel="stylesheet" href="css/topnav.css?v=5">
+    <link rel="stylesheet" href="css/workspace-pink.css?v=1">
 </head>
-<body class="ds-app ds-topnav-layout ds-content ds-quotes">
+<body class="ds-app ds-topnav-layout ds-workspace ds-content ds-quotes">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -54,16 +55,17 @@
                         <p>Calculá costos, mano de obra, margen y precio sugerido para una cotización.</p>
                     </div>
                 </section>
-            <div class="presupuesto-layout">
-                <section class="card">
-                    <h2 class="card__title">Selecciona los Ingredientes</h2>
+            <div class="ds-work-split ds-quote-workspace">
+                <div class="ds-work-stack"><section class="card ds-work-panel ds-quote-ingredients">
+                    <div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">01 · Selección</span><h2 class="card__title">Ingredientes</h2><p>Marcá los insumos e ingresá las cantidades.</p></div></div>
+                    <div class="ds-work-filter-row"><div class="ds-work-search"><span aria-hidden="true">⌕</span><input type="search" id="buscador-ingredientes-presupuesto" placeholder="Buscar ingrediente…" aria-label="Buscar ingrediente…" autocomplete="off"></div><span id="quote-ingredient-count" class="ds-work-count" aria-live="polite"></span></div>
                     <div id="lista-ingredientes" class="ingredientes-container">
                         <p>Cargando ingredientes...</p>
                     </div>
                 </section>
-                <section class="card">
-                    <h2 class="card__title">Resumen de Costos</h2>
-                    <table class="table-clean" id="tabla-presupuesto">
+                <section class="card ds-work-panel">
+                    <div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">02 · Materiales</span><h2 class="card__title">Resumen de costos</h2></div></div>
+                    <div class="ds-work-table-wrap"><table class="table-clean" id="tabla-presupuesto">
                         <thead>
                             <tr>
                                 <th>Ingrediente</th>
@@ -76,13 +78,13 @@
                                 <td colspan="3" style="text-align: center;">Selecciona ingredientes...</td>
                             </tr>
                         </tbody>
-                    </table>
-                    <h2 class="total-cost">Costo Materiales: <span id="costo-total">$0.00</span></h2>
+                    </table></div>
+                    <h2 class="total-cost">Costo materiales <span id="costo-total">$0.00</span></h2>
                 </section>
-            </div>
+            </div><div class="ds-work-stack ds-work-aside">
             
-            <section class="card" id="calculo-precio-venta">
-                <h2 class="card__title">Cálculo de Precio de Venta</h2>
+            <section class="card ds-work-panel ds-work-calculator" id="calculo-precio-venta">
+                <div class="ds-work-panel-head"><div><span class="ds-mini-eyebrow">03 · Rentabilidad</span><h2 class="card__title">Precio de venta</h2><p>Ajustá los parámetros para calcular la cotización.</p></div></div>
                 <div class="calculo-grid">
                     <div class="form-group">
                         <label for="horas-trabajo">Horas de Trabajo</label>
@@ -116,7 +118,8 @@
                 <button id="btn-finalizar" class="btn-primary" disabled>Guardar y Finalizar Presupuesto</button>
             </section>
             
-            <section id="resultado-final" class="card" style="display: none;">
+            </div></div>
+            <section id="resultado-final" class="card ds-work-panel" style="display: none;">
                 <h2 class="card__title">Mensaje para Compartir</h2>
                 <div class="form-group">
                     <label for="mensaje-final">Copia este mensaje para enviarlo a tu cliente:</label>
@@ -154,7 +157,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupPresupuesto } from './js/presupuesto.js';
+        import { setupPresupuesto } from './js/presupuesto.js?v=2';
         try {
             const app = initializeApp(firebaseConfig);
             setupPresupuesto(app);

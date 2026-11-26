@@ -392,7 +392,15 @@ export function setupRecetas(app) {
     };
     
     // Mostrar lista de recetas con los COSTOS EN VIVO
+    const recipeSearch=document.getElementById('buscador-recetas');
+    const recipeCount=document.getElementById('recetas-result-count');
+    const normalizeSearch=value=>String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    const expanded=new Set();
     const mostrarRecetas = (recetas) => {
+        const search=normalizeSearch(recipeSearch?.value);
+        const total=recetas.length;
+        if(search)recetas=recetas.filter(r=>normalizeSearch((r.data.nombreTorta||'')+' '+(r.data.categoria||'')).includes(search));
+        if(recipeCount)recipeCount.textContent=recetas.length+' de '+total+' recetas';
         listaRecetasContainer.innerHTML = '';
         const recetasPorCategoria = {};
 
@@ -405,7 +413,7 @@ export function setupRecetas(app) {
         });
 
         if (recetas.length === 0) {
-            listaRecetasContainer.innerHTML = '<p>No tienes recetas guardadas. ¡Crea la primera!</p>';
+            listaRecetasContainer.innerHTML = search?'<p class="ds-work-empty">No encontramos recetas para esa búsqueda.</p>':'<p class="ds-work-empty">Todavía no hay recetas guardadas. Creá la primera.</p>';
             return;
         }
 
@@ -414,6 +422,9 @@ export function setupRecetas(app) {
             if (listaDeRecetas && listaDeRecetas.length > 0) {
                 const acordeonItem = document.createElement('div');
                 acordeonItem.className = 'categoria-acordeon';
+                acordeonItem.dataset.category=categoria;
+                const isOpen=Boolean(search)||expanded.has(categoria)||Object.keys(recetasPorCategoria).length===1;
+                if(isOpen)acordeonItem.classList.add('active');
                 
                 const contenidoHtml = listaDeRecetas.map(receta => {
                     // Calculamos el costo en tiempo real para mostrarlo en pantalla
@@ -426,11 +437,9 @@ export function setupRecetas(app) {
                     return `
                     <div class="receta-card">
                         <div class="receta-card__info">
-                            <h3>${recetaVista.nombreTorta}</h3>
-                            <p>${recetaVista.ingredientes.length} ingrediente(s) - Rinde: ${rendimiento} u. · Venta: x${unidadesVenta}</p>
-                            <p style="color:#15803d; font-weight:bold; margin-top:0.3rem; font-size:0.9rem;">
-                                Costo Lote: $${costoTotalActual.toLocaleString('es-AR', {minimumFractionDigits: 2})} | Costo c/u: $${costoPorcionActual.toLocaleString('es-AR', {minimumFractionDigits: 2})}
-                            </p>
+                            <h3>${escapeHtml(recetaVista.nombreTorta)}</h3>
+                            <div class="ds-recipe-meta"><span>${recetaVista.ingredientes.length} ingredientes</span><span>Rinde ${rendimiento} u.</span><span>Venta ×${unidadesVenta}</span></div>
+                            <div class="ds-recipe-costs"><div><small>Costo del lote</small><strong>${costoTotalActual.toLocaleString('es-AR', {minimumFractionDigits: 2,maximumFractionDigits:2})}</strong></div><div><small>Costo por unidad</small><strong>${costoPorcionActual.toLocaleString('es-AR', {minimumFractionDigits: 2,maximumFractionDigits:2})}</strong></div></div>
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>
@@ -442,8 +451,8 @@ export function setupRecetas(app) {
                 `}).join('');
                 
                 acordeonItem.innerHTML = `
-                    <button class="categoria-acordeon__header">
-                        <span class="categoria-acordeon__titulo">${categoria}</span>
+                    <button type="button" class="categoria-acordeon__header" aria-expanded="${isOpen}">
+                        <span class="categoria-acordeon__titulo">${escapeHtml(categoria)} <small class="ds-work-count">${listaDeRecetas.length}</small></span>
                         <span class="acordeon-icono">+</span>
                     </button>
                     <div class="categoria-acordeon__content">${contenidoHtml}</div>
@@ -521,10 +530,14 @@ export function setupRecetas(app) {
         }
     });
 
+    recipeSearch?.addEventListener('input',()=>mostrarRecetas(todasLasRecetas));
     listaRecetasContainer.addEventListener('click', (e) => {
         const header = e.target.closest('.categoria-acordeon__header');
         if (header) {
-            header.parentElement.classList.toggle('active');
+            const group=header.parentElement;
+            const open=group.classList.toggle('active');
+            header.setAttribute('aria-expanded',String(open));
+            if(open)expanded.add(group.dataset.category);else expanded.delete(group.dataset.category);
             return;
         }
         
