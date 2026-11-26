@@ -27,9 +27,9 @@
     <!-- ====================================================== -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-    <link rel="stylesheet" href="css/topnav.css?v=2">
+    <link rel="stylesheet" href="css/topnav.css?v=3">
 </head>
-<body class="ds-app ds-content ds-prices">
+<body class="ds-app ds-topnav-layout ds-content ds-prices">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -39,11 +39,12 @@
             <a href="index.html" class="header__logo-link">
                 <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
+            <nav class="nav-menu ds-topnav" id="nav-menu" aria-label="Navegación por categorías"></nav>
             <div class="header__spacer"></div>
         </header>
 
         <!-- MENÚ DINÁMICO (Inyectado por menu.js) -->
-        <nav class="nav-menu" id="nav-menu"></nav>
+        
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-content-main"><div class="ds-content-wrap">
@@ -237,8 +238,8 @@
             setupPrecios(app);
         } catch (error) { console.error(error); }
     </script>
-    <script src="js/menu.js?v=22" defer></script>
-    <script src="js/shell-v2.js?v=2" defer></script>
+    <script src="js/menu.js?v=23" defer></script>
+    <script src="js/shell-v2.js?v=3" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });

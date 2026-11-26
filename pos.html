@@ -115,9 +115,9 @@
     body.ds-pos #pantalla-pos .ds-pos-tools-menu button{width:100%!important;text-align:left;margin:0;padding:6px 10px!important;white-space:normal;min-height:38px}
     @media(max-width:560px){body.ds-pos #pantalla-pos .ds-pos-admin-actions{width:100%!important;justify-content:flex-start}body.ds-pos .ds-pos-tools-menu{right:auto;left:0;max-width: min(250px,calc(100vw - 24px))}}
     </style>
-    <link rel="stylesheet" href="css/topnav.css?v=2">
+    <link rel="stylesheet" href="css/topnav.css?v=3">
 </head>
-<body class="rol-empleado ds-app ds-pos">
+<body class="rol-empleado ds-app ds-topnav-layout ds-pos">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -127,11 +127,12 @@
             <a href="index.html" class="header__logo-link">
                 <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
+            <nav class="nav-menu ds-topnav" id="nav-menu" aria-label="Navegación por categorías"></nav>
             <div class="header__spacer"></div>
         </header>
 
         <!-- MENÚ DINÁMICO -->
-        <nav class="nav-menu" id="nav-menu"></nav>
+        
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-pos-main">
@@ -865,7 +866,7 @@
             console.error("Error al inicializar Mostrador:", error); 
         }
     </script>
-    <script src="js/shell-v2.js?v=2" defer></script>
-    <script src="js/menu.js?v=22" defer></script>
+    <script src="js/shell-v2.js?v=3" defer></script>
+    <script src="js/menu.js?v=23" defer></script>
 </body>
 </html>
