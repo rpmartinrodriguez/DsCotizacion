@@ -1,0 +1,172 @@
+/* Dulce Sall: capa visual exclusiva para Recetas, Stock y Cotizaciones. */
+body.ds-workspace{--work-rose:#a53569;--work-rose-dark:#78324f;--work-rose-soft:#f8e8ef;--work-rose-pale:#fcf6f9;--work-line:#e5d2dd;--work-ink:#33252e;--work-muted:#77636e;--work-green:#166c47;--ds-primary:#a53569;--ds-primary-strong:#8a2d59;--ds-primary-soft:#f8e8ef;--primary-color:#a53569;--ds-border:#e8dbe3;background:#f7f3f6;color:var(--work-ink)}
+body.ds-workspace .ds-content-wrap{max-width:1440px;width:100%;min-width:0;box-sizing:border-box;margin:0 auto}
+body.ds-workspace .ds-content-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;padding:0 0 14px;border-bottom:1px solid var(--work-line)}
+body.ds-workspace .ds-content-head h1{color:var(--work-ink);font-size:clamp(1.5rem,2.5vw,2rem);margin:3px 0 5px;letter-spacing:-.035em}
+body.ds-workspace .ds-content-head p:not(.ds-eyebrow){color:var(--work-muted);font-size:.86rem;margin:0;line-height:1.5}
+body.ds-workspace :is(.ds-eyebrow,.ds-mini-eyebrow){color:var(--work-rose);font-weight:750;letter-spacing:.07em;font-size:.68rem;text-transform:uppercase}
+body.ds-workspace .ds-content-actions{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+body.ds-workspace :is(.ds-action-primary,.ds-action-secondary,.btn-primary,.btn-secondary){box-shadow:none!important;border-radius:10px;font-weight:650;letter-spacing:0;text-transform:none;line-height:1.25;min-height:40px;box-sizing:border-box}
+body.ds-workspace :is(.ds-action-primary,.btn-primary){background:var(--work-rose)!important;color:white!important;border:1px solid var(--work-rose)!important}
+body.ds-workspace :is(.ds-action-primary,.btn-primary):hover:not(:disabled){background:var(--work-rose-dark)!important;border-color:var(--work-rose-dark)!important}
+body.ds-workspace :is(.ds-action-secondary,.btn-secondary){background:#fff!important;color:var(--work-rose-dark)!important;border:1px solid var(--work-line)!important}
+body.ds-workspace :is(.ds-action-secondary,.btn-secondary):hover:not(:disabled){background:var(--work-rose-soft)!important}
+body.ds-workspace :is(button,input,select,textarea,a):focus-visible{outline:2px solid var(--work-rose)!important;outline-offset:2px}
+body.ds-workspace button:disabled{opacity:.55;cursor:not-allowed}
+body.ds-workspace .ds-work-panel{min-width:0;background:white;border:1px solid var(--work-line);border-radius:14px;box-shadow:0 3px 12px #6d2d4b08;padding:16px;margin:0 0 14px;box-sizing:border-box}
+body.ds-workspace .ds-work-panel-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px}
+body.ds-workspace .ds-work-panel-head .card__title,body.ds-workspace .ds-work-panel .card__title{font-size:1.1rem;color:var(--work-ink);margin:3px 0 4px;letter-spacing:-.02em;line-height:1.3}
+body.ds-workspace .ds-work-panel-head p{font-size:.78rem;color:var(--work-muted);margin:0;line-height:1.4}
+body.ds-workspace .ds-work-filter-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+body.ds-workspace .ds-work-search{flex:1 1 220px;min-width:0;display:flex;align-items:center;gap:9px;border:1px solid var(--work-line);border-radius:11px;padding:0 12px;min-height:44px;background:#fff;box-sizing:border-box}
+body.ds-workspace .ds-work-search>span{font-size:1.35rem;color:var(--work-rose)}
+body.ds-workspace .ds-work-search:focus-within{border-color:var(--work-rose);box-shadow:0 0 0 3px #a5356912}
+body.ds-workspace .ds-work-search input{width:100%;min-width:0;flex:1;padding:9px 0!important;outline:none!important;border:0!important;box-shadow:none!important;background:transparent!important;color:var(--work-ink);font-size:.9rem!important}
+body.ds-workspace :is(.ds-work-count,.ds-work-hint){display:inline-block;color:var(--work-rose-dark);background:var(--work-rose-pale);border:1px solid var(--work-line);border-radius:8px;padding:5px 8px;font-size:.7rem;font-weight:650;line-height:1.3}
+body.ds-workspace .ds-work-empty{margin:0;padding:22px;text-align:center;color:var(--work-muted);background:var(--work-rose-pale);border:1px dashed var(--work-line);border-radius:10px}
+body.ds-workspace .ds-work-split{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.9fr);align-items:start;gap:14px;min-width:0}
+body.ds-workspace .ds-work-stack{display:grid;gap:14px;min-width:0;align-content:start}
+body.ds-workspace .ds-work-stack>.ds-work-panel{margin:0}
+body.ds-workspace .ds-work-aside{position:sticky;top:calc(var(--ds-topnav-height,72px) + 14px)}
+body.ds-workspace .ds-work-table-wrap{overflow-x:auto;max-width:100%;min-width:0}
+body.ds-workspace .ds-work-panel .table-clean{border:1px solid var(--work-line);box-shadow:none;border-radius:10px;background:#fff;width:100%;font-size:.84rem;border-spacing:0}
+body.ds-workspace .ds-work-panel .table-clean th{background:#f3dce7;color:var(--work-rose-dark);font-size:.7rem;letter-spacing:.035em;font-weight:750;padding:12px 10px}
+body.ds-workspace .ds-work-panel .table-clean td{border-color:#eddee6;padding:11px 10px;color:var(--work-ink)}
+body.ds-workspace .ds-work-panel .table-clean tbody tr:nth-child(even){background:#fdf8fb}
+body.ds-workspace .ds-work-panel .table-clean tbody tr:hover{background:#faeff5}
+body.ds-workspace .form-group label{font-size:.79rem;color:var(--work-rose-dark);font-weight:700}
+body.ds-workspace .form-group small{font-size:.72rem;line-height:1.35;color:var(--work-muted)}
+body.ds-workspace :is(.form-group,.ds-work-panel) :is(input:not([type=checkbox]):not([type=radio]):not([type=search]),select,textarea){box-shadow:none!important;border:1px solid var(--work-line);border-radius:9px;background:#fff;color:var(--work-ink);min-width:0;max-width:100%;box-sizing:border-box;font:inherit}
+body.ds-workspace .form-group :is(input:not([type=checkbox]):not([type=radio]),select){min-height:40px}
+body.ds-workspace .form-group{min-width:0;margin-bottom:8px}
+body.ds-workspace .modal-content.card{border:1px solid var(--work-line);border-radius:15px;background:#fff;color:var(--work-ink)}
+body.ds-workspace .modal-content .card__title{color:var(--work-ink);letter-spacing:-.02em}
+body.ds-workspace .modal-actions{background:white;border-top:1px solid var(--work-line);gap:8px}
+body.ds-workspace .modal-actions>button{min-height:42px;margin:0}
+body.ds-workspace .ds-work-modal-heading{flex:0 0 auto;border-bottom:1px solid var(--work-line);padding:14px 18px;background:var(--work-rose-pale)}
+body.ds-workspace .ds-work-modal-heading .card__title{margin:4px 0 0!important;font-size:1.15rem}
+body.ds-workspace .ds-work-form-block{background:var(--work-rose-pale);border:1px solid var(--work-line);padding:12px;border-radius:10px;gap:10px}
+body.ds-workspace .card__subtitle{font-size:.9rem;color:var(--work-rose-dark);margin:14px 0 9px}
+body.ds-workspace .calculo-divisor{border:0;border-top:1px solid var(--work-line);margin:12px 0}
+/* Recetas: categorías plegables, tarjetas de costos y acciones estables. */
+body.ds-recipes.ds-workspace .ds-category-manager{padding:0;overflow:hidden}
+body.ds-recipes.ds-workspace .ds-category-manager>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:12px 16px;background:var(--work-rose-soft);color:var(--work-rose-dark);list-style:none}
+body.ds-recipes.ds-workspace .ds-category-manager>summary::-webkit-details-marker{display:none}
+body.ds-recipes.ds-workspace .ds-category-manager>summary>span:first-child{display:grid;gap:4px}
+body.ds-recipes.ds-workspace .ds-category-manager>summary strong{font-size:.91rem}
+body.ds-recipes.ds-workspace .ds-category-manager[open] .ds-work-summary-arrow{transform:rotate(180deg)}
+body.ds-recipes.ds-workspace .ds-work-category-body{padding:14px 16px}
+body.ds-recipes.ds-workspace #form-categoria{gap:10px;margin:0}
+body.ds-recipes.ds-workspace #lista-recetas-container{display:grid;gap:10px}
+body.ds-recipes.ds-workspace .categoria-acordeon{border:1px solid var(--work-line);border-radius:12px;box-shadow:none;margin:0;overflow:hidden}
+body.ds-recipes.ds-workspace .categoria-acordeon__header{background:#f4dfe9;color:var(--work-rose-dark);padding:11px 13px;font-size:.92rem;min-height:48px;gap:8px}
+body.ds-recipes.ds-workspace .categoria-acordeon__titulo{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+body.ds-recipes.ds-workspace .categoria-acordeon__header .ds-work-count{background:#fff;border-color:#e4c6d5}
+body.ds-recipes.ds-workspace .categoria-acordeon__content{display:none;max-height:none;padding:0;transition:none}
+body.ds-recipes.ds-workspace .categoria-acordeon.active .categoria-acordeon__content{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px;max-height:none;overflow:visible;background:#fcf7fa;padding:10px}
+body.ds-recipes.ds-workspace .receta-card{display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;gap:12px;border:1px solid var(--work-line);border-radius:10px;background:white;box-shadow:none;margin:0;padding:12px;min-width:0}
+body.ds-recipes.ds-workspace .receta-card__info{min-width:0;width:100%}
+body.ds-recipes.ds-workspace .receta-card__info h3{font-size:1rem;color:var(--work-ink);margin:0 0 7px;overflow-wrap:anywhere}
+body.ds-recipes.ds-workspace .ds-recipe-meta{display:flex;flex-wrap:wrap;gap:5px;font-size:.68rem;color:var(--work-muted)}
+body.ds-recipes.ds-workspace .ds-recipe-meta span{padding:4px 6px;border:1px solid #ebdfe5;border-radius:6px;background:#fff}
+body.ds-recipes.ds-workspace .ds-recipe-costs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}
+body.ds-recipes.ds-workspace .ds-recipe-costs>div{display:grid;gap:4px;padding:9px;background:#f8e9f0;border:1px solid #ead2df;border-radius:8px;min-width:0}
+body.ds-recipes.ds-workspace .ds-recipe-costs small{font-size:.69rem;color:var(--work-rose-dark)}
+body.ds-recipes.ds-workspace .ds-recipe-costs strong{font-size:clamp(.85rem,1.4vw,1.03rem);color:var(--work-rose-dark);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+body.ds-recipes.ds-workspace .receta-card__actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;width:100%}
+body.ds-recipes.ds-workspace .receta-card__actions :is(button,a){width:100%!important;min-height:36px;padding:8px 6px!important;margin:0;font-size:.73rem;white-space:normal;text-align:center;display:flex;justify-content:center;align-items:center}
+body.ds-recipes.ds-workspace .receta-card__actions .btn-borrar-receta{color:#a13a50!important;border-color:#e8c7cf!important}
+body.ds-recipes.ds-workspace #receta-modal-overlay .modal-content{padding:0;max-height:calc(100dvh - 24px)!important;overflow:hidden!important;gap:0;display:flex;flex-direction:column}
+body.ds-recipes.ds-workspace #receta-modal-overlay .modal-body{min-height:0;flex:1 1 auto;padding:14px 18px;overflow:auto;overscroll-behavior:contain}
+body.ds-recipes.ds-workspace #receta-modal-overlay #ingredientes-en-receta-container{max-height:none;min-height:0;overflow:visible;background:var(--work-rose-pale);border:1px solid var(--work-line);padding:6px;margin-top:6px}
+body.ds-recipes.ds-workspace #receta-modal-overlay .modal-actions{flex:0 0 auto;margin:0!important;padding:12px 18px}
+body.ds-recipes.ds-workspace .ds-receta-cost-summary{background:#f5e0ea;border-color:#e3bfd2}
+body.ds-recipes.ds-workspace .cantidad-a-cotizar{background:var(--work-rose-soft);color:var(--work-rose-dark);border:1px solid var(--work-line);box-shadow:none;border-radius:10px}
+body.ds-recipes.ds-workspace .cantidad-a-cotizar small{color:var(--work-rose-dark)!important}
+/* Stock: tabla de trabajo con estados discretos y tarjetas legibles en celular. */
+body.ds-stock.ds-workspace .ds-stock-panel{overflow:visible}
+body.ds-stock.ds-workspace .ds-stock-material-name{font-size:.91rem;color:var(--work-ink)}
+body.ds-stock.ds-workspace .ds-applied-cost strong{color:var(--work-rose-dark);font-size:.92rem}
+body.ds-stock.ds-workspace .ds-provider-table-price strong{color:var(--work-ink)}
+body.ds-stock.ds-workspace .ds-applied-cost .is-provider,body.ds-stock.ds-workspace .ds-provider-table-price .is-down{color:var(--work-green);background:#edf6f0}
+body.ds-stock.ds-workspace .ds-stock-recipe-usage summary{color:var(--work-rose)}
+body.ds-stock.ds-workspace .stock-actions .btn-stock-link{border-color:var(--work-line);border-radius:9px;background:var(--work-rose-pale);min-width:36px;min-height:36px}
+body.ds-stock.ds-workspace .stock-actions .btn-stock-link:hover{background:var(--work-rose-soft)}
+body.ds-stock.ds-workspace .ds-stock-modal-head{background:var(--work-rose-pale);border-color:var(--work-line)}
+body.ds-stock.ds-workspace .ds-stock-essential{background:var(--work-rose-pale);border:1px solid var(--work-line);border-radius:10px;padding:10px}
+body.ds-stock.ds-workspace .ds-supplier-editor{background:#fff8fb;border:1px solid var(--work-line);box-shadow:none}
+body.ds-stock.ds-workspace .ds-supplier-kpis>div{background:#f6e4ed;border-color:var(--work-line)}
+body.ds-stock.ds-workspace .ds-supplier-kpis strong{color:var(--work-rose-dark)}
+body.ds-stock.ds-workspace .ds-stock-advanced{border-color:var(--work-line);background:var(--work-rose-pale)}
+/* Presupuesto y carrito de cotizaciones: mismo patrón de catálogo + resumen del POS. */
+body.ds-workspace .ds-quote-ingredients #lista-ingredientes{max-height:410px;overflow-y:auto;overscroll-behavior:contain;padding:0 4px 0 0}
+body.ds-workspace .ingrediente-item{border:1px solid #ecdee6;border-radius:9px;padding:8px 10px;margin:0 0 6px;gap:8px;background:#fff;min-width:0;box-sizing:border-box}
+body.ds-workspace .ingrediente-item[hidden]{display:none!important}
+body.ds-workspace .ingrediente-item:has(input[type=checkbox]:checked){border-color:#d5a3bc;background:#fcf0f6}
+body.ds-workspace .ingrediente-info{flex:1;min-width:0;gap:8px}
+body.ds-workspace .ingrediente-info label{font-size:.84rem;color:var(--work-ink);overflow-wrap:anywhere}
+body.ds-workspace .ingrediente-info input[type=checkbox]{flex:0 0 19px;width:19px;height:19px;accent-color:var(--work-rose)}
+body.ds-workspace .ingrediente-cantidad{flex:0 0 88px;min-width:0}
+body.ds-workspace .ingrediente-cantidad input{width:100%!important;min-height:36px;text-align:right;padding:6px}
+body.ds-workspace .ingrediente-cantidad input:disabled{background:#f5f1f3!important;opacity:.7}
+body.ds-workspace .total-cost{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;margin:10px 0 0;background:var(--work-rose-soft);border:1px solid var(--work-line);border-radius:9px;color:var(--work-rose-dark);font-size:.85rem;font-weight:650;text-align:left}
+body.ds-workspace .total-cost span{font-size:1.12rem;font-weight:800;overflow-wrap:anywhere}
+body.ds-workspace .ds-work-calculator :is(.form-modern,.calculo-grid){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:var(--work-rose-pale);border:1px solid var(--work-line);padding:10px;border-radius:10px;box-sizing:border-box}
+body.ds-workspace .ds-work-calculator .form-group{margin:0}
+body.ds-workspace .calculo-resumen{background:white;border:1px solid var(--work-line);border-radius:10px;padding:6px 10px;margin:0 0 10px;box-shadow:none}
+body.ds-workspace .calculo-fila{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid #f0e6ec;font-size:.8rem;color:var(--work-muted)}
+body.ds-workspace .calculo-fila:last-child{border-bottom:0}
+body.ds-workspace .calculo-fila span:last-child{color:var(--work-ink);font-weight:700;text-align:right;overflow-wrap:anywhere}
+body.ds-workspace .calculo-fila.costo-produccion{background:#f8e9f0;color:var(--work-rose-dark);padding:9px;border:0;border-radius:7px;font-weight:750}
+body.ds-workspace .precio-venta-final{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--work-rose-dark)!important;color:#fff!important;box-shadow:none;border-radius:10px;padding:13px;margin:12px 0;font-size:.88rem}
+body.ds-workspace .precio-venta-final span{color:#fff!important}
+body.ds-workspace #precio-venta-sugerido{font-size:clamp(1.1rem,2.5vw,1.65rem);font-weight:800;letter-spacing:-.02em;overflow-wrap:anywhere}
+body.ds-current-quote.ds-workspace #lista-carrito-container{display:grid;gap:8px;min-width:0}
+body.ds-current-quote.ds-workspace #lista-carrito-container .cart-item{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:9px;padding:12px;border:1px solid var(--work-line);border-radius:10px;background:var(--work-rose-pale);margin:0;box-shadow:none}
+body.ds-current-quote.ds-workspace .cart-item__info{min-width:0}
+body.ds-current-quote.ds-workspace .cart-item__info h4{font-size:.95rem;color:var(--work-ink);overflow-wrap:anywhere;margin:0 0 4px}
+body.ds-current-quote.ds-workspace .cart-item__info .precio{color:var(--work-rose-dark)!important;font-size:1rem;font-weight:800}
+body.ds-current-quote.ds-workspace .cart-item__actions{display:flex;align-items:center;gap:6px}
+body.ds-current-quote.ds-workspace .cart-item__actions input{width:64px!important;min-height:37px;padding:6px;text-align:center;background:#fff!important}
+body.ds-current-quote.ds-workspace .cart-item__actions .btn-remove-item{width:36px;height:36px;border:1px solid #e7c8d0;border-radius:8px;background:#fff;color:#a13a50}
+body.ds-current-quote.ds-workspace #btn-vaciar-carrito{color:#a13a50!important;border-color:#e7c8d0!important;padding:7px 10px;font-size:.75rem}
+body.ds-current-quote.ds-workspace #carrito-vacio-msg{background:var(--work-rose-pale);border:1px dashed var(--work-line);border-radius:10px}
+body.ds-workspace #copiado-feedback,body.ds-workspace #copiado-feedback-cotizacion{color:var(--work-green)}
+@media(max-width:1100px){body.ds-workspace .ds-work-split{grid-template-columns:minmax(0,1.1fr) minmax(290px,.9fr)}}
+@media(max-width:900px){body.ds-workspace .ds-work-split{grid-template-columns:minmax(0,1fr)}body.ds-workspace .ds-work-aside{position:static}}
+@media(max-width:767px){
+ body.ds-workspace .ds-content-head{align-items:flex-start;margin-bottom:12px;padding-bottom:10px}
+ body.ds-workspace .ds-content-actions{width:100%;gap:6px}
+ body.ds-workspace .ds-content-actions>:is(button,a){flex:1 1 auto;min-height:40px;white-space:normal;text-align:center;font-size:.76rem}
+ body.ds-workspace .ds-work-panel{padding:12px;border-radius:12px}
+ body.ds-workspace .ds-work-filter-row{gap:6px}
+ body.ds-workspace .ds-work-filter-row .ds-work-search{flex:1 1 100%}
+ body.ds-workspace .ds-work-panel-head{margin-bottom:10px}
+ body.ds-workspace .ds-work-split,body.ds-workspace .ds-work-stack{gap:10px}
+ body.ds-workspace .ds-work-calculator :is(.calculo-grid,.form-modern){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ body.ds-workspace .ds-work-calculator :is(.calculo-grid,.form-modern)>.form-group{grid-column:auto!important}
+ body.ds-recipes.ds-workspace .categoria-acordeon.active .categoria-acordeon__content{grid-template-columns:minmax(0,1fr);padding:8px}
+ body.ds-recipes.ds-workspace .receta-card{padding:10px}
+ body.ds-recipes.ds-workspace #receta-modal-overlay .modal-body{padding:10px 12px}
+ body.ds-recipes.ds-workspace #receta-modal-overlay .modal-actions{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+ body.ds-recipes.ds-workspace .ds-work-modal-heading{padding:11px 12px}
+ body.ds-recipes.ds-workspace #receta-modal-overlay .receta-editor-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(80px,.5fr);gap:8px}
+ body.ds-recipes.ds-workspace #receta-modal-overlay .receta-editor-grid>button{grid-column:1/-1}
+ body.ds-stock.ds-workspace #tabla-stock{display:block;border:0;background:transparent;min-width:0}
+ body.ds-stock.ds-workspace #tabla-stock thead{display:none}
+ body.ds-stock.ds-workspace #tabla-stock tbody{display:grid;gap:9px}
+ body.ds-stock.ds-workspace #tabla-stock tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border:1px solid var(--work-line);border-radius:10px;background:#fff;overflow:hidden;padding:0;box-shadow:none}
+ body.ds-stock.ds-workspace #tabla-stock td{display:block;min-width:0;text-align:left;border:0;padding:9px;white-space:normal;overflow-wrap:anywhere;position:static}
+ body.ds-stock.ds-workspace #tabla-stock td::before{display:block;position:static;content:attr(data-label);font-weight:700;color:var(--work-muted);font-size:.68rem;margin:0 0 4px;width:auto;white-space:normal;text-align:left}
+ body.ds-stock.ds-workspace #tabla-stock td:first-child{grid-column:1/-1;background:#f5e2eb;padding:11px}
+ body.ds-stock.ds-workspace #tabla-stock td:first-child::before,body.ds-stock.ds-workspace #tabla-stock td.stock-actions::before,body.ds-stock.ds-workspace #tabla-stock td[colspan]::before{display:none}
+ body.ds-stock.ds-workspace #tabla-stock td.stock-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;background:#fcf7fa;border-top:1px solid var(--work-line)}
+ body.ds-stock.ds-workspace #tabla-stock td[colspan]{grid-column:1/-1}
+ body.ds-stock.ds-workspace #tabla-stock .btn-stock-link{width:40px;height:40px}
+ body.ds-stock.ds-workspace .ds-work-table-wrap{overflow:visible!important}
+ body.ds-current-quote.ds-workspace #lista-carrito-container .cart-item{grid-template-columns:minmax(0,1fr);gap:6px}
+ body.ds-current-quote.ds-workspace .cart-item__actions{justify-content:flex-end;border-top:1px solid var(--work-line);padding-top:7px}
+ body.ds-workspace .ds-quote-ingredients #lista-ingredientes{max-height:340px}
+}
+@media(max-width:360px){body.ds-workspace .ds-work-calculator :is(.calculo-grid,.form-modern){grid-template-columns:minmax(0,1fr)!important}}
+@media print{body.ds-workspace .ds-work-aside{position:static}body.ds-workspace .ds-work-split{display:block}}
