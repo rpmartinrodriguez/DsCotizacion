@@ -136,6 +136,10 @@ export function setupPOS(app) {
     let favoriteIds = new Set();
     let draftContext = null;
     let pausedSales = [];
+    let draftMaterialsReady = false;
+    let draftRecipesReady = false;
+    let draftConfigReady = false;
+    const draftCatalogReady = () => draftMaterialsReady && draftRecipesReady && draftConfigReady && productosDisponibles.length > 0;
     const pauseSaleButton = document.getElementById('pos-pause-sale');
     const draftDetails = document.getElementById('pos-drafts');
     const draftList = document.getElementById('pos-draft-list');
@@ -300,6 +304,7 @@ export function setupPOS(app) {
     });
 
     onSnapshot(doc(db, 'config', 'mostrador'), (docSnap) => {
+        draftConfigReady = true;
         if (docSnap.exists()) {
             margenGlobal = docSnap.data().margenGlobal || 0;
         } else {
@@ -722,12 +727,14 @@ export function setupPOS(app) {
         }
 
         onSnapshot(materiasPrimasCollection, (snapshot) => {
+            draftMaterialsReady = true;
             materiasPrimasMap.clear();
             snapshot.forEach(doc => materiasPrimasMap.set(doc.id, doc.data()));
             programarProcesamiento();
         });
 
         onSnapshot(recetasCollection, (snapshot) => {
+            draftRecipesReady = true;
             let tempArr = [];
             snapshot.forEach(doc => tempArr.push({ id: doc.id, ...doc.data() }));
             tempArr.sort((a,b) => (a.nombreTorta || "").localeCompare(b.nombreTorta || ""));
@@ -1038,7 +1045,7 @@ export function setupPOS(app) {
             label.textContent = draft.label + ': ' + names + (draft.items.length > 2 ? '…' : '');
             const resume = document.createElement('button');
             resume.type = 'button'; resume.textContent = 'Retomar'; resume.dataset.resumeDraft = String(index);
-            resume.disabled = Boolean(carritoActual.length || cuentaCorrienteClienteId || pendingCheckout || !productosDisponibles.length);
+            resume.disabled = Boolean(carritoActual.length || cuentaCorrienteClienteId || pendingCheckout || !draftCatalogReady());
             const discard = document.createElement('button');
             discard.type = 'button'; discard.textContent = 'Descartar'; discard.dataset.discardDraft = String(index);
             row.append(label, resume, discard);
@@ -1064,7 +1071,7 @@ export function setupPOS(app) {
             }
             return;
         }
-        if (!resume || carritoActual.length || cuentaCorrienteClienteId || pendingCheckout || !cajaActiva || modalCobro?.classList.contains('visible')) return;
+        if (!resume || carritoActual.length || cuentaCorrienteClienteId || pendingCheckout || !cajaActiva || !draftCatalogReady() || modalCobro?.classList.contains('visible')) return;
         const index = Number(resume.dataset.resumeDraft);
         const draft = pausedSales[index];
         if (!draft) return;

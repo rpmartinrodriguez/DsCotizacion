@@ -72,3 +72,8 @@ body.ds-pos #modal-cobro .card__title { color:var(--pos-green) !important; }
   body.ds-pos .ds-pos-product-tile .producto-card { min-height:115px !important; padding:9px !important; }
   body.ds-pos .ds-pos-catalog-meta { font-size:.65rem; }
 }
+
+/* El menú necesita escapar del scroll horizontal anterior, también en móvil. */
+body.ds-pos #pantalla-pos .ds-pos-admin-actions { overflow:visible !important; max-width:none !important; flex-wrap:wrap !important; }
+body.ds-pos .ds-pos-favorite-toggle:focus-visible, body.ds-pos .ds-pos-tools summary:focus-visible, body.ds-pos .ds-pos-category-chip:focus-visible { outline:2px solid var(--pos-green); outline-offset:2px; }
+@media(max-width:560px) { body.ds-pos #pantalla-pos .ds-pos-admin-actions { width:100% !important; } }
