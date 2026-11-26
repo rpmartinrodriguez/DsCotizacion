@@ -324,7 +324,7 @@ export function setupHistorial(app) {
                 await showConfirmationModal('Eliminar Presupuesto', 'Esta acción es permanente. ¿Estás seguro?', 'danger');
                 await runTransaction(db,async tx=>{const ref=doc(db,'presupuestosGuardados',id),snap=await tx.get(ref);if(!snap.exists())return;if(snap.data().esVenta===true)throw Error('No se puede borrar una venta confirmada sin revertir sus movimientos.');tx.delete(ref);});
             } catch (error) {
-                if(error?.message && !error.message.includes("cancelado")) console.error("Error al eliminar:", error);
+                if(error?.message && !error.message.includes("cancelado")&&!error.message.includes("cancelada")) alert(error.message);
                 else console.log("Borrado cancelado.");
             }
         }

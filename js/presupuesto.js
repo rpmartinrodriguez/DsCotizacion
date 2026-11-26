@@ -44,7 +44,7 @@ export function setupPresupuesto(app) {
     // --- Variables de Estado ---
     let materiasPrimasDisponibles = [];
     let presupuestoActual = [];
-    let costoTotalCache = 0;
+    let costoTotalCache = 0,precioVentaCache=0;
 
     // --- FUNCIONES ---
 
@@ -244,7 +244,8 @@ export function setupPresupuesto(app) {
         subtotalCostosFijosSpan.textContent = `$${subtotalCostosFijos.toFixed(2)}`;
         costoProduccionSpan.textContent = `$${costoProduccion.toFixed(2)}`;
         totalGananciaSpan.textContent = `$${totalGanancia.toFixed(2)}`;
-        precioVentaSugeridoSpan.textContent = `$${precioVenta.toFixed(2)}`;
+        precioVentaCache=Number(precioVenta.toFixed(2));
+        precioVentaSugeridoSpan.textContent = `$${precioVentaCache.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
     };
 
     const showTitlePrompt = () => {
@@ -283,7 +284,7 @@ export function setupPresupuesto(app) {
                 costoHora: parseFloat(costoHoraInput.value) || 0,
                 porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0,
                 porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0,
-                precioVenta: Number(precioVentaSugeridoSpan.textContent.replace(/\$|\./g,'').replace(',','.')),
+                precioVenta: precioVentaCache,
                 estadoPedido:'presupuestado',
                 ingredientes: presupuestoActual,
                 esVenta: false,
