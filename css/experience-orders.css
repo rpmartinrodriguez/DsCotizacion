@@ -1,0 +1,49 @@
+
+/* Experience & Orders: shared pink palette, small green status details. */
+.ds-today-panel{background:#fff;border:1px solid #e7d4df;border-radius:15px;padding:16px;margin:0 0 16px}
+.ds-today-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.ds-today-head h2{margin:4px 0;color:#33252e;font-size:1.15rem}
+#ds-connection-status{font-size:.73rem;padding:6px 9px;border:1px solid #e7d4df;color:#78324f;border-radius:20px;background:#fcf6f9}
+#ds-connection-status[data-online=true]{color:#166c47;background:#f2f8f4;border-color:#d5e8db}
+.ds-today-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.ds-today-grid article{display:grid;gap:8px;background:#fcf6f9;border:1px solid #ead4df;border-radius:10px;padding:12px;min-width:0}
+.ds-today-grid span{font-size:.75rem;color:#78324f}
+.ds-today-grid strong{font-size:clamp(1rem,2vw,1.55rem);color:#78324f;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.ds-order-toolbar{display:flex;align-items:end;gap:8px;flex-wrap:wrap}
+.ds-order-toolbar label{display:grid;gap:4px;font-size:.74rem;font-weight:650;color:#78324f}
+.ds-order-toolbar select{min-height:40px;padding:7px 10px;background:#fff;border:1px solid #e5d2dd;border-radius:9px;color:#33252e;font:inherit}
+.ds-orders-board{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(265px,1fr);grid-template-columns:none!important;align-items:start;gap:10px;overflow-x:auto;max-width:100%;padding-bottom:12px;scroll-snap-type:x proximity}
+.ds-order-lane{min-width:0;background:#fcf6f9;border:1px solid #e5d2dd;border-radius:12px;padding:8px;display:grid;gap:8px;scroll-snap-align:start}
+.ds-order-lane h3{background:#f0dbe6;border-radius:8px;padding:9px;margin:0;color:#78324f;font-size:.82rem}
+.ds-orders-board .historial-card{min-width:0;margin:0;background:#fff;border:1px solid #e5d2dd;box-shadow:none;padding:10px}
+.ds-orders-board .historial-card__header{display:grid;gap:6px;min-width:0}
+.ds-orders-board .historial-card__info{min-width:0;overflow-wrap:anywhere}
+.ds-orders-board .historial-card__total{text-align:left;color:#78324f;font-size:1rem}
+.ds-order-stage{display:inline-block;padding:4px 7px;border:1px solid #e3c5d3;background:#f8e8ef;color:#78324f;border-radius:6px;font-size:.7rem;font-weight:700;margin:4px 0}
+.ds-order-stage[data-stage=entregado],.ds-order-stage[data-stage=listo]{color:#166c47;background:#f1f7f3;border-color:#d2e6da}
+.ds-order-note,.ds-order-payment{font-size:.75rem;white-space:normal;overflow-wrap:anywhere;color:#77636e}
+.ds-orders-board .historial-card__actions{display:flex;flex-wrap:wrap;gap:6px}
+.ds-orders-board .historial-card__actions>*{flex:1 1 auto;min-width:0}
+.btn-avanzar-pedido,.btn-nota-pedido{min-height:35px;border:1px solid #dfc5d3;border-radius:8px;background:#fff;color:#78324f;padding:7px 9px;font-size:.73rem;font-weight:650;cursor:pointer}
+.btn-avanzar-pedido{background:#a53569;color:#fff;border-color:#a53569}
+#ds-order-dialog label{display:grid;gap:6px;font-size:.8rem;color:#78324f;font-weight:650}
+#ds-order-dialog small{font-weight:400;color:#77636e;font-size:.72rem}
+.ds-users-panel .ds-user-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:5px}
+.ds-user-actions button{min-height:35px!important;padding:7px 9px!important;width:auto!important;margin:0!important;font-size:.74rem}
+.ds-user-actions .btn-borrar-usuario{color:#9f304e!important;border-color:#e6c4ce!important}
+.ds-user-protected{font-size:.74rem;font-weight:700;color:#78324f;background:#f8e8ef;padding:6px 8px;border-radius:8px}
+body.ds-users #btn-nuevo-usuario[hidden]{display:none!important}
+body.ds-users #modal-usuario .modal-content{padding:0;display:flex;flex-direction:column;max-height:calc(100dvh - 24px)!important;overflow:hidden!important;gap:0}
+.ds-user-modal-body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:14px 18px}
+.ds-user-create-fields{background:#fcf6f9;border:1px solid #e5d2dd;border-radius:10px;padding:10px;margin-bottom:10px}
+.ds-user-create-fields label{color:#78324f!important}
+.ds-user-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+body.ds-users .permisos-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+body.ds-users .permiso-item{min-width:0;display:flex;align-items:center;gap:6px;background:#fcf6f9;border:1px solid #e5d2dd;border-radius:8px;padding:9px;font-size:.78rem}
+body.ds-users .permiso-item:has(input:checked){background:#f3dce7;border-color:#d7a7be}
+body.ds-users .permiso-item input{accent-color:#a53569;flex:0 0 18px}
+body.ds-users .permiso-item label{white-space:normal;overflow-wrap:anywhere}
+.ds-user-modal-actions{flex:0 0 auto;padding:12px 18px;margin:0!important}
+body.ds-users .user-role.role-master{background:#f3dce7;color:#78324f}
+@media(max-width:767px){.ds-today-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ds-today-panel{padding:12px}.ds-orders-board{grid-auto-columns:minmax(250px,86%)}.ds-users-panel .table-clean{display:block;border:0;background:transparent}.ds-users-panel .table-clean thead{display:none}.ds-users-panel .table-clean tbody{display:grid;gap:8px}.ds-users-panel .table-clean tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border:1px solid #e5d2dd;border-radius:10px;overflow:hidden;padding:0;background:#fff}.ds-users-panel .table-clean td{display:block;border:0;padding:9px;text-align:left!important;position:static;min-width:0;overflow-wrap:anywhere;white-space:normal}.ds-users-panel .table-clean td::before{display:block;position:static;content:attr(data-label);font-size:.66rem;color:#77636e;margin-bottom:4px;width:auto;white-space:normal}.ds-users-panel .table-clean td:first-child{grid-column:1/-1;background:#f3dce7}.ds-users-panel .table-clean td:nth-child(2),.ds-users-panel .table-clean td:last-child,.ds-users-panel .table-clean td[colspan]{grid-column:1/-1}.ds-users-panel .table-clean td:first-child::before,.ds-users-panel .table-clean td:last-child::before{display:none}.ds-user-actions{justify-content:flex-start!important}.ds-user-modal-body{padding:12px}.ds-user-modal-actions{padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}.ds-user-fields{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:380px){body.ds-users .permisos-grid{grid-template-columns:minmax(0,1fr)}}

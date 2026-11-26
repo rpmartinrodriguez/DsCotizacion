@@ -132,11 +132,11 @@
     </div>
 
     <!-- SCRIPTS -->
-    <dialog id="ds-order-dialog" class="ds-tools-dialog"><div class="ds-tools-head"><h2 id="ds-order-dialog-title">Pedido</h2></div><div class="ds-tools-body"><label>Fecha de entrega<input id="ds-order-date" type="date" class="ds-tools-input"></label><label>Nota del pedido (opcional)<textarea id="ds-order-note" maxlength="1000" rows="4" class="ds-tools-input"></textarea></label><div class="ds-tools-actions"><button type="button" id="ds-order-cancel" class="btn-secondary">Cancelar</button><button type="button" id="ds-order-save" class="btn-primary">Guardar</button></div></div></dialog>
+    <dialog id="ds-order-dialog" class="ds-tools-dialog"><div class="ds-tools-head"><h2 id="ds-order-dialog-title">Pedido</h2></div><div class="ds-tools-body"><label>Fecha de entrega<input id="ds-order-date" type="date" class="ds-tools-input"></label><label>Seña informada ($)<input id="ds-order-deposit" type="number" min="0" step="0.01" class="ds-tools-input"><small>Control del pedido solamente: no registra cobros ni modifica caja o cuenta corriente.</small></label><label>Nota del pedido (opcional)<textarea id="ds-order-note" maxlength="1000" rows="4" class="ds-tools-input"></textarea></label><div class="ds-tools-actions"><button type="button" id="ds-order-cancel" class="btn-secondary">Cancelar</button><button type="button" id="ds-order-save" class="btn-primary">Guardar</button></div></div></dialog>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupHistorial } from './js/historial.js?v=8';
+        import { setupHistorial } from './js/historial.js?v=9';
         try {
             const app = initializeApp(firebaseConfig);
             setupHistorial(app);

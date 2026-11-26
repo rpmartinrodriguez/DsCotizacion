@@ -174,6 +174,7 @@ export function setupHistorial(app) {
                             <span class="ds-order-stage" data-stage="${stage}">${ORDER_LABELS[stage]}</span>
                             ${delivery?`<p>Entrega: ${delivery.split('-').reverse().join('/')}</p>`:''}
                             ${note?`<p class="ds-order-note">${note}</p>`:''}
+                            ${presupuesto.esVenta?`<p class="ds-order-payment">Seña informada: ${formatCurrency(Number(presupuesto.senaInformada)||0)} · Pendiente: ${formatCurrency(Math.max(0,totalMostrado-(Number(presupuesto.senaInformada)||0)))}</p>`:''}
                         </div>
                         <div class="historial-card__total">${formatCurrency(totalMostrado)}</div>
                     </div>
@@ -260,11 +261,12 @@ export function setupHistorial(app) {
             const advance=target.classList.contains('btn-avanzar-pedido'),expected=orderStage(p),next=nextStage(p);
             if(advance&&!next)return;
             const dialog=document.getElementById('ds-order-dialog'),note=document.getElementById('ds-order-note'),date=document.getElementById('ds-order-date');
+            const deposit=document.getElementById('ds-order-deposit');deposit.value=Number(p.senaInformada)||0;
             note.value=p.notaPedido||'';date.value=orderDate(p.fechaEntrega);document.getElementById('ds-order-dialog-title').textContent=advance?'Pasar a '+ORDER_LABELS[next]:'Editar nota y entrega';
             dialog.showModal();operationBusy=true;
             document.getElementById('ds-order-cancel').onclick=()=>dialog.close();
             dialog.onclose=()=>{operationBusy=false;};
-            document.getElementById('ds-order-save').onclick=async()=>{const btn=document.getElementById('ds-order-save');if(btn.disabled)return;if(!date.value){alert('Seleccioná una fecha de entrega.');return;}btn.disabled=true;try{const ref=doc(db,'presupuestosGuardados',id);await runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists()||!snap.data().esVenta||orderStage(snap.data())!==expected)throw Error('El pedido cambió. Volvé a abrirlo.');tx.update(ref,{estadoPedido:advance?next:expected,notaPedido:note.value.trim().slice(0,1000),fechaEntrega:Timestamp.fromDate(new Date(date.value+'T00:00:00-03:00')),pedidoActualizadoAt:Timestamp.now()});});dialog.close();}catch(e){alert(e.message);}finally{btn.disabled=false;}};
+            document.getElementById('ds-order-save').onclick=async()=>{const btn=document.getElementById('ds-order-save');if(btn.disabled)return;if(!date.value){alert('Seleccioná una fecha de entrega.');return;}btn.disabled=true;try{const ref=doc(db,'presupuestosGuardados',id);await runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists()||!snap.data().esVenta||orderStage(snap.data())!==expected)throw Error('El pedido cambió. Volvé a abrirlo.');const amount=Number(deposit.value),total=Number(snap.data().precioVenta||snap.data().costoTotal||0);if(!Number.isFinite(amount)||amount<0||amount>total)throw Error('La seña debe estar entre cero y el importe del pedido.');tx.update(ref,{estadoPedido:advance?next:expected,senaInformada:amount,notaPedido:note.value.trim().slice(0,1000),fechaEntrega:Timestamp.fromDate(new Date(date.value+'T00:00:00-03:00')),pedidoActualizadoAt:Timestamp.now()});});dialog.close();}catch(e){alert(e.message);}finally{btn.disabled=false;}};
         } else if (target.classList.contains('btn-marcar-venta')) {
             if(operationBusy)return;operationBusy=true;
             const presupuestoSeleccionado = todoElHistorial.find(p => p.id === id);

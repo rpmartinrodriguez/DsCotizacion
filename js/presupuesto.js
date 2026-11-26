@@ -283,7 +283,8 @@ export function setupPresupuesto(app) {
                 costoHora: parseFloat(costoHoraInput.value) || 0,
                 porcentajeCostosFijos: parseFloat(costosFijosPorcInput.value) || 0,
                 porcentajeGanancia: parseFloat(gananciaPorcInput.value) || 0,
-                precioVenta: parseFloat(precioVentaSugeridoSpan.textContent.replace('$', '')),
+                precioVenta: Number(precioVentaSugeridoSpan.textContent.replace(/\$|\./g,'').replace(',','.')),
+                estadoPedido:'presupuestado',
                 ingredientes: presupuestoActual,
                 esVenta: false,
                 fechaEntrega: null

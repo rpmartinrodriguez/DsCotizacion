@@ -100,15 +100,15 @@ export function setupInicio(app) {
     const updateConnection=()=>{const el=document.getElementById('ds-connection-status');if(el){el.textContent=navigator.onLine?'Con conexión':'Sin conexión';el.dataset.online=String(navigator.onLine);}};
     updateConnection();window.addEventListener('online',updateConnection);window.addEventListener('offline',updateConnection);
     const today=orderDate(new Date()),start=new Date(today+'T00:00:00-03:00'),end=new Date(start.getTime()+86400000);
-    onSnapshot(query(collection(db,'ventasMostrador'),where('fecha','>=',Timestamp.fromDate(start)),where('fecha','<',Timestamp.fromDate(end))),snap=>{
-        const sales=snap.docs.map(d=>d.data()).filter(d=>d.eliminada!==true);
-        kpi('ds-today-sales',formatCurrency(sales.reduce((sum,d)=>sum+(Number(d.total)||0),0)));kpi('ds-today-tickets',sales.length.toLocaleString('es-AR'));
-    },()=>{kpi('ds-today-sales','No disponible');kpi('ds-today-tickets','—');});
+    let salesToday=null,hiddenBoxes=null;
+    const renderToday=()=>{if(!salesToday||!hiddenBoxes)return;const rows=salesToday.filter(d=>d.eliminada!==true&&!hiddenBoxes.has(d.cajaId));kpi('ds-today-sales',formatCurrency(rows.reduce((sum,d)=>sum+(Number(d.total)||0),0)));kpi('ds-today-tickets',rows.length.toLocaleString('es-AR'));};
+    onSnapshot(query(collection(db,'cajas'),where('eliminada','==',true)),snap=>{hiddenBoxes=new Set(snap.docs.map(d=>d.id));renderToday();},()=>{kpi('ds-today-sales','No disponible');});
+    onSnapshot(query(collection(db,'ventasMostrador'),where('fecha','>=',Timestamp.fromDate(start)),where('fecha','<',Timestamp.fromDate(end))),snap=>{salesToday=snap.docs.map(d=>d.data());renderToday();},()=>{kpi('ds-today-sales','No disponible');kpi('ds-today-tickets','—');});
     onSnapshot(query(collection(db,'presupuestosGuardados'),where('esVenta','==',true)),snap=>{
         const active=snap.docs.map(d=>d.data()).filter(p=>orderStage(p)!=='entregado');
         kpi('ds-today-orders',active.length.toLocaleString('es-AR'));kpi('ds-today-deliveries',active.filter(p=>orderDate(p.fechaEntrega)===today).length.toLocaleString('es-AR'));
     },()=>{kpi('ds-today-orders','—');kpi('ds-today-deliveries','—');});
-    // Solo documentos abiertos; no descargar historiales, ventas ni presupuestos.
+    // Mantener las consultas de caja y revisiones existentes.
     // La consulta es informativa y no permite operar sobre fondos.
     onSnapshot(doc(db, 'config', 'mostrador'), snapshot => {
         reviewGlobalMargin = snapshot.exists() ? Number(snapshot.data().margenGlobal) || 0 : 0;
