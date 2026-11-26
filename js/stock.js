@@ -125,7 +125,7 @@ export function setupStock(app) {
 
                     proveedorHtml = `
                         <div class="ds-provider-table-price">
-                            <strong>${proveedorPrecio.toLocaleString('es-AR')}${presentacionTexto}</strong>
+                            <strong>${proveedorPrecio.toLocaleString('es-AR', {minimumFractionDigits:2,maximumFractionDigits:2})}${presentacionTexto}</strong>
                             <span class="${cls}">${variacionTexto}</span>
                         </div>
                     `;

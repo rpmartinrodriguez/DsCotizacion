@@ -439,7 +439,7 @@ export function setupRecetas(app) {
                         <div class="receta-card__info">
                             <h3>${escapeHtml(recetaVista.nombreTorta)}</h3>
                             <div class="ds-recipe-meta"><span>${recetaVista.ingredientes.length} ingredientes</span><span>Rinde ${rendimiento} u.</span><span>Venta ×${unidadesVenta}</span></div>
-                            <div class="ds-recipe-costs"><div><small>Costo del lote</small><strong>${costoTotalActual.toLocaleString('es-AR', {minimumFractionDigits: 2,maximumFractionDigits:2})}</strong></div><div><small>Costo por unidad</small><strong>${costoPorcionActual.toLocaleString('es-AR', {minimumFractionDigits: 2,maximumFractionDigits:2})}</strong></div></div>
+                            <div class="ds-recipe-costs"><div><small>Costo del lote</small><strong>${formatearCosto(costoTotalActual)}</strong></div><div><small>Costo por unidad</small><strong>${formatearCosto(costoPorcionActual)}</strong></div></div>
                         </div>
                         <div class="receta-card__actions">
                             <button class="btn-secondary btn-editar-receta" data-id="${receta.id}">Editar</button>

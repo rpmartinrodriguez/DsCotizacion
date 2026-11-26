@@ -78,3 +78,23 @@ body.ds-app.ds-topnav-layout .header>#ds-global-search{order:4;flex:0 0 38px!imp
  body.ds-app.ds-topnav-layout .ds-topnav-panel .nav-menu__link{min-height:46px;font-size:.9rem}
 }
 @media print{.ds-mobile-menu-toggle,.ds-mobile-menu-back{display:none!important}}
+
+/* Header visualmente estable en navegaciones entre documentos; sin volver a montar listeners de negocio en una misma página. */
+body.ds-app.ds-topnav-layout .header{position:fixed!important;top:0!important;view-transition-name:ds-fixed-header}
+body.ds-app.ds-topnav-layout .ds-nav-preview,body.ds-app.ds-topnav-layout .ds-nav-ghost{pointer-events:none!important}
+body.ds-app.ds-topnav-layout .header>.ds-nav-ghost-push{flex:0 0 38px;width:38px;height:38px;border:1px solid #d9e4de;background:white;color:#166c47;border-radius:10px;display:grid;place-items:center;order:3;box-sizing:border-box}
+body.ds-app.ds-topnav-layout .header>.ds-nav-ghost-search{display:grid;place-items:center;flex:0 0 38px;height:38px;order:4;box-sizing:border-box}
+body.ds-app.ds-topnav-layout .ds-navigation-loader{position:fixed;inset:var(--ds-topnav-height,72px) 0 0;z-index:1090;display:grid;place-items:center;pointer-events:none;background:transparent}
+body.ds-app.ds-topnav-layout .ds-navigation-loader[hidden]{display:none!important}
+.ds-navigation-loader-card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:17px 24px;background:#fff;border:1px solid #ecd6e1;border-radius:14px;box-shadow:0 8px 28px #78324f18;color:#78324f;font:700 .88rem/1.4 system-ui,sans-serif;text-align:center}
+.ds-navigation-cake{animation:ds-cake-turn 1.45s linear infinite;transform-origin:center}
+@keyframes ds-cake-turn{to{transform:rotate(360deg)}}
+.ds-navigation-loader.is-slow .ds-navigation-cake{animation:none}
+@media(prefers-reduced-motion:reduce){.ds-navigation-cake{animation:none}}
+@media print{.ds-navigation-loader{display:none!important}}
+@view-transition{navigation:auto}
+::view-transition-group(ds-fixed-header){animation-duration:0s}
+::view-transition-old(ds-fixed-header){animation:none;opacity:0}
+::view-transition-new(ds-fixed-header){animation:none;opacity:1}
+::view-transition-group(root){animation-duration:.12s}
+@media(prefers-reduced-motion:reduce){::view-transition-group(root){animation-duration:0s}}

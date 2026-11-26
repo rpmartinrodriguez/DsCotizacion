@@ -118,6 +118,7 @@ async function inicializarMenu() {
     const session = await obtenerSesionAutorizada();
 
     if(session.temporal){
+        window.DSNavigation?.fail();
         // Bloquear la vista si no se puede verificar la cuenta, sin borrar la sesión.
         const notice=document.createElement('dialog');notice.className='ds-tools-dialog';
         notice.innerHTML='<div class="ds-tools-head"><h2>Comprobando tu sesión</h2></div><div class="ds-tools-body"><p>No pudimos verificar los permisos en este momento. Tu sesión no se cerró. Revisá la conexión y reintentá.</p><button type="button" class="btn-primary">Reintentar</button></div>';
@@ -125,6 +126,7 @@ async function inicializarMenu() {
         document.body.append(notice);notice.showModal();return;
     }
     if (!session.autorizado) {
+        window.DSNavigation?.fail();
         localStorage.removeItem('userPermisos');
         localStorage.removeItem('userName');
         localStorage.removeItem('userRol');
@@ -232,6 +234,7 @@ async function inicializarMenu() {
         </div>
     `;
 
+    window.DSNavigation?.beforeMenu();
     navMenu.innerHTML = htmlMenu;
 
     const header=document.querySelector('.header');
@@ -283,6 +286,7 @@ async function inicializarMenu() {
             if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();groups[(i+(event.key==='ArrowRight'?1:-1)+groups.length)%groups.length].querySelector('button')?.focus();}
         });
     });
+    window.DSNavigation?.ready(groups.map((group,i)=>({name:group.querySelector('.ds-topnav-name')?.textContent,pages:[...document.getElementById('ds-topnav-panel-'+i).querySelectorAll('a[href]')].map(a=>new URL(a.href,location.href).pathname.split('/').pop())})),userRol==='master');
     const logout=navMenu.querySelector('#btn-cerrar-sesion-menu');
     if(logout){logout.classList.add('ds-topnav-logout');logout.title='Cerrar sesión · '+nombre;}
     document.addEventListener('pointerdown',event=>{if(mobileToggle.contains(event.target))return;if(mobile.matches){if(navMenu.classList.contains('ds-mobile-menu-open')&&!navMenu.contains(event.target)&&!current?.panel.contains(event.target))closeMenu();}else if(current&&!current.button.contains(event.target)&&!current.panel.contains(event.target))closeMenu();});
@@ -369,6 +373,7 @@ async function inicializarMenu() {
             {
                 // No borrar almacenamiento de Firebase ni preferencias de otros usuarios.
                 for(const key of ['userPermisos','userName','userRol'])try{localStorage.removeItem(key);}catch{}
+                window.DSNavigation?.clear();
                 window.location.replace('login.html');
             }
         });
