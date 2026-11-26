@@ -13,6 +13,7 @@ import { setupPOSInventory } from "./pos/inventory.js?v=6";
 import { createPriceListPdf, createBarcodeCatalogPdf, loadPriceListPdfLibrary } from "./pos/price-list-pdf.js";
 import { setupCurrentAccount } from "./pos/current-account.js?v=4";
 import { savePOSCheckout, toCents } from "./pos/checkout.js?v=2";
+import { notifyCommittedEvent } from "./core/push-client.js?v=1";
 
 export function setupPOS(app) {
     const db = getFirestore(app);
@@ -443,7 +444,7 @@ export function setupPOS(app) {
 
             try {
                 btnAbrirCaja.disabled = true;
-                await addDoc(cajasCollection, {
+                const openedDrawer = await addDoc(cajasCollection, {
                     usuarioId: currentUser.uid,
                     usuarioNombre: nombreIngresado,
                     turno: turno,
@@ -453,6 +454,7 @@ export function setupPOS(app) {
                     totalMercadoPago: 0,
                     estado: 'abierta'
                 });
+                void notifyCommittedEvent(auth, 'drawer-open', openedDrawer.id);
                 
                 if (fondoCajaInput) {
                     fondoCajaInput.value = '';
@@ -1363,7 +1365,7 @@ export function setupPOS(app) {
                     };
                 }
 
-                await savePOSCheckout({
+                const savedCheckout = await savePOSCheckout({
                     db,
                     cajaId: cajaActiva.id,
                     items: carritoActual,
@@ -1377,6 +1379,7 @@ export function setupPOS(app) {
                     operationId: pendingCheckout.id
                 });
 
+                if (mpReal > 0 && savedCheckout?.ventaId) void notifyCommittedEvent(auth, 'mp-sale', savedCheckout.ventaId);
                 pendingCheckout = null;
                 carritoActual = [];
                 cuentaCorrienteClienteId = null;
@@ -1442,7 +1445,9 @@ export function setupPOS(app) {
             btnConfirmarCierre.textContent = 'Cerrando...';
 
             try {
-                await updateDoc(doc(db, 'cajas', cajaActiva.id), cierreData);
+                const closingDrawerId = cajaActiva.id;
+                await updateDoc(doc(db, 'cajas', closingDrawerId), cierreData);
+                void notifyCommittedEvent(auth, 'drawer-close', closingDrawerId);
                 
                 if (modalCierre) modalCierre.classList.remove('visible');
                 btnConfirmarCierre.disabled = false;

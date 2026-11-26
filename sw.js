@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.42';
+const CACHE_NAME = 'dulce-sall-admin-v2.43';
 
 const CORE_ASSETS = [
     '/',
@@ -109,3 +109,33 @@ self.addEventListener('fetch', (event) => {
             .catch(() => caches.match(request))
     );
 });
+
+/* FCM: conservar el service worker PWA y sus políticas de caché. */
+self.addEventListener('notificationclick', event => {
+    if (!event.notification.data?.dsPush) return;
+    event.stopImmediatePropagation();
+    event.notification.close();
+    const path = ['/pos.html','/stock.html','/index.html'].includes(event.notification.data.path) ? event.notification.data.path : '/index.html';
+    event.waitUntil((async () => {
+        const windows = await self.clients.matchAll({type:'window', includeUncontrolled:true});
+        const client = windows.find(c => c.url === self.location.origin + path);
+        if (client) return client.focus();
+        return self.clients.openWindow(path);
+    })());
+});
+try {
+    importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
+    firebase.initializeApp({
+  apiKey: "AIzaSyAI7wOK4t6ZiWbIshuvWANjUfuxboMtK7E",
+  authDomain: "dulcesall.firebaseapp.com",
+  projectId: "dulcesall",
+  storageBucket: "dulcesall.firebasestorage.app",
+  messagingSenderId: "758854417192",
+  appId: "1:758854417192:web:2ce39292ef724cc20c6e1d"
+});
+    firebase.messaging().onBackgroundMessage(payload => {
+        const d = payload.data || {};
+        if (!d.title) return;
+        return self.registration.showNotification(d.title,{body:d.body || '',icon:'/assets/logo-192.png',tag:d.eventId || 'dulcesall',data:{dsPush:true,path:d.path || '/index.html'}});
+    });
+} catch (error) { console.warn('FCM no disponible; la PWA conserva sus funciones.', error); }
