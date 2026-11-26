@@ -13,7 +13,7 @@ import {
 import { cashMetricsInfo as infoDiccionario } from "./data/cash-metrics-info.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import { calculateRecipeUnitCost } from "./core/pricing.js";
-import { setupDecisionCenter } from "./cajas/decision-center.js";
+import { setupDecisionCenter } from "./cajas/decision-center.js?v=2";
 
 export function setupCajas(app) {
     const db = getFirestore(app);

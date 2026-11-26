@@ -101,7 +101,7 @@
             <div class="tabs-container">
                 <button class="tab-btn active" id="tab-btn-historial">🗃️ Historial y Facturación</button>
                 <button class="tab-btn" id="tab-btn-estadisticas">📊 Estadísticas del Negocio</button>
-                <button class="tab-btn" id="tab-btn-decisiones">✦ Centro de decisiones</button>
+                <button class="tab-btn" id="tab-btn-decisiones">✦ Intelligence</button>
             </div>
 
             <!-- SECCIÓN 1: HISTORIAL Y FACTURACIÓN -->
@@ -374,7 +374,7 @@
                 <div class="ds-decision-head">
                     <div>
                         <p class="ds-eyebrow">Inteligencia comercial · Dulce Sall</p>
-                        <h2>Centro de decisiones</h2>
+                        <h2>Dulce Sall Intelligence</h2>
                         <p>Señales, riesgos y oportunidades basadas en operaciones registradas. Las recomendaciones son orientativas: no modifican datos ni precios.</p>
                     </div>
                     <div class="ds-decision-controls">
@@ -412,6 +412,7 @@
                             <div id="decision-chart-fallback" class="ds-decision-muted" hidden>Gráfico no disponible.</div>
                             <div class="ds-decision-subheading">Promedio por día de la semana</div>
                             <div id="decision-dias" class="ds-decision-weekdays"></div>
+                            <div class="ds-decision-subheading">Horarios de mayor demanda</div><p class="ds-decision-muted">Tickets acumulados por franja de dos horas, hora argentina, durante el período elegido.</p><div id="decision-peak-hours"></div>
                         </article>
                     </section>
 
@@ -518,7 +519,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=17';
+        import { setupCajas } from './js/cajas.js?v=18';
         
         try {
             const app = initializeApp(firebaseConfig);

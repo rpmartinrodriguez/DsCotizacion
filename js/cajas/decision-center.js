@@ -3,7 +3,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "../core/format.js";
 import { escapeHtml } from "../core/html.js";
-import { analyzeDecisionData } from "./decision-engine.js";
+import { analyzeDecisionData } from "./decision-engine.js?v=2";
 
 const formatAmount = (value) => formatCurrency(Number(value) || 0);
 const formatPct = (value) =>
@@ -263,6 +263,11 @@ export function setupDecisionCenter(db) {
         renderChart(result);
         renderWeekdays(result);
         renderProducts(result);
+        const peak=document.getElementById('decision-peak-hours');
+        if(peak){
+            const names={Mon:'Lunes',Tue:'Martes',Wed:'Miércoles',Thu:'Jueves',Fri:'Viernes',Sat:'Sábado',Sun:'Domingo'};
+            peak.innerHTML=result.peakHours.length?result.peakHours.map(row=>`<div class="ds-decision-quality-row"><div><strong>${names[row.weekday]||row.weekday} · ${String(row.hour).padStart(2,'0')}:00–${String(row.hour+2).padStart(2,'0')}:00</strong><small>${formatAmount(row.revenue)} registrados</small></div><b>${row.tickets} tickets</b></div>`).join(''):'<p>Sin ventas en el período.</p>';
+        }
         renderQuality(result);
 
         if (status) {

@@ -19,6 +19,7 @@ const normalized = (value) =>
     String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 const itemKey = (item) => item?.id ? `id:${item.id}` : `name:${normalized(item?.nombre || item?.nombreTorta)}`;
+const keyValid=key=>Boolean(key&&key!=='name:');
 const saleRevenue = (sale) => Math.max(0, asNumber(sale.total));
 
 const grossMargin = (price, cost) =>
@@ -82,6 +83,10 @@ export const analyzeDecisionData = ({
     });
 
     const products = new Map();
+    const previousUnits=new Map();
+    previous.forEach(sale=>(Array.isArray(sale.items)?sale.items:[]).forEach(item=>{if(!item)return;const k=itemKey(item)+'|'+(item.modoVenta==='entera'?'entera':'unidad');const n=asNumber(item.cantidad);if(n>0)previousUnits.set(k,(previousUnits.get(k)||0)+n);}));
+    const hourBuckets=new Map();
+    const argentinaHour=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Argentina/Buenos_Aires',weekday:'short',hour:'2-digit',hourCycle:'h23'});
     let coveredRevenue = 0;
     let snapshotCost = 0;
     let eligibleLineRevenue = 0;
@@ -94,6 +99,11 @@ export const analyzeDecisionData = ({
     const daySales = new Map();
 
     recent.forEach(sale => {
+        const parts=Object.fromEntries(argentinaHour.formatToParts(new Date(sale.when)).map(x=>[x.type,x.value]));
+        const hour=Math.floor(Number(parts.hour)/2)*2;
+        const key=parts.weekday+' '+hour;
+        const bucket=hourBuckets.get(key)||{weekday:parts.weekday,hour,tickets:0,revenue:0};
+        bucket.tickets++;bucket.revenue+=saleRevenue(sale);hourBuckets.set(key,bucket);
         cashRevenue += asNumber(sale.pagoEfectivo);
         mpRevenue += asNumber(sale.pagoMercadoPago);
         const hasPaymentBreakdown = sale.pagoEfectivo !== undefined
@@ -129,12 +139,15 @@ export const analyzeDecisionData = ({
                 snapshotLines += 1;
             }
 
-            const key = itemKey(item);
-            if (!key || key === 'name:') return;
+            const recipeKey = itemKey(item);
+            if (!keyValid(recipeKey)) return;
+            const mode=item.modoVenta==='entera'?'entera':'unidad';
+            const key=recipeKey+'|'+mode;
             if (!products.has(key)) {
                 products.set(key, {
-                    key,
-                    name: item.nombre || 'Producto',
+                    key,recipeKey,mode,
+                    name: (item.nombre || 'Producto')+(mode==='entera'?' (entera)':''),
+                    physicalUnits: Math.max(1,Number(item.unidadesFisicasPorVenta||item.unidadesPorVenta)||1),
                     units: 0,
                     revenue: 0,
                     snapshotRevenue: 0,
@@ -160,8 +173,9 @@ export const analyzeDecisionData = ({
     });
 
     const productRows = [...products.values()].map(product => {
-        const recipe = recipeMap.get(product.key) || recipeMap.get(`name:${normalized(product.name)}`);
-        const currentCost = recipe?.currentCost || 0;
+        const recipe = recipeMap.get(product.recipeKey);
+        const currentUnits=product.mode==='entera'?Number(recipe?.porcionesTortaEntera)||0:Math.max(1,Number(recipe?.unidadesPorVenta)||1);
+        const currentCost = (recipe?.currentCost || 0)*currentUnits;
         const canEstimate = Boolean(recipe) && !recipe.costIncomplete && currentCost > 0 && product.latestPrice > 0;
         const estimatedMargin = canEstimate ? grossMargin(product.latestPrice, currentCost) : null;
         const requiredPrice = canEstimate && targetMargin > 0 && targetMargin < 100
@@ -173,6 +187,8 @@ export const analyzeDecisionData = ({
 
         return {
             ...product,
+            previousUnits:previousUnits.get(product.key)||0,
+            unitChange:deltaPercent(product.units,previousUnits.get(product.key)||0),
             currentCost,
             canEstimate,
             estimatedMargin,
@@ -188,6 +204,11 @@ export const analyzeDecisionData = ({
         alerts.push({ priority, title, evidence, action, link });
     };
 
+    const growing=productRows.filter(r=>r.previousUnits>=3&&r.units>=5&&r.unitChange>=20).sort((a,b)=>b.unitChange-a.unitChange).slice(0,3);
+    if(growing.length)addAlert('positive','Productos con demanda creciente',growing.map(r=>r.name+' +'+r.unitChange.toFixed(0)+'% ('+r.units+' frente a '+r.previousUnits+' ventas de esa presentación)').join(' · '),'Revisar capacidad de producción y disponibilidad de insumos; no es una previsión garantizada.',{href:'stock.html',text:'Revisar insumos'});
+    const eroding=productRows.filter(r=>r.canEstimate&&r.snapshotUnits>=3&&Number.isFinite(r.historicalMargin)&&r.historicalMargin-r.estimatedMargin>=5).sort((a,b)=>(b.historicalMargin-b.estimatedMargin)-(a.historicalMargin-a.estimatedMargin)).slice(0,3);
+    if(eroding.length)addAlert('review','Margen actual estimado por debajo del histórico',eroding.map(r=>r.name+': '+r.historicalMargin.toFixed(1)+'% → '+r.estimatedMargin.toFixed(1)+'%').join(' · '),'Comparar precio de referencia, presentación y costos actuales. La diferencia no prueba por sí sola un aumento del proveedor.',{href:'precios.html#revision-precios',text:'Revisar precios'});
+    const peak=[...hourBuckets.values()].sort((a,b)=>b.tickets-a.tickets).slice(0,5);
     const missingCost = productRows.filter(row => row.units > 0 && !row.canEstimate);
     if (missingCost.length) {
         addAlert('critical', `${missingCost.length} producto(s) vendidos sin costo confiable`,
@@ -346,6 +367,7 @@ export const analyzeDecisionData = ({
         alertCount: alerts.filter(alert => alert.priority === 'critical' || alert.priority === 'review').length,
         alerts,
         productRows,
+        peakHours:peak,
         revenueConcentration,
         chartDays,
         weekdays,
