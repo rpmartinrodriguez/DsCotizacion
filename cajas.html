@@ -70,9 +70,9 @@
         .list-top-productos { list-style: none; padding: 0; margin: 0; text-align: left; }
         .list-top-productos li { padding: 0.6rem 0; border-bottom: 1px dashed #eee; font-size: 0.95rem; display: flex; justify-content: space-between;}
     </style>
-    <link rel="stylesheet" href="css/topnav.css?v=2">
+    <link rel="stylesheet" href="css/topnav.css?v=3">
 </head>
-<body class="ds-app ds-content ds-cash">
+<body class="ds-app ds-topnav-layout ds-content ds-cash">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -82,11 +82,12 @@
             <a href="index.html" class="header__logo-link">
                 <img src="assets/logo.png" alt="Logo de Dulce App" class="header__logo">
             </a>
+            <nav class="nav-menu ds-topnav" id="nav-menu" aria-label="Navegación por categorías"></nav>
             <div class="header__spacer"></div>
         </header>
 
         <!-- MENÚ DE NAVEGACIÓN DINÁMICO -->
-        <nav class="nav-menu" id="nav-menu"></nav>
+        
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-cash-main"><div class="ds-content-wrap">
@@ -519,7 +520,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupCajas } from './js/cajas.js?v=18';
+        import { setupCajas } from './js/cajas.js?v=19';
         
         try {
             const app = initializeApp(firebaseConfig);
@@ -528,7 +529,7 @@
             console.error(e);
         }
     </script>
-    <script src="js/menu.js?v=22" defer></script>
-    <script src="js/shell-v2.js?v=2" defer></script>
+    <script src="js/menu.js?v=23" defer></script>
+    <script src="js/shell-v2.js?v=3" defer></script>
 </body>
 </html>

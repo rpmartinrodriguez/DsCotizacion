@@ -48,9 +48,9 @@
         @media(max-width:760px){.ds-home-layout{grid-template-columns:1fr}.ds-home-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.ds-home-bottom{display:block}.ds-home-hub .ds-page-head{align-items:flex-start}.ds-home-primary{display:inline-flex;margin-top:10px}}
         @media(max-width:420px){.ds-home-actions{grid-template-columns:1fr 1fr;gap:9px}.ds-home-action{min-height:140px;padding:15px 12px}.ds-home-action strong{font-size:.88rem}.ds-home-action small{font-size:.75rem}.ds-home-arrow{right:12px;top:12px}}
     </style>
-    <link rel="stylesheet" href="css/topnav.css?v=2">
+    <link rel="stylesheet" href="css/topnav.css?v=3">
 </head>
-<body class="ds-app">
+<body class="ds-app ds-topnav-layout">
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
@@ -60,6 +60,7 @@
             <a href="index.html" class="header__logo-link" aria-label="Inicio">
                 <img src="assets/logo.png" alt="Dulce Sall" class="header__logo">
             </a>
+            <nav class="nav-menu ds-topnav" id="nav-menu" aria-label="Navegación por categorías"></nav>
 
             <div class="ds-topbar-actions">
                 <a class="ds-icon-link" href="agenda.html" aria-label="Agenda" title="Agenda">
@@ -77,7 +78,7 @@
             </div>
         </header>
 
-        <nav class="nav-menu" id="nav-menu"></nav>
+        
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-main">
@@ -260,8 +261,8 @@
         });
     </script>
 
-    <script src="js/menu.js?v=22" defer></script>
-    <script src="js/shell-v2.js?v=1" defer></script>
+    <script src="js/menu.js?v=23" defer></script>
+    <script src="js/shell-v2.js?v=3" defer></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
