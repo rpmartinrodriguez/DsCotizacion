@@ -16,6 +16,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+    <style>#retry-session[hidden],#switch-account[hidden]{display:none!important}</style>
 </head>
 <body class="ds-login">
     <aside class="ds-login-visual" aria-hidden="true">
@@ -67,7 +68,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupLogin } from './js/login.js?v=4';
+        import { setupLogin } from './js/login.js?v=5';
 
         try {
             const app = initializeApp(firebaseConfig);

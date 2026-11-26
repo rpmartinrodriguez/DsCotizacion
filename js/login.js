@@ -137,6 +137,6 @@ export function setupLogin(app) {
         finally{idle();}
     };
     retry.addEventListener('click',restore);
-    switchAccount.addEventListener('click',async()=>{if(busy)return;loading('Cerrando sesión…');try{await signOut(auth);idle();}catch(e){resumeError('No se pudo cerrar la sesión. Reintentá.');}});
+    switchAccount.addEventListener('click',async()=>{if(busy)return;loading('Cerrando sesión…');try{try{await (await import('./core/push-client.js?v=6')).disablePush(auth);}catch(e){console.warn('No se pudo desactivar push',e);}await signOut(auth);for(const key of ['userPermisos','userName','userRol'])try{localStorage.removeItem(key);}catch{}idle();}catch(e){resumeError('No se pudo cerrar la sesión. Reintentá.');}});
     void restore();
 }
