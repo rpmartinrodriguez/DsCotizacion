@@ -35,7 +35,11 @@ const run=async()=>{
                 const variation=(next-before)/before*100;
                 await dispatchOnce(svc,productionOrigin,{id:'supplier-'+day+'-'+doc.id+'-'+hash(String(before)+'|'+next).slice(0,12),title:'Proveedor: '+(variation>0?'aumento de precio':'baja de precio'),body:(d.nombre||'Insumo')+' · '+money(before)+' → '+money(next)+' ('+(variation>0?'+':'')+variation.toFixed(2)+'%)',path:'/stock.html'});
             }
-            await state.set({key,price:next,checkedAt:Timestamp.now(),source:observed.source||'',host:observed.host||'',name:d.nombre||'',day});
+            const checkedAt=Timestamp.now();
+            const history=old.key===key&&Array.isArray(old.history)?old.history:[];
+            const entry={price:next,previous:before||null,at:checkedAt};
+            const recorded=history.length&&Number(history[0].price)===next?history:[entry,...history].slice(0,30);
+            await state.set({key,price:next,checkedAt,source:observed.source||'',host:observed.host||'',name:d.nombre||'',day,history:recorded});
             return {kind:before>0&&Math.abs(before-next)>=0.01?'changed':'same'};
         }catch(e){console.warn('supplier daily',doc.id,e.message);await db.collection('dsSupplierObservations').doc(doc.id).set({lastError:String(e.message).slice(0,250),lastAttempt:Timestamp.now()},{merge:true});return {kind:'error'};}
     }));
