@@ -133,6 +133,14 @@ export function setupPOS(app) {
     let topVendidosCargados = false;
     let cuentaCorrienteClienteId = null;
     let pendingCheckout = null;
+    let favoriteIds = new Set();
+    let draftContext = null;
+    let pausedSales = [];
+    const pauseSaleButton = document.getElementById('pos-pause-sale');
+    const draftDetails = document.getElementById('pos-drafts');
+    const draftList = document.getElementById('pos-draft-list');
+    const draftCount = document.getElementById('pos-draft-count');
+    const draftNotice = document.getElementById('pos-draft-notice');
     const ccScreen = document.getElementById('pantalla-cuenta-corriente');
     const ccBanner = document.getElementById('cc-venta-banner');
     const ccBannerName = document.getElementById('cc-venta-cliente');
@@ -276,6 +284,7 @@ export function setupPOS(app) {
         }
 
         currentUser = user;
+        try { favoriteIds = new Set(JSON.parse(localStorage.getItem('ds-pos-favorites:' + user.uid) || '[]')); } catch { favoriteIds = new Set(); }
         userName = localStorage.getItem('userName') || user.email.split('@')[0];
         userRol = localStorage.getItem('userRol') || 'empleado';
 
@@ -342,6 +351,9 @@ export function setupPOS(app) {
             if (!snapshot.empty) {
                 const cajaDoc = snapshot.docs[0];
                 cajaActiva = { id: cajaDoc.id, ...cajaDoc.data() };
+                loadDraftContext();
+                document.getElementById('pos-caja-estado').textContent = 'Caja abierta';
+                document.body.classList.add('ds-pos-caja-open');
                 if (pantallaApertura) pantallaApertura.style.display = 'none';
                 
                 if ((pantallaStock && pantallaStock.style.display === 'block') ||
@@ -363,7 +375,15 @@ export function setupPOS(app) {
                     datosCargados = true;
                 }
             } else {
+                if (draftContext) { try { sessionStorage.removeItem(draftContext); } catch {} }
+                draftContext = null;
+                pausedSales = [];
+                carritoActual = [];
+                pendingCheckout = null;
                 cajaActiva = null;
+                document.getElementById('pos-caja-estado').textContent = 'Caja cerrada';
+                document.body.classList.remove('ds-pos-caja-open');
+                renderizarCarrito();
                 datosCargados = false;
                 cuentaCorrienteClienteId = null;
                 const viendoCuenta = ccScreen?.style.display === 'block';
@@ -575,7 +595,8 @@ export function setupPOS(app) {
         )].sort((a, b) => a.localeCompare(b, 'es'));
 
         const botones = [
-            { value: 'todos', label: 'Todos' }
+            { value: 'todos', label: 'Todos' },
+            { value: 'favorites', label: '☆ Favoritos' }
         ];
 
         if (topVendidosKeys.size > 0) {
@@ -606,6 +627,7 @@ export function setupPOS(app) {
         return productosDisponibles.filter(prod => {
             const coincideCategoria =
                 categoriaActivaPOS === 'todos'
+                || (categoriaActivaPOS === 'favorites' && favoriteIds.has(String(prod.id)))
                 || (categoriaActivaPOS === 'top' && esTopVendido(prod))
                 || (
                     categoriaActivaPOS.startsWith('cat:')
@@ -767,6 +789,7 @@ export function setupPOS(app) {
             aplicarFiltrosPOS();
             actualizarMobileBarVisibility();
         } 
+        renderDraftTools();
         inventory.setProducts(productosDisponibles);
         manualHistory.setProducts(productosDisponibles);
 
@@ -791,12 +814,14 @@ export function setupPOS(app) {
     const renderizarGridPOS = (productos) => {
         if (!gridProductos) return;
         gridProductos.innerHTML = '';
+        const resultCount = document.getElementById('pos-result-count');
+        if (resultCount) resultCount.textContent = productos.length + (productos.length === 1 ? ' producto' : ' productos');
 
         if (!productos.length) {
             gridProductos.innerHTML = `
                 <div class="ds-pos-no-results">
                     <strong>No encontré productos</strong>
-                    <span>Probá con otra búsqueda o categoría.</span>
+                    <span>${categoriaActivaPOS === 'favorites' ? 'Marcá la estrella de cualquier producto para agregarlo a favoritos.' : 'Probá con otra búsqueda o categoría.'}</span>
                 </div>
             `;
             return;
@@ -829,7 +854,25 @@ export function setupPOS(app) {
                     <span class="ds-pos-card-category">${escapeHtml(categoria)}</span>
                 </div>
             `;
-            gridProductos.appendChild(card);
+            if (prod.stockMostrador !== undefined && prod.stockMostrador !== null && Number.isFinite(Number(prod.stockMostrador))) {
+                const stock = document.createElement('small');
+                stock.className = 'ds-pos-stock-info' + (Number(prod.stockMostrador) <= 0 ? ' is-empty' : '');
+                stock.textContent = 'Stock registrado: ' + Number(prod.stockMostrador).toLocaleString('es-AR') + ' u.';
+                card.appendChild(stock);
+            }
+            const tile = document.createElement('div');
+            tile.className = 'ds-pos-product-tile';
+            const favorite = document.createElement('button');
+            favorite.type = 'button';
+            favorite.className = 'ds-pos-favorite-toggle';
+            favorite.dataset.favoriteId = String(prod.id);
+            const selected = favoriteIds.has(String(prod.id));
+            favorite.textContent = selected ? '★' : '☆';
+            favorite.setAttribute('aria-pressed', String(selected));
+            favorite.setAttribute('aria-label', (selected ? 'Quitar favorito: ' : 'Agregar favorito: ') + prod.nombreTorta);
+            favorite.title = favorite.getAttribute('aria-label');
+            tile.append(card, favorite);
+            gridProductos.appendChild(tile);
         });
     };
 
@@ -934,6 +977,16 @@ export function setupPOS(app) {
     // Clic en Tarjeta (Touch POS)
     if (gridProductos) {
         gridProductos.addEventListener('click', (e) => {
+            const favorite = e.target.closest('[data-favorite-id]');
+            if (favorite) {
+                const id = favorite.dataset.favoriteId;
+                if (favoriteIds.has(id)) favoriteIds.delete(id);
+                else favoriteIds.add(id);
+                try { localStorage.setItem('ds-pos-favorites:' + currentUser.uid, JSON.stringify([...favoriteIds])); } catch {}
+                aplicarFiltrosPOS();
+                [...gridProductos.querySelectorAll('[data-favorite-id]')].find(btn => btn.dataset.favoriteId === id)?.focus();
+                return;
+            }
             const card = e.target.closest('.producto-card');
             if (!card) return;
             
@@ -943,6 +996,112 @@ export function setupPOS(app) {
             }
         });
     }
+
+    // Borradores locales de esta pestaña, usuario y caja. No registran ventas ni cobros.
+    function persistDrafts(excludeActive = false) {
+        if (!draftContext) return;
+        try {
+            const active = !excludeActive && !pendingCheckout && !cuentaCorrienteClienteId && carritoActual.length
+                ? carritoActual.map(line => ({ ...line })) : [];
+            sessionStorage.setItem(draftContext, JSON.stringify({ active, paused: pausedSales }));
+        } catch {
+            if (draftNotice) { draftNotice.hidden = false; draftNotice.textContent = 'No se pudo guardar el borrador en este dispositivo.'; }
+        }
+    }
+    function loadDraftContext() {
+        if (!cajaActiva?.id || !currentUser?.uid) return;
+        const next = 'ds-pos-drafts:' + currentUser.uid + ':' + cajaActiva.id;
+        if (draftContext === next) return;
+        if (draftContext) { carritoActual = []; pendingCheckout = null; cuentaCorrienteClienteId = null; }
+        draftContext = next;
+        pausedSales = [];
+        try {
+            const saved = JSON.parse(sessionStorage.getItem(next) || '{}');
+            if (Array.isArray(saved.paused)) pausedSales = saved.paused.filter(d => Array.isArray(d.items) && d.items.length);
+            if (Array.isArray(saved.active) && saved.active.length) {
+                pausedSales.unshift({ id: 'recovered-' + Date.now(), label: 'Venta recuperada', items: saved.active });
+            }
+        } catch {}
+        renderizarCarrito();
+    }
+    function renderDraftTools() {
+        if (!draftDetails || !draftList || !pauseSaleButton) return;
+        pauseSaleButton.disabled = !cajaActiva || !carritoActual.length || Boolean(cuentaCorrienteClienteId || pendingCheckout) || btnConfirmarVenta?.textContent === 'Procesando...';
+        draftDetails.hidden = !pausedSales.length;
+        if (draftCount) draftCount.textContent = String(pausedSales.length);
+        draftList.replaceChildren();
+        pausedSales.forEach((draft, index) => {
+            const row = document.createElement('div');
+            row.className = 'ds-pos-draft-row';
+            const label = document.createElement('span');
+            const names = draft.items.slice(0, 2).map(line => line.cantidad + '× ' + line.nombre).join(' · ');
+            label.textContent = draft.label + ': ' + names + (draft.items.length > 2 ? '…' : '');
+            const resume = document.createElement('button');
+            resume.type = 'button'; resume.textContent = 'Retomar'; resume.dataset.resumeDraft = String(index);
+            resume.disabled = Boolean(carritoActual.length || cuentaCorrienteClienteId || pendingCheckout || !productosDisponibles.length);
+            const discard = document.createElement('button');
+            discard.type = 'button'; discard.textContent = 'Descartar'; discard.dataset.discardDraft = String(index);
+            row.append(label, resume, discard);
+            draftList.appendChild(row);
+        });
+    }
+    pauseSaleButton?.addEventListener('click', () => {
+        if (!cajaActiva || !carritoActual.length || cuentaCorrienteClienteId || pendingCheckout || modalCobro?.classList.contains('visible')) return;
+        pausedSales.push({ id: String(Date.now()), label: 'Venta pendiente', items: carritoActual.map(line => ({ ...line })) });
+        carritoActual = [];
+        renderizarCarrito();
+        setMobilePOSPanel('productos');
+        if (draftDetails) draftDetails.open = true;
+    });
+    draftList?.addEventListener('click', event => {
+        const resume = event.target.closest('[data-resume-draft]');
+        const discard = event.target.closest('[data-discard-draft]');
+        if (discard) {
+            const index = Number(discard.dataset.discardDraft);
+            if (pausedSales[index] && confirm('¿Descartar esta venta pendiente sin cobrarla?')) {
+                pausedSales.splice(index, 1);
+                persistDrafts(); renderDraftTools();
+            }
+            return;
+        }
+        if (!resume || carritoActual.length || cuentaCorrienteClienteId || pendingCheckout || !cajaActiva || modalCobro?.classList.contains('visible')) return;
+        const index = Number(resume.dataset.resumeDraft);
+        const draft = pausedSales[index];
+        if (!draft) return;
+        let changed = false;
+        const restored = [];
+        for (const line of draft.items) {
+            const prod = productosDisponibles.find(p => p.id === line.id);
+            const quantity = Number(line.cantidad);
+            const whole = line.modoVenta === 'entera';
+            if (!prod || !Number.isInteger(quantity) || quantity < 1 || (whole && !tieneVentaEnteraConfigurable(prod))) {
+                alert('Un producto de la venta ya no está disponible en la misma presentación. Revisá el catálogo antes de descartarla.'); return;
+            }
+            const price = Number(whole ? prod.precioTortaEnteraVigente : prod.precioCalculado);
+            if (!Number.isFinite(price) || price <= 0) { alert('El precio vigente de un producto todavía no está disponible.'); return; }
+            const unit = Number(prod.precioCalculado);
+            const wholePrice = Number(prod.precioTortaEnteraVigente);
+            const unitsPerSale = Math.max(1, Math.floor(Number(prod.unidadesPorVenta) || 1));
+            const portions = Number.isInteger(prod.porcionesTortaEntera) ? prod.porcionesTortaEntera : null;
+            changed ||= price !== line.precio || unitsPerSale !== line.unidadesPorVenta || portions !== line.porcionesTortaEntera;
+            restored.push({ id: prod.id, nombre: prod.nombreTorta, cantidad: quantity, precio: price, precioUnidadVenta: unit, precioTortaEntera: Number.isFinite(wholePrice) && wholePrice > 0 ? wholePrice : null, unidadesPorVenta: unitsPerSale, porcionesTortaEntera: portions, modoVenta: whole ? 'entera' : 'unidad' });
+        }
+        if (changed && !confirm('Cambió el precio o presentación de algún producto. ¿Retomar con los valores vigentes?')) return;
+        carritoActual = restored;
+        pausedSales.splice(index, 1);
+        renderizarCarrito();
+        setMobilePOSPanel('carrito');
+    });
+    const toolsDetails = document.getElementById('pos-tools');
+    toolsDetails?.addEventListener('click', event => {
+        if (event.target.closest('.ds-pos-tools-menu button')) toolsDetails.open = false;
+    });
+    document.addEventListener('click', event => {
+        if (toolsDetails?.open && !toolsDetails.contains(event.target)) toolsDetails.open = false;
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && toolsDetails?.open) { toolsDetails.open = false; toolsDetails.querySelector('summary')?.focus(); }
+    });
 
     // Renderizar Carrito compacto y controles
     const renderizarCarrito = () => {
@@ -979,6 +1138,8 @@ export function setupPOS(app) {
             }
         }
         if (btnVaciarCarrito) btnVaciarCarrito.hidden = carritoActual.length === 0;
+        persistDrafts();
+        renderDraftTools();
 
         if (carritoActual.length === 0) {
             carritoContainer.innerHTML = `
@@ -1333,6 +1494,9 @@ export function setupPOS(app) {
 
             btnConfirmarVenta.disabled = true;
             btnConfirmarVenta.textContent = 'Procesando...';
+            // No recuperar automáticamente una operación cuyo cobro ya se intentó.
+            persistDrafts(true);
+            renderDraftTools();
 
             try {
                 const selectedCC = metodoPagoSeleccionado === 'CuentaCorriente'
@@ -1391,6 +1555,7 @@ export function setupPOS(app) {
                 console.error("Error al procesar la venta:", error);
                 alert(`No se pudo registrar la venta: ${error.message || 'revisá los datos y tu conexión'}. No se modificó la caja ni el saldo si la operación fue rechazada.`);
                 btnConfirmarVenta.disabled = false; btnConfirmarVenta.textContent = 'Confirmar Venta';
+                renderDraftTools();
             }
         });
     }
@@ -1401,6 +1566,10 @@ export function setupPOS(app) {
     if (btnIniciarCierre) {
         btnIniciarCierre.addEventListener('click', () => {
             if (!cajaActiva) return;
+            if (pausedSales.length || carritoActual.length) {
+                alert('Antes de cerrar caja, resolvé o descartá la venta actual y las pendientes de esta pestaña.');
+                return;
+            }
             
             if (cierreNombreCajero) {
                 cierreNombreCajero.value = cajaActiva.usuarioNombre === 'Ceci' || cajaActiva.usuarioNombre === 'Eve' ? cajaActiva.usuarioNombre : '';
