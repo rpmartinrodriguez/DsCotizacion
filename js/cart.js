@@ -60,7 +60,7 @@ export function addToCart(item) {
     saveCartItems(items);
     
     const precioMsg = cartItem.precio > 0 
-        ? ` - $${cartItem.precio.toLocaleString('es-AR', {minimumFractionDigits: 2})}` 
+        ? ` - $${(cartItem.precio*cartItem.cantidad).toLocaleString('es-AR', {minimumFractionDigits: 2,maximumFractionDigits:2})}` 
         : '';
         
     alert(`Se añadió "${cartItem.nombre}" al presupuesto${precioMsg}.`);

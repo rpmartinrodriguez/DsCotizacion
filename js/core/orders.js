@@ -5,7 +5,7 @@ export const nextStage=p=>ORDER_STAGES[ORDER_STAGES.indexOf(orderStage(p))+1]||n
 export const orderDate=value=>{if(value==null||value==='')return '';try{const d=value?.toDate?value.toDate():value?.seconds!==undefined?new Date(value.seconds*1000):new Date(value);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'';}catch{return '';}};
 export function aggregateIngredients(items){
  const map=new Map();
- for(const row of items||[]){const id=row.idMateriaPrima||row.id,qty=Number(row.cantidadTotal??row.cantidad);
+ for(const row of items||[]){if(!row||typeof row!=='object')throw Error('Ingrediente inválido.');const id=row.idMateriaPrima||row.id,qty=Number(row.cantidadTotal??row.cantidad);
  if(typeof id!=='string'||!id||id.includes('/')||!Number.isFinite(qty)||qty<=0)throw Error('Hay ingredientes sin identificación o cantidad válida. Revisá el presupuesto.');
  const prior=map.get(id);map.set(id,{id,qty:qty+(prior?.qty||0),name:row.nombreMateriaPrima||row.nombre||prior?.name||id});}
  return [...map.values()];

@@ -50,7 +50,7 @@ export function setupUsuarios(app, firebaseConfig) {
 
     btnNuevoUsuario.hidden=true;
     onAuthStateChanged(auth,async user=>{
-        unsubscribe?.();unsubscribe=null;master=false;btnNuevoUsuario.hidden=true;
+        unsubscribe?.();unsubscribe=null;master=false;btnNuevoUsuario.hidden=true;todosLosUsuarios=[];renderizarTabla();
         if(!user||user.isAnonymous){window.location.replace('login.html');return;}
         const profile=await authorization.getActiveProfile();
         if(!profile||auth.currentUser?.uid!==user.uid)return;
@@ -180,9 +180,11 @@ export function setupUsuarios(app, firebaseConfig) {
     if (btnGuardar) {
         btnGuardar.addEventListener('click', async () => {
             if(!master||busy)return;
+            busy=true;
             const profile=await authorization.getActiveProfile();
             const autorizado=profile?.rol==='master';
             if (!autorizado) {
+                busy=false;
                 alert("Tu sesión ya no tiene permisos de administrador.");
                 window.location.replace('pos.html');
                 return;
@@ -192,7 +194,7 @@ export function setupUsuarios(app, firebaseConfig) {
             const emailIngresado = editEmail.value.trim();
             const passIngresada = editPass.value;
 
-            if (!nombreIngresado) return alert("Tenés que ponerle un nombre al usuario.");
+            if (!nombreIngresado){busy=false;return alert("Tenés que ponerle un nombre al usuario.");}
 
             busy=true;btnGuardar.disabled = true;
             btnGuardar.textContent = isCreateMode ? 'Creando cuenta...' : 'Guardando...';

@@ -41,13 +41,15 @@ export function setupHistorial(app) {
     let ultimoEventoParaCalendario = null,operationBusy=false;
     const stageFilter=document.getElementById('orders-stage'),view=document.getElementById('orders-view');
     const rerender=()=>buscadorInput.dispatchEvent(new Event('input'));
-    stageFilter?.addEventListener('change',rerender);view?.addEventListener('change',rerender);
+    try{const prev=JSON.parse(sessionStorage.getItem('ds-orders-filters')||'{}');if(['all',...ORDER_STAGES].includes(prev.stage))stageFilter.value=prev.stage;if(['board','list'].includes(prev.view))view.value=prev.view;}catch{}
+    const remember=()=>{try{sessionStorage.setItem('ds-orders-filters',JSON.stringify({stage:stageFilter.value,view:view.value}));}catch{}rerender();};
+    stageFilter?.addEventListener('change',remember);view?.addEventListener('change',remember);
 
     const cargarMateriasPrimas = async () => {
         try {
             const snapshot = await getDocs(query(materiasPrimasCollection));
             materiasPrimasDisponibles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (error) { console.error("Error al cargar materias primas:", error); }
+        } catch (error) { console.error("Error al cargar materias primas:", error); throw error; }
     };
     
     const showConfirmVentaModal = () => {
@@ -264,8 +266,9 @@ export function setupHistorial(app) {
             const deposit=document.getElementById('ds-order-deposit');deposit.value=Number(p.senaInformada)||0;
             note.value=p.notaPedido||'';date.value=orderDate(p.fechaEntrega);document.getElementById('ds-order-dialog-title').textContent=advance?'Pasar a '+ORDER_LABELS[next]:'Editar nota y entrega';
             dialog.showModal();operationBusy=true;
-            document.getElementById('ds-order-cancel').onclick=()=>dialog.close();
+            document.getElementById('ds-order-cancel').onclick=()=>{if(!document.getElementById('ds-order-save').disabled)dialog.close();};
             dialog.onclose=()=>{operationBusy=false;};
+            dialog.oncancel=event=>{if(document.getElementById('ds-order-save').disabled)event.preventDefault();};
             document.getElementById('ds-order-save').onclick=async()=>{const btn=document.getElementById('ds-order-save');if(btn.disabled)return;if(!date.value){alert('Seleccioná una fecha de entrega.');return;}btn.disabled=true;try{const ref=doc(db,'presupuestosGuardados',id);await runTransaction(db,async tx=>{const snap=await tx.get(ref);if(!snap.exists()||!snap.data().esVenta||orderStage(snap.data())!==expected)throw Error('El pedido cambió. Volvé a abrirlo.');const amount=Number(deposit.value),total=Number(snap.data().precioVenta||snap.data().costoTotal||0);if(!Number.isFinite(amount)||amount<0||amount>total)throw Error('La seña debe estar entre cero y el importe del pedido.');tx.update(ref,{estadoPedido:advance?next:expected,senaInformada:amount,notaPedido:note.value.trim().slice(0,1000),fechaEntrega:Timestamp.fromDate(new Date(date.value+'T00:00:00-03:00')),pedidoActualizadoAt:Timestamp.now()});});dialog.close();}catch(e){alert(e.message);}finally{btn.disabled=false;}};
         } else if (target.classList.contains('btn-marcar-venta')) {
             if(operationBusy)return;operationBusy=true;
@@ -273,14 +276,14 @@ export function setupHistorial(app) {
             if (!presupuestoSeleccionado){operationBusy=false;return;}
             try {
                 let advertenciaStock = "";
-                for (const ing of (presupuestoSeleccionado.data.ingredientes||[])) {
-                    const materiaPrima = materiasPrimasDisponibles.find(mp => mp.id === (ing.idMateriaPrima || ing.id));
-                    if (materiaPrima) {
-                        const stockTotal = (materiaPrima.lotes || []).reduce((sum, lote) => sum + lote.stockRestante, 0);
-                        if (stockTotal < ing.cantidadTotal) {
-                            advertenciaStock += `- ${ing.nombre || ing.nombreMateriaPrima}\n`;
-                        }
-                    }
+                const p=presupuestoSeleccionado.data;
+                if(!Array.isArray(p.ingredientes)||!p.ingredientes.length)throw Error('Este presupuesto no contiene ingredientes guardados. Revisá la cotización original antes de confirmar.');
+                await cargarMateriasPrimas();
+                for(const need of aggregateIngredients(p.ingredientes)){
+                    const materia=materiasPrimasDisponibles.find(mp=>mp.id===need.id);
+                    if(!materia||!Array.isArray(materia.lotes)||!materia.lotes.length)throw Error('Revisá los lotes del insumo '+need.name+' antes de confirmar.');
+                    const available=materia.lotes.reduce((sum,l)=>sum+Math.max(0,Number(l.stockRestante)||0),0);
+                    if(available<need.qty)advertenciaStock+='- '+need.name+'\n';
                 }
                 let allowNegative=false;
                 if (advertenciaStock) {
@@ -344,5 +347,5 @@ export function setupHistorial(app) {
         });
     }
     
-    cargarMateriasPrimas();
+    cargarMateriasPrimas().catch(()=>{});
 }
