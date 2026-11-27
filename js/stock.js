@@ -1,13 +1,21 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    updateDoc, getDoc, getDocs, deleteDoc, runTransaction, where, addDoc, Timestamp
+    getFirestore, collection, onSnapshot as raw_onSnapshot, query, orderBy, doc, 
+    updateDoc as raw_updateDoc, getDoc as raw_getDoc, getDocs as raw_getDocs, deleteDoc as raw_deleteDoc, runTransaction as raw_runTransaction, where, addDoc as raw_addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
-import { setupSupplierPricing } from "./stock/supplier-pricing.js?v=3";
+import { setupSupplierPricing } from "./stock/supplier-pricing.js?v=4";
 import { getEffectiveUnitCost } from "./core/pricing.js";
 import { createAuthorization } from "./core/authorization.js";
 
-export function setupStock(app) {
+export function setupStock(app,session={},scope=createModuleScope()) {
+    const onSnapshot=scope.listen(raw_onSnapshot);
+    const getDoc=scope.wrap(raw_getDoc);
+    const getDocs=scope.wrap(raw_getDocs);
+    const updateDoc=scope.wrap(raw_updateDoc);
+    const deleteDoc=scope.wrap(raw_deleteDoc);
+    const runTransaction=scope.wrap(raw_runTransaction);
+    const addDoc=scope.wrap(raw_addDoc);
     const db = getFirestore(app);
     const authorization = createAuthorization(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
@@ -52,7 +60,7 @@ export function setupStock(app) {
         getStock: () => todoElStock,
         getRecipesForMaterial: (id) => recetasPorMateria.get(id) || [],
         openMaterialEditor: (id) => openModalParaEdicionCompleta(id)
-    });
+    },scope);
 
     const renderizarTabla = (datos) => {
         tablaStockBody.innerHTML = '';
@@ -617,4 +625,5 @@ export function setupStock(app) {
             openHistorialModal(id, target.dataset.nombre);
         }
     });
+    return scope.dispose;
 }

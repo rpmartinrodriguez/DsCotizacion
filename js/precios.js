@@ -1,11 +1,12 @@
+import {createModuleScope} from './core/module-scope.js';
 import {
     getFirestore,
     collection,
-    getDocs,
+    getDocs as raw_getDocs,
     query,
     doc,
-    getDoc,
-    updateDoc,
+    getDoc as raw_getDoc,
+    updateDoc as raw_updateDoc,
     Timestamp,
     orderBy,
     limit
@@ -14,7 +15,10 @@ import { calculateRecipeUnitCost, calculateRoundedSalePrice, getEffectiveUnitCos
 import { formatCurrency } from "./core/format.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 
-export function setupPrecios(app) {
+export function setupPrecios(app,session={},scope=createModuleScope()) {
+    const getDocs=scope.wrap(raw_getDocs);
+    const getDoc=scope.wrap(raw_getDoc);
+    const updateDoc=scope.wrap(raw_updateDoc);
     const db = getFirestore(app);
     const recetasCollection = collection(db, 'recetas');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
@@ -1025,4 +1029,5 @@ export function setupPrecios(app) {
     };
 
     init();
+    return scope.dispose;
 }

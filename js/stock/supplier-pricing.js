@@ -1,8 +1,8 @@
 import { getAuth, getIdToken } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import {
     doc,
-    getDoc,
-    updateDoc,
+    getDoc as raw_getDoc,
+    updateDoc as raw_updateDoc,
     Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "../core/format.js";
@@ -53,7 +53,9 @@ const formatDateTime = (timestamp) => {
     }
 };
 
-export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial, openMaterialEditor }) {
+import {createModuleScope} from '../core/module-scope.js';
+export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial, openMaterialEditor },scope=createModuleScope()) {
+    const getDoc=scope.wrap(raw_getDoc),updateDoc=scope.wrap(raw_updateDoc),request=scope.wrap(fetch.bind(globalThis));
     const auth = getAuth(app);
     const bulkButton = document.getElementById('btn-actualizar-precios-proveedor');
     const urlInput = document.getElementById('proveedor-url-input');
@@ -251,7 +253,7 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
         if (!user) throw new Error('Tu sesión venció. Volvé a iniciar sesión.');
 
         const token = await getIdToken(user);
-        const response = await fetch('/.netlify/functions/supplier-price', {
+        const response = await request('/.netlify/functions/supplier-price', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -663,7 +665,7 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
             const rows = (Array.isArray(data.historialPreciosProveedor)?data.historialPreciosProveedor:[]).filter(Boolean).map(row=>({...row,automatic:false}));
             let unavailable=false;
             try{
-                const response=await fetch('/.netlify/functions/supplier-settings',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await getIdToken(auth.currentUser)},body:JSON.stringify({action:'price-history',materialId:historyProductId})});
+                const response=await request('/.netlify/functions/supplier-settings',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await getIdToken(auth.currentUser)},body:JSON.stringify({action:'price-history',materialId:historyProductId})});
                 const result=await response.json();if(!response.ok||!result.ok)throw Error('Historial automático no disponible');
                 for(const h of result.history||[])rows.push({automatic:true,fecha:h.at,precioNuevo:h.price,precioAnterior:h.previous,variacionPct:(h.price-h.previous)/h.previous*100,presentacionCantidad:h.quantity,presentacionUnidad:h.unit});
             }catch{unavailable=true;}
@@ -710,8 +712,8 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
         packageEditedByUser = true;
     });
 
-    if (queryOneButton) queryOneButton.addEventListener('click', queryActiveProduct);
-    if (bulkButton) bulkButton.addEventListener('click', runBulkUpdate);
+    if (queryOneButton) queryOneButton.addEventListener('click', scope.wrap(queryActiveProduct));
+    if (bulkButton) bulkButton.addEventListener('click', scope.wrap(runBulkUpdate));
     resultsSummary?.addEventListener('click', (event) => {
         const button = event.target.closest('[data-supplier-filter]');
         if (!button) return;
@@ -729,7 +731,7 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
     });
 
     if (resultsClose) resultsClose.addEventListener('click', () => resultsModal?.classList.remove('visible'));
-    if (historyButton) historyButton.addEventListener('click', openHistory);
+    if (historyButton) historyButton.addEventListener('click', scope.wrap(openHistory));
     if (historyClose) historyClose.addEventListener('click', () => historyModal?.classList.remove('visible'));
 
     return {

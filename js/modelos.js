@@ -1,12 +1,15 @@
+import {createModuleScope} from './core/module-scope.js';
 import {
-    getFirestore, collection, onSnapshot, query, addDoc, doc,
-    deleteDoc, orderBy, getDocs
+    getFirestore, collection, onSnapshot as raw_onSnapshot, query, addDoc as raw_addDoc, doc,
+    deleteDoc as raw_deleteDoc, orderBy, getDocs as raw_getDocs
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js";
 
-const app = initializeApp(firebaseConfig);
+export function setupModelos(app,session={},scope=createModuleScope()) {
+    const onSnapshot=scope.listen(raw_onSnapshot);
+    const addDoc=scope.wrap(raw_addDoc);
+    const deleteDoc=scope.wrap(raw_deleteDoc);
+    const getDocs=scope.wrap(raw_getDocs);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
@@ -179,12 +182,7 @@ form.addEventListener('submit', async (event) => {
     }
 });
 
-onAuthStateChanged(auth, (user) => {
-    if (!user || user.isAnonymous) {
-        window.location.replace('login.html');
-        return;
-    }
-
     startListeners();
     cargarRecetasExistentes();
-});
+    return scope.dispose;
+}

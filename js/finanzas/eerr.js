@@ -1,6 +1,7 @@
+import {createModuleScope} from '../core/module-scope.js';
 import {
-    getFirestore, collection, query, where, getDocs, addDoc, updateDoc,
-    deleteDoc, doc, Timestamp, writeBatch
+    getFirestore, collection, query, where, getDocs as raw_getDocs, addDoc as raw_addDoc, updateDoc as raw_updateDoc,
+    deleteDoc as raw_deleteDoc, doc, Timestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 import { calculateEERR, monthFromDate, EERR_CATEGORIES } from "./eerr-engine.js?v=2";
@@ -8,7 +9,11 @@ import { formatCurrency } from "../core/format.js";
 import { escapeHtml, escapeAttribute } from "../core/html.js";
 import { parseARS } from "../core/money.js?v=2";
 
-export function setupEstadoResultados(app) {
+export function setupEstadoResultados(app,session={},scope=createModuleScope()) {
+    const getDocs=scope.wrap(raw_getDocs);
+    const addDoc=scope.wrap(raw_addDoc);
+    const updateDoc=scope.wrap(raw_updateDoc);
+    const deleteDoc=scope.wrap(raw_deleteDoc);
     const db = getFirestore(app);
     const auth = getAuth(app);
     const expenses = collection(db, 'gastosOperativos');
@@ -393,7 +398,7 @@ export function setupEstadoResultados(app) {
                     createdBy: auth.currentUser?.uid || ''
                 });
             });
-            await batch.commit();
+            await scope.wrap(()=>batch.commit())();
             await loadExpenses();
             alert(`Copiados ${Math.min(missing.length, 450)} conceptos. Revisá montos y categorías.`);
         } catch (error) {
@@ -408,4 +413,5 @@ export function setupEstadoResultados(app) {
     if (monthResult) monthResult.value = currentMonth;
     if (monthExpenses) monthExpenses.value = currentMonth;
     refreshReport();
+    return scope.dispose;
 }
