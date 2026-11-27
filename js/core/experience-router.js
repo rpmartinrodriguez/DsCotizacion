@@ -9,8 +9,8 @@ const routes={
  'productos.html':route(['recetas','precios','stock'],async()=>[(await import('../productos.js?v=2')).setupProductos]),
  'recetas.html':route(['recetas'],async()=>[(await import('../recetas.js?v=8')).setupRecetas],true,['receta-modal-overlay','modal-porciones']),
  'stock.html':route(['stock'],async()=>{const [stock,schedule]=await Promise.all([import('../stock.js?v=8'),import('../stock/supplier-schedule-r261.js')]);return [(app,session,scope)=>{schedule.setupSupplierSchedule(app,scope);return stock.setupStock(app,session,scope);}];},false,['edit-producto-completo-modal-overlay','ajustar-stock-modal-overlay','historial-movimientos-modal-overlay','supplier-results-modal-overlay','supplier-history-modal-overlay']),
- 'presupuesto.html':route(['presupuestos'],async()=>[(await import('../presupuesto.js?v=5')).setupPresupuesto],true,['custom-modal-overlay']),
- 'cotizacion-actual.html':route(['presupuestos','mostrador'],async()=>[(await import('../cotizacion-actual.js?v=4')).setupCotizacion],true,['resumen-cotizacion-modal']),
+ 'presupuesto.html':route(['presupuestos'],async()=>[(await import('../presupuesto.js?v=6')).setupPresupuesto],true,['custom-modal-overlay']),
+ 'cotizacion-actual.html':route(['presupuestos','mostrador'],async()=>[(await import('../cotizacion-actual.js?v=5')).setupCotizacion],true,['resumen-cotizacion-modal']),
  'precios.html':route(['precios'],async()=>[(await import('../precios.js?v=5')).setupPrecios],false,['revision-precio-modal']),
  'finanzas.html':route(['finanzas'],async()=>{const [a,b]=await Promise.all([import('../finanzas.js?v=2'),import('../finanzas/eerr.js?v=4')]);return [a.setupFinanzas,b.setupEstadoResultados];},true),
  'historial.html':route(['historial'],async()=>[(await import('../historial.js?v=11')).setupHistorial],false,['agradecimiento-modal-overlay','confirm-venta-modal-overlay','confirm-delete-modal-overlay','ds-order-dialog']),
@@ -32,7 +32,7 @@ const vendor=src=>{
  vendors.set(src,task);task.catch(()=>vendors.delete(src));return task;
 };
 const filters={
- 'productos.html':['productos-buscar','productos-categoria','productos-estado'],
+ 'productos.html':['productos-buscar','productos-estado'],
  'recetas.html':['buscador-recetas'],
  'stock.html':['buscador-stock'],
  'clientes.html':['buscador-clientes'],
@@ -77,7 +77,7 @@ export function mountExperience({session,p,closeMenu,groups}){
           if(el.tagName==='LINK')await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Tiempo de carga de estilos.')),8000);el.onload=()=>{clearTimeout(timeout);resolve();};el.onerror=()=>{clearTimeout(timeout);reject(Error('No se pudo cargar un estilo.'));};document.head.append(el);});
           else document.head.append(el);
        }
-       return {apply(){for(const [key,el] of styles)if(!next.has(key))el.remove();for(const el of added){el.media=el.dataset.dsOriginalMedia;delete el.dataset.dsOriginalMedia;}styles=next;},cancel(){for(const el of added)el.remove();}};
+       return {apply(){for(const [key,el] of styles)if(!next.has(key))el.remove();for(const el of added){el.media=el.dataset.dsOriginalMedia;delete el.dataset.dsOriginalMedia;}for(const el of next.values())document.head.append(el);styles=next;},cancel(){for(const el of added)el.remove();}};
     }catch(error){for(const el of added)el.remove();throw error;}
  };
  const mark=file=>{
@@ -94,24 +94,25 @@ export function mountExperience({session,p,closeMenu,groups}){
     scope=createModuleScope();dirty=false;mark(file);restoreFilters(file);
     for(const mount of mounts){const stop=mount(app,session,scope);if(typeof stop==='function'&&stop!==scope.dispose)cleanups.push(stop);}
     bindFilters(file);
+    document.querySelector('main')?.addEventListener('ds-form-saved',()=>dirty=false,{signal:scope.signal});
     const main=document.querySelector('main');if(routes[file].forms&&main){const changed=event=>{const el=event.target;if(el?.matches('input:not([type=search]):not([type=hidden]),textarea,select')&&!(filters[file]||[]).includes(el.id))dirty=true;};main.addEventListener('input',changed,{signal:scope.signal});main.addEventListener('change',changed,{signal:scope.signal});main.addEventListener('reset',()=>dirty=false,{signal:scope.signal});}
  };
- const blocked=()=>{if(busy||scope?.busy){notify('Hay una operación en curso. Esperá a que termine.');return true;}if(document.querySelector('.modal-overlay.visible,dialog[open]')){notify('Cerrá el formulario abierto antes de cambiar de sección.');return true;}if(dirty&&!window.confirm('Hay campos modificados en esta pantalla. ¿Querés salir de todas formas?'))return true;return false;};
+ const blocked=()=>{if(busy||scope?.busy){notify('Hay una operación en curso. Esperá a que termine.');return true;}if(document.querySelector('.modal-overlay.visible,dialog[open][data-ds-module-owned]')||routes[active].modals.some(id=>document.getElementById(id)?.open)){notify('Cerrá el formulario abierto antes de cambiar de sección.');return true;}if(dirty&&!window.confirm('Hay campos modificados en esta pantalla. ¿Querés salir de todas formas?'))return true;return false;};
  const loadModule=async file=>{if(file==='precios.html'){if(!window.jspdf)await vendor(vendorUrls[0]);if(!window.jspdf?.jsPDF?.API?.autoTable)await vendor(vendorUrls[1]);}return routes[file].load();};
  const initial=async()=>{busy=true;window.DSNavigation?.begin();try{start(active,await loadModule(active));}finally{busy=false;window.DSNavigation?.end();}};
  const go=async(url,pop=false)=>{
     const file=pilotRoute(url.pathname);
-    if(!file||url.hash||!canRoute(session.perfil,file)){if(pop)location.reload();else location.assign(url.href);return;}
+    if(!file||url.hash||!canRoute(session.perfil,file)){if(pop&&blocked()){history.pushState({dsPilot:true},'',activeHref);return;}dirty=false;if(pop)location.reload();else location.assign(url.href);return;}
     if(file===active&&!pop&&url.href===location.href)return;
     if(blocked()){if(pop)history.pushState({dsPilot:true},'',activeHref);return;}
     busy=true;const ticket=++seq;window.DSNavigation?.begin();closeMenu();
-    const oldMain=document.querySelector('main');oldMain.inert=true;let prepared;
+    const oldMain=document.querySelector('main');activeHref=pop?activeHref:location.href;oldMain.inert=true;let prepared;
     try{
         const [snap,template,mounts]=await Promise.all([getDocFromServer(doc(db,'usuarios',uid)),getTemplate(file),loadModule(file)]);
         if(ticket!==seq)return;
         if(auth.currentUser?.uid!==uid||!snap.exists()||snap.data().estado!=='activo'){leave();location.replace('/login.html');return;}
         const profile=snap.data();
-        if(fingerprint(profile)!==original||!canRoute(profile,file)){location.assign(url.href);return;}
+        if(fingerprint(profile)!==original||!canRoute(profile,file)){dirty=false;location.assign(url.href);return;}
         prepared=await prepareStyles(template);
         if(ticket!==seq)return;
         if(scope?.busy)throw Error('Operación pendiente.');
@@ -126,13 +127,14 @@ export function mountExperience({session,p,closeMenu,groups}){
         active=file;document.title=template.title;
         if(!pop)history.pushState({dsPilot:true},'',url.href);
         activeHref=location.href;
+        for(const dialog of document.querySelectorAll('dialog[open]'))dialog.close();
         start(file,mounts);window.scrollTo(0,0);
-    }catch(error){console.warn('Experience route',error);if(pop||!scope){location.assign(url.href);return;}notify('No se pudo abrir la sección. Revisá la conexión y reintentá.');}
+    }catch(error){console.warn('Experience route',error);if(pop||!scope){dirty=false;location.assign(url.href);return;}notify('No se pudo abrir la sección. Revisá la conexión y reintentá.');}
     finally{prepared?.cancel();oldMain.inert=false;busy=false;window.DSNavigation?.end();}
  };
- window.DSExperience={navigateLink(event,url){const file=pilotRoute(url.pathname);if(busy){event.preventDefault();notify('Cargando sección…');return true;}if(!file||url.hash||!canRoute(session.perfil,file)){if(blocked()){event.preventDefault();return true;}return false;}event.preventDefault();void go(url);return true;}};
- window.addEventListener('popstate',()=>{if(!pilotRoute(location.pathname)&&blocked()){history.pushState({dsPilot:true},'',activeHref);return;}void go(new URL(location.href),true);});
- window.addEventListener('beforeunload',event=>{if(scope?.busy){event.preventDefault();event.returnValue='';}});
+ window.DSExperience={navigateLink(event,url){const file=pilotRoute(url.pathname);if(busy){event.preventDefault();notify('Cargando sección…');return true;}if(!file||url.hash||!canRoute(session.perfil,file)){if(blocked()){event.preventDefault();return true;}dirty=false;return false;}event.preventDefault();void go(url);return true;}};
+ window.addEventListener('popstate',()=>void go(new URL(location.href),true));
+ window.addEventListener('beforeunload',event=>{if(scope?.busy||dirty){event.preventDefault();event.returnValue='';}});
  onAuthStateChanged(auth,user=>{if(user?.uid!==uid){seq++;leave();location.replace('/login.html');}});
  window.addEventListener('pagehide',event=>{if(!event.persisted){seq++;leave();}});
  return initial();

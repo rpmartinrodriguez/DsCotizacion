@@ -296,6 +296,7 @@ export function setupPresupuesto(app,session={},scope=createModuleScope()) {
             };
 
             await addDoc(presupuestosGuardadosCollection, presupuestoParaGuardar);
+            document.querySelector('main')?.dispatchEvent(new Event('ds-form-saved'));
 
             alert('¡Presupuesto guardado con éxito en el historial! Ahora puedes confirmarlo como venta desde allí.');
             

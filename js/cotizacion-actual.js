@@ -198,6 +198,7 @@ export function setupCotizacion(app,session={},scope=createModuleScope()) {
 
             try {
                 await addDoc(presupuestosGuardadosCollection, presupuestoGuardado);
+                document.querySelector('main')?.dispatchEvent(new Event('ds-form-saved'));
                 const mensaje = generarMensajeResumen(cliente, titulo, items, precioVentaFinal);
                 resumenTexto.value = mensaje;
                 resumenModal.classList.add('visible');

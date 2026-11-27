@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.62';
+const CACHE_NAME = 'dulce-sall-admin-v2.63';
 
 const CORE_ASSETS = [
     '/',
@@ -8,7 +8,7 @@ const CORE_ASSETS = [
     '/css/style.css',
     '/css/app-v2.css',
     '/js/menu.js?v=29',
-    '/js/core/experience-router.js?v=2',
+    '/js/core/experience-router.js?v=3',
     '/js/core/module-scope.js',
     '/js/navigation-feedback.js?v=5',
     '/js/stock/supplier-schedule-r260.js',

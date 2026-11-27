@@ -145,6 +145,8 @@ export function setupPOS(app) {
     let cuentaCorrienteClienteId = null;
     let pendingCheckout = null;
     let checkoutInProgress=false, dataUnsubs=[], parkingKey='', parked=[], parkedStorageError=false;
+    // No perder el carrito activo ni salir durante un intento de cobro no verificado.
+    window.addEventListener('beforeunload',event=>{if(checkoutInProgress||pendingCheckout||carritoActual.length){event.preventDefault();event.returnValue='';}});
     let posPreferenceLoaded=false;
     const parkedPanel=document.createElement('div');parkedPanel.className='ds-pos-smart-tools';parkedPanel.hidden=true;
     const parkBtn=document.createElement('button');parkBtn.type='button';parkBtn.className='btn-secondary';parkBtn.textContent='Poner en espera';
