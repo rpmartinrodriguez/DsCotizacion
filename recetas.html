@@ -112,7 +112,7 @@
     <link rel="stylesheet" href="css/topnav.css?v=8">
     <link rel="stylesheet" href="css/workspace-pink.css?v=1">
 </head>
-<body class="ds-app ds-topnav-layout ds-workspace ds-content ds-recipes">
+<body class="ds-app ds-topnav-layout ds-experience-pilot ds-workspace ds-content ds-recipes">
     <div class="main-container">
         <!-- HEADER -->
         <header class="header">
@@ -130,7 +130,7 @@
                 </div>
             </a>
         </header>
-        <script src="js/navigation-feedback.js?v=3"></script>
+        <script src="js/navigation-feedback.js?v=5"></script>
 
         <!-- MENÚ DINÁMICO (Inyectado por menu.js) -->
         
@@ -266,13 +266,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupRecetas } from './js/recetas.js?v=7';
-        try {
-            const app = initializeApp(firebaseConfig);
-            setupRecetas(app);
-        } catch (error) { console.error(error); }
+        initializeApp(firebaseConfig);
     </script>
-    <script src="js/menu.js?v=27" defer></script>
+    <script src="js/menu.js?v=29" defer></script>
     <script src="js/shell-v2.js?v=3" defer></script>
     <script>
         if ('serviceWorker' in navigator) {

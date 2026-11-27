@@ -63,14 +63,14 @@
     </style>
     <link rel="stylesheet" href="css/topnav.css?v=8">
 </head>
-<body class="ds-app ds-topnav-layout ds-content ds-products">
+<body class="ds-app ds-topnav-layout ds-experience-pilot ds-content ds-products">
 <div class="main-container">
     <header class="header">
         <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú"><span></span><span></span><span></span></button>
         <a href="index.html" class="header__logo-link"><img src="assets/logo.png" alt="Dulce Sall" class="header__logo"></a>
             <nav class="nav-menu ds-topnav" id="nav-menu" aria-label="Navegación por categorías"></nav>
     </header>
-        <script src="js/navigation-feedback.js?v=3"></script>
+        <script src="js/navigation-feedback.js?v=5"></script>
     
     <div class="nav-menu__overlay" id="nav-overlay"></div>
 
@@ -190,15 +190,11 @@
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-    import { firebaseConfig } from './js/firebase-config.js';
-    import { setupProductos } from './js/productos.js?v=1';
-    try {
-        const app = initializeApp(firebaseConfig);
-        setupProductos(app);
-    } catch (error) { console.error(error); }
-</script>
-<script src="js/menu.js?v=27" defer></script>
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { firebaseConfig } from './js/firebase-config.js';
+        initializeApp(firebaseConfig);
+    </script>
+<script src="js/menu.js?v=29" defer></script>
 <script src="js/shell-v2.js?v=3" defer></script>
 <script>
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
