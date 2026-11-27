@@ -1,2 +1,16 @@
 [functions]
   node_bundler = "esbuild"
+
+# Revalidate document shells and the service worker instead of reusing stale HTTP copies.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"

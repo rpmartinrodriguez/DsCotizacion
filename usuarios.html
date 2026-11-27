@@ -62,7 +62,7 @@
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-content-main"><div class="ds-content-wrap">
-            <section class="ds-content-head">
+            <section class="ds-content-head" data-release="2.58">
                 <div>
                     <p class="ds-eyebrow">Configuración</p>
                     <h1 class="page-title">Usuarios y permisos</h1>
@@ -70,7 +70,7 @@
                 </div>
                 <div class="ds-content-actions">
                     <button type="button" id="btn-push-settings" class="ds-action-secondary" hidden>Notificaciones push de este dispositivo</button>
-                    <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática de proveedores</button>
+                    <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática · Horario</button>
                     <button id="btn-nuevo-usuario" class="ds-action-primary">+ Nuevo empleado</button>
                 </div>
             </section>
@@ -209,7 +209,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupSupplierSchedule } from './js/stock/supplier-schedule.js?v=2';
+        import { setupSupplierSchedule } from './js/stock/supplier-schedule-r258.js';
         import { setupUsuarios } from './js/usuarios.js?v=6';
         
         try {

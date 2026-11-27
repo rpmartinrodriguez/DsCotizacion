@@ -52,7 +52,7 @@
 
         <main class="ds-content-main">
             <div class="ds-content-wrap">
-                <section class="ds-content-head">
+                <section class="ds-content-head" data-release="2.58">
                     <div>
                         <p class="ds-eyebrow">Operación</p>
                         <h1>Stock e inventario</h1>
@@ -60,7 +60,7 @@
                     </div>
                     <div class="ds-content-actions">
                         <button type="button" id="btn-actualizar-precios-proveedor" class="ds-action-secondary">↻ Actualizar proveedores</button>
-                        <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática</button>
+                        <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática · Horario</button>
                         <a href="compras.html" class="ds-action-primary">+ Registrar compra</a>
                     </div>
                 </section>
@@ -264,7 +264,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupSupplierSchedule } from './js/stock/supplier-schedule.js?v=2';
+        import { setupSupplierSchedule } from './js/stock/supplier-schedule-r258.js';
         import { setupStock } from './js/stock.js?v=6';
 
         try {

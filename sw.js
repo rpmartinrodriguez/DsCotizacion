@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.57';
+const CACHE_NAME = 'dulce-sall-admin-v2.58';
 
 const CORE_ASSETS = [
     '/',
@@ -9,6 +9,7 @@ const CORE_ASSETS = [
     '/css/app-v2.css',
     '/js/menu.js',
     '/js/navigation-feedback.js?v=2',
+    '/js/stock/supplier-schedule-r258.js',
     '/css/topnav.css?v=7',
     '/js/home.js',
     '/js/productos.js',
@@ -80,12 +81,15 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Versioned decorative bootstrap only; financial modules remain network-first.
+    if(pathname==='/js/stock/supplier-schedule-r258.js'){
+        event.respondWith(fetch(request,{cache:'no-cache'}).catch(()=>caches.match(request)));return;
+    }
     if(pathname==='/js/navigation-feedback.js'&&new URL(request.url).search==='?v=2'){
         event.respondWith(caches.match(request).then(cached=>cached||fetch(request)));return;
     }
     if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(request)
+            fetch(request, {cache:'no-cache'})
                 .then((response) => {
                     if (shouldCacheResponse(response)) {
                         const copy = response.clone();
