@@ -157,6 +157,7 @@ async function inicializarMenu() {
         'compras.html': p.compras,
         'compras-lista.html': p.compras_lista,
         'clientes.html': p.clientes,
+        'fidelizacion.html': userRol === 'master',
         'agenda.html': p.agenda,
         'modelos.html': p.modelos,
         'usuarios.html': p.configuracion || userRol === 'master'
@@ -202,9 +203,10 @@ async function inicializarMenu() {
         htmlMenu += `</div></div>`;
     }
 
-    if (p.clientes || p.agenda || p.presupuestos) {
+    if (p.clientes || p.agenda || p.presupuestos || userRol === 'master') {
         htmlMenu += categoriaMenu('Clientes y pedidos', 'Clientes, compromisos de entrega y presupuestos.');
         if (p.clientes) htmlMenu += `<a href="clientes.html" class="nav-menu__link" title="Clientes"><span class="nav-menu__glyph">${MENU_ICON.clients}</span><span class="nav-menu__label">Clientes</span></a>`;
+        if (userRol === 'master') htmlMenu += `<a href="fidelizacion.html" class="nav-menu__link" title="Fidelización"><span class="nav-menu__glyph">${MENU_ICON.clients}</span><span class="nav-menu__label">Fidelización</span></a>`;
         if (p.agenda) htmlMenu += `<a href="agenda.html" class="nav-menu__link" title="Agenda y entregas"><span class="nav-menu__glyph">${MENU_ICON.agenda}</span><span class="nav-menu__label">Agenda y entregas</span></a>`;
         if (p.presupuestos) htmlMenu += `<a href="presupuesto.html" class="nav-menu__link" title="Presupuestos"><span class="nav-menu__glyph">${MENU_ICON.quote}</span><span class="nav-menu__label">Presupuestos</span></a>`;
         htmlMenu += `</div></div>`;
