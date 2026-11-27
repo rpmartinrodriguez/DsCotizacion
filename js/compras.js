@@ -1,9 +1,13 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, addDoc, doc, updateDoc, 
-    query, where, getDocs, arrayUnion
+    getFirestore, collection, addDoc as raw_addDoc, doc, updateDoc as raw_updateDoc, 
+    query, where, getDocs as raw_getDocs, arrayUnion
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-export function setupCompras(app) {
+export function setupCompras(app,session={},scope=createModuleScope()) {
+    const getDocs=scope.wrap(raw_getDocs);
+    const addDoc=scope.wrap(raw_addDoc);
+    const updateDoc=scope.wrap(raw_updateDoc);
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const movimientosStockCollection = collection(db, 'movimientosStock');
@@ -122,4 +126,5 @@ export function setupCompras(app) {
     
     // Carga inicial
     cargarProductosExistentes();
+    return scope.dispose;
 }

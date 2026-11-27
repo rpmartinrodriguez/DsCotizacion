@@ -1,5 +1,6 @@
+import {createModuleScope} from './core/module-scope.js';
 import {
-    getFirestore, collection, doc, onSnapshot
+    getFirestore, collection, doc, onSnapshot as raw_onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import {
     calculateProductSalePrice,
@@ -9,7 +10,8 @@ import {
 import { formatCurrency, formatTimestampDateTime } from "./core/format.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 
-export function setupProductos(app) {
+export function setupProductos(app,session={},scope=createModuleScope()) {
+    const onSnapshot=scope.listen(raw_onSnapshot);
     const db = getFirestore(app);
 
     const lista = document.getElementById('productos-lista');
@@ -311,7 +313,7 @@ export function setupProductos(app) {
         helpBox.textContent = help.dataset.help || '';
         helpBox.hidden = false;
         helpBox.scrollIntoView({ block: 'nearest' });
-    });
+    },{signal:scope.signal});
 
     onSnapshot(doc(db, 'config', 'mostrador'), snapshot => {
         margenGlobal = snapshot.exists() ? Number(snapshot.data().margenGlobal) || 0 : 0;
@@ -329,4 +331,5 @@ export function setupProductos(app) {
         loadedRecipes = true;
         refresh();
     });
+    return scope.dispose;
 }

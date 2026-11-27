@@ -1,10 +1,15 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, onSnapshot, query, where, doc, 
-    setDoc, getDoc, updateDoc
+    getFirestore, collection, onSnapshot as raw_onSnapshot, query, where, doc, 
+    setDoc as raw_setDoc, getDoc as raw_getDoc, updateDoc as raw_updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 
-export function setupClientes(app) {
+export function setupClientes(app,session={},scope=createModuleScope()) {
+    const onSnapshot=scope.listen(raw_onSnapshot);
+    const setDoc=scope.wrap(raw_setDoc);
+    const getDoc=scope.wrap(raw_getDoc);
+    const updateDoc=scope.wrap(raw_updateDoc);
     const db = getFirestore(app);
     const presupuestosCollection = collection(db, 'presupuestosGuardados');
     const clientesCollection = collection(db, 'clientes');
@@ -128,7 +133,7 @@ export function setupClientes(app) {
                 // Mantener el alta automática sin bloquear la visualización.
                 altasPendientes.add(clienteId);
                 colaDeAltas = colaDeAltas.then(() =>
-                    setDoc(doc(db, 'clientes', clienteId), { nombre: nombreCliente })
+                    scope.signal.aborted?undefined:setDoc(doc(db, 'clientes', clienteId), { nombre: nombreCliente })
                 ).catch(error => {
                     console.error('Error creando ficha de cliente:', error);
                 }).finally(() => {
@@ -148,7 +153,7 @@ export function setupClientes(app) {
     const programarRender = () => {
         if (!presupuestosDocs || !clientesDocs || renderPendiente) return;
         renderPendiente = true;
-        requestAnimationFrame(() => {
+        scope.frame(() => {
             renderPendiente = false;
             sincronizarYRenderizar(presupuestosDocs, clientesDocs);
         });
@@ -224,4 +229,5 @@ export function setupClientes(app) {
     });
 
     btnCancelar.addEventListener('click', closeModal);
+    return scope.dispose;
 }

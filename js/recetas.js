@@ -1,17 +1,24 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    setDoc, deleteDoc, addDoc, updateDoc
+    getFirestore, collection, onSnapshot as raw_onSnapshot, query, orderBy, doc, 
+    setDoc as raw_setDoc, deleteDoc as raw_deleteDoc, addDoc as raw_addDoc, updateDoc as raw_updateDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { addToCart, updateCartIcon } from './cart.js?v=2';
 import { getEffectiveUnitCost } from './core/pricing.js';
 import { escapeHtml } from './core/html.js';
 import { createAuthorization } from './core/authorization.js';
 
-export function setupRecetas(app) {
+export function setupRecetas(app,session={},scope=createModuleScope()) {
+    const onSnapshot=scope.listen(raw_onSnapshot);
+    const setDoc=scope.wrap(raw_setDoc);
+    const deleteDoc=scope.wrap(raw_deleteDoc);
+    const addDoc=scope.wrap(raw_addDoc);
+    const updateDoc=scope.wrap(raw_updateDoc);
     const db = getFirestore(app);
     const authorization = createAuthorization(app);
     let puedeEditarUnidadesVenta = false;
     authorization.canAdminister().then(value => {
+        if(scope.signal.aborted)return;
         puedeEditarUnidadesVenta = value === true;
         if (unidadesVentaInput) {
             unidadesVentaInput.disabled = !puedeEditarUnidadesVenta;
@@ -590,4 +597,5 @@ export function setupRecetas(app) {
     unidadesVentaInput?.addEventListener('input', renderizarIngredientesEnReceta);
     
     updateCartIcon();
+    return scope.dispose;
 }

@@ -1,9 +1,11 @@
+import {createModuleScope} from './core/module-scope.js';
 // js/compras-lista.js
 import { 
-    getFirestore, collection, getDocs, query, where, Timestamp, orderBy, limit 
+    getFirestore, collection, getDocs as raw_getDocs, query, where, Timestamp, orderBy, limit 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-export function setupListaCompras(app) {
+export function setupListaCompras(app,session={},scope=createModuleScope()) {
+    const getDocs=scope.wrap(raw_getDocs);
     const db = getFirestore(app);
     const presupuestosCollection = collection(db, 'presupuestosGuardados');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
@@ -85,4 +87,5 @@ export function setupListaCompras(app) {
     };
 
     generarListaAutomatica();
+    return scope.dispose;
 }

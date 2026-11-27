@@ -1,11 +1,14 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, getDocs, query, addDoc, Timestamp 
+    getFirestore, collection, getDocs as raw_getDocs, query, addDoc as raw_addDoc, Timestamp 
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
 // IMPORTANTE: Aquí importamos la función que faltaba
 import { getCartItems, removeFromCart, clearCart, updateCartIcon, updateCartItemQuantity } from './cart.js?v=2';
 
-export function setupCotizacion(app) {
+export function setupCotizacion(app,session={},scope=createModuleScope()) {
+    const getDocs=scope.wrap(raw_getDocs);
+    const addDoc=scope.wrap(raw_addDoc);
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
@@ -253,7 +256,7 @@ export function setupCotizacion(app) {
         btnCopiarResumen.addEventListener('click', () => {
             navigator.clipboard.writeText(resumenTexto.value).then(() => {
                 feedbackCopiado.textContent = '¡Copiado!';
-                setTimeout(() => feedbackCopiado.textContent = '', 2000);
+                scope.timeout(() => feedbackCopiado.textContent = '', 2000);
             });
         });
     }
@@ -278,4 +281,5 @@ export function setupCotizacion(app) {
     };
 
     loadInitialData();
+    return scope.dispose;
 }

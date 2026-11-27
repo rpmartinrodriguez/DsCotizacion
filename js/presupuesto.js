@@ -1,10 +1,14 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, getDocs, query, orderBy, addDoc, 
-    Timestamp, doc, getDoc
+    getFirestore, collection, getDocs as raw_getDocs, query, orderBy, addDoc as raw_addDoc, 
+    Timestamp, doc, getDoc as raw_getDoc
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { getEffectiveUnitCost } from "./core/pricing.js";
 
-export function setupPresupuesto(app) {
+export function setupPresupuesto(app,session={},scope=createModuleScope()) {
+    const getDocs=scope.wrap(raw_getDocs);
+    const getDoc=scope.wrap(raw_getDoc);
+    const addDoc=scope.wrap(raw_addDoc);
     const db = getFirestore(app);
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
@@ -315,7 +319,7 @@ export function setupPresupuesto(app) {
     btnCopiar.addEventListener('click', () => {
         navigator.clipboard.writeText(mensajeFinalTextarea.value).then(() => {
             copiadoFeedback.textContent = '¡Copiado!';
-            setTimeout(() => { copiadoFeedback.textContent = ''; }, 2000);
+            scope.timeout(() => { copiadoFeedback.textContent = ''; }, 2000);
         }).catch(err => console.error('Error al copiar: ', err));
     });
 
@@ -324,4 +328,5 @@ export function setupPresupuesto(app) {
     });
 
     cargarRecetaDesdeURL();
+    return scope.dispose;
 }

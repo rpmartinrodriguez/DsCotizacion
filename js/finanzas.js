@@ -1,8 +1,10 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, onSnapshot, query
+    getFirestore, collection, onSnapshot as raw_onSnapshot, query
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-export function setupFinanzas(app) {
+export function setupFinanzas(app,session={},scope=createModuleScope()) {
+    const onSnapshot=scope.listen(raw_onSnapshot);
     const db = getFirestore(app);
     const presupuestosCollection = collection(db, 'presupuestosGuardados');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
@@ -117,4 +119,5 @@ export function setupFinanzas(app) {
     });
 
     filtroMesSelect.addEventListener('change', calcularYRenderizarReporte);
+    return scope.dispose;
 }

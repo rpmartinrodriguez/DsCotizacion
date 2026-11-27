@@ -1,12 +1,18 @@
+import {createModuleScope} from './core/module-scope.js';
 import { 
-    getFirestore, collection, onSnapshot, query, orderBy, doc, 
-    deleteDoc, updateDoc, Timestamp, writeBatch, runTransaction, getDocs, where
+    getFirestore, collection, onSnapshot as raw_onSnapshot, query, orderBy, doc, 
+    deleteDoc as raw_deleteDoc, updateDoc as raw_updateDoc, Timestamp, writeBatch, runTransaction as raw_runTransaction, getDocs as raw_getDocs, where
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 import { formatCurrency } from "./core/format.js";
 import { escapeHtml, escapeAttribute } from "./core/html.js";
 import {ORDER_STAGES,ORDER_LABELS,orderStage,nextStage,orderDate,aggregateIngredients,consumeLots} from "./core/orders.js";
 
-export function setupHistorial(app) {
+export function setupHistorial(app,session={},scope=createModuleScope()) {
+    const onSnapshot=scope.listen(raw_onSnapshot);
+    const getDocs=scope.wrap(raw_getDocs);
+    const runTransaction=scope.wrap(raw_runTransaction);
+    const deleteDoc=scope.wrap(raw_deleteDoc);
+    const updateDoc=scope.wrap(raw_updateDoc);
     const db = getFirestore(app);
     const presupuestosGuardadosCollection = collection(db, 'presupuestosGuardados');
     const materiasPrimasCollection = collection(db, 'materiasPrimas');
@@ -335,7 +341,7 @@ export function setupHistorial(app) {
         btnCopiarAgradecimiento.addEventListener('click', () => {
             navigator.clipboard.writeText(agradecimientoTexto.innerText).then(() => {
                 copiadoFeedback.textContent = '¡Copiado!';
-                setTimeout(() => { copiadoFeedback.textContent = ''; }, 2000);
+                scope.timeout(() => { copiadoFeedback.textContent = ''; }, 2000);
             }).catch(err => console.error('Error al copiar: ', err));
         });
     }
@@ -348,4 +354,5 @@ export function setupHistorial(app) {
     }
     
     cargarMateriasPrimas().catch(()=>{});
+    return scope.dispose;
 }
