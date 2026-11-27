@@ -34,7 +34,7 @@ export function mountExperience({session,p,closeMenu,groups}){
  };
  const mark=file=>{
     groups.forEach(group=>{const button=group.querySelector('.nav-category-btn'),panel=document.getElementById(button.getAttribute('aria-controls'));let selected=false;for(const link of panel?.querySelectorAll('a[href]')||[]){const yes=pilotRoute(new URL(link.href,location.href).pathname)===file;link.classList.toggle('active',yes);if(yes){link.setAttribute('aria-current','page');selected=true;}else link.removeAttribute('aria-current');}button.classList.toggle('is-current',selected);});
-    for(const el of document.querySelectorAll('main [data-permission]'))el.hidden=!can(session.perfil,el.dataset.permission);
+    for(const el of document.querySelectorAll('main [data-permission],.header [data-permission]')){const allowed=can(session.perfil,el.dataset.permission);el.hidden=!allowed;if(allowed&&el.style.display==='none')el.style.removeProperty('display');}
     const name=document.getElementById('ds-user-name');if(name)name.textContent=String(session.perfil.nombre||'equipo').trim().split(/\s+/)[0]||'equipo';
  };
  const start=file=>{mark(file);cleanup=routes[file].mount(app,session);if(typeof cleanup!=='function')throw Error('Módulo sin función de cierre.');};
@@ -69,5 +69,5 @@ export function mountExperience({session,p,closeMenu,groups}){
  window.DSExperience={navigateLink(event,url){const file=pilotRoute(url.pathname);if(!file||url.search||url.hash||!can(session.perfil,routes[file].permission))return false;event.preventDefault();void go(url);return true;}};
  window.addEventListener('popstate',()=>void go(new URL(location.href),true));
  onAuthStateChanged(auth,user=>{if(user?.uid!==uid){seq++;leave();location.replace('/login.html');}});
- window.addEventListener('pagehide',event=>{if(!event.persisted)leave();});
+ window.addEventListener('pagehide',event=>{if(!event.persisted){seq++;leave();}});
 }

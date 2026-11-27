@@ -47,8 +47,10 @@ export function setupInicio(app, session={}) {
         if (element) element.textContent = Number(value || 0).toLocaleString('es-AR');
     };
 
-    const renderReviewCenter = () => {
-        if (!reviewLoadedRecipes || !reviewLoadedMaterials) return;
+    let reviewFrame=0;
+    const renderReviewCenter=()=>{if(abort.signal.aborted||reviewFrame)return;reviewFrame=requestAnimationFrame(()=>{reviewFrame=0;renderReviewNow();});};
+    const renderReviewNow = () => {
+        if (abort.signal.aborted||!reviewLoadedRecipes || !reviewLoadedMaterials) return;
 
         let marginRisk = 0;
         let suggestedOnly = 0;
@@ -99,19 +101,22 @@ export function setupInicio(app, session={}) {
     },{signal:abort.signal});
 
     const db = getFirestore(app);
-    const kpi=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
+    const kpi=(id,value)=>{if(abort.signal.aborted)return;const el=document.getElementById(id);if(el)el.textContent=value;};
     const updateConnection=()=>{const el=document.getElementById('ds-connection-status');if(el){el.textContent=navigator.onLine?'Con conexión':'Sin conexión';el.dataset.online=String(navigator.onLine);}};
     updateConnection();window.addEventListener('online',updateConnection,{signal:abort.signal});window.addEventListener('offline',updateConnection,{signal:abort.signal});
-    const today=orderDate(new Date()),start=new Date(today+'T00:00:00-03:00'),end=new Date(start.getTime()+86400000);
+    let today=orderDate(new Date()),salesStop=null,orderRows=null;
+    const renderOrders=()=>{if(!orderRows)return;const active=orderRows.filter(p=>orderStage(p)!=='entregado');kpi('ds-today-orders',active.length.toLocaleString('es-AR'));kpi('ds-today-deliveries',active.filter(p=>orderDate(p.fechaEntrega)===today).length.toLocaleString('es-AR'));};
     let salesToday=null,hiddenBoxes=null;
-    const renderToday=()=>{if(!salesToday||!hiddenBoxes)return;const rows=salesToday.filter(d=>d.eliminada!==true&&!hiddenBoxes.has(d.cajaId));kpi('ds-today-sales',formatCurrency(rows.reduce((sum,d)=>sum+(Number(d.total)||0),0)));kpi('ds-today-tickets',rows.length.toLocaleString('es-AR'));};
+    const renderToday=()=>{if(abort.signal.aborted||!salesToday||!hiddenBoxes)return;const rows=salesToday.filter(d=>d.eliminada!==true&&!hiddenBoxes.has(d.cajaId));kpi('ds-today-sales',formatCurrency(rows.reduce((sum,d)=>sum+(Number(d.total)||0),0)));kpi('ds-today-tickets',rows.length.toLocaleString('es-AR'));};
     if(can('mostrador')||can('cajas')||can('precios')||can('finanzas')){
     watch(query(collection(db,'cajas'),where('eliminada','==',true)),snap=>{hiddenBoxes=new Set(snap.docs.map(d=>d.id));renderToday();},()=>{kpi('ds-today-sales','No disponible');});
-    watch(query(collection(db,'ventasMostrador'),where('fecha','>=',Timestamp.fromDate(start)),where('fecha','<',Timestamp.fromDate(end))),snap=>{salesToday=snap.docs.map(d=>d.data());renderToday();},()=>{kpi('ds-today-sales','No disponible');kpi('ds-today-tickets','—');});
+    const loadSales=()=>{salesStop?.();salesToday=null;kpi('ds-today-sales','—');kpi('ds-today-tickets','—');const start=new Date(today+'T00:00:00-03:00'),end=new Date(start.getTime()+86400000);salesStop=onSnapshot(query(collection(db,'ventasMostrador'),where('fecha','>=',Timestamp.fromDate(start)),where('fecha','<',Timestamp.fromDate(end))),snap=>{salesToday=snap.docs.map(d=>d.data());renderToday();},()=>{kpi('ds-today-sales','No disponible');kpi('ds-today-tickets','—');});};
+    loadSales();
+    const rollover=()=>{const date=orderDate(new Date());if(date===today)return;today=date;if(fecha)fecha.textContent=new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());loadSales();renderOrders();};
+    const dayTimer=setInterval(rollover,60000);subscriptions.push(()=>{clearInterval(dayTimer);salesStop?.();});document.addEventListener('visibilitychange',rollover,{signal:abort.signal});
     }else{kpi('ds-today-sales','Sin permiso');kpi('ds-today-tickets','—');}
     watch(query(collection(db,'presupuestosGuardados'),where('esVenta','==',true)),snap=>{
-        const active=snap.docs.map(d=>d.data()).filter(p=>orderStage(p)!=='entregado');
-        kpi('ds-today-orders',active.length.toLocaleString('es-AR'));kpi('ds-today-deliveries',active.filter(p=>orderDate(p.fechaEntrega)===today).length.toLocaleString('es-AR'));
+        orderRows=snap.docs.map(d=>d.data());renderOrders();
     },()=>{kpi('ds-today-orders','—');kpi('ds-today-deliveries','—');});
     // Mantener las consultas de caja y revisiones existentes.
     // La consulta es informativa y no permite operar sobre fondos.
@@ -164,5 +169,5 @@ export function setupInicio(app, session={}) {
                 'Revisá la conexión y los permisos. Podés continuar desde Mostrador.');
         }
     );
-    return ()=>{abort.abort();for(const stop of subscriptions.splice(0))try{stop();}catch{}};
+    return ()=>{abort.abort();if(reviewFrame)cancelAnimationFrame(reviewFrame);for(const stop of subscriptions.splice(0))try{stop();}catch{}};
 }
