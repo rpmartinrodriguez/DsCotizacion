@@ -29,11 +29,18 @@ const run=async()=>{
     // Scheduled functions run only in published production. Never change the official purchase cost.
     if(process.env.CONTEXT && process.env.CONTEXT!=='production')return {statusCode:200,body:'Preview: sin consultas automáticas.'};
     const svc=admin(),{db}=svc;
-    const now=new Date(),day=argentinaDay(now).key;
+    const now=new Date(),today=argentinaDay(now).key;
     const settings=await scheduleRef(db).get(),schedule=normalizeSchedule(settings.data());
-    if(!shouldCheck(schedule,now))return {statusCode:200,body:'Consulta automática desactivada, día no seleccionado o antes del horario.'};
-    const run=db.collection('dsSupplierChecks').doc(day);
-    const current=(await run.get()).data()||{};
+    if(!schedule.enabled)return {statusCode:200,body:'Consulta automática desactivada.'};
+    const collection=db.collection('dsSupplierChecks');
+    let day=today,run=collection.doc(today),current=(await run.get()).data()||{};
+    // Continuar una revisión iniciada el día anterior si cruzó medianoche.
+    if(!current.startedAt&&!current.done){
+        const yesterday=argentinaDay(new Date(now.getTime()-86400000)).key,priorRef=collection.doc(yesterday),prior=(await priorRef.get()).data()||{};
+        if(prior.summaryVersion===1&&prior.startedAt&&!prior.done){day=yesterday;run=priorRef;current=prior;}
+        else if(prior.summaryVersion===1&&prior.done&&!prior.summarySentAt&&!shouldCheck(schedule,now)){await publishSummary(svc,priorRef,yesterday,prior);return {statusCode:200,body:'Reintento resumen anterior.'};}
+    }
+    if(!current.startedAt&&!current.done&&!shouldCheck(schedule,now))return {statusCode:200,body:'Día no seleccionado o antes del horario.'};
     if(current.done){if(current.summaryVersion===1&&!current.summarySentAt)await publishSummary(svc,run,day,current);return {statusCode:200,body:'Ya revisado.'};}
     const claim=await db.runTransaction(async tx=>{const s=await tx.get(run),d=s.data()||{};if(d.done||d.leaseUntil?.toMillis()>Date.now())return null;tx.set(run,{day,summaryVersion:1,scheduledTime:d.scheduledTime||schedule.time,startedAt:d.startedAt||Timestamp.now(),leaseUntil:Timestamp.fromMillis(Date.now()+120000)},{merge:true});return d;});
     if(!claim)return {statusCode:200,body:'Ya revisado o en proceso.'};
@@ -46,8 +53,9 @@ const run=async()=>{
         const d=doc.data(),url=String(d.proveedorUrl||'').trim();
         if(!url)return {kind:'skip'};
         try{
-            const observed=await supplier.detectSupplierPrice(url);
             const state=db.collection('dsSupplierObservations').doc(doc.id),old=(await state.get()).data()||{};
+            if(old.day===day&&['same','initial','changed'].includes(old.runKind))return {kind:old.runKind};
+            const observed=await supplier.detectSupplierPrice(url);
             const configuredQty=Number(d.proveedorPresentacionCantidad)||0,configuredUnit=normal(d.proveedorPresentacionUnidad);
             const detectedQty=Number(observed.packageQuantity)||0,detectedUnit=normal(observed.packageUnit);
             if(configuredQty && configuredUnit && detectedQty && detectedUnit && (configuredQty!==detectedQty||configuredUnit!==detectedUnit))throw new Error('La presentación detectada difiere de la configurada; requiere revisión manual.');
@@ -65,8 +73,9 @@ const run=async()=>{
             const history=old.key===key&&Array.isArray(old.history)?old.history:[];
             const entry={price:next,previous:before||null,at:checkedAt};
             const recorded=history.length&&Number(history[0].price)===next?history:[entry,...history].slice(0,30);
-            await state.set({key,price:next,checkedAt,source:observed.source||'',host:observed.host||'',name:d.nombre||'',day,history:recorded,configuredQty,configuredUnit,url});
-            return {kind:before<=0?'initial':Math.abs(before-next)>=0.01?'changed':'same'};
+            const kind=before<=0?'initial':Math.abs(before-next)>=0.01?'changed':'same';
+            await state.set({key,price:next,checkedAt,source:observed.source||'',host:observed.host||'',name:d.nombre||'',day,runKind:kind,history:recorded,configuredQty,configuredUnit,url});
+            return {kind};
         }catch(e){console.warn('supplier daily',doc.id,e.message);await db.collection('dsSupplierObservations').doc(doc.id).set({lastError:String(e.message).slice(0,250),lastAttempt:Timestamp.now()},{merge:true});return {kind:'error'};}
     }));
     const done=batch.size<25&&processed.length===batch.size;

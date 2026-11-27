@@ -32,7 +32,7 @@ const remove=k=>{try{sessionStorage.removeItem(k);}catch{}};
 const file=url=>url.pathname.split('/').pop()||'index.html';
 const current=()=>file(new URL(location.href));
 const make=(tag,cls)=>{const el=document.createElement(tag);el.className=cls;return el;};
-let loader,delay,limit,ghosts=[],ready=false,outgoing=false,dataObserver;
+let loader,delay,limit,finishTimer,visibleAt=0,ghosts=[],ready=false,outgoing=false,dataObserver;
 const ghost=(className,html)=>{
  const node=make('span',className+' ds-nav-ghost');node.setAttribute('aria-hidden','true');node.innerHTML=html;header.append(node);ghosts.push(node);
  return node;
@@ -60,10 +60,16 @@ const createLoader=()=>{
  loader.innerHTML='<div class="ds-navigation-loader-card"><svg class="ds-navigation-cake" viewBox="0 0 64 64" width="48" height="48" aria-hidden="true"><path d="M9 29 43 12 55 27 55 49 9 49Z" fill="#f7c5da" stroke="#78324f" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 29 43 12 55 27 9 36Z" fill="#fff0f6" stroke="#78324f" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 42 55 34M9 48 55 41" fill="none" stroke="#a53569" stroke-width="3" stroke-linecap="round"/><circle cx="42" cy="13" r="4.5" fill="#a53569" stroke="#78324f" stroke-width="1.4"/><path d="M42 8q2-5 6-5" fill="none" stroke="#166c47" stroke-width="2" stroke-linecap="round"/></svg><span>Cargando…</span></div>';
  document.body.append(loader);return loader;
 };
-const hide=()=>{dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);if(loader){loader.hidden=true;loader.classList.remove('is-slow');loader.querySelector('span').textContent='Cargando…';}};
-const show=(isOutgoing=false)=>{
- hide();outgoing=isOutgoing;
- delay=setTimeout(()=>{const el=createLoader();el.hidden=false;limit=setTimeout(()=>{if(isOutgoing){hide();outgoing=false;remove(pendingKey);}else{el.classList.add('is-slow');el.querySelector('span').textContent='La carga está demorando…';}},isOutgoing?5000:15000);},isOutgoing?90:160);
+const hide=(immediate=false)=>{
+ dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);clearTimeout(finishTimer);
+ const finish=()=>{if(loader){loader.hidden=true;loader.classList.remove('is-slow');loader.querySelector('span').textContent='Cargando…';}visibleAt=0;};
+ // Keep feedback visible briefly without delaying access to the actual loaded page.
+ if(!immediate&&loader&&!loader.hidden&&visibleAt){finishTimer=setTimeout(finish,Math.max(0,240-(performance.now()-visibleAt)));}else finish();
+};
+const show=(isOutgoing=false,immediate=false)=>{
+ hide(true);outgoing=isOutgoing;
+ const display=()=>{const el=createLoader();el.hidden=false;visibleAt=performance.now();limit=setTimeout(()=>{if(isOutgoing){hide(true);outgoing=false;remove(pendingKey);}else{el.classList.add('is-slow');el.querySelector('span').textContent='La carga está demorando…';}},isOutgoing?5000:15000);};
+ if(isOutgoing||immediate)display();else delay=setTimeout(display,80);
 };
 const clearPreview=()=>{
  nav.inert=false;nav.removeAttribute('aria-hidden');nav.classList.remove('ds-nav-preview');
@@ -75,8 +81,9 @@ const syncGhosts=()=>{
  ghosts=ghosts.filter(node=>node.isConnected);
 };
 const observer=new MutationObserver(syncGhosts);observer.observe(header,{childList:true});
-remove(pendingKey);
-show();
+const pending=read(pendingKey);remove(pendingKey);
+const transferred=Boolean(pending&&pending.path===location.pathname&&Date.now()-pending.at>=0&&Date.now()-pending.at<30000);
+show(false,transferred);
 window.DSNavigation={
  beforeMenu(){clearPreview();},
  ready(groups,master){
@@ -93,16 +100,16 @@ window.DSNavigation={
   // If a secondary module fails, don't leave dead decorative buttons around indefinitely.
   setTimeout(()=>{clearGhosts();observer.disconnect();},3000);
  },
- fail(){remove(key);remove(pendingKey);if(nav.classList.contains('ds-nav-preview'))nav.replaceChildren();clearPreview();clearGhosts();observer.disconnect();hide();},
- clear(){remove(key);remove(pendingKey);hide();}
+ fail(){remove(key);remove(pendingKey);if(nav.classList.contains('ds-nav-preview'))nav.replaceChildren();clearPreview();clearGhosts();observer.disconnect();hide(true);},
+ clear(){remove(key);remove(pendingKey);hide(true);}
 };
 document.addEventListener('click',event=>{
  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
  const link=event.target.closest?.('a[href]');if(!link||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;
  const url=new URL(link.href,location.href);
  if(url.origin!==location.origin||!pages.has(file(url))||!/^\/(?:[^/]+\.html)?$/.test(url.pathname)||url.pathname===location.pathname&&url.search===location.search)return;
- write(pendingKey,{at:Date.now(),path:url.pathname});show(true);
+ write(pendingKey,{at:Date.now(),path:url.pathname});show(true,true);
 });
-window.addEventListener('pageshow',event=>{if(event.persisted){hide();outgoing=false;remove(pendingKey);}else if(ready&&!outgoing&&!dataObserver)hide();});
-window.addEventListener('pagehide',()=>{dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);});
+window.addEventListener('pageshow',event=>{if(event.persisted){hide(true);outgoing=false;remove(pendingKey);}else if(ready&&!outgoing&&!dataObserver)hide();});
+window.addEventListener('pagehide',()=>{dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);clearTimeout(finishTimer);});
 })();

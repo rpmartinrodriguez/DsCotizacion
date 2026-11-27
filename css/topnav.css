@@ -96,5 +96,13 @@ body.ds-app.ds-topnav-layout .ds-navigation-loader[hidden]{display:none!importan
 ::view-transition-group(ds-fixed-header){animation-duration:0s}
 ::view-transition-old(ds-fixed-header){animation:none;opacity:0}
 ::view-transition-new(ds-fixed-header){animation:none;opacity:1}
-::view-transition-group(root){animation-duration:.12s}
+::view-transition-group(root){animation-duration:0s}
+::view-transition-old(root){animation:none;opacity:0}
+::view-transition-new(root){animation:none;opacity:1}
 @media(prefers-reduced-motion:reduce){::view-transition-group(root){animation-duration:0s}}
+
+/* Loading feedback is above the document content on desktop and mobile; never blocks input. */
+body.ds-app.ds-topnav-layout .ds-navigation-loader{z-index:1095;visibility:visible;opacity:1;pointer-events:none!important}
+body.ds-app.ds-topnav-layout .ds-navigation-loader-card{pointer-events:none!important}
+.ds-navigation-cake{display:block;will-change:transform;transform-box:fill-box;transform-origin:center}
+@media(prefers-reduced-motion:reduce){.ds-navigation-cake{will-change:auto}}

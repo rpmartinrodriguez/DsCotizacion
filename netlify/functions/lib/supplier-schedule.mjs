@@ -1,7 +1,7 @@
 
 export const DEFAULT_DAYS=[1,2,3,4,5,6,7];
 export const DAYS=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-export const validTime=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+export const validTime=value=>typeof value==='string'&&/^([01]\d|2[0-3]):[0-5][05]$/.test(value);
 export function normalizeSchedule(value){
     if(!value || typeof value!=='object')return {enabled:true,days:[...DEFAULT_DAYS],time:'07:00'};
     const days=Array.isArray(value.days)?[...new Set(value.days.filter(n=>Number.isInteger(n)&&n>=1&&n<=7))].sort((a,b)=>a-b):[...DEFAULT_DAYS];
@@ -9,7 +9,7 @@ export function normalizeSchedule(value){
 }
 export function validateSchedule(value){
     if(typeof value?.enabled!=='boolean'||!Array.isArray(value.days)||value.days.some(n=>!Number.isInteger(n)||n<1||n>7))throw Object.assign(new Error('Seleccioná días válidos.'),{status:400});
-    if(value.time!==undefined&&!validTime(value.time))throw Object.assign(new Error('Ingresá un horario válido de 00:00 a 23:59.'),{status:400});
+    if(value.time!==undefined&&!validTime(value.time))throw Object.assign(new Error('Elegí un horario de 00:00 a 23:55, en intervalos de 5 minutos.'),{status:400});
     const result=normalizeSchedule(value);
     if(result.enabled&&!result.days.length)throw Object.assign(new Error('Seleccioná al menos un día o pausá las consultas.'),{status:400});
     return result;
