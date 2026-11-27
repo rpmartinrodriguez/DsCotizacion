@@ -37,13 +37,9 @@ async function obtenerSesionAutorizada() {
             return { autorizado: false, auth, signOut };
         }
 
-        const perfilSnap = await getDoc(doc(db, 'usuarios', user.uid));
-        if (!perfilSnap.exists()) {
-            return { autorizado: false, auth, signOut };
-        }
-
-        const perfil = perfilSnap.data();
-        if (perfil.estado !== 'activo') {
+        const {readActiveProfile}=await import('./core/authorization.js');
+        const perfil=await readActiveProfile(app,user);
+        if (!perfil) {
             return { autorizado: false, auth, signOut };
         }
 
@@ -313,6 +309,9 @@ async function inicializarMenu() {
         }
     }
     import('./core/admin-tools.js?v=4').then(m=>m.mountAdminTools({session,p,header,navMenu})).catch(console.warn);
+    if(document.body.classList.contains('ds-experience-pilot')){
+        import('./core/experience-router.js?v=1').then(m=>m.mountExperience({session,p,closeMenu,groups})).catch(error=>{console.error('Experience',error);window.DSNavigation?.fail();const main=document.querySelector('main');if(main){main.replaceChildren();const message=document.createElement('p');message.textContent='No se pudo iniciar esta pantalla. ';const retry=document.createElement('button');retry.type='button';retry.className='btn-primary';retry.textContent='Reintentar';retry.onclick=()=>location.reload();main.append(message,retry);}});
+    }
 
     // Anticipar el HTML de la sección que el usuario está por abrir.
     // No ejecuta scripts ni consulta datos de Firebase; sólo precarga HTML.

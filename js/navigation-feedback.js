@@ -88,6 +88,8 @@ show(false,transferred);
 if(!transferred)show(false,true);
 window.DSNavigation={
  beforeMenu(){clearPreview();},
+ begin(){show(false,true);},
+ end(){hide();outgoing=false;},
  ready(groups,master){
   // Only after Firebase validates the user; no UID, tokens or financial data stored.
   const data={master:master===true,groups:groups.map(g=>({name:g.name,pages:[...new Set(g.pages.filter(p=>pages.has(p)))]})).filter(g=>Object.prototype.hasOwnProperty.call(categoryIcons,g.name))};
@@ -110,6 +112,7 @@ document.addEventListener('click',event=>{
  const link=event.target.closest?.('a[href]');if(!link||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;
  const url=new URL(link.href,location.href);
  if(url.origin!==location.origin||!pages.has(file(url))||!/^\/(?:[^/]+\.html)?$/.test(url.pathname)||url.pathname===location.pathname&&url.search===location.search)return;
+ if(window.DSExperience?.navigateLink?.(event,url))return;
  event.preventDefault();
  if(outgoing)return;
  write(pendingKey,{at:Date.now(),path:url.pathname});show(true,true);
