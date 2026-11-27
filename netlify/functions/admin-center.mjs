@@ -33,12 +33,11 @@ export default async function(request){
             return json(200,{ok:true});
         }
         if(body.action==='suppliers'){
-            const [observations,runs,alternatives]=await Promise.all([
+            const [observations,alternatives]=await Promise.all([
                 db.collection('dsSupplierObservations').orderBy('__name__').limit(301).get(),
-                db.collection('dsSupplierChecks').orderBy('__name__','desc').limit(7).get(),
                 db.collection('dsSupplierAlternatives').orderBy('__name__').limit(301).get()
             ]);
-            return json(200,{ok:true,observations:rows(observations).slice(0,300).map(d=>({id:d.id,name:d.name||'',price:d.price||0,configuredQty:d.configuredQty||0,configuredUnit:d.configuredUnit||'',url:d.url||'',checkedAt:date(d.checkedAt),lastAttempt:date(d.lastAttempt),error:d.lastError||'',history:(Array.isArray(d.history)?d.history:[]).slice(0,30).map(v=>({price:v.price,previous:v.previous,at:date(v.at)}))})),runs:rows(runs).map(d=>({day:d.day||d.id,done:d.done===true,checked:d.checked||0,changed:d.changed||0,errors:d.errors||0})),alternatives:rows(alternatives).slice(0,300).map(d=>({id:d.id,items:(Array.isArray(d.alternatives)?d.alternatives:[]).map(x=>({name:x.name,price:x.price,quantity:x.quantity,unit:x.unit,at:date(x.at)}))})),truncated:observations.size>300||alternatives.size>300});
+            return json(200,{ok:true,observations:rows(observations).slice(0,300).map(d=>({id:d.id,name:d.name||'',price:d.price||0,configuredQty:d.configuredQty||0,configuredUnit:d.configuredUnit||'',url:d.url||'',checkedAt:date(d.checkedAt),lastAttempt:date(d.lastAttempt),error:d.lastError||'',history:(Array.isArray(d.history)?d.history:[]).slice(0,30).map(v=>({price:v.price,previous:v.previous,at:date(v.at)}))})),runs:[],alternatives:rows(alternatives).slice(0,300).map(d=>({id:d.id,items:(Array.isArray(d.alternatives)?d.alternatives:[]).map(x=>({name:x.name,price:x.price,quantity:x.quantity,unit:x.unit,at:date(x.at)}))})),truncated:observations.size>300||alternatives.size>300});
         }
         const prefs=db.collection('dsNotificationPrefs').doc(hash(uid+'|'+origin));
         if(body.action==='inbox-update'){

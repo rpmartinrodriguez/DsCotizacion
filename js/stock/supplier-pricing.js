@@ -357,7 +357,7 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
             fecha: checkedAt
         };
 
-        const updatedHistory = [historyEntry, ...previousHistory].slice(0, 60);
+        const updatedHistory = oldProviderPrice<=0||Math.abs(newPrice-oldProviderPrice)>=0.01||(oldProviderUnitCost>0&&Math.abs(detectedUnitCost-oldProviderUnitCost)>1e-9)?[historyEntry,...previousHistory].slice(0,60):previousHistory;
 
         await updateDoc(ref, {
             proveedorPrecioAnterior: oldProviderPrice || null,
@@ -650,21 +650,29 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
     const openHistory = async () => {
         if (!activeProductId || !historyModal || !historyList) return;
 
+        const historyProductId=activeProductId;
         historyTitle.textContent = `Historial de precios · ${activeProductName || 'Materia prima'}`;
         historyList.innerHTML = '<p>Cargando historial…</p>';
         historyModal.classList.add('visible');
 
         try {
-            const snapshot = await getDoc(doc(db, 'materiasPrimas', activeProductId));
+            const snapshot = await getDoc(doc(db, 'materiasPrimas', historyProductId));
             if (!snapshot.exists()) throw new Error('La materia prima ya no existe.');
 
             const data = snapshot.data();
-            const rows = Array.isArray(data.historialPreciosProveedor)
-                ? data.historialPreciosProveedor
-                : [];
+            const rows = (Array.isArray(data.historialPreciosProveedor)?data.historialPreciosProveedor:[]).filter(Boolean).map(row=>({...row,automatic:false}));
+            let unavailable=false;
+            try{
+                const response=await fetch('/.netlify/functions/supplier-settings',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+await getIdToken(auth.currentUser)},body:JSON.stringify({action:'price-history',materialId:historyProductId})});
+                const result=await response.json();if(!response.ok||!result.ok)throw Error('Historial automático no disponible');
+                for(const h of result.history||[])rows.push({automatic:true,fecha:h.at,precioNuevo:h.price,precioAnterior:h.previous,variacionPct:(h.price-h.previous)/h.previous*100,presentacionCantidad:h.quantity,presentacionUnidad:h.unit});
+            }catch{unavailable=true;}
+            if(activeProductId!==historyProductId)return;
+            const millis=v=>typeof v?.toMillis==='function'?v.toMillis():Number(v)||0;
+            rows.sort((a,b)=>millis(b.fecha)-millis(a.fecha));
 
             if (!rows.length) {
-                historyList.innerHTML = '<p>No hay consultas de proveedor registradas todavía.</p>';
+                historyList.innerHTML = '<p>No hay cambios de precio registrados todavía.</p>'+(unavailable?'<p class="ds-supplier-error">No se pudo consultar el historial automático.</p>':'');
                 return;
             }
 
@@ -683,12 +691,12 @@ export function setupSupplierPricing(app, db, { getStock, getRecipesForMaterial,
                             <span>${significant ? '⚠ ' : ''}${formatPercent(row.variacionPct)}</span>
                         </div>
                         <div>
-                            <small>${formatDateTime(row.fecha)} · ${packageText}</small>
-                            <p>Costo vigente: ${formatCurrency(Number(row.costoUnitarioDetectado) || 0)} / ${escapeHtml(row.unidad || 'unidad')}</p>
+                            <small>${formatDateTime(row.fecha)} · ${packageText} · ${row.automatic?'Automático':'Manual'}</small>
+                            ${row.automatic?`<p>Precio anterior: ${formatCurrency(row.precioAnterior)} · Observación informativa</p>`:`<p>Costo vigente: ${formatCurrency(Number(row.costoUnitarioDetectado) || 0)} / ${escapeHtml(row.unidad || 'unidad')}</p>`}
                         </div>
                     </article>
                 `;
-            }).join('');
+            }).join('')+(unavailable?'<p class="ds-supplier-error">No se pudo consultar el historial automático.</p>':'');
         } catch (error) {
             console.error('Error cargando historial de precios:', error);
             historyList.innerHTML = `<p class="ds-supplier-error">${escapeHtml(error.message || 'No se pudo cargar el historial.')}</p>`;

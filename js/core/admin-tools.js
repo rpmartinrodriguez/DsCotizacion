@@ -84,8 +84,8 @@ export function mountAdminTools({session,p,header,navMenu}){
  const supplier=dialog('Centro de proveedores'),supStatus=make('p','ds-tools-muted'),supList=make('div','ds-tools-results'),supSearch=make('input','ds-tools-input');supSearch.type='search';supSearch.placeholder='Buscar insumo o proveedor…';
  let supplyData=null;
  const renderSupplier=()=>{
-    if(!supplyData)return;const {observations,runs,materials,recipes,alternatives=[]}=supplyData,q=norm(supSearch.value),obs=new Map(observations.map(x=>[x.id,x]));supList.replaceChildren();
-    const last=runs[0];supStatus.textContent=last?'Última ejecución: '+last.day+' · '+(last.done?'Finalizada':'En proceso')+' · '+last.checked+' revisados · '+last.changed+' cambios · '+last.errors+' errores':'Aún no hay ejecuciones automáticas registradas.';
+    if(!supplyData)return;const {observations,materials,recipes,alternatives=[]}=supplyData,q=norm(supSearch.value),obs=new Map(observations.map(x=>[x.id,x]));supList.replaceChildren();
+    supStatus.textContent='Precios observados e historial por insumo.';
     const list=materials.filter(m=>m.proveedorUrl||obs.has(m.id)).filter(m=>norm([m.nombre,m.proveedorUltimoHost,m.proveedorUrl].join(' ')).includes(q)).slice(0,100);
     for(const m of list){
        const o=obs.get(m.id),card=make('article','ds-tools-notice'),name=make('strong','',m.nombre||'Insumo'),stored=Number(m.proveedorPrecioActual)||0,latest=Number(o?.price)||0,affected=recipes.filter(r=>Array.isArray(r.ingredientes)&&r.ingredientes.some(i=>i?.idMateriaPrima===m.id));
@@ -96,7 +96,7 @@ export function mountAdminTools({session,p,header,navMenu}){
        card.append(make('small','', 'Última consulta: '+date(o?.checkedAt)+' · '+affected.length+' recetas vinculadas'));
        if(o?.error)card.append(make('p','ds-tools-error','Último intento: '+o.error));
        const history=make('details'),summary=make('summary','','Historial y recetas afectadas');history.append(summary);
-       const items=[...(o?.history||[]).map(x=>({at:x.at,price:x.price,source:'Automático'})),...(m.historialPreciosProveedor||[]).map(x=>({at:x.fecha?.toMillis?.()||0,price:x.precioNuevo,source:'Manual'}))].filter(x=>x.at&&Number(x.price)>0).sort((a,b)=>b.at-a.at).slice(0,20);
+       const items=[...(o?.history||[]).filter(x=>Number(x.previous)>0&&Math.abs(Number(x.price)-Number(x.previous))>=0.01).map(x=>({at:x.at,price:x.price,source:'Automático'})),...(m.historialPreciosProveedor||[]).map(x=>({at:x.fecha?.toMillis?.()||0,price:x.precioNuevo,source:'Manual'}))].filter(x=>x.at&&Number(x.price)>0).sort((a,b)=>b.at-a.at).slice(0,20);
        if(items.length)for(const h of items)history.append(make('p','',date(h.at)+' · '+money(h.price)+' · '+h.source));else history.append(make('p','ds-tools-muted','Sin historial disponible.'));
        if(affected.length)history.append(make('p','',affected.map(r=>r.nombreTorta||'Receta').join(', ')));
        const currentUnit=getEffectiveUnitCost(m);

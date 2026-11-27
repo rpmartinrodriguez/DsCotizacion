@@ -33,16 +33,26 @@ const run=async()=>{
     const settings=await scheduleRef(db).get(),schedule=normalizeSchedule(settings.data());
     if(!schedule.enabled)return {statusCode:200,body:'Consulta automática desactivada.'};
     const collection=db.collection('dsSupplierChecks');
-    let day=today,run=collection.doc(today),current=(await run.get()).data()||{};
+    // Dos documentos rotativos conservan sólo el estado operativo necesario para
+    // reanudar los lotes y evitar duplicados. Los registros anteriores no se borran.
+    const slot=day=>collection.doc('runtime-'+(Math.floor(Date.parse(day+'T00:00:00Z')/86400000)%2));
+    const readRun=async day=>{
+        const ref=slot(day),value=(await ref.get()).data()||{};
+        if(value.day===day)return {ref,value,rolling:true};
+        // Mantener compatibilidad con una ejecución iniciada antes de esta versión.
+        const legacy=collection.doc(day),old=(await legacy.get()).data();
+        return old?{ref:legacy,value:old,rolling:false}:{ref,value:{},rolling:true};
+    };
+    let day=today,active=await readRun(today),run=active.ref,current=active.value;
     // Continuar una revisión iniciada el día anterior si cruzó medianoche.
     if(!current.startedAt&&!current.done){
-        const yesterday=argentinaDay(new Date(now.getTime()-86400000)).key,priorRef=collection.doc(yesterday),prior=(await priorRef.get()).data()||{};
-        if(prior.summaryVersion===1&&prior.startedAt&&!prior.done){day=yesterday;run=priorRef;current=prior;}
+        const yesterday=argentinaDay(new Date(now.getTime()-86400000)).key,previous=await readRun(yesterday),priorRef=previous.ref,prior=previous.value;
+        if(prior.summaryVersion===1&&prior.startedAt&&!prior.done){day=yesterday;active=previous;run=priorRef;current=prior;}
         else if(prior.summaryVersion===1&&prior.done&&!prior.summarySentAt&&!shouldCheck(schedule,now)){await publishSummary(svc,priorRef,yesterday,prior);return {statusCode:200,body:'Reintento resumen anterior.'};}
     }
     if(!current.startedAt&&!current.done&&!shouldCheck(schedule,now))return {statusCode:200,body:'Día no seleccionado o antes del horario.'};
     if(current.done){if(current.summaryVersion===1&&!current.summarySentAt)await publishSummary(svc,run,day,current);return {statusCode:200,body:'Ya revisado.'};}
-    const claim=await db.runTransaction(async tx=>{const s=await tx.get(run),d=s.data()||{};if(d.done||d.leaseUntil?.toMillis()>Date.now())return null;tx.set(run,{day,summaryVersion:1,scheduledTime:d.scheduledTime||schedule.time,startedAt:d.startedAt||Timestamp.now(),leaseUntil:Timestamp.fromMillis(Date.now()+120000)},{merge:true});return d;});
+    const claim=await db.runTransaction(async tx=>{const s=await tx.get(run),raw=s.data()||{},reuse=!active.rolling||raw.day===day,d=reuse?raw:{};if(d.done||d.leaseUntil?.toMillis()>Date.now())return null;tx.set(run,{day,summaryVersion:1,scheduledTime:d.scheduledTime||schedule.time,startedAt:d.startedAt||Timestamp.now(),leaseUntil:Timestamp.fromMillis(Date.now()+120000)},{merge:reuse});return d;});
     if(!claim)return {statusCode:200,body:'Ya revisado o en proceso.'};
     const query=db.collection('materiasPrimas').orderBy(FieldPath.documentId());
     // Avanzar hasta 25 documentos por ejecución, pero consultar como máximo 3 sitios externos a la vez.
@@ -71,9 +81,10 @@ const run=async()=>{
             }
             const checkedAt=Timestamp.now();
             const history=old.key===key&&Array.isArray(old.history)?old.history:[];
-            const entry={price:next,previous:before||null,at:checkedAt};
-            const recorded=history.length&&Number(history[0].price)===next?history:[entry,...history].slice(0,30);
             const kind=before<=0?'initial':Math.abs(before-next)>=0.01?'changed':'same';
+            const entry={price:next,previous:before||null,at:checkedAt,quantity:configuredQty,unit:configuredUnit,url};
+            // Sólo registrar variaciones; el valor inicial se guarda como referencia, sin crear una entrada histórica.
+            const recorded=kind==='changed'?[entry,...history].slice(0,30):history;
             await state.set({key,price:next,checkedAt,source:observed.source||'',host:observed.host||'',name:d.nombre||'',day,runKind:kind,history:recorded,configuredQty,configuredUnit,url});
             return {kind};
         }catch(e){console.warn('supplier daily',doc.id,e.message);await db.collection('dsSupplierObservations').doc(doc.id).set({lastError:String(e.message).slice(0,250),lastAttempt:Timestamp.now()},{merge:true});return {kind:'error'};}
