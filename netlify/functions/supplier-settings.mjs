@@ -19,7 +19,10 @@ export default async function(request){
         const ref=scheduleRef(svc.db);
         if(body.action==='get'){
             const snap=await ref.get();
-            return json(200,{ok:true,schedule:normalizeSchedule(snap.data())});
+            const runs=await svc.db.collection('dsSupplierChecks').orderBy('__name__','desc').limit(1).get();
+            const last=runs.docs[0]?.data();
+            const lastRun=last?{day:last.day||runs.docs[0].id,done:last.done===true,checked:last.checked||0,changed:last.changed||0,errors:last.errors||0,initial:last.initial||0,startedAt:last.startedAt?.toMillis?.()||0,finishedAt:last.finishedAt?.toMillis?.()||0,summarySent:!!last.summarySentAt,summaryDelivered:last.summaryDelivered??null,summaryDevices:last.summaryDevices??null,summaryError:last.summaryError||''}:null;
+            return json(200,{ok:true,schedule:normalizeSchedule(snap.data()),lastRun});
         }
         const value=validateSchedule(body.schedule);
         await ref.set({...value,updatedAt:Timestamp.now(),updatedBy:uid});
