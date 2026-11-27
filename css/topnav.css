@@ -92,7 +92,7 @@ body.ds-app.ds-topnav-layout .ds-navigation-loader[hidden]{display:none!importan
 .ds-navigation-loader.is-slow .ds-navigation-cake{animation:none}
 @media(prefers-reduced-motion:reduce){.ds-navigation-cake{animation:none}}
 @media print{.ds-navigation-loader{display:none!important}}
-@view-transition{navigation:auto}
+@view-transition{navigation:none}
 ::view-transition-group(ds-fixed-header){animation-duration:0s}
 ::view-transition-old(ds-fixed-header){animation:none;opacity:0}
 ::view-transition-new(ds-fixed-header){animation:none;opacity:1}
@@ -106,3 +106,7 @@ body.ds-app.ds-topnav-layout .ds-navigation-loader{z-index:1095;visibility:visib
 body.ds-app.ds-topnav-layout .ds-navigation-loader-card{pointer-events:none!important}
 .ds-navigation-cake{display:block;will-change:transform;transform-box:fill-box;transform-origin:center}
 @media(prefers-reduced-motion:reduce){.ds-navigation-cake{will-change:auto}}
+
+body.ds-app.ds-topnav-layout .ds-navigation-loader{z-index:2147483000!important;inset:var(--ds-topnav-height,72px) 0 0!important}
+body.ds-app.ds-topnav-layout .ds-navigation-loader-card{min-width:118px;box-shadow:0 8px 30px #78324f25}
+@media print{body.ds-app.ds-topnav-layout .ds-navigation-loader{display:none!important}}

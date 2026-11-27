@@ -64,7 +64,7 @@ const hide=(immediate=false)=>{
  dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);clearTimeout(finishTimer);
  const finish=()=>{if(loader){loader.hidden=true;loader.classList.remove('is-slow');loader.querySelector('span').textContent='Cargando…';}visibleAt=0;};
  // Keep feedback visible briefly without delaying access to the actual loaded page.
- if(!immediate&&loader&&!loader.hidden&&visibleAt){finishTimer=setTimeout(finish,Math.max(0,240-(performance.now()-visibleAt)));}else finish();
+ if(!immediate&&loader&&!loader.hidden&&visibleAt){finishTimer=setTimeout(finish,Math.max(0,500-(performance.now()-visibleAt)));}else finish();
 };
 const show=(isOutgoing=false,immediate=false)=>{
  hide(true);outgoing=isOutgoing;
@@ -84,6 +84,8 @@ const observer=new MutationObserver(syncGhosts);observer.observe(header,{childLi
 const pending=read(pendingKey);remove(pendingKey);
 const transferred=Boolean(pending&&pending.path===location.pathname&&Date.now()-pending.at>=0&&Date.now()-pending.at<30000);
 show(false,transferred);
+// If the browser restored the document or redirected, display feedback on initial startup too.
+if(!transferred)show(false,true);
 window.DSNavigation={
  beforeMenu(){clearPreview();},
  ready(groups,master){
@@ -108,7 +110,14 @@ document.addEventListener('click',event=>{
  const link=event.target.closest?.('a[href]');if(!link||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;
  const url=new URL(link.href,location.href);
  if(url.origin!==location.origin||!pages.has(file(url))||!/^\/(?:[^/]+\.html)?$/.test(url.pathname)||url.pathname===location.pathname&&url.search===location.search)return;
+ event.preventDefault();
+ if(outgoing)return;
  write(pendingKey,{at:Date.now(),path:url.pathname});show(true,true);
+ // Allow at least one painted frame before native document navigation.
+ // A bounded fallback avoids getting stuck if requestAnimationFrame is throttled.
+ let moved=false;const go=()=>{if(moved)return;moved=true;location.assign(url.href);};
+ requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(go,90)));
+ setTimeout(go,220);
 });
 window.addEventListener('pageshow',event=>{if(event.persisted){hide(true);outgoing=false;remove(pendingKey);}else if(ready&&!outgoing&&!dataObserver)hide();});
 window.addEventListener('pagehide',()=>{dataObserver?.disconnect();dataObserver=null;clearTimeout(delay);clearTimeout(limit);clearTimeout(finishTimer);});

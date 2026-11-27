@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.58';
+const CACHE_NAME = 'dulce-sall-admin-v2.59';
 
 const CORE_ASSETS = [
     '/',
@@ -8,9 +8,9 @@ const CORE_ASSETS = [
     '/css/style.css',
     '/css/app-v2.css',
     '/js/menu.js',
-    '/js/navigation-feedback.js?v=2',
-    '/js/stock/supplier-schedule-r258.js',
-    '/css/topnav.css?v=7',
+    '/js/navigation-feedback.js?v=3',
+    '/js/stock/supplier-schedule-r259.js',
+    '/css/topnav.css?v=8',
     '/js/home.js',
     '/js/productos.js',
     '/js/shell-v2.js',
@@ -81,10 +81,10 @@ self.addEventListener('fetch', (event) => {
     }
 
     // Versioned decorative bootstrap only; financial modules remain network-first.
-    if(pathname==='/js/stock/supplier-schedule-r258.js'){
+    if(pathname==='/js/stock/supplier-schedule-r259.js'){
         event.respondWith(fetch(request,{cache:'no-cache'}).catch(()=>caches.match(request)));return;
     }
-    if(pathname==='/js/navigation-feedback.js'&&new URL(request.url).search==='?v=2'){
+    if(pathname==='/js/navigation-feedback.js'&&new URL(request.url).search==='?v=3'){
         event.respondWith(caches.match(request).then(cached=>cached||fetch(request)));return;
     }
     if (request.mode === 'navigate') {
