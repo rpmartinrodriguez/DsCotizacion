@@ -23,3 +23,5 @@
 .ds-supplier-schedule-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:8px}
 .ds-supplier-schedule-actions button{margin:0;width:100%;min-height:44px;white-space:normal}
 #btn-supplier-schedule[hidden]{display:none!important}
+
+.ds-supplier-time{display:grid;gap:6px;color:#78324f;font-size:.84rem;font-weight:700}.ds-supplier-time input{min-height:42px;border:1px solid #e5d2dd;border-radius:9px;padding:7px 10px;color:#33252e;background:#fcf6f9;font:inherit;box-sizing:border-box;width:100%}.ds-supplier-last{padding:12px;background:#fcf6f9;border:1px solid #e5d2dd;border-radius:10px;display:grid;gap:5px;color:#78324f;font-size:.84rem}.ds-supplier-last:empty{display:none}.ds-supplier-schedule-form input[type=checkbox]{accent-color:#a53569}.ds-supplier-schedule-days label:has(input:checked){background:#f8e8ef;border-color:#d7a7be}.ds-supplier-schedule-info strong{color:#78324f}

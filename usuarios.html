@@ -38,8 +38,8 @@
         .permiso-item input[type="checkbox"] { width: 1.2rem; height: 1.2rem; accent-color: #ec4899; cursor: pointer;}
         .permiso-item label { font-size: 0.95rem; cursor: pointer; color: #334155; font-weight: 500;}
     </style>
-    <link rel="stylesheet" href="css/supplier-schedule.css?v=1">
-    <link rel="stylesheet" href="css/topnav.css?v=6">
+    <link rel="stylesheet" href="css/supplier-schedule.css?v=2">
+    <link rel="stylesheet" href="css/topnav.css?v=8">
     <link rel="stylesheet" href="css/workspace-pink.css?v=1"><link rel="stylesheet" href="css/experience-orders.css?v=1">
 </head>
 <body class="ds-app ds-topnav-layout ds-content ds-users ds-workspace">
@@ -55,14 +55,14 @@
             <nav class="nav-menu ds-topnav" id="nav-menu" aria-label="Navegación por categorías"></nav>
             <div class="header__spacer"></div>
         </header>
-        <script src="js/navigation-feedback.js?v=1"></script>
+        <script src="js/navigation-feedback.js?v=3"></script>
 
         <!-- MENÚ DE NAVEGACIÓN DINÁMICO (Inyectado por menu.js) -->
         
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-content-main"><div class="ds-content-wrap">
-            <section class="ds-content-head">
+            <section class="ds-content-head" data-release="2.59">
                 <div>
                     <p class="ds-eyebrow">Configuración</p>
                     <h1 class="page-title">Usuarios y permisos</h1>
@@ -70,7 +70,7 @@
                 </div>
                 <div class="ds-content-actions">
                     <button type="button" id="btn-push-settings" class="ds-action-secondary" hidden>Notificaciones push de este dispositivo</button>
-                    <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática de proveedores</button>
+                    <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática · Horario</button>
                     <button id="btn-nuevo-usuario" class="ds-action-primary">+ Nuevo empleado</button>
                 </div>
             </section>
@@ -209,7 +209,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupSupplierSchedule } from './js/stock/supplier-schedule.js?v=1';
+        import { setupSupplierSchedule } from './js/stock/supplier-schedule-r259.js';
         import { setupUsuarios } from './js/usuarios.js?v=6';
         
         try {

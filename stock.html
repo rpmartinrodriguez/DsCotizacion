@@ -29,8 +29,8 @@
         .ds-stock-recipe-usage ul { margin:6px 0 0; padding:7px 10px 7px 24px; border-radius:8px; background:#fff7fa; color:#51444d; border:1px solid #efdce6; }
         .ds-stock-recipe-usage li + li { margin-top:3px; }
     </style>
-    <link rel="stylesheet" href="css/supplier-schedule.css?v=1">
-    <link rel="stylesheet" href="css/topnav.css?v=6">
+    <link rel="stylesheet" href="css/supplier-schedule.css?v=2">
+    <link rel="stylesheet" href="css/topnav.css?v=8">
     <link rel="stylesheet" href="css/workspace-pink.css?v=1">
 </head>
 <body class="ds-app ds-topnav-layout ds-workspace ds-content ds-stock">
@@ -45,14 +45,14 @@
             <nav class="nav-menu ds-topnav" id="nav-menu" aria-label="Navegación por categorías"></nav>
             <div class="header__spacer"></div>
         </header>
-        <script src="js/navigation-feedback.js?v=1"></script>
+        <script src="js/navigation-feedback.js?v=3"></script>
 
         
         <div class="nav-menu__overlay" id="nav-overlay"></div>
 
         <main class="ds-content-main">
             <div class="ds-content-wrap">
-                <section class="ds-content-head">
+                <section class="ds-content-head" data-release="2.59">
                     <div>
                         <p class="ds-eyebrow">Operación</p>
                         <h1>Stock e inventario</h1>
@@ -60,7 +60,7 @@
                     </div>
                     <div class="ds-content-actions">
                         <button type="button" id="btn-actualizar-precios-proveedor" class="ds-action-secondary">↻ Actualizar proveedores</button>
-                        <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática</button>
+                        <button type="button" id="btn-supplier-schedule" class="ds-action-secondary" hidden>⚙ Consulta automática · Horario</button>
                         <a href="compras.html" class="ds-action-primary">+ Registrar compra</a>
                     </div>
                 </section>
@@ -264,7 +264,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupSupplierSchedule } from './js/stock/supplier-schedule.js?v=1';
+        import { setupSupplierSchedule } from './js/stock/supplier-schedule-r259.js';
         import { setupStock } from './js/stock.js?v=6';
 
         try {
