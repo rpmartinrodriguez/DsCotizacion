@@ -310,7 +310,7 @@ async function inicializarMenu() {
     }
     import('./core/admin-tools.js?v=4').then(m=>m.mountAdminTools({session,p,header,navMenu})).catch(console.warn);
     if(document.body.classList.contains('ds-experience-pilot')){
-        import('./core/experience-router.js?v=3').then(m=>m.mountExperience({session,p,closeMenu,groups})).catch(error=>{console.error('Experience',error);window.DSNavigation?.fail();const main=document.querySelector('main');if(main){main.replaceChildren();const message=document.createElement('p');message.textContent='No se pudo iniciar esta pantalla. ';const retry=document.createElement('button');retry.type='button';retry.className='btn-primary';retry.textContent='Reintentar';retry.onclick=()=>location.reload();main.append(message,retry);}});
+        import('./core/experience-router.js?v=4').then(m=>m.mountExperience({session,p,closeMenu,groups})).catch(error=>{console.error('Experience',error);window.DSNavigation?.fail();const main=document.querySelector('main');if(main){main.replaceChildren();const message=document.createElement('p');message.textContent='No se pudo iniciar esta pantalla. ';const retry=document.createElement('button');retry.type='button';retry.className='btn-primary';retry.textContent='Reintentar';retry.onclick=()=>location.reload();main.append(message,retry);}});
     }
 
     // Anticipar el HTML de la sección que el usuario está por abrir.
@@ -337,6 +337,7 @@ async function inicializarMenu() {
     const btnCerrarSesion = document.getElementById('btn-cerrar-sesion-menu');
     if (btnCerrarSesion) {
         btnCerrarSesion.addEventListener('click', async () => {
+            if(window.DSBeforeLeave?.()===false||window.DSExperience?.canLeave?.()===false)return;
             btnCerrarSesion.disabled = true;
             btnCerrarSesion.innerHTML = `<span class="nav-menu__logout-icon">${MENU_ICON.logout}</span><span class="nav-menu__logout-label">Cerrando…</span>`;
 

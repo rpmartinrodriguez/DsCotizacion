@@ -145,6 +145,7 @@ export function setupPOS(app) {
     let cuentaCorrienteClienteId = null;
     let pendingCheckout = null;
     let checkoutInProgress=false, dataUnsubs=[], parkingKey='', parked=[], parkedStorageError=false;
+    window.DSBeforeLeave=()=>{if(checkoutInProgress||pendingCheckout){alert('Primero verificá el cobro pendiente.');return false;}if(carritoActual.length){alert('Finalizá la venta o ponela en espera antes de cambiar de sección.');return false;}return true;};
     // No perder el carrito activo ni salir durante un intento de cobro no verificado.
     window.addEventListener('beforeunload',event=>{if(checkoutInProgress||pendingCheckout||carritoActual.length){event.preventDefault();event.returnValue='';}});
     let posPreferenceLoaded=false;

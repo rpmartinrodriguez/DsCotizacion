@@ -132,7 +132,7 @@ export function mountExperience({session,p,closeMenu,groups}){
     }catch(error){console.warn('Experience route',error);if(pop||!scope){dirty=false;location.assign(url.href);return;}notify('No se pudo abrir la sección. Revisá la conexión y reintentá.');}
     finally{prepared?.cancel();oldMain.inert=false;busy=false;window.DSNavigation?.end();}
  };
- window.DSExperience={navigateLink(event,url){const file=pilotRoute(url.pathname);if(busy){event.preventDefault();notify('Cargando sección…');return true;}if(!file||url.hash||!canRoute(session.perfil,file)){if(blocked()){event.preventDefault();return true;}dirty=false;return false;}event.preventDefault();void go(url);return true;}};
+ window.DSExperience={canLeave(){if(blocked())return false;dirty=false;return true;},navigateLink(event,url){const file=pilotRoute(url.pathname);if(busy){event.preventDefault();notify('Cargando sección…');return true;}if(!file||url.hash||!canRoute(session.perfil,file)){if(blocked()){event.preventDefault();return true;}dirty=false;return false;}event.preventDefault();void go(url);return true;}};
  window.addEventListener('popstate',()=>void go(new URL(location.href),true));
  window.addEventListener('beforeunload',event=>{if(scope?.busy||dirty){event.preventDefault();event.returnValue='';}});
  onAuthStateChanged(auth,user=>{if(user?.uid!==uid){seq++;leave();location.replace('/login.html');}});

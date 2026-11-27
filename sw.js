@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.63';
+const CACHE_NAME = 'dulce-sall-admin-v2.64';
 
 const CORE_ASSETS = [
     '/',
@@ -7,10 +7,10 @@ const CORE_ASSETS = [
     '/productos.html',
     '/css/style.css',
     '/css/app-v2.css',
-    '/js/menu.js?v=29',
-    '/js/core/experience-router.js?v=3',
+    '/js/menu.js?v=30',
+    '/js/core/experience-router.js?v=4',
     '/js/core/module-scope.js',
-    '/js/navigation-feedback.js?v=5',
+    '/js/navigation-feedback.js?v=6',
     '/js/stock/supplier-schedule-r260.js',
     '/css/topnav.css?v=8',
     '/js/home.js',
@@ -86,7 +86,7 @@ self.addEventListener('fetch', (event) => {
     if(pathname==='/js/stock/supplier-schedule-r260.js'){
         event.respondWith(fetch(request,{cache:'no-cache'}).catch(()=>caches.match(request)));return;
     }
-    if(pathname==='/js/navigation-feedback.js'&&new URL(request.url).search==='?v=5'){
+    if(pathname==='/js/navigation-feedback.js'&&new URL(request.url).search==='?v=6'){
         event.respondWith(caches.match(request).then(cached=>cached||fetch(request)));return;
     }
     if (request.mode === 'navigate') {

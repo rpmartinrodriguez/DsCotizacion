@@ -112,6 +112,7 @@ document.addEventListener('click',event=>{
  const link=event.target.closest?.('a[href]');if(!link||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;
  const url=new URL(link.href,location.href);
  if(url.origin!==location.origin||!pages.has(file(url))||!/^\/(?:[^/]+\.html)?$/.test(url.pathname)||url.pathname===location.pathname&&url.search===location.search)return;
+ if(window.DSBeforeLeave?.()===false){event.preventDefault();return;}
  if(window.DSExperience?.navigateLink?.(event,url))return;
  event.preventDefault();
  if(outgoing)return;
