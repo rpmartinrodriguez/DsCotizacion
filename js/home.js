@@ -5,7 +5,10 @@ import { calculateProductSalePrice, getEffectiveUnitCost } from "./core/pricing.
 import { formatCurrency } from "./core/format.js";
 import {orderDate,orderStage} from "./core/orders.js";
 
-export function setupInicio(app) {
+export function setupInicio(app, session={}) {
+    const abort=new AbortController(),subscriptions=[];
+    const watch=(...args)=>{const stop=onSnapshot(...args);subscriptions.push(stop);return stop;};
+    const can=permission=>session.rol==='master'||session.permisos?.[permission]===true;
     const fecha = document.getElementById('ds-home-date');
     const estado = document.getElementById('ds-home-caja-indicator');
     const mensaje = document.getElementById('ds-home-caja-message');
@@ -13,7 +16,7 @@ export function setupInicio(app) {
 
     if (fecha) {
         fecha.textContent = new Intl.DateTimeFormat('es-AR', {
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+            timeZone:'America/Argentina/Buenos_Aires',weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
         }).format(new Date());
     }
 
@@ -52,7 +55,7 @@ export function setupInicio(app) {
         let webMissing = 0;
         let incompleteCosts = 0;
 
-        reviewRecipes.forEach(recipe => {
+        reviewRecipes.filter(Boolean).forEach(recipe => {
             const sale = calculateProductSalePrice(recipe, reviewMaterials, reviewGlobalMargin);
             const hasManual = sale.manualPrice !== null;
             if (!hasManual) suggestedOnly += 1;
@@ -64,7 +67,7 @@ export function setupInicio(app) {
             }
 
             const ingredients = Array.isArray(recipe.ingredientes) ? recipe.ingredientes : [];
-            if (ingredients.some(item => getEffectiveUnitCost(reviewMaterials.get(item.idMateriaPrima)) <= 0)) {
+            if (ingredients.some(item => !item||getEffectiveUnitCost(reviewMaterials.get(item.idMateriaPrima)) <= 0)) {
                 incompleteCosts += 1;
             }
         });
@@ -93,31 +96,33 @@ export function setupInicio(app) {
         if (!info || !reviewHelp) return;
         reviewHelp.textContent = info.dataset.homeHelp || '';
         reviewHelp.hidden = false;
-    });
+    },{signal:abort.signal});
 
     const db = getFirestore(app);
     const kpi=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value;};
     const updateConnection=()=>{const el=document.getElementById('ds-connection-status');if(el){el.textContent=navigator.onLine?'Con conexión':'Sin conexión';el.dataset.online=String(navigator.onLine);}};
-    updateConnection();window.addEventListener('online',updateConnection);window.addEventListener('offline',updateConnection);
+    updateConnection();window.addEventListener('online',updateConnection,{signal:abort.signal});window.addEventListener('offline',updateConnection,{signal:abort.signal});
     const today=orderDate(new Date()),start=new Date(today+'T00:00:00-03:00'),end=new Date(start.getTime()+86400000);
     let salesToday=null,hiddenBoxes=null;
     const renderToday=()=>{if(!salesToday||!hiddenBoxes)return;const rows=salesToday.filter(d=>d.eliminada!==true&&!hiddenBoxes.has(d.cajaId));kpi('ds-today-sales',formatCurrency(rows.reduce((sum,d)=>sum+(Number(d.total)||0),0)));kpi('ds-today-tickets',rows.length.toLocaleString('es-AR'));};
-    onSnapshot(query(collection(db,'cajas'),where('eliminada','==',true)),snap=>{hiddenBoxes=new Set(snap.docs.map(d=>d.id));renderToday();},()=>{kpi('ds-today-sales','No disponible');});
-    onSnapshot(query(collection(db,'ventasMostrador'),where('fecha','>=',Timestamp.fromDate(start)),where('fecha','<',Timestamp.fromDate(end))),snap=>{salesToday=snap.docs.map(d=>d.data());renderToday();},()=>{kpi('ds-today-sales','No disponible');kpi('ds-today-tickets','—');});
-    onSnapshot(query(collection(db,'presupuestosGuardados'),where('esVenta','==',true)),snap=>{
+    if(can('mostrador')||can('cajas')||can('precios')||can('finanzas')){
+    watch(query(collection(db,'cajas'),where('eliminada','==',true)),snap=>{hiddenBoxes=new Set(snap.docs.map(d=>d.id));renderToday();},()=>{kpi('ds-today-sales','No disponible');});
+    watch(query(collection(db,'ventasMostrador'),where('fecha','>=',Timestamp.fromDate(start)),where('fecha','<',Timestamp.fromDate(end))),snap=>{salesToday=snap.docs.map(d=>d.data());renderToday();},()=>{kpi('ds-today-sales','No disponible');kpi('ds-today-tickets','—');});
+    }else{kpi('ds-today-sales','Sin permiso');kpi('ds-today-tickets','—');}
+    watch(query(collection(db,'presupuestosGuardados'),where('esVenta','==',true)),snap=>{
         const active=snap.docs.map(d=>d.data()).filter(p=>orderStage(p)!=='entregado');
         kpi('ds-today-orders',active.length.toLocaleString('es-AR'));kpi('ds-today-deliveries',active.filter(p=>orderDate(p.fechaEntrega)===today).length.toLocaleString('es-AR'));
     },()=>{kpi('ds-today-orders','—');kpi('ds-today-deliveries','—');});
     // Mantener las consultas de caja y revisiones existentes.
     // La consulta es informativa y no permite operar sobre fondos.
-    onSnapshot(doc(db, 'config', 'mostrador'), snapshot => {
+    if(can('mostrador')||can('configuracion')||can('precios'))watch(doc(db, 'config', 'mostrador'), snapshot => {
         reviewGlobalMargin = snapshot.exists() ? Number(snapshot.data().margenGlobal) || 0 : 0;
         renderReviewCenter();
     }, error => {
         console.warn('No se pudo leer el margen global para revisiones:', error);
     });
 
-    onSnapshot(collection(db, 'materiasPrimas'), snapshot => {
+    watch(collection(db, 'materiasPrimas'), snapshot => {
         reviewMaterials = new Map(snapshot.docs.map(material => [material.id, { id: material.id, ...material.data() }]));
         reviewLoadedMaterials = true;
         renderReviewCenter();
@@ -126,7 +131,7 @@ export function setupInicio(app) {
         if (reviewStatus) reviewStatus.textContent = 'No se pudo completar el análisis de insumos.';
     });
 
-    onSnapshot(collection(db, 'recetas'), snapshot => {
+    watch(collection(db, 'recetas'), snapshot => {
         reviewRecipes = snapshot.docs.map(recipe => ({ id: recipe.id, ...recipe.data() }));
         reviewLoadedRecipes = true;
         renderReviewCenter();
@@ -135,7 +140,7 @@ export function setupInicio(app) {
         if (reviewStatus) reviewStatus.textContent = 'No se pudo completar el análisis de productos.';
     });
 
-    onSnapshot(query(collection(db, 'cajas'), where('estado', '==', 'abierta')),
+    watch(query(collection(db, 'cajas'), where('estado', '==', 'abierta')),
         snapshot => {
             if (snapshot.empty) {
                 marcar('Cerrada', 'No hay una caja abierta.',
@@ -159,4 +164,5 @@ export function setupInicio(app) {
                 'Revisá la conexión y los permisos. Podés continuar desde Mostrador.');
         }
     );
+    return ()=>{abort.abort();for(const stop of subscriptions.splice(0))try{stop();}catch{}};
 }

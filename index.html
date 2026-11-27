@@ -18,40 +18,11 @@
     <meta name="apple-mobile-web-app-title" content="Dulce Sall">
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 
-    <style>
-        .ds-home-hub { max-width: 1180px; margin-inline: auto; }
-        .ds-home-hub .ds-page-head { align-items: center; }
-        .ds-home-date { color: #827780; font-size: .87rem; margin: 8px 0 0; }
-        .ds-home-primary { text-decoration: none; white-space: nowrap; }
-        .ds-home-layout { display:grid; grid-template-columns: 1.15fr 1fr; gap:16px; margin: 20px 0 26px; }
-        .ds-home-feature { padding:24px; border-radius:18px; border:1px solid #eadde4; background:linear-gradient(135deg,#fff8fb,#fff); }
-        .ds-home-feature--secondary { background:#fff; }
-        .ds-home-feature h2,.ds-home-section h2,.ds-home-bottom h2 { margin: 3px 0 12px; font-size:1.12rem; color:#3d3239; }
-        .ds-home-feature-head {display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-        .ds-home-pill {border:1px solid #ecd3df;color:#935377;border-radius:100px;padding:5px 10px;font-size:.78rem;white-space:nowrap;}
-        .ds-home-pill.is-open {background:#eef9f0;color:#287347;border-color:#c6e8cc;}
-        .ds-home-pill.is-closed {background:#f6f1f4;color:#675861;}
-        .ds-home-feature-message {font-size:1.02rem;font-weight:700;margin:12px 0 5px;color:#53414a;}
-        .ds-home-feature-detail {font-size:.9rem;color:#766d75;line-height:1.6;}
-        .ds-home-feature-actions {display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;}
-        .ds-home-mini-link {color:#ab4678;font-size:.88rem;font-weight:700;text-decoration:none}
-        .ds-home-section-head {margin-bottom:14px;}
-        .ds-home-actions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
-        .ds-home-action {position:relative;display:flex;flex-direction:column;gap:7px;padding:20px 18px;border:1px solid #eae1e6;border-radius:15px;background:#fff;color:inherit;text-decoration:none;min-height:146px;}
-        .ds-home-action:hover {border-color:#dca5bf;box-shadow:0 7px 24px rgba(126,55,93,.07)}
-        .ds-home-action-emoji {font-size:1.5rem;}
-        .ds-home-action strong {font-size:.96rem;color:#483b44}
-        .ds-home-action small {font-size:.83rem;color:#887d84;line-height:1.45}
-        .ds-home-arrow {position:absolute;right:18px;top:17px;color:#a6537a}
-        .ds-home-bottom {display:flex;justify-content:space-between;gap:18px;align-items:center;margin:24px 0;padding:20px 4px;border-top:1px solid #eae2e6}
-        .ds-home-bottom p {margin:0;color:#897d86;font-size:.85rem}
-        @media(max-width:760px){.ds-home-layout{grid-template-columns:1fr}.ds-home-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.ds-home-bottom{display:block}.ds-home-hub .ds-page-head{align-items:flex-start}.ds-home-primary{display:inline-flex;margin-top:10px}}
-        @media(max-width:420px){.ds-home-actions{grid-template-columns:1fr 1fr;gap:9px}.ds-home-action{min-height:140px;padding:15px 12px}.ds-home-action strong{font-size:.88rem}.ds-home-action small{font-size:.75rem}.ds-home-arrow{right:12px;top:12px}}
-    </style>
+    <link rel="stylesheet" href="css/experience-pilot.css?v=1">
     <link rel="stylesheet" href="css/topnav.css?v=8">
     <link rel="stylesheet" href="css/experience-orders.css?v=1">
 </head>
-<body class="ds-app ds-topnav-layout">
+<body class="ds-app ds-topnav-layout ds-experience-pilot">
     <div class="main-container">
         <header class="header">
             <button class="header__menu-icon" id="menu-toggle-btn" aria-label="Abrir menú">
@@ -78,7 +49,7 @@
                 </a>
             </div>
         </header>
-        <script src="js/navigation-feedback.js?v=3"></script>
+        <script src="js/navigation-feedback.js?v=4"></script>
 
         
         <div class="nav-menu__overlay" id="nav-overlay"></div>
@@ -211,60 +182,11 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
         import { firebaseConfig } from './js/firebase-config.js';
-        import { setupInicio } from './js/home.js?v=6';
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        onAuthStateChanged(auth, async (user) => {
-            if (!user || user.isAnonymous) {
-                window.location.replace('login.html');
-                return;
-            }
-
-            try {
-                const perfilSnap = await getDoc(doc(db, 'usuarios', user.uid));
-
-                if (!perfilSnap.exists() || perfilSnap.data().estado !== 'activo') {
-                    await signOut(auth);
-                    window.location.replace('login.html');
-                    return;
-                }
-
-                const perfil = perfilSnap.data();
-                const permisos = perfil.permisos || {};
-                const rol = perfil.rol || 'empleado';
-
-                if (rol !== 'master' && permisos.indicadores !== true) {
-                    if (permisos.mostrador) window.location.replace('pos.html');
-                    else if (permisos.stock) window.location.replace('stock.html');
-                    else window.location.replace('login.html');
-                    return;
-                }
-
-                localStorage.setItem('userPermisos', JSON.stringify(permisos));
-                localStorage.setItem('userName', perfil.nombre || user.email);
-                localStorage.setItem('userRol', rol);
-
-                const userNameEl = document.getElementById('ds-user-name');
-                if (userNameEl) {
-                    userNameEl.textContent = (perfil.nombre || user.email || 'equipo').trim().split(/\s+/)[0];
-                }
-
-                setupInicio(app);
-            } catch (error) {
-                console.error("No se pudo validar la sesión:", error);
-                await signOut(auth);
-                window.location.replace('login.html');
-            }
-        });
+        initializeApp(firebaseConfig);
     </script>
 
-    <script src="js/menu.js?v=27" defer></script>
+    <script src="js/menu.js?v=28" defer></script>
     <script src="js/shell-v2.js?v=3" defer></script>
     <script>
         if ('serviceWorker' in navigator) {

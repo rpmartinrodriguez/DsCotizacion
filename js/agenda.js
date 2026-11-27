@@ -1,8 +1,14 @@
 import { 
-    getFirestore, collection, onSnapshot, query, where
+    getFirestore, collection, onSnapshot, query, where, Timestamp
 } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
 
-export function setupAgenda(app) {
+import {orderDate} from './core/orders.js';
+export function setupAgenda(app,session={}) {
+    const abort=new AbortController();let stop=null,revision=0;
+    const status=document.getElementById('ds-agenda-status');
+    const uid=session.auth?.currentUser?.uid||'';
+    const key='ds-agenda-month:'+uid;
+    const on=(el,event,callback)=>el.addEventListener(event,callback,{signal:abort.signal});
     const db = getFirestore(app);
     const presupuestosCollection = collection(db, 'presupuestosGuardados');
 
@@ -17,7 +23,9 @@ export function setupAgenda(app) {
     const modalLista = document.getElementById('agenda-modal-lista');
     const modalBtnCerrar = document.getElementById('agenda-modal-btn-cerrar');
 
-    let currentDate = new Date();
+    const localToday=orderDate(new Date()).split('-').map(Number);
+    let currentDate = new Date(localToday[0],localToday[1]-1,1);
+    try{const saved=localStorage.getItem(key);if(/^\d{4}-(0[1-9]|1[0-2])$/.test(saved||'')){const [y,m]=saved.split('-').map(Number);if(y>=2000&&y<=2100)currentDate=new Date(y,m-1,1);}}catch{}
     let entregas = [];
 
     const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -47,18 +55,13 @@ export function setupAgenda(app) {
             numeroDia.textContent = i;
             celdaDia.appendChild(numeroDia);
 
-            const hoy = new Date();
-            if (i === hoy.getDate() && month === hoy.getMonth() && year === hoy.getFullYear()) {
+            const hoy=orderDate(new Date());
+            const dayKey=year+'-'+String(month+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
+            if (dayKey===hoy) {
                 celdaDia.classList.add('hoy');
             }
 
-            const fechaCelda = new Date(year, month, i);
-            const entregasDelDia = entregas.filter(entrega => {
-                const fechaEntrega = entrega.data.fechaEntrega.toDate();
-                return fechaEntrega.getFullYear() === fechaCelda.getFullYear() &&
-                       fechaEntrega.getMonth() === fechaCelda.getMonth() &&
-                       fechaEntrega.getDate() === fechaCelda.getDate();
-            });
+            const entregasDelDia=entregas.filter(e=>orderDate(e.data.fechaEntrega)===dayKey);
 
             if (entregasDelDia.length > 0) {
                 celdaDia.classList.add('con-eventos'); // Clase para hacerla clicable
@@ -83,12 +86,8 @@ export function setupAgenda(app) {
         
         modalTitle.textContent = `Entregas del ${fechaSeleccionada.toLocaleDateString('es-AR', {day: 'numeric', month: 'long'})}`;
 
-        const entregasDelDia = entregas.filter(entrega => {
-            const fechaEntrega = entrega.data.fechaEntrega.toDate();
-            return fechaEntrega.getFullYear() === fechaSeleccionada.getFullYear() &&
-                   fechaEntrega.getMonth() === fechaSeleccionada.getMonth() &&
-                   fechaEntrega.getDate() === fechaSeleccionada.getDate();
-        });
+        const dayKey=year+'-'+String(month).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+        const entregasDelDia=entregas.filter(e=>orderDate(e.data.fechaEntrega)===dayKey);
 
         modalLista.innerHTML = '';
         if (entregasDelDia.length > 0) {
@@ -112,31 +111,41 @@ export function setupAgenda(app) {
         diaModal.classList.add('visible');
     };
 
-    calendarioGrid.addEventListener('click', (e) => {
+    on(calendarioGrid,'click', (e) => {
         const celda = e.target.closest('.calendario-dia.con-eventos');
         if (celda) {
             mostrarModalConEntregas(celda.dataset.date);
         }
     });
 
-    modalBtnCerrar.addEventListener('click', () => diaModal.classList.remove('visible'));
-    diaModal.addEventListener('click', e => {
+    on(modalBtnCerrar,'click', () => diaModal.classList.remove('visible'));
+    on(diaModal,'click', e => {
         if(e.target === diaModal) diaModal.classList.remove('visible');
     });
 
-    prevMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
+    on(prevMonthBtn,'click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);loadMonth();
     });
 
-    nextMonthBtn.addEventListener('click', () => {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
+    on(nextMonthBtn,'click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);loadMonth();
     });
 
-    const q = query(presupuestosCollection, where("esVenta", "==", true));
-    onSnapshot(q, (snapshot) => {
-        entregas = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() })).filter(p=>p.data.fechaEntrega?.toDate);
-        renderCalendar();
-    });
+    function loadMonth(){
+        const id=++revision;stop?.();stop=null;entregas=[];renderCalendar();
+        const y=currentDate.getFullYear(),m=currentDate.getMonth()+1;
+        const month=y+'-'+String(m).padStart(2,'0'),next=new Date(y,m,1);
+        const nextMonth=next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0');
+        try{localStorage.setItem(key,month);}catch{}
+        if(status)status.textContent='Cargando entregas…';
+        // Consultar sólo el mes visible; filtrar confirmados localmente para no exigir índices compuestos.
+        const q=query(presupuestosCollection,where('fechaEntrega','>=',Timestamp.fromDate(new Date(month+'-01T00:00:00-03:00'))),where('fechaEntrega','<',Timestamp.fromDate(new Date(nextMonth+'-01T00:00:00-03:00'))));
+        stop=onSnapshot(q,snapshot=>{
+            if(id!==revision||abort.signal.aborted)return;
+            entregas=snapshot.docs.map(d=>({id:d.id,data:d.data()})).filter(p=>p.data.esVenta===true&&p.data.fechaEntrega?.toDate);
+            renderCalendar();if(status)status.textContent=entregas.length+' entregas en este mes'+(snapshot.metadata.fromCache?' · datos en caché':'');
+        },error=>{if(id!==revision||abort.signal.aborted)return;entregas=[];renderCalendar();if(status)status.textContent='No se pudieron cargar las entregas. Revisá la conexión.';});
+    }
+    loadMonth();
+    return ()=>{revision++;abort.abort();stop?.();};
 }
