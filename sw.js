@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dulce-sall-admin-v2.56';
+const CACHE_NAME = 'dulce-sall-admin-v2.57';
 
 const CORE_ASSETS = [
     '/',
@@ -121,7 +121,7 @@ self.addEventListener('notificationclick', event => {
     if (!event.notification.data?.dsPush) return;
     event.stopImmediatePropagation();
     event.notification.close();
-    const path = ['/pos.html','/stock.html','/index.html'].includes(event.notification.data.path) ? event.notification.data.path : '/index.html';
+    const path = ['/pos.html','/stock.html','/index.html','/fidelizacion.html'].includes(event.notification.data.path) ? event.notification.data.path : '/index.html';
     event.waitUntil((async () => {
         const windows = await self.clients.matchAll({type:'window', includeUncontrolled:true});
         const client = windows.find(c => c.url === self.location.origin + path);
