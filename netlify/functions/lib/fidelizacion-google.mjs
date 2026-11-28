@@ -26,18 +26,21 @@ export async function googleWallet(production){
   return r.json();
  }
  const objectId=card=>classId.split('.')[0]+'.ds_'+(production?'live_':'test_')+card;
+ const values=member=>({accountName:member.name,loyaltyPoints:{label:'Sellos',balance:{int:Number.isSafeInteger(member.stamps)?member.stamps:0}}});
  const path=card=>'/loyaltyObject/'+encodeURIComponent(objectId(card));
  return {
   async issue(member,origin){
    const id=objectId(member.card);
-   const obj={id,classId,state:'ACTIVE',accountId:member.card,accountName:member.name,barcode:{type:'QR_CODE',value:member.card,alternateText:member.card}};
+   const obj={id,classId,state:'ACTIVE',accountId:member.card,...values(member),barcode:{type:'QR_CODE',value:member.card,alternateText:member.card}};
    let existing;
    try{existing=await request(path(member.card));}catch(e){if(e.status!==404)throw e;}
    if(!existing)await request('/loyaltyObject','POST',obj);
    else if(existing.classId!==classId)throw fail('La tarjeta pertenece a otra clase.');
+   else await request(path(member.card),'PATCH',values(member));
    const jwt=sign({iss:account.clientEmail,aud:'google',typ:'savetowallet',iat:now,origins:[new URL(origin).hostname],payload:{loyaltyObjects:[{id}]}},account.privateKey);
    return 'https://pay.google.com/gp/v/save/'+jwt;
   },
+  update:member=>request(path(member.card),'PATCH',values(member)),
   status:async card=>{try{const o=await request(path(card));return {issued:true,saved:o.hasUsers===true};}catch(e){if(e.status===404)return {issued:false,saved:false};throw e;}},
   async notify(card,title,body){
    return request(path(card)+'/addMessage','POST',{message:{header:title,body,messageType:'TEXT_AND_NOTIFY'}});
