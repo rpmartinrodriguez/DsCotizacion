@@ -314,7 +314,7 @@ async function inicializarMenu() {
             panel.append(action);
         }
     }
-    import('./core/admin-tools.js?v=3').then(m=>m.mountAdminTools({session,p,header,navMenu})).catch(console.warn);
+    import('./core/admin-tools.js?v=4').then(m=>m.mountAdminTools({session,p,header,navMenu})).catch(console.warn);
 
     // Anticipar el HTML de la sección que el usuario está por abrir.
     // No ejecuta scripts ni consulta datos de Firebase; sólo precarga HTML.
