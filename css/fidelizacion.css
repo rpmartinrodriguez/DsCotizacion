@@ -68,3 +68,5 @@
  .loyal-public {padding:18px 12px;}
  .loyal-public .loyal-panel {padding:16px;}
 }
+
+.loyal-member-card{background:var(--loyal-pale);border:1px solid var(--loyal-line);border-radius:14px;padding:16px;text-align:center;display:grid;justify-items:center;gap:8px;margin:12px 0}.loyal-card-brand{width:auto;height:auto;max-width:95px;max-height:65px;object-fit:contain}.loyal-member-qr{display:block;width:142px;height:142px;max-width:100%;object-fit:contain;background:white;border-radius:6px}.loyal-member-card #p-code{font-size:.76rem;margin:0;max-width:100%;box-sizing:border-box}.loyal-public input[type=date]{min-height:42px;appearance:auto;-webkit-appearance:auto}.loyal-public input[type=date]::-webkit-date-and-time-value{text-align:left}

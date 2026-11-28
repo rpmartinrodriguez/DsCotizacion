@@ -15,7 +15,7 @@ function render(){
  const q=$('search').value.toLowerCase();$('members').replaceChildren();
  for(const m of rows.filter(m=>[m.name,m.email,m.phone,m.card].join(' ').toLowerCase().includes(q))){
   const el=node('article','');el.className='loyal-panel';
-  el.append(node('h3',m.name||'Invitación pendiente'),node('p',m.card),node('p',[m.email,m.phone].filter(Boolean).join(' · ')),node('p',m.state==='registered'?(m.consent?'Promociones autorizadas':'Sin autorización comercial'):'Sin registrar'),node('p','Google: '+(m.googleSaved?'Guardada (última consulta)':m.googleIssued?'Emitida, sin guardar o sin confirmar':'Sin confirmar')),node('p',m.lastPushStatus?'Último envío: '+m.lastPushStatus:'Sin envíos'));
+  el.append(node('h3',m.name||'Invitación pendiente'),node('p',m.card),node('p',[m.email,m.phone].filter(Boolean).join(' · ')),node('p',m.birthdate?'Nacimiento: '+m.birthdate.split('-').reverse().join('/')+' · Recordatorio '+(m.birthdayReminder?'activo':'inactivo'):'Sin fecha de nacimiento'),node('p',m.state==='registered'?(m.consent?'Promociones autorizadas':'Sin autorización comercial'):'Sin registrar'),node('p','Google: '+(m.googleSaved?'Guardada (última consulta)':m.googleIssued?'Emitida, sin guardar o sin confirmar':'Sin confirmar')),node('p',m.lastPushStatus?'Último envío: '+m.lastPushStatus:'Sin envíos'));
   if(m.state==='registered'&&ready){
    const refresh=node('button','Consultar Wallet');refresh.onclick=()=>run(refresh,async()=>{const s=await api('refresh-google',{id:m.id});m.googleSaved=s.saved;m.googleIssued=s.issued;render();status('Estado consultado.');});el.append(refresh);
    if(m.consent&&m.googleSaved){const send=node('button','Preparar push');send.onclick=()=>{selected=m;$('recipient').textContent=m.name+' · '+m.card;$('form').reset();$('send').hidden=false;$('send').scrollIntoView({behavior:'smooth'});};el.append(send);}
@@ -24,8 +24,10 @@ function render(){
  }
  if(!$('members').children.length)$('members').append(node('p','No hay registros para mostrar.'));
 }
-async function load(append=false){const d=await api('list',append?{after:next}:{});rows=append?[...rows,...d.rows]:d.rows;next=d.next;ready=d.googleReady;$('config').textContent=(d.production?'Producción':'Rama de prueba: datos separados')+' · Google Wallet: '+(ready?'credenciales de clase declaradas; validar conexión':'pendiente de configurar');$('next').hidden=!next;render();$('admin').hidden=false;status('');}
+async function loadBirthdays(){const d=await api('birthdays');$('birthdays').replaceChildren();if(!d.people.length)$('birthdays').append(node('p','No hay cumpleaños registrados para hoy.'));for(const p of d.people)$('birthdays').append(node('p',p.name+' · '+p.birthdate.split('-').reverse().join('/')));}
+async function load(append=false){const d=await api('list',append?{after:next}:{});rows=append?[...rows,...d.rows]:d.rows;next=d.next;ready=d.googleReady;$('config').textContent=(d.production?'Producción':'Rama de prueba: datos separados')+' · Google Wallet: '+(ready?'credenciales de clase declaradas; validar conexión':'pendiente de configurar');$('next').hidden=!next;render();$('admin').hidden=false;$('birthday-test').hidden=d.production;status('');if(!append)await loadBirthdays().catch(e=>{$('birthdays').textContent=e.message;});}
 onAuthStateChanged(auth,user=>{if(user)load().catch(e=>status(e.message));else{$('admin').hidden=true;status('Iniciá sesión para continuar.');}});
+$('birthday-test').onclick=()=>run($('birthday-test'),async()=>{const d=await api('birthday-test');status(d.count===0?'No hay cumpleaños de hoy para notificar.':d.duplicate?'El aviso de hoy ya fue registrado.':'Aviso de hoy registrado; '+(d.delivered||0)+' dispositivos aceptados por FCM.');});
 $('search').oninput=render;
 $('reload').onclick=()=>run($('reload'),()=>load());
 $('next').onclick=()=>run($('next'),()=>load(true));

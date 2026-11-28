@@ -2,12 +2,13 @@ import {randomBytes} from 'node:crypto';
 import QRCode from 'qrcode';
 import {admin,authorize,hash,productionOrigin} from './lib/push-admin.mjs';
 import {googleClass,googleWallet} from './lib/fidelizacion-google.mjs';
+import {validBirthdate,birthdays,remindBirthdays} from './lib/fidelizacion-birthdays.mjs';
 const json=(status,body)=>new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
 const validId=v=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
 const clean=(v,max)=>typeof v==='string'?v.trim().slice(0,max):'';
 const publicActions=['invite-status','register','google-link','opt-out'];
-const policyVersion='2026-11-27';
+const policyVersion='2026-11-27-birthday';
 export default async function(request){
  try{
   if(request.method!=='POST')return json(405,{ok:false});
@@ -26,30 +27,40 @@ export default async function(request){
    const snap=await ref.get(), m=snap.data();
    if(!snap.exists||m.origin!==origin)fail(404,'Invitación inválida.');
    if(m.state==='pending'&&m.expiresAt<Date.now())fail(410,'La invitación venció. Solicitá una nueva en el local.');
-   if(action==='invite-status')return json(200,{ok:true,state:m.state,card:m.state==='registered'?m.card:null,consent:m.consent===true,googleReady:ready});
+   if(action==='invite-status'){
+    const registered=m.state==='registered';
+    return json(200,{ok:true,state:m.state,card:registered?m.card:null,qr:registered?await QRCode.toDataURL(m.card,{width:280,margin:4,errorCorrectionLevel:'M'}):null,consent:m.consent===true,googleReady:ready});
+   }
    if(action==='register'){
-    const name=clean(body.name,100),email=clean(body.email,160),phone=clean(body.phone,35);
-    if(name.length<2||body.accept!==true||(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))fail(400,'Revisá tus datos y aceptá el aviso de privacidad.');
+    const name=clean(body.name,100),phone=clean(body.phone,35),birthdate=body.birthdate;
+    const digits=phone.replace(/\D/g,'');
+    if(name.split(/\s+/).length<2||!/^\+?[\d\s().-]+$/.test(phone)||digits.length<7||digits.length>15||!validBirthdate(birthdate)||body.accept!==true)fail(400,'Completá nombre y apellido, un celular válido, la fecha de nacimiento y aceptá el aviso de privacidad.');
     await db.runTransaction(async tx=>{
      const current=(await tx.get(ref)).data();
      if(!current||current.state!=='pending'||current.expiresAt<Date.now())fail(409,'Invitación usada o vencida.');
-     tx.set(ref,{state:'registered',name,email,phone,consent:body.consent===true,consentAt:Date.now(),policyVersion,registeredAt:Date.now()},{merge:true});
+     tx.set(ref,{state:'registered',name,phone,birthdate,birthdayKey:birthdate.slice(5),birthdayReminder:true,consent:body.consent===true,consentAt:Date.now(),policyVersion,registeredAt:Date.now()},{merge:true});
     });
-    return json(200,{ok:true,card:m.card,googleReady:ready});
+    return json(200,{ok:true,state:'registered',card:m.card,qr:await QRCode.toDataURL(m.card,{width:280,margin:4,errorCorrectionLevel:'M'}),consent:body.consent===true,googleReady:ready});
    }
    if(m.state!=='registered')fail(409,'Completá primero tu registro.');
    if(action==='opt-out'){await ref.set({consent:false,consentAt:Date.now()},{merge:true});return json(200,{ok:true});}
    if(action==='google-link'){
     const wallet=await googleWallet(prod),url=await wallet.issue(m,origin);
+    await ref.set({googleIssued:true},{merge:true});
     return json(200,{ok:true,url});
    }
   }
   const {uid,profile}=await authorize({headers:{authorization:request.headers.get('authorization')||''}},svc);
   if(profile.rol!=='master')fail(403,'Sólo administradores.');
+  if(action==='birthdays')return json(200,{ok:true,people:await birthdays(svc,origin,prod)});
+  if(action==='birthday-test'){
+   if(prod)fail(403,'La prueba manual sólo está disponible en vistas previas.');
+   return json(200,{ok:true,...await remindBirthdays(svc,origin,false)});
+  }
   if(action==='list'){
    const query=members.orderBy('__name__').limit(101);
    const snap=await (validId(body.after)?query.startAfter(body.after):query).get();
-   const rows=snap.docs.slice(0,100).map(d=>({id:d.id,...d.data()})).filter(m=>m.origin===origin).map(({id,card,name,email,phone,state,consent,registeredAt,googleSaved,googleIssued,lastPushAt,lastPushStatus})=>({id,card,name,email,phone,state,consent,registeredAt,googleSaved,googleIssued,lastPushAt,lastPushStatus}));
+   const rows=snap.docs.slice(0,100).map(d=>({id:d.id,...d.data()})).filter(m=>m.origin===origin).map(({id,card,name,email,phone,birthdate,birthdayReminder,state,consent,registeredAt,googleSaved,googleIssued,lastPushAt,lastPushStatus})=>({id,card,name,email,phone,birthdate,birthdayReminder,state,consent,registeredAt,googleSaved,googleIssued,lastPushAt,lastPushStatus}));
    return json(200,{ok:true,rows,next:snap.size>100?snap.docs[99].id:null,googleReady:ready,production:prod});
   }
   if(action==='invite'){
